@@ -86,6 +86,28 @@ def parse_args():
         help='The maximum number of iterations to run the algorithm'
     )
 
+    # OpenAI Settings
+    parser.add_argument(
+        '--organization',
+        type=str,
+        default="org-5NION61XDUXh0ib0JZpcppqS",
+        help='Organization ID'
+    )
+
+    parser.add_argument(
+        '--project',
+        type=str,
+        default="proj_Ry1rvoznXAMj8R2bujIIkhQN",
+        help='Project ID'
+    )
+
+    parser.add_argument(
+        '--apikey',
+        type=str,
+        default="sk-l4ETwy_5kOgNvt5OzHf_YtBevR1pxQyNrlW8NRNPw2T3BlbkFJdKpqpbcDG0IhInYcsS3CXdz_EMHkJO7s1Bo3e4BBcA",
+        help='API Key'
+    )
+
     args = parser.parse_args()
     return args
 
@@ -108,10 +130,10 @@ def main():
     round = 0
     flag = False
     algo_candidates = filter(data, statics_dict)
-    algorithm_setup = reranker(data, algo_candidates, statics_dict, knowledge_docs)
+    algorithm, algorithm_setup = reranker(data, algo_candidates, statics_dict, knowledge_docs)
 
     while round < args.max_iterations and flag == False:
-        results = programmer(data, algorithm_setup)
+        results = programmer(data, algorithm, algorithm_setup)
         flag, algorithm_setup = judge(data, results, statics_dict, algorithm_setup, knowledge_docs)
 
     judge.report_generation(data, results, statics_dict, algorithm_setup, knowledge_docs)
