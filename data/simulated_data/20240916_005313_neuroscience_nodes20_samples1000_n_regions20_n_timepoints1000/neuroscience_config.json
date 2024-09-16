@@ -1,0 +1,7 @@
+{
+  "domain": "neuroscience",
+  "n_nodes": 20,
+  "n_samples": 1000,
+  "n_regions": 20,
+  "n_timepoints": 1000
+}
