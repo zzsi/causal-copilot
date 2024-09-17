@@ -4,7 +4,21 @@ def load_data(path):
     :param path: str for data path or filename
     :return: pandas dataframe
     '''
-    data = []
+    import pandas as pd
+    import os
+
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"The file {path} does not exist.")
+
+    file_extension = os.path.splitext(path)[1].lower()
+
+    if file_extension == '.csv':
+        data = pd.read_csv(path)
+    elif file_extension in ['.xls', '.xlsx']:
+        data = pd.read_excel(path)
+    else:
+        raise ValueError(f"Unsupported file format: {file_extension}")
+
     return data
 
 def statics_info(args, data):
