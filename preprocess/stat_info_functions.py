@@ -134,7 +134,7 @@ def linearity_check (df: pd.DataFrame, test_pairs: int = 1000, alpha: float = 0.
     '''
     :param df: imputed data.
     :param test_pairs: maximum number of pairs to be tested.
-    :param alpha: significant level.
+    :param alpha: significance level.
     :return: indicator of linearity, reset testing results for each pair, fitted OLS model.
     '''
 
@@ -189,7 +189,7 @@ def gaussian_check(df: pd.DataFrame,
     :param ols_fit: fitted OLS model for each pair.
     :param reset_test: results of RESET test for each pair.
     :param test_pairs: maximum number of pairs to be tested.
-    :param alpha: significant level.
+    :param alpha: significance level.
     :return: indicator of gaussian errors.
     '''
 
@@ -234,7 +234,7 @@ def stationary_check(df: pd.DataFrame, max_test: int = 1000, alpha: float = 0.1)
     '''
     :param df: imputed data.
     :param max_test: maximum number of test.
-    :param alpha: significant level.
+    :param alpha: significance level.
     :return: indicator of stationary.
     '''
 
@@ -283,7 +283,7 @@ class ParaStatCollect:
 def stat_info_collection(args, data):
     '''
     :param args: a class contain pre-specified informaiton - indicator of time-series,
-                 missing ratio for data clean, significance level (default 0.1),
+                 missing ratio for data cleaning, significance level (default 0.1),
                  maximum number of tests (default 1000).
     :param data: given tabular data in pandas dataFrame format.
     :return: a dict containing all necessary statics information.
@@ -338,3 +338,18 @@ def stat_info_collection(args, data):
 
 
     return stat_info_combine
+
+
+'''
+Clss containing information for statistics information collection:
+ts: indicator of time-series.
+ratio: missing ratio for data clean.
+alpha: significace level.
+num_test: maximum number of tests.
+'''
+class ParaStatCollect:
+    def __init__(self):
+        self.ts = False
+        self.ratio = 0.5
+        self.alpha = 0.1
+        self.num_test = 1000
