@@ -2,14 +2,11 @@ import numpy as np
 import pandas as pd
 import random
 import json
-
 from sklearn.impute import SimpleImputer
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from itertools import combinations
-
 import statsmodels.api as sm
-
 from statsmodels.stats.diagnostic import linear_reset
 from statsmodels.stats.multitest import multipletests
 from statsmodels.nonparametric.smoothers_lowess import lowess
@@ -331,7 +328,7 @@ def stat_info_collection(args, data):
                                       reset_test = all_reset_results,
                                       alpha = args.alpha)
 
-    # Assumption Checking
+    '''Assumption checking for time-series data'''
     if args.ts:
         stationary_res = stationary_check(df =  imputed_data, max_test=1000, alpha=0.1)
 
