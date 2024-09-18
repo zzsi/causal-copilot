@@ -78,7 +78,7 @@ def data_preprocess (df: pd.DataFrame, ratio: float = 0.5, ts: bool = False):
 
     return clean_df, miss_res, column_type, overall_type
 
-clean_data, miss_res, each_type, dataset_type = data_preprocess(df = data, ratio = 0.5, ts = False)
+# clean_data, miss_res, each_type, dataset_type = data_preprocess(df = data, ratio = 0.5, ts = False)
 
 
 def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
@@ -109,7 +109,7 @@ def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
 
     return df
 
-imputed_data = imputation(df = clean_data, column_type = each_type, ts = False)
+# imputed_data = imputation(df = clean_data, column_type = each_type, ts = False)
 
 
 
@@ -153,9 +153,9 @@ def linearity_check (df: pd.DataFrame, test_pairs: int = 1000, alpha: float = 0.
     return check_result, corrected_reset, OLS_model
 
 
-linearity_res, all_reset_results, OLS_model = linearity_check(df = imputed_data,
-                                                               test_pairs = combinations_select,
-                                                               alpha = 0.1)
+# linearity_res, all_reset_results, OLS_model = linearity_check(df = imputed_data,
+#                                                                test_pairs = combinations_select,
+#                                                                alpha = 0.1)
 
 
 
@@ -208,9 +208,9 @@ def gaussian_check(df: pd.DataFrame,
 
     return check_result
 
-gaussian_res = gaussian_check(df = imputed_data, ols_fit = OLS_model,
-                              test_pairs = combinations_select, reset_test = all_reset_results,
-                              alpha = 0.1)
+# gaussian_res = gaussian_check(df = imputed_data, ols_fit = OLS_model,
+#                               test_pairs = combinations_select, reset_test = all_reset_results,
+#                               alpha = 0.1)
 
 
 def stationary_check(df: pd.DataFrame, max_test: int = 1000, alpha: float = 0.1):
@@ -253,15 +253,7 @@ def stationary_check(df: pd.DataFrame, max_test: int = 1000, alpha: float = 0.1)
     return check_result
 
 
-stationary_res = stationary_check(df =  imputed_data, max_test=1000, alpha=0.1)
-
-class ParaStatCollect:
-    def __init__(self):
-        self.ts = False
-        self.ratio = 0.5
-        self.alpha = 0.1
-        self.num_test = 1000
-
+# stationary_res = stationary_check(df =  imputed_data, max_test=1000, alpha=0.1)
 
 def stat_info_collection(args, data):
     '''
@@ -318,7 +310,6 @@ def stat_info_collection(args, data):
     stat_info_combine = {**miss_res, **dataset_type, **linearity_res, **gaussian_res, **stationary_res}
 
     stat_info_combine = json.dumps(stat_info_combine, indent=4)
-
 
     return stat_info_combine
 
