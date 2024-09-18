@@ -112,23 +112,6 @@ def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
 imputed_data = imputation(df = clean_data, column_type = each_type, ts = False)
 
 
-max_pair=1000
-m = clean_data.shape[1]
-tot_pairs = m * (m - 1) / 2
-
-'''Generate combination of pairs for testing '''
-combinations_list = list(combinations(list(range(m)), 2))
-
-'''Determine the number of pairs to be tested'''
-if tot_pairs > max_pair:
-  select_pair = max_pair
-else:
-  select_pair = tot_pairs
-
-select_pair = int(select_pair)
-combinations_select = random.sample(combinations_list, select_pair)
-
-
 
 def linearity_check (df: pd.DataFrame, test_pairs: int = 1000, alpha: float = 0.1):
     '''
@@ -341,7 +324,7 @@ def stat_info_collection(args, data):
 
 
 '''
-Clss containing information for statistics information collection:
+Class containing information for statistics information collection:
 ts: indicator of time-series.
 ratio: missing ratio for data clean.
 alpha: significace level.
