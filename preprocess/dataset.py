@@ -33,7 +33,7 @@ def statics_info(args, data):
     '''
     from stat_info_functions import *
 
-    statics_dict = stat_info_collection(args = para, data = data)
+    statics_dict = stat_info_collection(args = args, data = data)
     
     return statics_dict
 
