@@ -22,7 +22,7 @@ def data_preprocess (df: pd.DataFrame, ratio: float = 0.5, ts: bool = False):
     :return: cleaned data, missingness indicator of cleaned data, overall data type, data type of each column.
     '''
 
-    """ Data clean """
+    # Data clean
     missing_vals = [np.nan]
     missing_mask = df.isin(missing_vals)
 
@@ -34,15 +34,15 @@ def data_preprocess (df: pd.DataFrame, ratio: float = 0.5, ts: bool = False):
     clean_df = df.drop(remove_index, axis=1)
     missing_mask_clean = missing_mask.drop(remove_index, axis=1)
 
-    """Judge if missingness exist in the cleaned data"""
+    # Judge if missingness exist in the cleaned data
     if missing_mask_clean.sum().sum() > 0:
         miss_res = {"Missingness": True}
     else:
         miss_res = {"Missingness": False}
 
-    """Data Type Classification"""
+    # Data Type Classification
     column_type = {}
-    overall_type = {"Continuous": False, "Category": False, "Mixture": False, "Time-series": False}
+    overall_type = {}
 
     for column in clean_df.columns:
 
@@ -59,16 +59,16 @@ def data_preprocess (df: pd.DataFrame, ratio: float = 0.5, ts: bool = False):
     if not ts:
         if len(unique_type) == 1:
             if unique_type[0] == "Continuous":
-                overall_type["Continuous"] = True
+                overall_type["Data Type"] = "Continuous"
             elif unique_type[0] == "Category":
-                overall_type["Category"] = True
+                overall_type["Data Type"] = "Category"
         else:
-            overall_type["Mixture"] = True
+            overall_type["Data Type"] = "Mixture"
 
     if ts:
-        overall_type["Time-series"] = True
+        overall_type["Data Type"] = "Time-series"
 
-    """Convert category data to numeric data"""
+    # Convert category data to numeric data
     categorical_features = [key for key, value in column_type.items() if value == "Category"]
 
     for column in categorical_features:
@@ -93,14 +93,14 @@ def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
     continuous_features = [key for key, value in column_type.items() if value == "Continuous"]
 
     if not ts:
-        '''Initialize imputer'''
+        # Initialize imputer
         imputer_cat = SimpleImputer(strategy='most_frequent')
         imputer_cont = IterativeImputer(random_state=0)
 
-        '''Imputation for continuous data'''
+        # Imputation for continuous data
         df[continuous_features] = imputer_cont.fit_transform(df[continuous_features])
 
-        '''Imputation for categorical data'''
+        # Imputation for categorical data
         for column in categorical_features:
             df[column] = imputer_cat.fit_transform(df[[column]]).ravel()
 
@@ -138,11 +138,11 @@ def linearity_check (df: pd.DataFrame, test_pairs: int = 1000, alpha: float = 0.
 
         OLS_model.append(results)
 
-        '''Ramsey’s RESET - H0: linearity is satisfied'''
+        # Ramsey’s RESET - H0: linearity is satisfied
         reset_test = linear_reset(results)
         reset_pval.append(reset_test.pvalue)
 
-    '''Benjamini & Yekutieli procedure - True: reject H0 -- linearity is not satisfied'''
+    # Benjamini & Yekutieli procedure - True: reject H0 -- linearity is not satisfied
     corrected_reset = multipletests(reset_pval, alpha=alpha, method='fdr_by')[0]
 
     if corrected_reset.sum() == 0:
@@ -186,18 +186,18 @@ def gaussian_check(df: pd.DataFrame,
             x = df.iloc[:, test_pairs[i][0]].to_numpy()
             y = df.iloc[:, test_pairs[i][1]].to_numpy()
 
-            '''Fit Lowess'''
+            # Fit Lowess
             smoothed = lowess(y, x)
             smoothed_x = smoothed[:, 0]
             smoothed_y = smoothed[:, 1]
             smoothed_values = np.interp(x, smoothed_x, smoothed_y)
             residuals = y - smoothed_values
 
-        '''Jarque–Bera test - H0: residuals are Gaussian'''
+        # Jarque–Bera test - H0: residuals are Gaussian
         JB_test = jarque_bera(residuals)
         JB_pval.append(JB_test[1])
 
-        '''Benjamini & Yekutieli procedure - True: reject H0 -- Gaussian error assumption is not satisfied'''
+        # Benjamini & Yekutieli procedure - True: reject H0 -- Gaussian error assumption is not satisfied
         corrected_JB = multipletests(JB_pval, alpha=alpha, method='fdr_by')[0]
 
         if corrected_JB.sum() == 0:
@@ -234,13 +234,13 @@ def stationary_check(df: pd.DataFrame, max_test: int = 1000, alpha: float = 0.1)
     for i in range(num_test):
         x = df.iloc[:, index[i]].to_numpy()
 
-        '''ADF test - H0: this series is non-stationary'''
+        # ADF test - H0: this series is non-stationary
         adf_test = adfuller(x)
         ADF_pval.append(adf_test[1])
 
-        '''Bonferroni correction'''
-        '''True: reject H0 -- this series is stationary'''
-        '''False: accept H0 -- this series is non-stationary'''
+        # Bonferroni correction
+        # True: reject H0 -- this series is stationary
+        # False: accept H0 -- this series is non-stationary
         corrected_ADF = multipletests(ADF_pval, alpha=alpha, method='bonferroni')[0]
 
         if corrected_ADF.sum() == m:
@@ -257,30 +257,30 @@ def stationary_check(df: pd.DataFrame, max_test: int = 1000, alpha: float = 0.1)
 
 def stat_info_collection(args, data):
     '''
-    :param args: a class contain pre-specified informaiton - indicator of time-series,
+    :param args: a class contain pre-specified information - indicator of time-series,
                  missing ratio for data cleaning, significance level (default 0.1),
                  maximum number of tests (default 1000).
     :param data: given tabular data in pandas dataFrame format.
     :return: a dict containing all necessary statics information.
     '''
 
-    '''Initialize output'''
+    # Initialize output
     linearity_res = {"Linearity": "time-series"}
     gaussian_res = {"Gaussian Error": "time-series"}
     stationary_res = {"Stationary": "non time-series"}
 
-    '''Data pre-processing'''
+    # Data pre-processing
     clean_data, miss_res, each_type, dataset_type = data_preprocess(df = data, ratio = args.ratio, ts = args.ts)
 
-    '''Imputation'''
+    # Imputation
     imputed_data = imputation(df = clean_data, column_type = each_type, ts = args.ts)
 
     if not args.ts:
-        '''Generate combinations of pairs to be tested'''
+        # Generate combinations of pairs to be tested
         m = clean_data.shape[1]
         tot_pairs = m * (m - 1) / 2
 
-        '''Sample pairs without replacement'''
+        # Sample pairs without replacement
         combinations_list = list(combinations(list(range(m)), 2))
 
         if tot_pairs > args.num_test:
@@ -291,19 +291,19 @@ def stat_info_collection(args, data):
         num_test = int(num_test)
         combinations_select = random.sample(combinations_list, num_test)
 
-        '''Linearity assumption checking'''
+        # Linearity assumption checking
         linearity_res, all_reset_results, OLS_model = linearity_check(df = imputed_data,
                                                                       test_pairs = combinations_select,
                                                                       alpha = args.alpha)
 
-        '''Gaussian error checking'''
+        # Gaussian error checking
         gaussian_res = gaussian_check(df = imputed_data,
                                       ols_fit = OLS_model,
                                       test_pairs = combinations_select,
                                       reset_test = all_reset_results,
                                       alpha = args.alpha)
 
-    '''Assumption checking for time-series data'''
+    # Assumption checking for time-series data
     if args.ts:
         stationary_res = stationary_check(df =  imputed_data, max_test=1000, alpha=0.1)
 
@@ -314,13 +314,13 @@ def stat_info_collection(args, data):
     return stat_info_combine
 
 
-'''
-Class containing information for statistics information collection:
-ts: indicator of time-series.
-ratio: missing ratio for data clean.
-alpha: significace level.
-num_test: maximum number of tests.
-'''
+
+# Class containing information for statistics information collection:
+# ts: indicator of time-series.
+# ratio: missing ratio for data clean.
+# alpha: significace level.
+# num_test: maximum number of tests.
+
 class ParaStatCollect:
     def __init__(self):
         self.ts = False
