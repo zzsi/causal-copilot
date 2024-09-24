@@ -31,9 +31,9 @@ def statics_info(args, data):
     :param data: Given Tabular Data in Pandas DataFrame format
     :return: A dict containing all necessary statics information
     '''
-    from stat_info_functions import *
+    from stat_info_functions import stat_info_collection
 
-    statics_dict = stat_info_collection(args = args, data = data)
+    statics_dict = stat_info_collection(args=args, data=data)
     
     return statics_dict
 

@@ -127,21 +127,15 @@ class DataSimulator:
         self.ground_truth['noise_type'] = noise_type
         self.ground_truth['function_type'] = function_type
 
-    def add_categorical_variable(self, n_categories: int = 10, column: str = None) -> None:
-        """Add a categorical variable, either as a new column or by converting an existing one."""
+    def add_categorical_variable(self, n_categories: int = 10) -> None:
+        """Convert all original data to quantized or categorical values."""
         if self.data is None:
             raise ValueError("Generate data first")
 
-        if column and column not in self.data.columns:
-            raise ValueError(f"Column {column} not found in data")
-
-        if column:
+        for column in self.data.columns:
             self.data[column] = pd.qcut(self.data[column], q=n_categories, labels=range(n_categories))
-        else:
-            new_col = f'Cat_{len(self.data.columns)}'
-            self.data[new_col] = np.random.choice(n_categories, size=len(self.data))
         
-        self.ground_truth['categorical'] = column or new_col
+        self.ground_truth['categorical'] = f"All columns quantized into {n_categories} categories"
 
     def add_measurement_error(self, error_std: float = 0.1, columns: Union[str, List[str]] = None) -> None:
         """Add measurement error to specified columns or all if not specified."""
@@ -205,9 +199,8 @@ class DataSimulator:
         self.generate_data(n_samples, noise_scale, noise_type, function_type)
         
         if add_categorical:
-            n_categorical = np.random.randint(1, max(2, n_nodes // 3))
-            for _ in range(n_categorical):
-                self.add_categorical_variable(n_categories=np.random.randint(2, 5))
+            n_categories = np.random.randint(2, 10)
+            self.add_categorical_variable(n_categories=n_categories)
         
         if add_measurement_error:
             self.add_measurement_error(error_std=np.random.uniform(0.05, 0.2))
@@ -526,21 +519,20 @@ class DomainSpecificSimulator:
 base_simulator = DataSimulator()
 
 # 1. Linear Gaussian data (simple)
-base_simulator.generate_and_save_dataset(function_type='linear', n_nodes=5, n_samples=1000, edge_probability=0.3)
+# base_simulator.generate_and_save_dataset(function_type='linear', n_nodes=5, n_samples=1000, edge_probability=0.3)
 
 # 2. Non-linear Gaussian data
-base_simulator.generate_and_save_dataset(function_type='polynomial', n_nodes=10, n_samples=2000, edge_probability=0.4)
+# base_simulator.generate_and_save_dataset(function_type='polynomial', n_nodes=10, n_samples=2000, edge_probability=0.4)
 
 # 3. Linear Non-Gaussian data
-base_simulator.generate_and_save_dataset(function_type='linear', noise_type='uniform', n_nodes=15, n_samples=3000, edge_probability=0.3)
+# base_simulator.generate_and_save_dataset(function_type='linear', noise_type='uniform', n_nodes=15, n_samples=3000, edge_probability=0.3)
 
 # 4. Discrete data
-# base_simulator.generate_and_save_dataset(function_type='neural_network', n_nodes=8, n_samples=1500, edge_probability=0.35, 
-#                                          add_categorical=True)
+base_simulator.generate_and_save_dataset(function_type='neural_network', n_nodes=8, n_samples=1500, edge_probability=0.35, 
+                                         add_categorical=True)
 
 # 5. Mixed data (complex)
-base_simulator.generate_and_save_dataset(function_type=['linear', 'polynomial', 'neural_network'], n_nodes=20, n_samples=5000, edge_probability=0.25)
-
+# base_simulator.generate_and_save_dataset(function_type=['linear', 'polynomial', 'neural_network'], n_nodes=20, n_samples=5000, edge_probability=0.25)
 
 
 # Example usage
