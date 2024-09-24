@@ -55,6 +55,7 @@ class Judge(object):
     '''
 
     # Generate prompts based on all the information and results
+    from judge_functions import *
     from openai import OpenAI
     client = OpenAI(organization=llm_setup.organization, project=llm_setup.project, api_key=llm_setup.apikey)
 
