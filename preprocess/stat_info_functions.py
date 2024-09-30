@@ -5,6 +5,7 @@ import json
 from sklearn.impute import SimpleImputer
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
+from sklearn.preprocessing import StandardScaler
 from itertools import combinations
 import statsmodels.api as sm
 from statsmodels.stats.diagnostic import linear_reset
@@ -86,7 +87,7 @@ def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
     :param df: cleaned and converted data.
     :param column_type: data type of each column.
     :param ts: indicator of time-series data.
-    :return: imputed data.
+    :return: imputed data with normalization.
     '''
 
     categorical_features = [key for key, value in column_type.items() if value == "Category"]
@@ -107,7 +108,11 @@ def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
     if ts:
         df = df.ffill()
 
-    return df
+    # Z-score normalization
+    scaler = StandardScaler()
+    scaled_df = pd.DataFrame(scaler.fit_transform(df), columns=df.columns)
+
+    return scaled_df
 
 # imputed_data = imputation(df = clean_data, column_type = each_type, ts = False)
 
