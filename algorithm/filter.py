@@ -1,6 +1,7 @@
 from openai import OpenAI
 import json
 
+
 class Filter(object):
     def __init__(self, args):
         self.args = args
@@ -13,12 +14,12 @@ class Filter(object):
     def create_prompt(self, data, statics_dict):
         columns = ', '.join(data.columns)
         stats = json.loads(statics_dict)
-        
+
         algo_context = self.load_context("algo")
         score_function_context = self.load_context("score_function")
         independence_test_context = self.load_context("independence_test")
         prompt_template = self.load_context("algo_select_prompt")
-        
+
         replacements = {
             "[COLUMNS]": columns,
             "[DATA_TYPE]": stats['Data Type'],
@@ -30,10 +31,10 @@ class Filter(object):
             "[SCORE_FUNCTION_CONTEXT]": score_function_context,
             "[INDEPENDENCE_TEST_CONTEXT]": independence_test_context
         }
-        
+
         for placeholder, value in replacements.items():
             prompt_template = prompt_template.replace(placeholder, value)
-        
+
         return prompt_template
 
     def parse_response(self, response):
@@ -51,17 +52,18 @@ class Filter(object):
 
     def forward(self, data, statics_dict):
         prompt = self.create_prompt(data, statics_dict)
-        
+
         response = self.client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a causal discovery expert. Provide your response in JSON format."},
+                {"role": "system",
+                 "content": "You are a causal discovery expert. Provide your response in JSON format."},
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"}
         )
-        
+
         output = response.choices[0].message.content
         algo_candidates = self.parse_response(output)
-        
+
         return algo_candidates

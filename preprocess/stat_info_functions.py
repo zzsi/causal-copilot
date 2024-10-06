@@ -87,7 +87,7 @@ def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
     :param df: cleaned and converted data.
     :param column_type: data type of each column.
     :param ts: indicator of time-series data.
-    :return: imputed data with normalization.
+    :return: imputed data.
     '''
 
     categorical_features = [key for key, value in column_type.items() if value == "Category"]
@@ -310,13 +310,13 @@ def stat_info_collection(args, data):
 
     # Assumption checking for time-series data
     if args.ts:
-        stationary_res = stationary_check(df =  imputed_data, max_test=1000, alpha=0.1)
+        stationary_res = stationary_check(df = imputed_data, max_test=1000, alpha=0.1)
 
     stat_info_combine = {**miss_res, **dataset_type, **linearity_res, **gaussian_res, **stationary_res}
 
     stat_info_combine = json.dumps(stat_info_combine, indent=4)
 
-    return stat_info_combine
+    return stat_info_combine, imputed_data
 
 
 

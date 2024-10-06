@@ -15,7 +15,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        required=True,
+        default="data/20240918_224141_base_nodes20_samples5000/base_data.csv",
         help='Path to the input dataset file (e.g., CSV format)'
     )
 
@@ -23,7 +23,6 @@ def parse_args():
     parser.add_argument(
         '--target-variable',
         type=str,
-        required=True,
         help='Name of the target variable in the dataset'
     )
 
@@ -40,7 +39,6 @@ def parse_args():
         '--model',
         type=str,
         choices=['linear_regression', 'propensity_score_matching', 'causal_forest', 'do_calculus'],
-        required=True,
         help='Causal inference model to use for the analysis'
     )
 
@@ -71,10 +69,30 @@ def parse_args():
         help='Impute missing values in the dataset'
     )
 
+    # Data Preprocess Hyper-parameters
+    parser.add_argument(
+        '--ratio',
+        type=float,
+        default=0.5,
+        help=''
+    )
+    parser.add_argument(
+        '--ts',
+        type=bool,
+        default=False,
+        help=''
+    )
+    parser.add_argument(
+        '--num_test',
+        type=int,
+        default=100,
+        help=''
+    )
     # Verbosity level
     parser.add_argument(
-        '--verbose',
-        action='store_true',
+        '--alpha',
+        type=float,
+        default=0.1,
         help='Enable verbose output during analysis'
     )
 
@@ -117,23 +135,43 @@ def main():
     data = load_data(args.data_file)
 
     # background info collection
-    statics_dict = statics_info(args, data)
-    knowledge_docs = knowledge_info(args, data)
+    print("Original Data: ", data)
+    statics_dict, preprocessed_data = statics_info(args, data)
+    print("Preprocessed Data: ", preprocessed_data)
+    print("Statics Info: ", statics_dict)
+    #knowledge_docs = knowledge_info(args, preprocessed_data)
+    #print("Knowledge Info: ", knowledge_docs)
+    knowledge_docs = ["No knowledge"]
 
     # algorithm selection and deliberation initialization
     filter = Filter(args)
+    algo_candidates = filter.forward(preprocessed_data, statics_dict)
+    print(algo_candidates)
+
     reranker = Reranker(args)
+    algorithm, hyper_suggest = reranker.forward(preprocessed_data, algo_candidates, statics_dict, knowledge_docs)
+    print(algorithm)
+    algorithm = "PC"
+    print(hyper_suggest)
+
     programmer = Programming(args)
+    code, results = programmer.forward(preprocessed_data, algorithm, hyper_suggest)
+    print(results)
+
     judge = Judge(args)
+    flag, hyper_suggest = judge.forward(preprocessed_data, code, results, statics_dict, hyper_suggest, knowledge_docs)
 
     # algorithm selection process
+    '''
     round = 0
     flag = False
-    algo_candidates = filter(data, statics_dict)
-    algorithm, algorithm_setup = reranker(data, algo_candidates, statics_dict, knowledge_docs)
 
     while round < args.max_iterations and flag == False:
-        results = programmer(data, algorithm, algorithm_setup)
-        flag, algorithm_setup = judge(data, results, statics_dict, algorithm_setup, knowledge_docs)
+        code, results = programmer.forward(preprocessed_data, algorithm, hyper_suggest)
+        flag, algorithm_setup = judge(preprocessed_data, code, results, statics_dict, algorithm_setup, knowledge_docs)
+    '''
 
-    judge.report_generation(data, results, statics_dict, algorithm_setup, knowledge_docs)
+    judge.report_generation(preprocessed_data, results, statics_dict, hyper_suggest, knowledge_docs)
+
+if __name__ == '__main__':
+    main()
