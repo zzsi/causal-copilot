@@ -281,34 +281,45 @@ def stat_info_collection(args, data):
     imputed_data = imputation(df = clean_data, column_type = each_type, ts = args.ts)
 
     if not args.ts:
-        # Generate combinations of pairs to be tested
-        m = clean_data.shape[1]
-        tot_pairs = m * (m - 1) / 2
+        # Check assumption for continuous data
+        if dataset_type["Data Type"] == "Continuous":
+            # Generate combinations of pairs to be tested
+            m = clean_data.shape[1]
+            tot_pairs = m * (m - 1) / 2
 
-        # Sample pairs without replacement
-        combinations_list = list(combinations(list(range(m)), 2))
+            # Sample pairs without replacement
+            combinations_list = list(combinations(list(range(m)), 2))
 
-        if tot_pairs > args.num_test:
-            num_test = args.num_test
-        else:
-            num_test = tot_pairs
+            if tot_pairs > args.num_test:
+                num_test = args.num_test
+            else:
+                num_test = tot_pairs
 
-        num_test = int(num_test)
-        combinations_select = random.sample(combinations_list, num_test)
+            num_test = int(num_test)
+            combinations_select = random.sample(combinations_list, num_test)
 
-        # Linearity assumption checking
-        linearity_res, all_reset_results, OLS_model = linearity_check(df = imputed_data,
-                                                                      test_pairs = combinations_select,
-                                                                      alpha = args.alpha)
+            # Linearity assumption checking
+            linearity_res, all_reset_results, OLS_model = linearity_check(df = imputed_data,
+                                                                        test_pairs = combinations_select,
+                                                                        alpha = args.alpha)
 
-        # Gaussian error checking
-        gaussian_res = gaussian_check(df = imputed_data,
-                                      ols_fit = OLS_model,
-                                      test_pairs = combinations_select,
-                                      reset_test = all_reset_results,
-                                      alpha = args.alpha)
+            # Gaussian error checking
+            gaussian_res = gaussian_check(df = imputed_data,
+                                        ols_fit = OLS_model,
+                                        test_pairs = combinations_select,
+                                        reset_test = all_reset_results,
+                                        alpha = args.alpha)
 
-    # Assumption checking for time-series data
+        if dataset_type["Data Type"] == "Mixture":
+            linearity_res["Linearity"] = False
+            gaussian_res["Gaussian Error"] = False
+
+        if dataset_type["Data Type"] == "Category":
+            linearity_res = {"Linearity": "Category"}
+            gaussian_res = {"Gaussian Error": "Category"}
+
+
+     # Assumption checking for time-series data
     if args.ts:
         stationary_res = stationary_check(df = imputed_data, max_test=1000, alpha=0.1)
 
@@ -323,12 +334,12 @@ def stat_info_collection(args, data):
 # Class containing information for statistics information collection:
 # ts: indicator of time-series.
 # ratio: missing ratio for data clean.
-# alpha: significace level.
+# alpha: significant level.
 # num_test: maximum number of tests.
 
-class ParaStatCollect:
-    def __init__(self):
-        self.ts = False
-        self.ratio = 0.5
-        self.alpha = 0.1
-        self.num_test = 1000
+# class ParaStatCollect:
+#     def __init__(self):
+#         self.ts = False
+#         self.ratio = 0.5
+#         self.alpha = 0.1
+#         self.num_test = 1000
