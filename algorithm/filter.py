@@ -16,8 +16,6 @@ class Filter(object):
         stats = json.loads(statics_dict)
 
         algo_context = self.load_context("algo")
-        score_function_context = self.load_context("score_function")
-        independence_test_context = self.load_context("independence_test")
         prompt_template = self.load_context("algo_select_prompt")
 
         replacements = {
@@ -28,8 +26,6 @@ class Filter(object):
             "[GAUSSIAN_ERROR]": str(stats.get('Gaussian Error', 'N/A')),
             "[STATIONARY]": str(stats.get('Stationary', 'N/A')),
             "[ALGO_CONTEXT]": algo_context,
-            "[SCORE_FUNCTION_CONTEXT]": score_function_context,
-            "[INDEPENDENCE_TEST_CONTEXT]": independence_test_context
         }
 
         for placeholder, value in replacements.items():
@@ -42,9 +38,7 @@ class Filter(object):
             algo_candidates = json.loads(response)
             return {algo['name']: {
                 'description': algo['description'],
-                'justification': algo['justification'],
-                'independence_test_or_score_function': algo['independence_test_or_score_function'],
-                'hyperparameters': algo['hyperparameters']
+                'justification': algo['justification']
             } for algo in algo_candidates['algorithms']}
         except json.JSONDecodeError:
             print("Error: Unable to parse JSON response")

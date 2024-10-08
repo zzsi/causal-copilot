@@ -1,3 +1,4 @@
+## Workflow
 ### Input
 
 User’s input + Analysis about the data properties + Domain Knowledge
@@ -18,9 +19,17 @@ User’s input + Analysis about the data properties + Domain Knowledge
     - Non-stationary/Heterogeneous
 - Domain Knowledge from LLM
 
-### Output
+### Algorithms
 
-The algorithm chosen and corresponding experiment codes
+Current available algorithms implemented for usage:
+
+- PC
+- FCI
+- CD-NOD
+- GES
+- NOTEARS
+- DirectLiNGAM
+- ICALiNGAM
 
 ## Algorithms (Tabular)
 

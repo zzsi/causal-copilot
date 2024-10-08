@@ -5,7 +5,7 @@ from algorithm.program import Programming
 from algorithm.rerank import Reranker
 from postprocess.judge import Judge
 
-
+import json
 import argparse
 
 def parse_args():
@@ -15,7 +15,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="data/20240918_224141_base_nodes20_samples5000/base_data.csv",
+        default="simulated_data/20240918_224140_base_nodes4_samples1000/base_data.csv",
         help='Path to the input dataset file (e.g., CSV format)'
     )
 
@@ -126,6 +126,12 @@ def parse_args():
         help='API Key'
     )
 
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Enable debugging mode'
+    )
+
     args = parser.parse_args()
     return args
 
@@ -136,22 +142,35 @@ def main():
 
     # background info collection
     print("Original Data: ", data)
-    statics_dict, preprocessed_data = statics_info(args, data)
+    
+    if args.debug:
+        # Fake statistics_dict and knowledge_docs for debugging
+        statistics_dict = {
+            "Missingness": False,
+            "Data Type": "Continuous",
+            "Linearity": True,
+            "Gaussian Error": True,
+            "Stationary": "non time-series"
+        }
+        statistics_dict = json.dumps(statistics_dict, indent=4)
+        preprocessed_data = data  # For simplicity, use original data
+        knowledge_docs = ["This is fake domain knowledge for debugging purposes."]
+    else:
+        statistics_dict, preprocessed_data = statics_info(args, data)
+        knowledge_docs = knowledge_info(args, preprocessed_data)
+    
     print("Preprocessed Data: ", preprocessed_data)
-    print("Statics Info: ", statics_dict)
-    #knowledge_docs = knowledge_info(args, preprocessed_data)
-    #print("Knowledge Info: ", knowledge_docs)
-    knowledge_docs = ["No knowledge"]
+    print("Statics Info: ", statistics_dict)
+    print("Knowledge Info: ", knowledge_docs)
 
     # algorithm selection and deliberation initialization
     filter = Filter(args)
-    algo_candidates = filter.forward(preprocessed_data, statics_dict)
+    algo_candidates = filter.forward(preprocessed_data, statistics_dict)
     print(algo_candidates)
 
     reranker = Reranker(args)
-    algorithm, hyper_suggest = reranker.forward(preprocessed_data, algo_candidates, statics_dict, knowledge_docs)
+    algorithm, hyper_suggest = reranker.forward(preprocessed_data, algo_candidates, statistics_dict, knowledge_docs)
     print(algorithm)
-    algorithm = "PC"
     print(hyper_suggest)
 
     programmer = Programming(args)
@@ -159,7 +178,7 @@ def main():
     print(results)
 
     judge = Judge(args)
-    flag, hyper_suggest = judge.forward(preprocessed_data, code, results, statics_dict, hyper_suggest, knowledge_docs)
+    flag, hyper_suggest = judge.forward(preprocessed_data, code, results, statistics_dict, hyper_suggest, knowledge_docs)
 
     # algorithm selection process
     '''
@@ -168,10 +187,10 @@ def main():
 
     while round < args.max_iterations and flag == False:
         code, results = programmer.forward(preprocessed_data, algorithm, hyper_suggest)
-        flag, algorithm_setup = judge(preprocessed_data, code, results, statics_dict, algorithm_setup, knowledge_docs)
+        flag, algorithm_setup = judge(preprocessed_data, code, results, statistics_dict, algorithm_setup, knowledge_docs)
     '''
 
-    judge.report_generation(preprocessed_data, results, statics_dict, hyper_suggest, knowledge_docs)
+    judge.report_generation(preprocessed_data, results, statistics_dict, hyper_suggest, knowledge_docs)
 
 if __name__ == '__main__':
     main()

@@ -13,11 +13,7 @@ class Reranker(object):
             # todo hyper_dict processing
             algo_des, algo_justify = algo_candidates[algo_name]['description'], algo_candidates[algo_name]['justification']
             algo_string = algo_name + ':\nDescription: ' + algo_des + '\nJustification: ' + algo_justify
-            algo_cond = "Independence Test or Score Function Requirement: " + algo_candidates[algo_name]['independence_test_or_score_function']
-            algo_hyper = "Hyper-parameters Requirements:\n"
-            for id, hyper_name in enumerate(algo_candidates[algo_name]['hyperparameters']):
-                algo_hyper += str(id) + ": " + hyper_name + ': ' + algo_candidates[algo_name]['hyperparameters'][hyper_name] + '\n'
-            algo2des_cond_hyper[algo_name] = (algo_string, algo_cond, algo_hyper)
+            algo2des_cond_hyper[algo_name] = algo_string
             algo_candidate_string += algo_string + "\n\n"
         return algo_candidate_string, algo2des_cond_hyper
 
@@ -31,6 +27,13 @@ class Reranker(object):
         else:
             return ''
 
+    # workflow
+    # 1. select candidate algorithms -> algorithm names and their descriptions
+    # 2. rerank the algorithms based on more criteria -> pick the best one
+    # 3. for the best algorithm, select the best hyperparameters
+    #   a. give suggestions for the primary hyperparameters, use default values of the secondary hyperparameters
+    #     i. for each primary hyperparameters, we might need to have some context about their meaning and possible values
+    # 4. return the selected algorithm and its hyperparameters
     def forward(self, data, algo_candidates, statics_dict, knowledge_docs):
         '''
 
@@ -71,29 +74,59 @@ class Reranker(object):
             selected_algo = self.extract(output, '<Algo>', '</Algo>')
 
         # Set up the Hyperparameters
-        algo_des, algo_cond, algo_hyper = algo2des_cond_hyper[selected_algo]
-        prompt = ("I will conduct causal discovery on the Tabular Dataset %s containing the following Columns:\n\n"
-                  "%s\n\nThe Detailed Background Information is listed below:\n\n"
-                  "%s\n\nThe Statics Information about the dataset is:\n\n"
-                  "%s\n\nWe have determined to use the algorithm %s, whose description is: "
-                  "%s\nIts condition requirements are: "
-                  "%s\nIts hyperparameters are listed below:"
-                  "%s\n\nPlease give suggestions about the hyperparameter setup based on the above information. If not very confident, please use the default value."
-                  "Finally, please generate the hyperparameter suggestions in the ending of the output, using the following template <Hyper>hyperparameter suggestions</Hyper>") % (
-                 table_name, table_columns, knowledge_info, statics_info, selected_algo, algo_des, algo_cond, algo_hyper)
-        hyper_suggest = ''
-        while hyper_suggest == '':
-            print("The used prompt for hyper-parameter suggestion is: -------------------------------------------------------------------------")
-            print(prompt)
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            output = response.choices[0].message.content
-            print("The received answer for hyper-parameter suggestion is: -------------------------------------------------------------------------")
-            print(output)
-            hyper_suggest = self.extract(output, "<Hyper>", "</Hyper>")
+        # Load hyperparameters prompt template
+        import json
+        import algorithm.wrappers as wrappers
+
+        with open("algorithm/context/hyperparameters_prompt.txt", "r") as f:
+            hp_prompt = f.read()
+
+        # Load hyperparameters context
+        with open("algorithm/context/hyperparameters.json", "r") as f:
+            hp_context = json.load(f)
+
+        # Load additional context files for parameters that have them
+        for algo in hp_context:
+            for param in hp_context[algo]:
+                if 'context_file' in hp_context[algo][param]:
+                    context_file_path = hp_context[algo][param]['context_file']
+                    with open(context_file_path, "r") as cf:
+                        hp_context[algo][param]['context_content'] = cf.read()
+
+        # Get algorithm description and hyperparameters
+        algo_description = algo2des_cond_hyper[selected_algo]
+        primary_params = getattr(wrappers, selected_algo)().get_primary_params()
+
+        # Prepare hyperparameter information
+        hp_info_str = str(hp_context[selected_algo])
+
+        # Create the hyperparameter selection prompt
+        hp_prompt = hp_prompt.replace("[COLUMNS]", table_columns)
+        hp_prompt = hp_prompt.replace("[KNOWLEDGE_INFO]", knowledge_info)
+        hp_prompt = hp_prompt.replace("[STATISTICS INFO]", statics_dict)
+        hp_prompt = hp_prompt.replace("[ALGORITHM_NAME]", selected_algo)
+        hp_prompt = hp_prompt.replace("[ALGORITHM_DESCRIPTION]", algo_description)
+        hp_prompt = hp_prompt.replace("[PRIMARY_HYPERPARAMETERS]", str(primary_params))
+        hp_prompt = hp_prompt.replace("[HYPERPARAMETER_INFO]", hp_info_str)
+
+        # Get hyperparameter suggestions from GPT-4
+        print("Hyperparameter Prompt: ", hp_prompt)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a causal discovery expert. Provide your response in JSON format."},
+                {"role": "user", "content": hp_prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+
+        print("Hyperparameter Response: ", response.choices[0].message.content)
+        hyper_suggest = json.loads(response.choices[0].message.content)
+
+        # only use the hyperparameter keys and values, explanation is added later
+        hyper_suggest = {k: v['value'] for k, v in hyper_suggest['hyperparameters'].items() if k in primary_params}
+
+        print("Selected Algorithm: ", selected_algo)
+        print("Hyperparameter Suggestions: ", hyper_suggest)
+    
         return selected_algo, hyper_suggest

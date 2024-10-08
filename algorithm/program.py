@@ -56,29 +56,27 @@ class Programming(object):
             print(code)
         return code
 
-    def execute(self, pd_data, program):
+    def execute(self, pd_data, algorithm, hyperparameters):
         '''
-        :param program: Causal-Learn Toolkit program
+        :param pd_data: Pandas DataFrame
+        :param algorithm: String representing the algorithm name
+        :param hyperparameters: Dictionary of hyperparameter names and values
         :return: A numpy: adj binary matrix (variable relation), Matrix[i,j] denotes j->i
         '''
-        from causallearn.search.ConstraintBased.PC import pc
-        from causallearn.search.ConstraintBased.FCI import fci
-        from causallearn.search.ConstraintBased.CDNOD import cdnod
-        from causallearn.search.ScoreBased.GES import ges
-        from causallearn.search.FCMBased import lingam
-        data = pd_data.to_numpy()
+        import algorithm.wrappers as wrappers
 
-        global graph
-        graph = None
-        local_scope = {'data': data, 'pc': pc, 'fci': fci, 'cdnod': cdnod, 'ges': ges, 'lingam': lingam, 'graph': graph}
         try:
-            exec(program, globals(), local_scope)
-            graph = local_scope['graph']
-            print(graph.G)
-            results = graph.G.graph
-        except:
-            print("Execution failed")
+            # Get the algorithm function from wrappers
+            algo_func = getattr(wrappers, algorithm)
+            
+            # Execute the algorithm with data and hyperparameters
+            graph, info = algo_func(hyperparameters).fit(pd_data)
+            
+            results = graph
+        except Exception as e:
+            print(f"Execution failed: {str(e)}")
             results = None
+        
         return results
 
     def forward(self, data, algorithm, algorithm_setup):
@@ -91,8 +89,10 @@ class Programming(object):
         '''
         results = None
         while results is None:
-            program = self.code_synthesis(algorithm, algorithm_setup)
-            print("The final code for execution is: -------------------------------------------------------------------------")
-            print(program)
-            results = self.execute(data, program)
+            # program = self.code_synthesis(algorithm, algorithm_setup)
+            # print("The final code for execution is: -------------------------------------------------------------------------")
+            # print(program)
+            results = self.execute(data, algorithm, algorithm_setup)
+            print(results)
+        program = {'algorithm': algorithm, 'hyperparameters': algorithm_setup}
         return program, results
