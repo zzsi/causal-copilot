@@ -25,18 +25,15 @@ def load_data(path):
 def statics_info(args, data):
     # Fang Nan Implemented
     '''
-    :param args: a class containing pre-specified information - an indicator of time-series data,
-                 missing ratio for data cleaning,
-                 significance level (default 0.1),
-                 maximum number of tests (default 1000).
+    :param args: configurations.
     :param data: Given Tabular Data in Pandas DataFrame format
     :return: A dict containing all necessary statics information
     '''
     from preprocess.stat_info_functions import stat_info_collection
 
-    statics_dict = stat_info_collection(args=args, data=data)
+    statistics_dict, preprocessed_data = stat_info_collection(args=args, data=data)
 
-    return statics_dict
+    return statics_dict, preprocessed_data
 
 
 def knowledge_info(args, data):

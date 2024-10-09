@@ -17,10 +17,10 @@ from statsmodels.tsa.stattools import adfuller
 
 def data_preprocess (df: pd.DataFrame, ratio: float = 0.5, ts: bool = False):
     '''
-    :param df: raw data.
+    :param df: Dataset in Panda DataFrame format.
     :param ratio: threshold to remove column.
     :param ts: indicator of time-series data.
-    :return: cleaned data, missingness indicator of cleaned data, overall data type, data type of each column.
+    :return: cleaned data, indicator of missingness in cleaned data, overall data type, data type of each feature.
     '''
 
     # Data clean
@@ -35,7 +35,7 @@ def data_preprocess (df: pd.DataFrame, ratio: float = 0.5, ts: bool = False):
     clean_df = df.drop(remove_index, axis=1)
     missing_mask_clean = missing_mask.drop(remove_index, axis=1)
 
-    # Judge if missingness exist in the cleaned data
+    # Judge if missingness exists in the cleaned data
     if missing_mask_clean.sum().sum() > 0:
         miss_res = {"Missingness": True}
     else:
@@ -84,7 +84,7 @@ def data_preprocess (df: pd.DataFrame, ratio: float = 0.5, ts: bool = False):
 
 def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
     '''
-    :param df: cleaned and converted data.
+    :param df: cleaned and converted data in Pandas DataFrame format.
     :param column_type: data type of each column.
     :param ts: indicator of time-series data.
     :return: imputed data.
@@ -120,7 +120,7 @@ def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
 
 def linearity_check (df: pd.DataFrame, test_pairs: int = 1000, alpha: float = 0.1):
     '''
-    :param df: imputed data.
+    :param df: imputed data in Pandas DataFrame format.
     :param test_pairs: maximum number of pairs to be tested.
     :param alpha: significance level.
     :return: indicator of linearity, reset testing results for each pair, fitted OLS model.
@@ -173,7 +173,7 @@ def gaussian_check(df: pd.DataFrame,
                     reset_test: list,
                     test_pairs: int = 1000, alpha: float = 0.1):
     '''
-    :param df: imputed data.
+    :param df: imputed data in Pandas DataFrame format.
     :param ols_fit: fitted OLS model for each pair.
     :param reset_test: results of RESET test for each pair.
     :param test_pairs: maximum number of pairs to be tested.
@@ -220,7 +220,7 @@ def gaussian_check(df: pd.DataFrame,
 
 def stationary_check(df: pd.DataFrame, max_test: int = 1000, alpha: float = 0.1):
     '''
-    :param df: imputed data.
+    :param df: imputed data in Pandas DataFrame format.
     :param max_test: maximum number of test.
     :param alpha: significance level.
     :return: indicator of stationary.
@@ -262,17 +262,17 @@ def stationary_check(df: pd.DataFrame, max_test: int = 1000, alpha: float = 0.1)
 
 def stat_info_collection(args, data):
     '''
-    :param args: a class contain pre-specified information - indicator of time-series,
-                 missing ratio for data cleaning, significance level (default 0.1),
-                 maximum number of tests (default 1000).
+    :param args: configurations.
     :param data: given tabular data in pandas dataFrame format.
     :return: a dict containing all necessary statics information.
     '''
 
+    n,m = data.shape
+
     # Initialize output
-    linearity_res = {"Linearity": "time-series"}
-    gaussian_res = {"Gaussian Error": "time-series"}
-    stationary_res = {"Stationary": "non time-series"}
+    time_series_res = {"Time-series": args.ts}
+    sample_size = {"Sample Size": n}
+    feature_size = {"Number of Features": m}
 
     # Data pre-processing
     clean_data, miss_res, each_type, dataset_type = data_preprocess(df = data, ratio = args.ratio, ts = args.ts)
@@ -281,6 +281,7 @@ def stat_info_collection(args, data):
     imputed_data = imputation(df = clean_data, column_type = each_type, ts = args.ts)
 
     if not args.ts:
+        stationary_res = {"Stationary": False}
         # Check assumption for continuous data
         if dataset_type["Data Type"] == "Continuous":
             # Generate combinations of pairs to be tested
@@ -310,36 +311,22 @@ def stat_info_collection(args, data):
                                         reset_test = all_reset_results,
                                         alpha = args.alpha)
 
-        if dataset_type["Data Type"] == "Mixture":
-            linearity_res["Linearity"] = False
-            gaussian_res["Gaussian Error"] = False
-
-        if dataset_type["Data Type"] == "Category":
-            linearity_res = {"Linearity": "Category"}
-            gaussian_res = {"Gaussian Error": "Category"}
-
+        # If the data type is Mixture or Category
+        else:
+            linearity_res = {"Linearity": False}
+            gaussian_res = {"Gaussian Error": False}
 
      # Assumption checking for time-series data
     if args.ts:
-        stationary_res = stationary_check(df = imputed_data, max_test=1000, alpha=0.1)
+        linearity_res = {"Linearity": False}
+        gaussian_res = {"Gaussian Error": False}
+        stationary_res = stationary_check(df = imputed_data, max_test=args.num_test, alpha=args.alpha)
 
-    stat_info_combine = {**miss_res, **dataset_type, **linearity_res, **gaussian_res, **stationary_res}
+    stat_info_combine = {**sample_size, **feature_size, **time_series_res,
+                         **miss_res, **dataset_type, **linearity_res, **gaussian_res, **stationary_res}
 
     stat_info_combine = json.dumps(stat_info_combine, indent=4)
 
     return stat_info_combine, imputed_data
 
 
-
-# Class containing information for statistics information collection:
-# ts: indicator of time-series.
-# ratio: missing ratio for data clean.
-# alpha: significant level.
-# num_test: maximum number of tests.
-
-# class ParaStatCollect:
-#     def __init__(self):
-#         self.ts = False
-#         self.ratio = 0.5
-#         self.alpha = 0.1
-#         self.num_test = 1000
