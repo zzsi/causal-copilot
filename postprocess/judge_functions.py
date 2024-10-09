@@ -109,8 +109,10 @@ def llm_evaluation(data, full_graph, args, knowledge_docs):
               "The output of your response should be in dict format, which can be detected by python. "
               "For example, if you have 95% confidence to conclude that X cause Y, and only 5% confidence that Y causes Z,"
               "you should output {'X->Y': 0.95, 'Y->Z': 0.05}. "
-              "Just give me the output in a dict format, do not provide other information!"
-              "When generating dict, the name of features should always be the column names!")
+              "For the format of dict you give, make sure obey the follow rules: \n\n"
+              "1. Just give me the output in a dict format, do not provide other information! \n\n"
+              "2. The feature name within keys should always be the same as the column names I provided!\n\n"
+              "3. Always use directed right arrow like '->' and DO NOT use left arrow '->' in the dict. For example, if you want to express X causes Y, always use 'X->Y' and DO NOT use 'Y<-X.")
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
@@ -135,26 +137,6 @@ def llm_evaluation(data, full_graph, args, knowledge_docs):
             split_key = key.split("->")
             i = data.columns.get_loc(split_key[0])
             j = data.columns.get_loc(split_key[1])
-
-            # Indicator of existence of path i->j
-            exist_ij = (full_graph[j, i] == 1)
-
-            # If this path is confirmed by LLM
-            if known_effect_dict.get(key) >= 0.95:
-                # Compare with the initial graph: if the path doesn't exist then force this path
-                if not exist_ij:
-                    errors[key] = "Forced"
-
-            # The causal effect is rejected by LLM
-            if known_effect_dict.get(key) <= 0.05:
-                # Compare with the initial graph: if the path does exist then forbid this path
-                if exist_ij:
-                    errors[key] = "Forbidden"
-
-        if "<-" in key:
-            split_key = key.split("<-")
-            i = data.columns.get_loc(split_key[1])
-            i = data.columns.get_loc(split_key[0])
 
             # Indicator of existence of path i->j
             exist_ij = (full_graph[j, i] == 1)

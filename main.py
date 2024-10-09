@@ -16,7 +16,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="simulated.csv",
+        default="/Users/fangnan/Desktop/simulated.csv",
         help='Path to the input dataset file (e.g., CSV format)'
     )
 
@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument(
         '--ground-truth',
         type=str,
-        default="truth.csv",
+        default="/Users/fangnan/Desktop/truth.csv",
         help='Path to the ground truth matrix (e.g., CSV format)'
     )
 
@@ -200,6 +200,7 @@ def main():
     judge = Judge(args)
     flag, _, boot_probability, revised_graph = judge.forward(preprocessed_data, results, algorithm, hyper_suggest, knowledge_docs)
     print(flag)
+    print(boot_probability)
 
     shd, precision, recall, f1 = judge.evaluation(revised_graph, mat_ground_truth)
     print(shd, precision, recall, f1)
