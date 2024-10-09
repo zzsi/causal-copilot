@@ -31,7 +31,7 @@ def statics_info(args, data):
     '''
     from preprocess.stat_info_functions import stat_info_collection
 
-    statistics_dict, preprocessed_data = stat_info_collection(args=args, data=data)
+    statics_dict, preprocessed_data = stat_info_collection(args=args, data=data)
 
     return statics_dict, preprocessed_data
 

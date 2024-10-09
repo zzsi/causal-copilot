@@ -8,6 +8,7 @@ from postprocess.judge import Judge
 import json
 import argparse
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Causal Learning Tool for Data Analysis')
 
@@ -15,8 +16,16 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="simulated_data/20240918_224140_base_nodes4_samples1000/base_data.csv",
+        default="simulated.csv",
         help='Path to the input dataset file (e.g., CSV format)'
+    )
+
+    # Input data file of Ground Truth
+    parser.add_argument(
+        '--ground-truth',
+        type=str,
+        default="truth.csv",
+        help='Path to the ground truth matrix (e.g., CSV format)'
     )
 
     # Target variable
@@ -96,6 +105,14 @@ def parse_args():
         help='Enable verbose output during analysis'
     )
 
+    # Postprocess options
+    parser.add_argument(
+        '--boot_num',
+        type=int,
+        default=100,
+        help='Number of bootstrap iterations'
+    )
+
     # Max Deliberation Round
     parser.add_argument(
         '--max-iterations',
@@ -140,6 +157,9 @@ def main():
     args = parse_args()
     data = load_data(args.data_file)
 
+    mat_ground_truth = load_data(args.ground_truth).to_numpy()
+
+
     # background info collection
     print("Original Data: ", data)
     
@@ -178,7 +198,11 @@ def main():
     print(results)
 
     judge = Judge(args)
-    flag, hyper_suggest = judge.forward(preprocessed_data, code, results, statistics_dict, hyper_suggest, knowledge_docs)
+    flag, _, boot_probability, revised_graph = judge.forward(preprocessed_data, results, algorithm, hyper_suggest, knowledge_docs)
+    print(flag)
+
+    shd, precision, recall, f1 = judge.evaluation(revised_graph, mat_ground_truth)
+    print(shd, precision, recall, f1)
 
     # algorithm selection process
     '''
@@ -190,7 +214,7 @@ def main():
         flag, algorithm_setup = judge(preprocessed_data, code, results, statistics_dict, algorithm_setup, knowledge_docs)
     '''
 
-    judge.report_generation(preprocessed_data, results, statistics_dict, hyper_suggest, knowledge_docs)
+    # judge.report_generation(preprocessed_data, results, statistics_dict, hyper_suggest, knowledge_docs)
 
 if __name__ == '__main__':
     main()
