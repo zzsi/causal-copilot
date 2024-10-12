@@ -1,5 +1,4 @@
-## Workflow
-### Input
+## Input
 
 User’s input + Analysis about the data properties + Domain Knowledge
 
@@ -19,7 +18,7 @@ User’s input + Analysis about the data properties + Domain Knowledge
     - Non-stationary/Heterogeneous
 - Domain Knowledge from LLM
 
-### Algorithms
+## Available Algorithms
 
 Current available algorithms implemented for usage:
 
@@ -31,7 +30,46 @@ Current available algorithms implemented for usage:
 - DirectLiNGAM
 - ICALiNGAM
 
-## Algorithms (Tabular)
+## Domain Knowledge about Algorithm Selection
+
+Based on the characteristics of your data and requirements, consider the following priority order for selecting causal discovery algorithms:
+
+1. If your data is nonstationary or heterogeneous across domains/time:
+   - Use CD-NOD as the first choice
+   
+2. If you suspect the presence of hidden confounders:
+   - Try FCI as the primary algorithm
+   
+3. If you have a large dataset with all relevant variables observed:
+   - Start with PC algorithm
+   
+4. If you prefer a score-based approach and assume no hidden confounders:
+   - Consider GES (Greedy Equivalence Search)
+   
+5. If your data is high-dimensional and you prefer a continuous optimization approach:
+   - Experiment with NOTEARS
+   
+6. If you have reason to believe the relationships are linear and noise is non-Gaussian:
+   - Try DirectLiNGAM first
+   - If computational resources allow, also consider ICALiNGAM
+
+Additional considerations:
+
+- For large datasets where efficiency is crucial, prioritize PC or GES
+- If you need a fully directed graph rather than a Markov equivalence class, prefer LiNGAM variants or NOTEARS
+- When dealing with non-linear relationships, consider extensions of these algorithms designed for non-linear data
+
+Default algorithm ranking for general cases (when data doesn't favor any specific characteristics):
+
+1. PC: Good balance between generality and computational efficiency
+2. GES: Efficient for larger datasets and provides a good general approach
+3. FCI: More general than PC but computationally more intensive
+4. NOTEARS: Efficient for high-dimensional data but assumes linear relationships
+5. DirectLiNGAM: Efficient but assumes linear relationships and non-Gaussian noise
+6. ICALiNGAM: More computationally intensive than DirectLiNGAM
+7. CD-NOD: Specialized for nonstationary/heterogeneous data, may be overkill for stationary data
+
+## Algorithms Description (Tabular)
 
 ### PC
 

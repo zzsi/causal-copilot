@@ -138,6 +138,15 @@
         "dense": 0.1
       },
       "reasoning": "Higher values lead to sparser graphs. Adjust based on expected graph density and to filter out weak connections."
+    },
+    "beta": {
+      "meaning": "Regularization parameter for edge weights",
+      "suggested_values": {
+        "default": 0.1,
+        "sparse": 0.0,
+        "dense": 0.2
+      },
+      "reasoning": "Higher values lead to sparser graphs. Adjust based on expected graph density and to filter out weak connections."
     }
   },
   "CDNOD": {

@@ -7,14 +7,14 @@ import sys
 sys.path.insert(0, 'causal-learn')
 
 from causallearn.graph.GraphClass import CausalGraph
-from causallearn.search.ConstraintBased.PC import pc
-from causallearn.search.ConstraintBased.FCI import fci
-from causallearn.search.ConstraintBased.CDNOD import cdnod
-from causallearn.search.ScoreBased.GES import ges
-from causallearn.search.FCMBased.lingam.direct_lingam import DirectLiNGAM
-from causallearn.search.FCMBased.lingam.ica_lingam import ICALiNGAM
+from causallearn.search.ConstraintBased.PC import pc as cl_pc
+from causallearn.search.ConstraintBased.FCI import fci as cl_fci
+from causallearn.search.ConstraintBased.CDNOD import cdnod as cl_cdnod
+from causallearn.search.ScoreBased.GES import ges as cl_ges
+from causallearn.search.FCMBased.lingam.direct_lingam import DirectLiNGAM as CLDirectLiNGAM
+from causallearn.search.FCMBased.lingam.ica_lingam import ICALiNGAM as CLICALiNGAM
 
-from .base import CausalDiscoveryAlgorithm
+from base import CausalDiscoveryAlgorithm
 
 class PC(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
@@ -60,7 +60,7 @@ class PC(CausalDiscoveryAlgorithm):
         all_params = {**self.get_primary_params(), **self.get_secondary_params(), 'node_names': node_names}
 
         # Run PC algorithm
-        cg = pc(data, **all_params)
+        cg = cl_pc(data, **all_params)
 
         # Convert the graph to adjacency matrix
         adj_matrix = self.convert_to_adjacency_matrix(cg)
@@ -158,7 +158,7 @@ class FCI(CausalDiscoveryAlgorithm):
         all_params = {**self.get_primary_params(), **self.get_secondary_params(), 'node_names': node_names}
 
         # Run FCI algorithm
-        graph, edges = fci(data, **all_params)
+        graph, edges = cl_fci(data, **all_params)
 
         # Convert the graph to adjacency matrix
         adj_matrix = self.convert_to_adjacency_matrix(graph)
@@ -253,7 +253,7 @@ class CDNOD(CausalDiscoveryAlgorithm):
         all_params = {**self.get_primary_params(), **self.get_secondary_params(), 'node_names': node_names}
 
         # Run CD-NOD algorithm
-        cg = cdnod(data, c_indx, **all_params)
+        cg = cl_cdnod(data, c_indx, **all_params)
 
         # Convert the graph to adjacency matrix
         adj_matrix = self.convert_to_adjacency_matrix(cg)
@@ -340,7 +340,7 @@ class GES(CausalDiscoveryAlgorithm):
         all_params = {**self.get_primary_params(), **self.get_secondary_params(), 'node_names': node_names}
 
         # Run GES algorithm
-        record = ges(data, **all_params)
+        record = cl_ges(data, **all_params)
 
         # Convert the graph to adjacency matrix
         adj_matrix = self.convert_to_adjacency_matrix(record['G'])
@@ -406,11 +406,11 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
         return self._params
     
     def get_primary_params(self):
-        self._primary_param_keys = ['random_state', 'measure']
+        self._primary_param_keys = ['measure']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
     
     def get_secondary_params(self):
-        self._secondary_param_keys = ['prior_knowledge', 'apply_prior_knowledge_softly']
+        self._secondary_param_keys = ['random_state', 'prior_knowledge', 'apply_prior_knowledge_softly']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: Union[pd.DataFrame, np.ndarray]) -> Tuple[np.ndarray, Dict]:
@@ -424,7 +424,7 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
         all_params = {**self.get_primary_params(), **self.get_secondary_params()}
 
         # Run DirectLiNGAM algorithm
-        model = DirectLiNGAM(**all_params)
+        model = CLDirectLiNGAM(**all_params)
         model.fit(data)
 
         # Convert the graph to adjacency matrix
@@ -481,11 +481,11 @@ class ICALiNGAM(CausalDiscoveryAlgorithm):
         return self._params
     
     def get_primary_params(self):
-        self._primary_param_keys = ['random_state', 'max_iter']
+        self._primary_param_keys = ['max_iter']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
     
     def get_secondary_params(self):
-        self._secondary_param_keys = []
+        self._secondary_param_keys = ['random_state']
         return {}
 
     def fit(self, data: Union[pd.DataFrame, np.ndarray]) -> Tuple[np.ndarray, Dict]:
@@ -496,7 +496,7 @@ class ICALiNGAM(CausalDiscoveryAlgorithm):
             node_names = [f"X{i}" for i in range(data.shape[1])]
 
         # Run ICALiNGAM algorithm
-        model = ICALiNGAM(**self.get_primary_params())
+        model = CLICALiNGAM(**self.get_primary_params(), **self.get_secondary_params())
         model.fit(data)
 
         # Convert the graph to adjacency matrix
@@ -537,17 +537,17 @@ class ICALiNGAM(CausalDiscoveryAlgorithm):
         print(info['causal_order'])
 
 if __name__ == "__main__":
-    pc_algo = PC({})
-    pc_algo.test_algorithm()
+    # pc_algo = PC({})
+    # pc_algo.test_algorithm()
 
-    fci_algo = FCI({})
-    fci_algo.test_algorithm()
+    # fci_algo = FCI({})
+    # fci_algo.test_algorithm()
 
-    cdnod_algo = CDNOD({})
-    cdnod_algo.test_algorithm()
+    # cdnod_algo = CDNOD({})
+    # cdnod_algo.test_algorithm()
 
-    ges_algo = GES({})
-    ges_algo.test_algorithm()
+    # ges_algo = GES({})
+    # ges_algo.test_algorithm()
 
     direct_lingam_algo = DirectLiNGAM({})
     direct_lingam_algo.test_algorithm()
