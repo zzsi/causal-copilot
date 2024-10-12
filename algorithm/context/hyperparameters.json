@@ -139,12 +139,22 @@
       },
       "reasoning": "Higher values lead to sparser graphs. Adjust based on expected graph density and to filter out weak connections."
     },
+    "sparse": {
+      "meaning": "Whether to use sparse optimization",
+      "suggested_values": {
+        "default": true,
+        "sparse": true,
+        "dense": false
+      },
+      "reasoning": "Use true for sparse optimization, which has better identifiability of the true graph."
+    },
     "beta": {
-      "meaning": "Regularization parameter for edge weights",
+      "meaning": "L1 regularization coefficient for edge weights",
       "suggested_values": {
         "default": 0.1,
-        "sparse": 0.0,
-        "dense": 0.2
+        "very_sparse": 0.5,
+        "moderately_sparse": 0.2,
+        "dense": 0.01
       },
       "reasoning": "Higher values lead to sparser graphs. Adjust based on expected graph density and to filter out weak connections."
     }

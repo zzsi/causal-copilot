@@ -14,7 +14,7 @@ from causallearn.search.ScoreBased.GES import ges as cl_ges
 from causallearn.search.FCMBased.lingam.direct_lingam import DirectLiNGAM as CLDirectLiNGAM
 from causallearn.search.FCMBased.lingam.ica_lingam import ICALiNGAM as CLICALiNGAM
 
-from base import CausalDiscoveryAlgorithm
+from .base import CausalDiscoveryAlgorithm
 
 class PC(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):

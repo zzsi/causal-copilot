@@ -4,7 +4,7 @@ from typing import Union, Dict, List, Tuple
 
 from causalnex.structure.notears import from_numpy, from_pandas, from_numpy_lasso, from_pandas_lasso
 
-from base import CausalDiscoveryAlgorithm
+from .base import CausalDiscoveryAlgorithm
 
 class NOTEARS(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
@@ -25,7 +25,7 @@ class NOTEARS(CausalDiscoveryAlgorithm):
         return self._params
     
     def get_primary_params(self):
-        self._primary_param_keys = ['max_iter', 'sparse']
+        self._primary_param_keys = ['max_iter', 'sparse', 'beta']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
     
     def get_secondary_params(self):
