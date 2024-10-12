@@ -49,13 +49,13 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
 
             boot_sample = pd.concat(subsets, ignore_index=True).iloc[1:n]
 
-            # Get the algorithm function from wrappers
-            algo_func = getattr(wrappers, algorithm)
+        # Get the algorithm function from wrappers
+        algo_func = getattr(wrappers, algorithm)
 
-            # Execute the algorithm with data and hyperparameters
-            boot_graph, info = algo_func(hyperparameters).fit(boot_sample)
+        # Execute the algorithm with data and hyperparameters
+        boot_graph, info = algo_func(hyperparameters).fit(boot_sample)
 
-            boot_effect_save[:, :, boot_time] = boot_graph
+        boot_effect_save[:, :, boot_time] = boot_graph
 
 
         for i in range(m):
