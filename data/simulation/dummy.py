@@ -72,30 +72,11 @@ class DataSimulator:
         self.graph = nx.relabel_nodes(self.graph, {node: i for i, node in enumerate(self.graph.nodes())})
         self.ground_truth['graph'] = self.graph
 
-    def generate_data(self, n_samples: int, noise_scale: float = 0.1, 
-                      noise_type: str = 'gaussian', 
-                      function_type: Union[str, List[str], Dict[int, str]] = 'linear') -> None:
-        """Generate data based on the graph structure with various functional relationships."""
-        if self.graph is None:
-            raise ValueError("Generate graph first")
-
+    def generate_domain_data(self, n_samples: int, noise_scale: float, noise_type: str, function_type: Union[str, List[str], Dict[int, str]]) -> pd.DataFrame:
+        """Generate data for a single domain based on the graph structure."""
         data = {}
         function_types = ['linear', 'polynomial', 'gaussian_process', 'sigmoid', 'neural_network']
         noise_func = getattr(self.noise_distribution, noise_type)
-
-        if isinstance(function_type, str):
-            if function_type != 'random' and function_type not in function_types:
-                raise ValueError(f"Invalid function type: {function_type}")
-        elif isinstance(function_type, list):
-            if not all(ft in function_types for ft in function_type):
-                raise ValueError(f"Invalid function type in list: {function_type}")
-        elif isinstance(function_type, dict):
-            if not all(node in self.graph.nodes() for node in function_type.keys()):
-                raise ValueError("Invalid node in function_type dictionary")
-            if not all(ft in function_types for ft in function_type.values()):
-                raise ValueError(f"Invalid function type in dictionary: {function_type}")
-        else:
-            raise ValueError("function_type must be a string, list, or dictionary")
 
         for node in nx.topological_sort(self.graph):
             parents = list(self.graph.predecessors(node))
@@ -123,9 +104,31 @@ class DataSimulator:
             
             self.ground_truth.setdefault('node_functions', {})[node] = func_type
 
-        self.data = pd.DataFrame({f'X{node}': data[node] for node in self.graph.nodes()})
+        return pd.DataFrame({f'X{node}': data[node] for node in self.graph.nodes()})
+
+    def generate_data(self, n_samples: int, noise_scale: float = 0.1, 
+                      noise_type: str = 'gaussian', 
+                      function_type: Union[str, List[str], Dict[int, str]] = 'linear',
+                      n_domains: int = 1) -> None:
+        """Generate heterogeneous data from multiple domains."""
+        if self.graph is None:
+            raise ValueError("Generate graph first")
+
+        domain_data = []
+        domain_size = n_samples // n_domains
+        
+        for domain in range(n_domains):
+            domain_df = self.generate_domain_data(domain_size, noise_scale, noise_type, function_type)
+            if n_domains > 1:
+                domain_df['domain_index'] = domain
+            domain_data.append(domain_df)
+
+        self.data = pd.concat(domain_data, ignore_index=True)
+        np.random.shuffle(self.data.values)  # Shuffle the rows
+        
         self.ground_truth['noise_type'] = noise_type
         self.ground_truth['function_type'] = function_type
+        self.ground_truth['n_domains'] = n_domains
 
     def add_categorical_variable(self, n_categories: int = 10) -> None:
         """Convert all original data to quantized or categorical values."""
@@ -133,16 +136,17 @@ class DataSimulator:
             raise ValueError("Generate data first")
 
         for column in self.data.columns:
-            self.data[column] = pd.qcut(self.data[column], q=n_categories, labels=range(n_categories))
+            if column != 'domain_index':  # Skip domain_index
+                self.data[column] = pd.qcut(self.data[column], q=n_categories, labels=range(n_categories))
         
-        self.ground_truth['categorical'] = f"All columns quantized into {n_categories} categories"
+        self.ground_truth['categorical'] = f"All columns (except domain_index) quantized into {n_categories} categories"
 
     def add_measurement_error(self, error_std: float = 0.1, columns: Union[str, List[str]] = None) -> None:
         """Add measurement error to specified columns or all if not specified."""
         if self.data is None:
             raise ValueError("Generate data first")
 
-        columns = columns or self.data.columns
+        columns = columns or [col for col in self.data.columns if col != 'domain_index']
         if isinstance(columns, str):
             columns = [columns]
 
@@ -167,7 +171,8 @@ class DataSimulator:
 
         confounder = np.random.randn(len(self.data))
         for col in affected_columns:
-            self.data[col] += strength * confounder
+            if col in self.data.columns and col != 'domain_index':
+                self.data[col] += strength * confounder
         
         self.ground_truth['confounding'] = {'affected_columns': affected_columns, 'strength': strength}
 
@@ -176,7 +181,7 @@ class DataSimulator:
         if self.data is None:
             raise ValueError("Generate data first")
 
-        columns = columns or self.data.columns
+        columns = columns or [col for col in self.data.columns if col != 'domain_index']
         if isinstance(columns, str):
             columns = [columns]
 
@@ -191,12 +196,12 @@ class DataSimulator:
                          function_type: Union[str, List[str], Dict[int, str]] = 'random',
                          add_categorical: bool = False, add_measurement_error: bool = False,
                          add_selection_bias: bool = False, add_confounding: bool = False,
-                         add_missing_values: bool = False) -> Tuple[nx.DiGraph, pd.DataFrame]:
+                         add_missing_values: bool = False, n_domains: int = 1) -> Tuple[nx.DiGraph, pd.DataFrame]:
         """
-        Generate a complete dataset with various characteristics.
+        Generate a complete heterogeneous dataset with various characteristics.
         """
         self.generate_graph(n_nodes, edge_probability)
-        self.generate_data(n_samples, noise_scale, noise_type, function_type)
+        self.generate_data(n_samples, noise_scale, noise_type, function_type, n_domains)
         
         if add_categorical:
             n_categories = np.random.randint(2, 10)
@@ -239,12 +244,16 @@ class DataSimulator:
         
         # Save the data as CSV
         data_filename = os.path.join(save_dir, f'{prefix}_data.csv')
-        self.data.to_csv(data_filename, index=False)
+        data_to_save = self.data.copy()
+        if self.ground_truth.get('n_domains', 1) == 1 and 'domain_index' in data_to_save.columns:
+            data_to_save = data_to_save.drop('domain_index', axis=1)
+        data_to_save.to_csv(data_filename, index=False)
         print(f"Data saved to {data_filename}")
         
         # Save the graph structure as NPY
+        # transpose to make the (i, j) == 1 indicates a directed edge from j to i
         graph_filename = os.path.join(save_dir, f'{prefix}_graph.npy')
-        np.save(graph_filename, nx.to_numpy_array(self.graph))
+        np.save(graph_filename, nx.to_numpy_array(self.graph).transpose())
         print(f"Graph structure saved to {graph_filename}")
         
         # Save the simulation settings as JSON
@@ -252,6 +261,7 @@ class DataSimulator:
         config = {
             'n_nodes': n_nodes,
             'n_samples': n_samples,
+            'n_domains': self.ground_truth.get('n_domains'),
             'noise_type': self.ground_truth.get('noise_type'),
             'function_type': self.ground_truth.get('function_type'),
             'node_functions': self.ground_truth.get('node_functions'),
@@ -528,11 +538,14 @@ base_simulator = DataSimulator()
 # base_simulator.generate_and_save_dataset(function_type='linear', noise_type='uniform', n_nodes=15, n_samples=3000, edge_probability=0.3)
 
 # 4. Discrete data
-base_simulator.generate_and_save_dataset(function_type='neural_network', n_nodes=8, n_samples=1500, edge_probability=0.35, 
-                                         add_categorical=True)
+# base_simulator.generate_and_save_dataset(function_type='neural_network', n_nodes=8, n_samples=1500, edge_probability=0.35, 
+#                                          add_categorical=True)
 
 # 5. Mixed data (complex)
 # base_simulator.generate_and_save_dataset(function_type=['linear', 'polynomial', 'neural_network'], n_nodes=20, n_samples=5000, edge_probability=0.25)
+
+# 6. Heterogeneous data
+base_simulator.generate_and_save_dataset(function_type='linear', n_nodes=10, n_samples=1000, edge_probability=0.3, n_domains=5)
 
 
 # Example usage
