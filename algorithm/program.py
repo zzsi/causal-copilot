@@ -65,17 +65,17 @@ class Programming(object):
         '''
         import algorithm.wrappers as wrappers
 
-        try:
-            # Get the algorithm function from wrappers
-            algo_func = getattr(wrappers, algorithm)
-            
-            # Execute the algorithm with data and hyperparameters
-            graph, info = algo_func(hyperparameters).fit(pd_data)
-            
-            results = graph
-        except Exception as e:
-            print(f"Execution failed: {str(e)}")
-            results = None
+        #try:
+        # Get the algorithm function from wrappers
+        algo_func = getattr(wrappers, algorithm)
+        print("Hyperparameters: ", hyperparameters)
+        # Execute the algorithm with data and hyperparameters
+        graph, info = algo_func(hyperparameters).fit(pd_data)
+
+        results = graph
+        #except Exception as e:
+        #    print(f"Execution failed: {str(e)}")
+        #    results = None
         
         return results
 
@@ -88,7 +88,7 @@ class Programming(object):
         :return: executable programs based on Causal-Learn Toolkit
         '''
         results = None
-        while results is None:
+        if results is None:
             # program = self.code_synthesis(algorithm, algorithm_setup)
             # print("The final code for execution is: -------------------------------------------------------------------------")
             # print(program)

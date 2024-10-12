@@ -1,26 +1,28 @@
-import numpy as np
-import pandas as pd
-from causallearn.search.ConstraintBased.PC import pc
-import random
-import math
-
-from algorithm.program import Programming
-
-
-def bootstrap(data,
-              algorithm_setup,
-              full_graph,
-              ts: bool = False, boot_num: int = 500):
+def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
     '''
     :param data: Given Tabular Data in Pandas DataFrame format
-    :param algorithm_setup: A dict containing the selected algorithm and its hyperparameter settings
-    :param full_graph: Causal graph using the full dataset
-    :param ts: indicator of time-series data
-    :param boot_num: number of bootstrap iterations
+    :param full_graph: An adjacent matrix in Numpy Ndarray format -
+                       causal graph using the full dataset - Matrix[i,j] = 1 indicates j->i
+    :param algorithm: String representing the algorithm name
+    :param hyperparameters: Dictionary of hyperparameter names and values
+    :param boot_num: Number of bootstrap iterations
+    :param ts: An indicator of time-series data
     :return: a dict of obvious errors in causal analysis results based on bootstrap,
-             e.g. {"X->Y: "Forced", "Y->Z: "Forbidden", "K <-> Z": Forced};
-             bootstrap probability of directed edges and common cause.
+             e.g. {"X->Y: "Forced", "Y->Z: "Forbidden"};
+             a matrix records bootstrap probability of directed edges, Matrix[i,j] records the
+             bootstrap probability of the existence of edge i -> j.
     '''
+
+    import numpy as np
+    import pandas as pd
+    import random
+    import math
+    import algorithm.wrappers as wrappers
+    from causallearn.search.ConstraintBased.PC import pc
+    from causallearn.search.ConstraintBased.FCI import fci
+    from causallearn.search.ConstraintBased.CDNOD import cdnod
+    from causallearn.search.ScoreBased.GES import ges
+    from causallearn.search.FCMBased import lingam
 
     n, m = data.shape
     errors = {}
@@ -28,7 +30,6 @@ def bootstrap(data,
     boot_effect_save = np.empty((m, m, boot_num)) # Save graphs based on bootstrapping
 
     boot_probability = np.empty((m, m)) # Save bootstrap probability of directed edges
-    boot_prob_common_cause = np.empty((m, m))  # Save bootstrap probability of common cause
 
     for boot_time in range(boot_num):
 
@@ -48,96 +49,70 @@ def bootstrap(data,
 
             boot_sample = pd.concat(subsets, ignore_index=True).iloc[1:n]
 
-            # Use PC as an example: cg_boot = pc(boot_sample.to_numpy())
-            # Use functions in code generation part
-            cg_boot = Programming(data, algorithm_setup)
-            boot_effect_save[:, :, boot_time] = cg_boot.G.graph
+            # Get the algorithm function from wrappers
+            algo_func = getattr(wrappers, algorithm)
+
+            # Execute the algorithm with data and hyperparameters
+            boot_graph, info = algo_func(hyperparameters).fit(boot_sample)
+
+            boot_effect_save[:, :, boot_time] = boot_graph
+
 
         for i in range(m):
-            for j in range(i + 1, m):
-                # Consider three cases: i->j, j->i and i<->j
+            for j in range(m):
+                if i==j:
+                    continue
+                else:
+                    # Only consider directed edge: i->j
+                    # boot_probability[i,j] represent the bootstrap probability of the edge i –> j
+                    boot_probability[i, j] = np.mean(boot_effect_save[j, i, :] == 1)
 
-                # boot_probability[i,j] represent the bootstrap probability of the edge i –> j
-                boot_probability[i,j] = np.mean(np.logical_and(boot_effect_save[j, i, :] == 1,boot_effect_save[i, j, :] == -1))
+                    # Indicator of existence of path i->j in full graph
+                    exist_ij = (full_graph[j, i] == 1)
 
-                # Indicator of existence of path i->j
-                exist_ij = np.logical_and(full_graph[j, i] == 1, full_graph[i, j] == -1)
+                    # Force the path if the probability is greater than 0.95
+                    if boot_probability[i, j] >= 0.95:
+                        # Compare with the initial graph: if the path doesn't exist then force it
+                        if not exist_ij:
+                            errors[data.columns[i] + "->" + data.columns[j]] = "Forced"
 
-                # cg.G.graph[j,i]=1 and cg.G.graph[i,j]=-1 indicate i –> j or
-                # cg.G.graph[i,j] = cg.G.graph[j,i] = 1 indicates i <-> j
-                # Force the path if the probability is greater than 0.95
-                if  boot_probability[i,j] >= 0.95:
-                    # Compare with the initial graph: if the path doesn't exist then force it
-                    if not exist_ij:
-                        errors[data.columns[i] + "->" + data.columns[j]] = "Forced"
+                    # Forbid the path if the probability is less than 0.05
+                    elif boot_probability[i, j] <= 0.05:
+                        # Compare with the initial graph: if the path exist then forbid it
+                        if exist_ij:
+                            errors[data.columns[i] + "->" + data.columns[j]] = "Forbidden"
 
-                # Forbid the path if the probability is less than 0.05
-                elif boot_probability[i,j] <= 0.05:
-                    # Compare with the initial graph: if the path exist then forbid it
-                    if exist_ij:
-                        errors[data.columns[i] + "->" + data.columns[j]] = "Forbidden"
-
-                # j –> i
-                # boot_probability[j,i] represent the bootstrap probability of the edge j –> i
-                boot_probability[j, i] = np.mean(np.logical_and(boot_effect_save[i, j, :] == 1,boot_effect_save[j, i, :] == -1))
-
-                # Indicator of existence of path i->j
-                exist_ji = np.logical_and(full_graph[i, j] == 1, full_graph[j, i] == -1)
-
-                if boot_probability[j, i] >= 0.95:
-                    # Compare with the initial graph: if the path doesn't exist then force it
-                    if not exist_ji:
-                        errors[data.columns[j] + "->" + data.columns[i]] = "Forced"
-                elif boot_probability[j, i] <= 0.05:
-                    # Compare with the initial graph: if the path exist then forbid it
-                    if exist_ji:
-                        errors[data.columns[j] + "->" + data.columns[i]] = "Forbidden"
-
-                # i <–> j
-                # boot_prob_common_cause[i, j] represent the bootstrap probability of the common cause i <–> j
-                boot_prob_common_cause[i, j] = np.mean(np.logical_and(boot_effect_save[i, j, :] == -1,boot_effect_save[j, i, :] == -1))
-
-                # Indicator of common cause i<->j
-                exist_common_ij = np.logical_and(full_graph[i, j] == -1, full_graph[j, i] == -1)
-
-                if boot_prob_common_cause[i, j] >= 0.95:
-                    # Compare with the initial graph: if the common cause doesn't exist then force it
-                    if not exist_common_ij:
-                        errors[data.columns[i] + "<->" + data.columns[j]] = "Forced"
-                elif boot_prob_common_cause[i, j] <= 0.05:
-                    # Compare with the initial graph: if the path exist then forbid it
-                    if exist_ji:
-                        errors[data.columns[j] + "<->" + data.columns[i]] = "Forbidden"
-
-    return errors, boot_probability, boot_prob_common_cause
+    return errors, boot_probability
 
 
-def llm_evaluation(data,
-                   full_graph,
-                   llm_setup,
-                   knowledge_docs):
+
+def llm_evaluation(data, full_graph, args, knowledge_docs):
     '''
     :param data: Given Tabular Data in Pandas DataFrame format
-    :param full_graph: Causal graph using the full dataset
-    :param llm_setup: information of configurations of GPT-4
+    :param full_graph: An adjacent matrix in Numpy Ndarray format -
+                       causal graph using the full dataset - Matrix[i,j] = 1 indicates j->i
+    :param gpt_setup: Contain information of configurations of GPT-4
     :param knowledge_docs: A doc containing all necessary domain knowledge information from GPT-4.
-    :return: obvious errors in causal analysis results based on LLM,
-             e.g. {"X->Y: "Forced", "Y->Z: "Forbidden"}
+    :return: obvious errors based on LLM, e.g. {"X->Y: "Forced", "Y->Z: "Forbidden"}
     '''
 
+    import ast
     from openai import OpenAI
-    client = OpenAI(organization=llm_setup.organization, project=llm_setup.project, api_key=llm_setup.apikey)
+
+    client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
 
     table_columns = '\t'.join(data.columns)
 
-    prompt = ("Based on this knowledge document: %s \n\n"
-              "and these column names %s\n\n, "
-              "conclude the causal relationship between each pair of variables among the column names,"
-              "and how much confidence you have about such relationship. "
-              "You should also report the existence of common cause between variables. \n\n"
-              "The output of your response should be a dictionary, for example, if you have 95% confidence that X cause Y,"
-              "and only 5% confidence that there is a common cause between Y and Z, "
-              "you should output {'X->Y': 95%, 'Y<->Z': 5%}.") % (knowledge_docs,table_columns)
+    prompt = (f"Based on information provided by the knowledge document: {knowledge_docs} \n\n,"
+              f"conclude the causal relationship between each pair of variables as shown among the column names: {table_columns}, "
+              "and tell me how much confidence you have about such causal relationship. "
+              "The output of your response should be in dict format, which can be detected by python. "
+              "For example, if you have 95% confidence to conclude that X cause Y, and only 5% confidence that Y causes Z,"
+              "you should output {'X->Y': 0.95, 'Y->Z': 0.05}. "
+              "For the format of dict you give, make sure obey the follow rules: \n\n"
+              "1. Just give me the output in a dict format, do not provide other information! \n\n"
+              "2. The feature name within keys should always be the same as the column names I provided!\n\n"
+              "3. Always use directed right arrow like '->' and DO NOT use left arrow '->' in the dict. For example, if you want to express X causes Y, always use 'X->Y' and DO NOT use 'Y<-X.")
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
@@ -146,47 +121,34 @@ def llm_evaluation(data,
         ]
     )
 
-    # known_effect is a dict have format: {'X->Y': 95%, 'Y<->Z': 5%}
+    # The output from GPT is str
     known_effect = response.choices[0].message.content
+
+    known_effect_cleaned = known_effect.replace('```python', '').replace('```', '').strip()
+
+    # Convert to dict format
+    known_effect_dict = ast.literal_eval(known_effect_cleaned)
 
     errors = {}
 
-    for key in known_effect.keys():
-
-        # Consider common cause
-        if "<->" in key:
-            split_key = key.split("<->")
+    for key in known_effect_dict.keys():
+        # Consider directed path
+        if "->" in key:
+            split_key = key.split("->")
             i = data.columns.get_loc(split_key[0])
             j = data.columns.get_loc(split_key[1])
 
-            # Indicator of existence of path i<->j
-            exist_common_ij = np.logical_and(full_graph[j, i] == -1, full_graph[i, j] == -1)
-
-            # If this path is confirmed by LLM
-            if known_effect.get(key) >= 0.95:
-                # Compare with the initial graph: if the path doesn't exist then force this path
-                if not exist_common_ij:
-                    errors[key] = "Forced"
-
-            # The causal effect is rejected by LLM
-            if known_effect.get(key) <= 0.05:
-                # Compare with the initial graph: if the path does exist then forbid this path
-                if exist_common_ij:
-                    errors[key] = "Forbidden"
-
-        # Consider directed path
-        else:
             # Indicator of existence of path i->j
-            exist_ij = np.logical_and(full_graph[j, i] == 1, full_graph[i, j] == -1)
+            exist_ij = (full_graph[j, i] == 1)
 
             # If this path is confirmed by LLM
-            if known_effect.get(key) >= 0.95:
+            if known_effect_dict.get(key) >= 0.95:
                 # Compare with the initial graph: if the path doesn't exist then force this path
                 if not exist_ij:
                     errors[key] = "Forced"
 
             # The causal effect is rejected by LLM
-            if known_effect.get(key) <= 0.05:
+            if known_effect_dict.get(key) <= 0.05:
                 # Compare with the initial graph: if the path does exist then forbid this path
                 if exist_ij:
                     errors[key] = "Forbidden"
@@ -195,41 +157,30 @@ def llm_evaluation(data,
 
 
 
-def graph_effect_prompts (column_names,
-                          graph,
-                          boot_probability,
-                          boot_prob_common_cause):
+def graph_effect_prompts (data, graph, boot_probability):
     '''
-    :param column_names: Column names.
-    :param graph: causal graph
-    :param boot_probability: bootstrap probability of directed edges, e.g., i -> j
-    :param boot_prob_common_cause: bootstrap probability of common cause, e.g., i <-> j
+    :param data: Pandas DataFrame format.
+    :param graph: An adjacent matrix in Numpy Ndarray format - Matrix[i,j] = 1 indicates j->i
+    :param boot_probability: A matrix in Numpy Ndarray format
+                             recording bootstrap probability of directed edges,
+                             e.g., Matrix[i,j] records probability of existence of edge i -> j.
     :return: A prompt describing relationships in the causal graph and corresponding bootstrap probability.
     '''
 
-    m = graph.shape[0]
+    m = data.shape[1]
+    column_names = data.columns
+
     effect_prompt = []
 
     for i in range(m):
-        for j in range(i+1,m):
-            if np.logical_and(graph[j, i] == 1, graph[i, j] == -1):
-                effect_prompt.append(column_names[i] + "->" + column_names[j] +
-                                     "(the bootstrap probability of such edge is" + boot_probability[i,j] + ")")
-
-            if np.logical_and(graph[i, j] == 1, graph[j, i] == -1):
-                effect_prompt.append(column_names[j] + "->" + column_names[i]+
-                                     "(the bootstrap probability of such edge is" + boot_probability[j,i] + ")")
-
-            if np.logical_and(graph[i, j] == -1, graph[j, i] == -1):
-                effect_prompt.append(column_names[j] + "<->" + column_names[i]+
-                                     "(the bootstrap probability of there exist a common cause is" + boot_prob_common_cause[i,j] + ")")
+        for j in range(m):
+            if graph[j, i] == 1:
+                effect_prompt.append(str(column_names[i]) + "->" + str(column_names[j]) +
+                                     " (the bootstrap probability of such edge is " + str(boot_probability[i, j]) + ")")
 
     graph_prompt = "All of the edges suggested by the causal discovery are below:\n" + "\n".join(effect_prompt)
 
-
     return graph_prompt
-
-
 
 
 

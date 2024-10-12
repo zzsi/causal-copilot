@@ -8,6 +8,7 @@ def load_data(directory):
     import numpy as np
     import pandas as pd
     import os
+    import numpy as np
 
     if not os.path.exists(directory):
         raise FileNotFoundError(f"The directory {directory} does not exist.")
@@ -36,18 +37,15 @@ def load_data(directory):
 def statics_info(args, data):
     # Fang Nan Implemented
     '''
-    :param args: a class containing pre-specified information - an indicator of time-series data,
-                 missing ratio for data cleaning,
-                 significance level (default 0.1),
-                 maximum number of tests (default 1000).
+    :param args: configurations.
     :param data: Given Tabular Data in Pandas DataFrame format
     :return: A dict containing all necessary statics information
     '''
     from preprocess.stat_info_functions import stat_info_collection
 
-    statics_dict = stat_info_collection(args=args, data=data)
+    statics_dict, preprocessed_data = stat_info_collection(args=args, data=data)
 
-    return statics_dict
+    return statics_dict, preprocessed_data
 
 
 def knowledge_info(args, data):
@@ -62,10 +60,11 @@ def knowledge_info(args, data):
     table_name = args.data_file
     table_columns = '\t'.join(data.columns._data)
     prompt = ("I will conduct causal discovery on the Tabular Dataset %s containing the following Columns: \n\n"
-              "%s\n\nPlease list the following information with clear format and accurate expression:"
-              "\n1.Detailed Explanation about the Variables (columns);"
+              "%s\n\nIf the Variables Names are Meaningful, Please list the following information with clear format and accurate expression:"
+              "\n1.Detailed Explanation about the Variables;"
               "\n2.Possible Causal Relations among these variables;"
-              "\n3.Other Background Domain Knowledge that may be helpful for experts to design causal discovery algorithms") % (
+              "\n3.Other Background Domain Knowledge that may be helpful for experts to design causal discovery algorithms\n\n"
+              "Otherwise, if the Variable Names are just Symbols (like x1, y1), Please Return 'No Knowledge'") % (
              table_name, table_columns)
     response = client.chat.completions.create(
         model="gpt-4o-mini",

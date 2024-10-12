@@ -6,15 +6,15 @@ class Reranker(object):
     def statics_dict2string(self, statics_dict):
         return str(statics_dict)
 
-    def algo_can2string(self, algo_candidates):
+    def algo_can2string(self, algo_candidates, hp_context):
         algo_candidate_string = ''
         algo2des_cond_hyper = {}
         for algo_name in algo_candidates:
-            # todo hyper_dict processing
-            algo_des, algo_justify = algo_candidates[algo_name]['description'], algo_candidates[algo_name]['justification']
-            algo_string = algo_name + ':\nDescription: ' + algo_des + '\nJustification: ' + algo_justify
-            algo2des_cond_hyper[algo_name] = algo_string
-            algo_candidate_string += algo_string + "\n\n"
+            if algo_name in hp_context:
+                algo_des, algo_justify = algo_candidates[algo_name]['description'], algo_candidates[algo_name]['justification']
+                algo_string = algo_name + ':\nDescription: ' + algo_des + '\nJustification: ' + algo_justify
+                algo2des_cond_hyper[algo_name] = algo_string
+                algo_candidate_string += algo_string + "\n\n"
         return algo_candidate_string, algo2des_cond_hyper
 
     def extract(self, output, start_str, end_str):
@@ -45,11 +45,31 @@ class Reranker(object):
         '''
         from openai import OpenAI
         client = OpenAI(organization=self.args.organization, project=self.args.project, api_key=self.args.apikey)
+        # Set up the Hyperparameters
+        # Load hyperparameters prompt template
+        import json
+        import algorithm.wrappers as wrappers
+
+        with open("algorithm/context/hyperparameters_prompt.txt", "r") as f:
+            hp_prompt = f.read()
+
+        # Load hyperparameters context
+        with open("algorithm/context/hyperparameters.json", "r") as f:
+            hp_context = json.load(f)
+
+        # Load additional context files for parameters that have them
+        for algo in hp_context:
+            for param in hp_context[algo]:
+                if 'context_file' in hp_context[algo][param]:
+                    context_file_path = hp_context[algo][param]['context_file']
+                    with open(context_file_path, "r") as cf:
+                        hp_context[algo][param]['context_content'] = cf.read()
+
         table_name = self.args.data_file
         table_columns = '\t'.join(data.columns._data)
         knowledge_info = '\n'.join(knowledge_docs)
         statics_info = self.statics_dict2string(statics_dict)
-        algo_info, algo2des_cond_hyper = self.algo_can2string(algo_candidates)
+        algo_info, algo2des_cond_hyper = self.algo_can2string(algo_candidates, hp_context)
 
         # Select the Best Algorithm
         prompt = ("I will conduct causal discovery on the Tabular Dataset %s containing the following Columns:\n\n"
@@ -72,26 +92,6 @@ class Reranker(object):
             print("The received answer for rerank is: -------------------------------------------------------------------------")
             print(output)
             selected_algo = self.extract(output, '<Algo>', '</Algo>')
-
-        # Set up the Hyperparameters
-        # Load hyperparameters prompt template
-        import json
-        import algorithm.wrappers as wrappers
-
-        with open("algorithm/context/hyperparameters_prompt.txt", "r") as f:
-            hp_prompt = f.read()
-
-        # Load hyperparameters context
-        with open("algorithm/context/hyperparameters.json", "r") as f:
-            hp_context = json.load(f)
-
-        # Load additional context files for parameters that have them
-        for algo in hp_context:
-            for param in hp_context[algo]:
-                if 'context_file' in hp_context[algo][param]:
-                    context_file_path = hp_context[algo][param]['context_file']
-                    with open(context_file_path, "r") as cf:
-                        hp_context[algo][param]['context_content'] = cf.read()
 
         # Get algorithm description and hyperparameters
         algo_description = algo2des_cond_hyper[selected_algo]
