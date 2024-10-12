@@ -16,7 +16,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="/Users/fangnan/Desktop/simulated.csv",
+        default="data/20240918_224140_base_nodes10_samples2000/base_data.csv",
         help='Path to the input dataset file (e.g., CSV format)'
     )
 
@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument(
         '--ground-truth',
         type=str,
-        default="/Users/fangnan/Desktop/truth.csv",
+        default="data/20240918_224140_base_nodes10_samples2000/base_graph.npy",
         help='Path to the ground truth matrix (e.g., CSV format)'
     )
 
@@ -157,9 +157,6 @@ def main():
     args = parse_args()
     data = load_data(args.data_file)
 
-    mat_ground_truth = load_data(args.ground_truth).to_numpy()
-
-
     # background info collection
     print("Original Data: ", data)
     
@@ -193,15 +190,20 @@ def main():
     print(algorithm)
     print(hyper_suggest)
 
+    #algorithm = 'GES'
+    #hyper_suggest = {'score_func': 'local_score_CV_general', 'maxP': 5}
     programmer = Programming(args)
     code, results = programmer.forward(preprocessed_data, algorithm, hyper_suggest)
     print(results)
 
     judge = Judge(args)
     flag, _, boot_probability, revised_graph = judge.forward(preprocessed_data, results, algorithm, hyper_suggest, knowledge_docs)
-    print(flag)
-    print(boot_probability)
+    #print(flag)
+    #print(boot_probability)
 
+    mat_ground_truth = load_data(args.ground_truth)
+    print("Revised Graph: ", revised_graph)
+    print("Math Ground Truth: ", mat_ground_truth)
     shd, precision, recall, f1 = judge.evaluation(revised_graph, mat_ground_truth)
     print(shd, precision, recall, f1)
 

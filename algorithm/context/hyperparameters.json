@@ -92,9 +92,9 @@
         "default": "local_score_BIC",
         "BIC": "local_score_BIC",
         "BDeu": "local_score_BDeu",
-        "CV_general": "local_score_cv_general",
+        "CV_general": "local_score_CV_general",
         "marginal_general": "local_score_marginal_general",
-        "CV_multi": "local_score_cv_multi",
+        "CV_multi": "local_score_CV_multi",
         "marginal_multi": "local_score_marginal_multi"
       },
       "reasoning": "Use 'local_score_BIC' for a good balance of fit and complexity. 'BDeu' for discrete data. CV and marginal scores for more robust model selection, especially with limited data.",

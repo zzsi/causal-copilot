@@ -20,9 +20,16 @@ class Judge(object):
         # Statistics Perspective: Bootstrapping to get probability of edges using the selected algorithm.
         errors_stat, boot_probability = bootstrap(data=data, full_graph=full_graph, algorithm=algorithm, hyperparameters=hyperparameters,
                                                   boot_num=self.args.boot_num, ts=self.args.ts)
+        print("Errors from Bootstrap method: ", errors_stat)
+        print("Bootstrap Probability: ", boot_probability)
 
         # LLM perspective: errors based on domain knowledge from GPT-4
-        errors_llm = llm_evaluation(data=data, full_graph=full_graph, args=self.args, knowledge_docs=knowledge_docs)
+        if "No Knowledge" in knowledge_docs:
+            errors_llm = []
+            print("No Errors are found by LLM, due to No Knowledge")
+        else:
+            errors_llm = llm_evaluation(data=data, full_graph=full_graph, args=self.args, knowledge_docs=knowledge_docs)
+            print("Errors from LLMs: ", errors_llm)
 
         # Combine error obtained from both statistics and LLM perspectives
         errors = {**errors_stat, **errors_llm}

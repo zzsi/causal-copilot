@@ -6,6 +6,7 @@ def load_data(path):
     '''
     import pandas as pd
     import os
+    import numpy as np
 
     if not os.path.exists(path):
         raise FileNotFoundError(f"The file {path} does not exist.")
@@ -16,6 +17,9 @@ def load_data(path):
         data = pd.read_csv(path)
     elif file_extension in ['.xls', '.xlsx']:
         data = pd.read_excel(path)
+    elif file_extension == '.npy':
+        data = np.load(path)
+        data = data.T
     else:
         raise ValueError(f"Unsupported file format: {file_extension}")
 
@@ -48,10 +52,11 @@ def knowledge_info(args, data):
     table_name = args.data_file
     table_columns = '\t'.join(data.columns._data)
     prompt = ("I will conduct causal discovery on the Tabular Dataset %s containing the following Columns: \n\n"
-              "%s\n\nPlease list the following information with clear format and accurate expression:"
-              "\n1.Detailed Explanation about the Variables (columns);"
+              "%s\n\nIf the Variables Names are Meaningful, Please list the following information with clear format and accurate expression:"
+              "\n1.Detailed Explanation about the Variables;"
               "\n2.Possible Causal Relations among these variables;"
-              "\n3.Other Background Domain Knowledge that may be helpful for experts to design causal discovery algorithms") % (
+              "\n3.Other Background Domain Knowledge that may be helpful for experts to design causal discovery algorithms\n\n"
+              "Otherwise, if the Variable Names are just Symbols (like x1, y1), Please Return 'No Knowledge'") % (
              table_name, table_columns)
     response = client.chat.completions.create(
         model="gpt-4o-mini",
