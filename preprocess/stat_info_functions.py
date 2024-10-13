@@ -14,6 +14,9 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.stats.stattools import jarque_bera
 from statsmodels.tsa.stattools import adfuller
 
+# path = '/Users/fangnan/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/ML Research/Causality-Copilot/data/simulation/simulated_data/20241013_162600_base_nodes10_samples2000/base_data.csv'
+# data = pd.read_csv(path)
+
 
 def data_preprocess (df: pd.DataFrame, ratio: float = 0.5, ts: bool = False):
     '''
@@ -144,7 +147,7 @@ def linearity_check (df: pd.DataFrame, test_pairs: int = 1000, alpha: float = 0.
         OLS_model.append(results)
 
         # Ramsey’s RESET - H0: linearity is satisfied
-        reset_test = linear_reset(results)
+        reset_test = linear_reset(results, power=2)
         reset_pval.append(reset_test.pvalue)
 
     # Benjamini & Yekutieli procedure - True: reject H0 -- linearity is not satisfied
@@ -336,6 +339,18 @@ def stat_info_collection(args, data):
     return stat_info_combine, imputed_data
 
 
-
-
+# class ParaStatCollect:
+#     def __init__(self):
+#         self.ts = False
+#         self.ratio = 0.5
+#         self.alpha = 0.1
+#         self.num_test = 100
+#         self.domain_index = None
+#
+# args = ParaStatCollect()
+#
+#
+# stat_info_combine, _ = stat_info_collection(args = args, data = data)
+#
+# print(stat_info_combine)
 

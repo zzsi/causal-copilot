@@ -2,7 +2,7 @@
 # import pandas as pd
 # import numpy as np
 # import algorithm.wrappers as wrappers
-
+#
 # path = '/Users/fangnan/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/ML Research/Causality-Copilot/data/simulation/simulated_data/20241012_145758_base_nodes4_samples1000/base_data.csv'
 # file_extension = os.path.splitext(path)[1].lower()
 # data = pd.read_csv(path)
@@ -36,7 +36,7 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
     :return: a dict of obvious errors in causal analysis results based on bootstrap,
              e.g. {"X->Y: "Forced", "Y->Z: "Forbidden"};
              a matrix records bootstrap probability of directed edges, Matrix[i,j] records the
-             bootstrap probability of the existence of edge i -> j.
+             bootstrap probability of the existence of edge j -> i.
     '''
 
     import numpy as np
@@ -85,20 +85,20 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
                     continue
                 else:
                     # Only consider directed edge: i->j
-                    # boot_probability[i,j] represent the bootstrap probability of the edge i –> j
-                    boot_probability[i, j] = np.mean(boot_effect_save[j, i, :] == 1)
+                    # boot_probability[j,i] represent the bootstrap probability of the edge i –> j
+                    boot_probability[j, i] = np.mean(boot_effect_save[j, i, :] == 1)
 
                     # Indicator of existence of path i->j in full graph
                     exist_ij = (full_graph[j, i] == 1)
 
                     # Force the path if the probability is greater than 0.95
-                    if boot_probability[i, j] >= 0.95:
+                    if boot_probability[j, i] >= 0.95:
                         # Compare with the initial graph: if the path doesn't exist then force it
                         if not exist_ij:
                             errors[data.columns[i] + "->" + data.columns[j]] = "Forced"
 
                     # Forbid the path if the probability is less than 0.05
-                    elif boot_probability[i, j] <= 0.05:
+                    elif boot_probability[j, i] <= 0.05:
                         # Compare with the initial graph: if the path exist then forbid it
                         if exist_ij:
                             errors[data.columns[i] + "->" + data.columns[j]] = "Forbidden"
@@ -107,6 +107,8 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
 
 # errors, boot_probability = bootstrap(data, graph, 'PC', hyperparameters, 10, False)
 # print(boot_probability)
+
+
 
 def llm_evaluation(data, full_graph, args, knowledge_docs):
     '''
