@@ -1,4 +1,5 @@
 # Kun Zhou Implemented
+from data.simulation.simulation import SimulationManager
 from preprocess.dataset import load_data, statics_info, knowledge_info
 from algorithm.filter import Filter
 from algorithm.program import Programming
@@ -16,7 +17,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="data/20240918_224140_base_nodes10_samples2000/base_data.csv",
+        default="simulated_data/20240918_224140_base_nodes4_samples1000",
         help='Path to the input dataset file (e.g., CSV format)'
     )
 
@@ -144,6 +145,13 @@ def parse_args():
     )
 
     parser.add_argument(
+        '--simulation_mode',
+        type=str,
+        default="online",
+        help='Simulation mode: online or offline'
+    )
+
+    parser.add_argument(
         '--debug',
         action='store_true',
         help='Enable debugging mode'
@@ -155,7 +163,13 @@ def parse_args():
 
 def main():
     args = parse_args()
-    data = load_data(args.data_file)
+    if args.simulation_mode == "online":
+        simulation_manager = SimulationManager(args)
+        config, data, graph = simulation_manager.generate_dataset()
+    elif args.simulation_mode == "offline":
+        config, data, graph = load_data(args.data_file)
+    else:
+        raise ValueError("Invalid simulation mode. Please choose 'online' or 'offline'.")
 
     # background info collection
     print("Original Data: ", data)

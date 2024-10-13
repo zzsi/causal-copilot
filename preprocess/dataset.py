@@ -1,29 +1,37 @@
-def load_data(path):
+def load_data(directory):
     # Xinyue Wang Implemented
     '''
     :param path: str for data path or filename
     :return: pandas dataframe
     '''
+    import json
+    import numpy as np
     import pandas as pd
     import os
     import numpy as np
 
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"The file {path} does not exist.")
-
-    file_extension = os.path.splitext(path)[1].lower()
-
-    if file_extension == '.csv':
-        data = pd.read_csv(path)
-    elif file_extension in ['.xls', '.xlsx']:
-        data = pd.read_excel(path)
-    elif file_extension == '.npy':
-        data = np.load(path)
-        data = data.T
+    if not os.path.exists(directory):
+        raise FileNotFoundError(f"The directory {directory} does not exist.")
+    
+    config_path = f"{directory}/config.json"
+    data_path = f"{directory}/base_data.csv"
+    graph_path = f"{directory}/base_graph.npy"
+    
+    if os.path.exists(config_path):
+        with open(config_path, 'r') as f:
+            config = json.load(f)
     else:
-        raise ValueError(f"Unsupported file format: {file_extension}")
+        config = None
+    if os.path.exists(data_path):
+        data = pd.read_csv(data_path)
+    else:
+        raise FileNotFoundError(f"The data file {data_path} does not exist.")
+    if os.path.exists(graph_path):
+        graph = np.load(graph_path)
+    else:
+        graph = None
 
-    return data
+    return config, data, graph
 
 
 def statics_info(args, data):

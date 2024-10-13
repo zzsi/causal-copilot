@@ -16,7 +16,8 @@ class NOTEARS(CausalDiscoveryAlgorithm):
             'tabu_edges': None,
             'tabu_parent_nodes': None,
             'tabu_child_nodes': None,
-            'sparse': False
+            'beta': 0.1,
+            'sparse': True
         }
         self._params.update(params)
 
@@ -24,27 +25,27 @@ class NOTEARS(CausalDiscoveryAlgorithm):
         return self._params
     
     def get_primary_params(self):
-        self._primary_param_keys = ['max_iter', 'sparse']
+        self._primary_param_keys = ['max_iter', 'sparse', 'beta']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
     
     def get_secondary_params(self):
-        self._secondary_param_keys = ['h_tol', 'w_threshold','tabu_edges', 'tabu_parent_nodes', 'tabu_child_nodes']
+        self._secondary_param_keys = ['h_tol', 'w_threshold','tabu_edges', 'tabu_parent_nodes', 'tabu_child_nodes', 'beta']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: Union[pd.DataFrame, np.ndarray]) -> Tuple[np.ndarray, Dict]:
         sparse = self._params.pop('sparse', False)
         if isinstance(data, pd.DataFrame):
             node_names = list(data.columns)
-            if sparse:
-                sm = from_pandas_lasso(data, **self.get_primary_params(), **self.get_secondary_params())
-            else:
-                sm = from_pandas(data, **self.get_primary_params(), **self.get_secondary_params())
         else:
             node_names = [f"X{i}" for i in range(data.shape[1])]
-            if sparse:
-                sm = from_numpy_lasso(data, **self.get_primary_params(), **self.get_secondary_params())
-            else:
-                sm = from_numpy(data, **self.get_primary_params(), **self.get_secondary_params())
+            data = pd.DataFrame(data, columns=node_names)
+
+        if sparse:
+            sm = from_pandas_lasso(data, **self.get_primary_params(), **self.get_secondary_params())
+        else:
+            secondary_params = self.get_secondary_params()
+            secondary_params.pop('beta')
+            sm = from_pandas(data, **self.get_primary_params(), **secondary_params)
         # Add the 'sparse' parameter back
         self._params['sparse'] = sparse 
 
@@ -76,10 +77,11 @@ class NOTEARS(CausalDiscoveryAlgorithm):
         
         # Test with numpy array
         print("Testing NOTEARS algorithm with numpy array:")
-        params = {
+        params = {  
             'max_iter': 100,
             'h_tol': 1e-8,
-            'w_threshold': 0.1
+            'w_threshold': 0.0,
+            'sparse': True
         }
         adj_matrix, info = self.fit(X)
         print("Adjacency Matrix:")
