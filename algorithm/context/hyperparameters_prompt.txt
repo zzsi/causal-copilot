@@ -39,6 +39,8 @@ Please provide your suggestions in a structured JSON format. Your response shoul
   }
 }
 
-Consider the trade-offs between accuracy and computational efficiency when suggesting values. If you're unsure about a specific value, you may suggest using the default value and explain why.
+Please always determine the hyperparameters from its corresponding "Suggested Values" part, DO NOT use any values just exist in other context but not in "Suggested Values".
+
+Please consider the trade-offs between accuracy and computational efficiency when suggesting values. If you're unsure about a specific value, you may suggest using the default value and explain why.
 
 Please provide your hyperparameter suggestions following this JSON structure.

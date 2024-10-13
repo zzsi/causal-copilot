@@ -78,6 +78,7 @@ class Reranker(object):
                   "%s\n\nBased on the above information, please select the best-suited algorithm from the following candidate:\n\n"
                   "%s\n\nPlease highlight the selected algorithm name using the following template <Algo>Name</Algo> in the ending of the output") % (table_name, table_columns, knowledge_info, statics_info, algo_info)
         selected_algo = ''
+        print("Keys in algo2des_cond_hyper:", algo2des_cond_hyper.keys())
         while selected_algo not in algo2des_cond_hyper:
             print("The used prompt for rerank is: -------------------------------------------------------------------------")
             print(prompt)

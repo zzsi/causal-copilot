@@ -17,7 +17,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="simulated_data/20240918_224140_base_nodes4_samples1000",
+        default="data/20240918_225847_base_nodes8_samples1500",
         help='Path to the input dataset file (e.g., CSV format)'
     )
 
@@ -25,7 +25,7 @@ def parse_args():
     parser.add_argument(
         '--ground-truth',
         type=str,
-        default="data/20240918_224140_base_nodes10_samples2000/base_graph.npy",
+        default="data/20240918_224140_base_nodes4_samples1000/base_graph.npy",
         help='Path to the ground truth matrix (e.g., CSV format)'
     )
 
@@ -110,7 +110,7 @@ def parse_args():
     parser.add_argument(
         '--boot_num',
         type=int,
-        default=100,
+        default=5,
         help='Number of bootstrap iterations'
     )
 
@@ -147,13 +147,14 @@ def parse_args():
     parser.add_argument(
         '--simulation_mode',
         type=str,
-        default="online",
+        default="offline",
         help='Simulation mode: online or offline'
     )
 
     parser.add_argument(
         '--debug',
         action='store_true',
+        default=False,
         help='Enable debugging mode'
     )
 
@@ -211,13 +212,19 @@ def main():
     print(results)
 
     judge = Judge(args)
+    mat_ground_truth = graph
+    print("Original Graph: ", results)
+    print("Mat Ground Truth: ", mat_ground_truth)
+
+    shd, precision, recall, f1 = judge.evaluation(results, mat_ground_truth)
+    print(shd, precision, recall, f1)
+
     flag, _, boot_probability, revised_graph = judge.forward(preprocessed_data, results, algorithm, hyper_suggest, knowledge_docs)
     #print(flag)
     #print(boot_probability)
 
-    mat_ground_truth = load_data(args.ground_truth)
     print("Revised Graph: ", revised_graph)
-    print("Math Ground Truth: ", mat_ground_truth)
+    print("Mat Ground Truth: ", mat_ground_truth)
     shd, precision, recall, f1 = judge.evaluation(revised_graph, mat_ground_truth)
     print(shd, precision, recall, f1)
 

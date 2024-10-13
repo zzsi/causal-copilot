@@ -203,6 +203,3 @@ def graph_effect_prompts (data, graph, boot_probability):
     graph_prompt = "All of the edges suggested by the causal discovery are below:\n" + "\n".join(effect_prompt)
 
     return graph_prompt
-
-
-
