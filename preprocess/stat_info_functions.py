@@ -51,7 +51,7 @@ def data_preprocess (df: pd.DataFrame, ratio: float = 0.5, ts: bool = False):
 
         if pd.api.types.is_numeric_dtype(dtype) and dtype != 'bool':
             column_type[column] = 'Continuous'
-        elif isinstance(dtype, pd.CategoricalDtype) or pd.api.types.is_object_dtype(dtype) or dtype == 'bool':
+        elif isinstance(dtype, pd.CategoricalDtype) or pd.api.types.is_object_dtype(dtype) or dtype == 'bool' or dtype == 'int64':
             column_type[column] = 'Category'
 
     all_type = list(column_type.values())
@@ -273,12 +273,16 @@ def stat_info_collection(args, data):
     time_series_res = {"Time-series": args.ts}
     sample_size = {"Sample Size": n}
     feature_size = {"Number of Features": m}
+    domain_index = {'Domain Index': args.domain_index}
 
     # Data pre-processing
     clean_data, miss_res, each_type, dataset_type = data_preprocess(df = data, ratio = args.ratio, ts = args.ts)
 
     # Imputation
-    imputed_data = imputation(df = clean_data, column_type = each_type, ts = args.ts)
+    if miss_res['Missingness'] == True:
+        imputed_data = imputation(df = clean_data, column_type = each_type, ts = args.ts)
+    else:
+        imputed_data = clean_data
 
     if not args.ts:
         stationary_res = {"Stationary": False}
@@ -316,13 +320,13 @@ def stat_info_collection(args, data):
             linearity_res = {"Linearity": False}
             gaussian_res = {"Gaussian Error": False}
 
-     # Assumption checking for time-series data
+    # Assumption checking for time-series data
     if args.ts:
         linearity_res = {"Linearity": False}
         gaussian_res = {"Gaussian Error": False}
         stationary_res = stationary_check(df = imputed_data, max_test=args.num_test, alpha=args.alpha)
 
-    stat_info_combine = {**sample_size, **feature_size, **time_series_res,
+    stat_info_combine = {**sample_size, **feature_size, **time_series_res, **domain_index,
                          **miss_res, **dataset_type, **linearity_res, **gaussian_res, **stationary_res}
 
     if stat_info_combine['Time-series'] == False:
@@ -330,5 +334,8 @@ def stat_info_collection(args, data):
     stat_info_combine = json.dumps(stat_info_combine, indent=4)
 
     return stat_info_combine, imputed_data
+
+
+
 
 
