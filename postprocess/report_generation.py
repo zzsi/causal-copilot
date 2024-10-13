@@ -28,7 +28,7 @@ def parse_args():
     parser.add_argument(
         '--visual-dir',
         type=str,
-        default="postprocess/test_data/20241007_184921_base_nodes8_samples1500/output_graph",
+        default="/postprocess/test_data/20241007_184921_base_nodes8_samples1500/output_graph",
         help='Directory of the visualization graph'
     )
 
