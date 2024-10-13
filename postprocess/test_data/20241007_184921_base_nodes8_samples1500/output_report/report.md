@@ -30,7 +30,7 @@ The following are result graphs produced by our algorithm. The initial graph is 
 
 | <center> Initial Graph | <center> Revised Graph |
 | -- | -- |
-| ![Initial Graph](postprocess/test_data/20241007_184921_base_nodes8_samples1500/output_graph/Initial_Graph.jpg) | ![Revised Graph](postprocess/test_data/20241007_184921_base_nodes8_samples1500/output_graph/Revised_Graph.jpg) |
+| ![Initial Graph](/postprocess/test_data/20241007_184921_base_nodes8_samples1500/output_graph/Initial_Graph.jpg) | ![Revised Graph](/postprocess/test_data/20241007_184921_base_nodes8_samples1500/output_graph/Revised_Graph.jpg) |
 
 ### Interpretation of Causal Relationships
 - **X1 → X0**: There is a direct causal influence of X1 on X0, meaning that changes in X1 will directly impact X0.
