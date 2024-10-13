@@ -202,40 +202,40 @@ def main():
     
     print("Preprocessed Data: ", preprocessed_data)
     print("Statics Info: ", statistics_dict)
-    # print("Knowledge Info: ", knowledge_docs)
-    #
-    # # algorithm selection and deliberation initialization
-    # filter = Filter(args)
-    # algo_candidates = filter.forward(preprocessed_data, statistics_dict)
-    # print(algo_candidates)
-    #
-    # reranker = Reranker(args)
-    # algorithm, hyper_suggest = reranker.forward(preprocessed_data, algo_candidates, statistics_dict, knowledge_docs)
-    # print(algorithm)
-    # print(hyper_suggest)
-    #
-    # #algorithm = 'GES'
-    # #hyper_suggest = {'score_func': 'local_score_CV_general', 'maxP': 5}
-    # programmer = Programming(args)
-    # code, results = programmer.forward(preprocessed_data, algorithm, hyper_suggest)
-    # print(results)
-    #
-    # judge = Judge(args)
-    # mat_ground_truth = graph
-    # print("Original Graph: ", results)
-    # print("Mat Ground Truth: ", mat_ground_truth)
-    #
-    # shd, precision, recall, f1 = judge.evaluation(results, mat_ground_truth)
-    # print(shd, precision, recall, f1)
-    #
-    # flag, _, boot_probability, revised_graph = judge.forward(preprocessed_data, results, algorithm, hyper_suggest, knowledge_docs)
-    # #print(flag)
-    # #print(boot_probability)
-    #
-    # print("Revised Graph: ", revised_graph)
-    # print("Mat Ground Truth: ", mat_ground_truth)
-    # shd, precision, recall, f1 = judge.evaluation(revised_graph, mat_ground_truth)
-    # print(shd, precision, recall, f1)
+    print("Knowledge Info: ", knowledge_docs)
+
+    # algorithm selection and deliberation initialization
+    filter = Filter(args)
+    algo_candidates = filter.forward(preprocessed_data, statistics_dict)
+    print(algo_candidates)
+
+    reranker = Reranker(args)
+    algorithm, hyper_suggest = reranker.forward(preprocessed_data, algo_candidates, statistics_dict, knowledge_docs)
+    print(algorithm)
+    print(hyper_suggest)
+
+    #algorithm = 'GES'
+    #hyper_suggest = {'score_func': 'local_score_CV_general', 'maxP': 5}
+    programmer = Programming(args)
+    code, results = programmer.forward(preprocessed_data, algorithm, hyper_suggest)
+    print(results)
+
+    judge = Judge(args)
+    mat_ground_truth = graph
+    print("Original Graph: ", results)
+    print("Mat Ground Truth: ", mat_ground_truth)
+
+    shd, precision, recall, f1 = judge.evaluation(results, mat_ground_truth)
+    print(shd, precision, recall, f1)
+
+    flag, _, boot_probability, revised_graph = judge.forward(preprocessed_data, results, algorithm, hyper_suggest, knowledge_docs)
+    #print(flag)
+    #print(boot_probability)
+
+    print("Revised Graph: ", revised_graph)
+    print("Mat Ground Truth: ", mat_ground_truth)
+    shd, precision, recall, f1 = judge.evaluation(revised_graph, mat_ground_truth)
+    print(shd, precision, recall, f1)
 
     # algorithm selection process
     '''
