@@ -51,67 +51,6 @@ class Judge(object):
 
         return errors, boot_probability, revised_graph
 
-    # def report_generation(self, llm_setup, data, graph, statics_dict, algorithm_setup,
-    #                       knowledge_docs, boot_probability, boot_prob_common_cause):
-    #     '''
-    #     generate and save the report
-    #     :param llm_setup: information of configurations of GPT-4
-    #     :param data: Given Tabular Data in Pandas DataFrame format
-    #     :param graph: graph generated using causal discovery algorithm
-    #     :param statics_dict: A dict containing all necessary statics information
-    #     :param algorithm_setup: A dict containing the selected algorithm and its hyperparameter settings
-    #     :param knowledge_docs: A doc containing all necessary domain knowledge information from GPT-4
-    #     :param boot_probability: bootstrap probability of directed edges, e.g., i -> j
-    #     :param boot_prob_common_cause: bootstrap probability of common cause, e.g., i <-> j
-    #     :return: Str: A technique report explaining all the results for readers
-    #     '''
-    #     from openai import OpenAI
-    #     import numpy as np
-    #
-    #     client = OpenAI(organization=llm_setup.organization, project=llm_setup.project, api_key=llm_setup.apikey)
-    #
-    #     # Data information
-    #     table_columns = '\t'.join(data.columns)
-    #
-    #     # Data property prompt
-    #     if statics_dict.get("Stationary") == "non time-series":
-    #         missing = "has missing values," if statics_dict.get("Missingness") else "does not have missing values,"
-    #         data_type = f"is {statics_dict.get('Data Type')} data,"
-    #         linear = "satisfies the linearity assumption," if statics_dict.get("Linearity") else "violates the linearity assumption,"
-    #         gaussian = ",and satisfies the Gaussian error assumption" if statics_dict.get("Gaussian Error") else ",and violates the Gaussian error assumption"
-    #         data_prop_prompt = missing + data_type + linear + gaussian
-    #     else:
-    #         data_prop_prompt = f"is {'stationary' if statics_dict.get('Stationary') else 'non-stationary'} time-series data"
-    #
-    #     # Graph prompt
-    #     graph_prompt = graph_effect_prompts(
-    #         column_names=data.columns,
-    #         graph=graph,
-    #         boot_probability=boot_probability,
-    #         boot_prob_common_cause=boot_prob_common_cause
-    #     )
-    #
-    #     prompt = (f"I have conduct causal discovery on the Tabular Dataset containing the following columns: \n\n"
-    #               f"{table_columns}\n\n. "
-    #               f"In terms of the property of the dataset, it {data_prop_prompt}.\n\n"
-    #               f"Based on the property of the dataset mentioned above, we think {algorithm_setup} is suitable for "
-    #               f"running causal discovery on this dataset. \n\n"
-    #               f"{graph_prompt}"
-    #               f"Based on the context and knowledge {knowledge_docs}, and all of the results and information above, "
-    #               f"write a comprehensive technical report, the report should be easily readable and understandable to audience who may not "
-    #               f"be familiar with causal discovery. If there is common cause between variables, you should point out what may be "
-    #               f"the potential common cause.")
-    #
-    #     response = client.chat.completions.create(
-    #         model="gpt-4o-mini",
-    #         messages=[
-    #             {"role": "system", "content": "You are a helpful assistant."},
-    #             {"role": "user", "content": prompt}
-    #         ]
-    #     )
-    #     report_doc = response.choices[0].message.content
-    #
-    #     return report_doc
 
     def forward(self, data, full_graph, algorithm, hyperparameters, knowledge_docs):
         '''
@@ -148,8 +87,11 @@ class Judge(object):
         shd = np.sum(diff)
 
         # Precision, Recall and F1-score
-        precision = precision_score(ground_truth, est_graph, average=None)
-        recall = recall_score(ground_truth, est_graph, average=None)
-        f1 = f1_score(ground_truth, est_graph, average=None)
+        precision = precision_score(ground_truth, est_graph, average='micro')
+        recall = recall_score(ground_truth, est_graph, average='micro')
+        f1 = f1_score(ground_truth, est_graph, average='micro')
 
         return shd, precision, recall, f1
+
+
+
