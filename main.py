@@ -173,7 +173,10 @@ def main():
 
     # background info collection
     print("Original Data: ", data)
+
+    # TODO: add user query for initial data uploading
     
+    # add sample size, variable size. 
     if args.debug:
         # Fake statistics_dict and knowledge_docs for debugging
         statistics_dict = {
