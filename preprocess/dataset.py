@@ -28,6 +28,7 @@ def load_data(directory):
         raise FileNotFoundError(f"The data file {data_path} does not exist.")
     if os.path.exists(graph_path):
         graph = np.load(graph_path)
+        graph = graph.T
     else:
         graph = None
 

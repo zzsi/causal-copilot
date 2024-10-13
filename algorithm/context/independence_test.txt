@@ -1,3 +1,11 @@
+Available Independence Tests have been implemented:
+    - fisherz
+    - chisq
+    - gsq
+
+
+
+
 - **Fisher's Z (fisherz):**
     - **Description**:
         

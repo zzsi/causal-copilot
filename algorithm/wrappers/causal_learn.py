@@ -4,6 +4,7 @@ from typing import Union, Dict, List, Tuple
 
 # use the local causal-learn package
 import sys
+
 sys.path.insert(0, 'causal-learn')
 
 from causallearn.graph.GraphClass import CausalGraph
@@ -15,6 +16,7 @@ from causallearn.search.FCMBased.lingam.direct_lingam import DirectLiNGAM as CLD
 from causallearn.search.FCMBased.lingam.ica_lingam import ICALiNGAM as CLICALiNGAM
 
 from .base import CausalDiscoveryAlgorithm
+
 
 class PC(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
@@ -37,16 +39,17 @@ class PC(CausalDiscoveryAlgorithm):
     @property
     def name(self):
         return "PC"
-    
+
     def get_params(self):
         return self._params
-    
+
     def get_primary_params(self):
         self._primary_param_keys = ['alpha', 'indep_test', 'depth']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
-    
+
     def get_secondary_params(self):
-        self._secondary_param_keys = ['stable', 'uc_rule', 'uc_priority', 'mvpc', 'correction_name', 'background_knowledge', 'verbose', 'show_progress']
+        self._secondary_param_keys = ['stable', 'uc_rule', 'uc_priority', 'mvpc', 'correction_name',
+                                      'background_knowledge', 'verbose', 'show_progress']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: Union[pd.DataFrame, np.ndarray]) -> Tuple[np.ndarray, Dict]:
@@ -74,22 +77,22 @@ class PC(CausalDiscoveryAlgorithm):
         }
 
         return adj_matrix, info
-    
+
     def convert_to_adjacency_matrix(self, cg: CausalGraph) -> np.ndarray:
         adj_matrix = np.zeros_like(cg.G.graph)
         for i in range(cg.G.graph.shape[0]):
             for j in range(cg.G.graph.shape[1]):
                 if cg.G.graph[i, j] == 1 and cg.G.graph[j, i] == -1:
-                     # only keep the determined arrows (j --> i)
+                    # only keep the determined arrows (j --> i)
                     adj_matrix[i, j] = 1
         return adj_matrix
-    
+
     def test_algorithm(self):
         # Generate some sample data
         np.random.seed(42)
         n_samples, n_features = 1000, 5
         X = np.random.randn(n_samples, n_features)
-        
+
         # Test with numpy array
         print("Testing PC algorithm with numpy array:")
         params = {
@@ -106,7 +109,7 @@ class PC(CausalDiscoveryAlgorithm):
         print(f"PC elapsed time: {info['PC_elapsed']:.4f} seconds")
         print(f"Number of definite unshielded colliders: {len(info['definite_UC'])}")
         print(f"Number of definite non-unshielded colliders: {len(info['definite_non_UC'])}")
-        
+
         # Test with pandas DataFrame
         print("\nTesting PC algorithm with pandas DataFrame:")
         df = pd.DataFrame(X, columns=[f'X{i}' for i in range(n_features)])
@@ -117,6 +120,7 @@ class PC(CausalDiscoveryAlgorithm):
         print(f"PC elapsed time: {info['PC_elapsed']:.4f} seconds")
         print(f"Number of definite unshielded colliders: {len(info['definite_UC'])}")
         print(f"Number of definite non-unshielded colliders: {len(info['definite_non_UC'])}")
+
 
 class FCI(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
@@ -138,11 +142,11 @@ class FCI(CausalDiscoveryAlgorithm):
 
     def get_params(self):
         return self._params
-    
+
     def get_primary_params(self):
         self._primary_param_keys = ['alpha', 'indep_test', 'depth']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
-    
+
     def get_secondary_params(self):
         self._secondary_param_keys = ['max_path_length', 'verbose', 'background_knowledge', 'show_progress']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
@@ -170,7 +174,7 @@ class FCI(CausalDiscoveryAlgorithm):
         }
 
         return adj_matrix, info
-    
+
     def convert_to_adjacency_matrix(self, graph: CausalGraph) -> np.ndarray:
         adj_matrix = np.zeros_like(graph.graph, dtype=int)
         for i in range(graph.graph.shape[0]):
@@ -185,7 +189,7 @@ class FCI(CausalDiscoveryAlgorithm):
         np.random.seed(42)
         n_samples, n_features = 1000, 5
         X = np.random.randn(n_samples, n_features)
-        
+
         # Test with numpy array
         print("Testing FCI algorithm with numpy array:")
         params = {
@@ -197,13 +201,14 @@ class FCI(CausalDiscoveryAlgorithm):
         adj_matrix, info = self.fit(X)
         print("Adjacency Matrix:")
         print(adj_matrix)
-        
+
         # Test with pandas DataFrame
         print("\nTesting FCI algorithm with pandas DataFrame:")
         df = pd.DataFrame(X, columns=[f'X{i}' for i in range(n_features)])
         adj_matrix, info = self.fit(df)
         print("Adjacency Matrix:")
         print(adj_matrix)
+
 
 class CDNOD(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
@@ -229,13 +234,14 @@ class CDNOD(CausalDiscoveryAlgorithm):
 
     def get_params(self):
         return self._params
-    
+
     def get_primary_params(self):
         self._primary_param_keys = ['alpha', 'indep_test', 'depth']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
-    
+
     def get_secondary_params(self):
-        secondary_param_keys = ['stable', 'uc_rule', 'uc_priority', 'mvcdnod', 'correction_name', 'background_knowledge', 'verbose', 'show_progress']
+        secondary_param_keys = ['stable', 'uc_rule', 'uc_priority', 'mvcdnod', 'correction_name',
+                                'background_knowledge', 'verbose', 'show_progress']
         return {k: v for k, v in self._params.items() if k in secondary_param_keys}
 
     def fit(self, data: Union[pd.DataFrame, np.ndarray]) -> Tuple[np.ndarray, Dict]:
@@ -265,7 +271,7 @@ class CDNOD(CausalDiscoveryAlgorithm):
         }
 
         return adj_matrix, info
-    
+
     def convert_to_adjacency_matrix(self, cg: CausalGraph) -> np.ndarray:
         adj_matrix = np.zeros_like(cg.G.graph, dtype=int)
         for i in range(cg.G.graph.shape[0]):
@@ -282,7 +288,7 @@ class CDNOD(CausalDiscoveryAlgorithm):
         X = np.random.randn(n_samples, n_features)
         c_indx = np.random.randint(0, 2, size=(n_samples, 1))
         X_with_c_indx = np.hstack((X, c_indx))
-        
+
         # Test with numpy array
         print("Testing CD-NOD algorithm with numpy array:")
         params = {
@@ -295,7 +301,7 @@ class CDNOD(CausalDiscoveryAlgorithm):
         print("Adjacency Matrix:")
         print(adj_matrix)
         print(f"CD-NOD elapsed time: {info['PC_elapsed']:.4f} seconds")
-        
+
         # Test with pandas DataFrame
         print("\nTesting CD-NOD algorithm with pandas DataFrame:")
         df = pd.DataFrame(X_with_c_indx, columns=[f'X{i}' for i in range(n_features)] + ['c_indx'])
@@ -303,6 +309,7 @@ class CDNOD(CausalDiscoveryAlgorithm):
         print("Adjacency Matrix:")
         print(adj_matrix)
         print(f"CD-NOD elapsed time: {info['PC_elapsed']:.4f} seconds")
+
 
 class GES(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
@@ -320,11 +327,11 @@ class GES(CausalDiscoveryAlgorithm):
 
     def get_params(self):
         return self._params
-    
+
     def get_primary_params(self):
         self._primary_param_keys = ['score_func', 'maxP']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
-    
+
     def get_secondary_params(self):
         self._secondary_param_keys = ['parameters']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
@@ -353,7 +360,7 @@ class GES(CausalDiscoveryAlgorithm):
         }
 
         return adj_matrix, info
-    
+
     def convert_to_adjacency_matrix(self, G: CausalGraph) -> np.ndarray:
         adj_matrix = np.zeros_like(G.graph, dtype=int)
         for i in range(G.graph.shape[0]):
@@ -367,7 +374,7 @@ class GES(CausalDiscoveryAlgorithm):
         np.random.seed(42)
         n_samples, n_features = 1000, 5
         X = np.random.randn(n_samples, n_features)
-        
+
         # Test with numpy array
         print("Testing GES algorithm with numpy array:")
         params = {
@@ -378,7 +385,7 @@ class GES(CausalDiscoveryAlgorithm):
         print("Adjacency Matrix:")
         print(adj_matrix)
         print(f"GES score: {info['score']:.4f}")
-        
+
         # Test with pandas DataFrame
         print("\nTesting GES algorithm with pandas DataFrame:")
         df = pd.DataFrame(X, columns=[f'X{i}' for i in range(n_features)])
@@ -386,6 +393,7 @@ class GES(CausalDiscoveryAlgorithm):
         print("Adjacency Matrix:")
         print(adj_matrix)
         print(f"GES score: {info['score']:.4f}")
+
 
 class DirectLiNGAM(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
@@ -397,18 +405,18 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
             'measure': 'pwling'
         }
         self._params.update(params)
-    
+
     @property
     def name(self):
         return "DirectLiNGAM"
 
     def get_params(self):
         return self._params
-    
+
     def get_primary_params(self):
         self._primary_param_keys = ['measure']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
-    
+
     def get_secondary_params(self):
         self._secondary_param_keys = ['random_state', 'prior_knowledge', 'apply_prior_knowledge_softly']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
@@ -442,7 +450,7 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
         np.random.seed(42)
         n_samples, n_features = 1000, 5
         X = np.random.randn(n_samples, n_features)
-        
+
         # Test with numpy array
         print("Testing DirectLiNGAM algorithm with numpy array:")
         params = {
@@ -454,7 +462,7 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
         print(adj_matrix)
         print("Causal Order:")
         print(info['causal_order'])
-        
+
         # Test with pandas DataFrame
         print("\nTesting DirectLiNGAM algorithm with pandas DataFrame:")
         df = pd.DataFrame(X, columns=[f'X{i}' for i in range(n_features)])
@@ -464,6 +472,7 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
         print("Causal Order:")
         print(info['causal_order'])
 
+
 class ICALiNGAM(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
@@ -472,18 +481,18 @@ class ICALiNGAM(CausalDiscoveryAlgorithm):
             'max_iter': 1000
         }
         self._params.update(params)
-    
+
     @property
     def name(self):
         return "ICALiNGAM"
 
     def get_params(self):
         return self._params
-    
+
     def get_primary_params(self):
         self._primary_param_keys = ['max_iter']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
-    
+
     def get_secondary_params(self):
         self._secondary_param_keys = ['random_state']
         return {}
@@ -514,7 +523,7 @@ class ICALiNGAM(CausalDiscoveryAlgorithm):
         np.random.seed(42)
         n_samples, n_features = 1000, 5
         X = np.random.randn(n_samples, n_features)
-        
+
         # Test with numpy array
         print("Testing ICALiNGAM algorithm with numpy array:")
         params = {
@@ -526,7 +535,7 @@ class ICALiNGAM(CausalDiscoveryAlgorithm):
         print(adj_matrix)
         print("Causal Order:")
         print(info['causal_order'])
-        
+
         # Test with pandas DataFrame
         print("\nTesting ICALiNGAM algorithm with pandas DataFrame:")
         df = pd.DataFrame(X, columns=[f'X{i}' for i in range(n_features)])
@@ -535,6 +544,7 @@ class ICALiNGAM(CausalDiscoveryAlgorithm):
         print(adj_matrix)
         print("Causal Order:")
         print(info['causal_order'])
+
 
 if __name__ == "__main__":
     # pc_algo = PC({})

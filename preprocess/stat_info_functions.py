@@ -325,6 +325,8 @@ def stat_info_collection(args, data):
     stat_info_combine = {**sample_size, **feature_size, **time_series_res,
                          **miss_res, **dataset_type, **linearity_res, **gaussian_res, **stationary_res}
 
+    if stat_info_combine['Time-series'] == False:
+        stat_info_combine.pop('Stationary')
     stat_info_combine = json.dumps(stat_info_combine, indent=4)
 
     return stat_info_combine, imputed_data

@@ -1,3 +1,29 @@
+# import os
+# import pandas as pd
+# import numpy as np
+# import algorithm.wrappers as wrappers
+
+# path = '/Users/fangnan/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/ML Research/Causality-Copilot/data/simulation/simulated_data/20241012_145758_base_nodes4_samples1000/base_data.csv'
+# file_extension = os.path.splitext(path)[1].lower()
+# data = pd.read_csv(path)
+#
+# hyperparameters = {'alpha': 0.05,
+#                    'indep_test': 'fisherz',
+#                     'depth': -1,
+#                     'stable': True,
+#                     'uc_rule': 0,
+#                     'uc_priority': -1,
+#                     'mvpc': False,
+#                     'correction_name': 'MV_Crtn_Fisher_Z',
+#                     'background_knowledge': None,
+#                     'verbose': False,
+#                     'show_progress': False}
+# algo_func = getattr(wrappers, 'PC')
+# graph, _ = algo_func(hyperparameters).fit(data)
+#
+# print(graph)
+
+
 def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
     '''
     :param data: Given Tabular Data in Pandas DataFrame format
@@ -18,11 +44,6 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
     import random
     import math
     import algorithm.wrappers as wrappers
-    from causallearn.search.ConstraintBased.PC import pc
-    from causallearn.search.ConstraintBased.FCI import fci
-    from causallearn.search.ConstraintBased.CDNOD import cdnod
-    from causallearn.search.ScoreBased.GES import ges
-    from causallearn.search.FCMBased import lingam
 
     n, m = data.shape
     errors = {}
@@ -49,13 +70,13 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
 
             boot_sample = pd.concat(subsets, ignore_index=True).iloc[1:n]
 
-            # Get the algorithm function from wrappers
-            algo_func = getattr(wrappers, algorithm)
+        # Get the algorithm function from wrappers
+        algo_func = getattr(wrappers, algorithm)
 
-            # Execute the algorithm with data and hyperparameters
-            boot_graph, info = algo_func(hyperparameters).fit(boot_sample)
+        # Execute the algorithm with data and hyperparameters
+        boot_graph, info = algo_func(hyperparameters).fit(boot_sample)
 
-            boot_effect_save[:, :, boot_time] = boot_graph
+        boot_effect_save[:, :, boot_time] = boot_graph
 
 
         for i in range(m):
@@ -84,7 +105,8 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
 
     return errors, boot_probability
 
-
+# errors, boot_probability = bootstrap(data, graph, 'PC', hyperparameters, 10, False)
+# print(boot_probability)
 
 def llm_evaluation(data, full_graph, args, knowledge_docs):
     '''
@@ -181,6 +203,3 @@ def graph_effect_prompts (data, graph, boot_probability):
     graph_prompt = "All of the edges suggested by the causal discovery are below:\n" + "\n".join(effect_prompt)
 
     return graph_prompt
-
-
-

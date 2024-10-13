@@ -24,8 +24,8 @@ class Judge(object):
         print("Bootstrap Probability: ", boot_probability)
 
         # LLM perspective: errors based on domain knowledge from GPT-4
-        if "No Knowledge" in knowledge_docs:
-            errors_llm = []
+        if len(knowledge_docs) == 0 or "no knowledge" in knowledge_docs[0].lower():
+            errors_llm = {}
             print("No Errors are found by LLM, due to No Knowledge")
         else:
             errors_llm = llm_evaluation(data=data, full_graph=full_graph, args=self.args, knowledge_docs=knowledge_docs)
