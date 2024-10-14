@@ -11,20 +11,15 @@ class Filter(object):
         with open(f"algorithm/context/{filename}.txt", "r") as f:
             return f.read()
 
-    def create_prompt(self, data, statics_dict):
+    def create_prompt(self, data, statistics_desc):
         columns = ', '.join(data.columns)
-        stats = json.loads(statics_dict)
 
         algo_context = self.load_context("algo")
         prompt_template = self.load_context("algo_select_prompt")
 
         replacements = {
             "[COLUMNS]": columns,
-            "[DATA_TYPE]": stats['Data Type'],
-            "[MISSINGNESS]": str(stats['Missingness']),
-            "[LINEARITY]": str(stats.get('Linearity', 'N/A')),
-            "[GAUSSIAN_ERROR]": str(stats.get('Gaussian Error', 'N/A')),
-            "[STATIONARY]": str(stats.get('Stationary', 'N/A')),
+            "[STATISTICS_DESC]": statistics_desc,
             "[ALGO_CONTEXT]": algo_context,
         }
 
@@ -44,8 +39,8 @@ class Filter(object):
             print("Error: Unable to parse JSON response")
             return {}
 
-    def forward(self, data, statics_dict):
-        prompt = self.create_prompt(data, statics_dict)
+    def forward(self, data, statistics_desc):
+        prompt = self.create_prompt(data, statistics_desc)
 
         response = self.client.chat.completions.create(
             model="gpt-4o-mini",

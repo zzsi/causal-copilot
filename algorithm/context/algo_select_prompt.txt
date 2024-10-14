@@ -2,11 +2,7 @@ Given a dataset with the following properties:
 
 1. Columns: [COLUMNS]
 2. Statistics:
-   - Data Type: [DATA_TYPE]
-   - Missingness: [MISSINGNESS]
-   - Linearity: [LINEARITY]
-   - Gaussian Error: [GAUSSIAN_ERROR]
-   - Stationary: [STATIONARY]
+[STATISTICS_DESC]
 
 Please analyze the dataset characteristics and recommend suitable causal discovery algorithms. Use the following context information to inform your recommendations:
 

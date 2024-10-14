@@ -35,18 +35,74 @@ def load_data(directory):
     return config, data, graph
 
 
-def statics_info(args, data):
+def statistics_info(args, data):
     # Fang Nan Implemented
     '''
     :param args: configurations.
     :param data: Given Tabular Data in Pandas DataFrame format
-    :return: A dict containing all necessary statics information
+    :return: A dict containing all necessary statistics information
     '''
     from preprocess.stat_info_functions import stat_info_collection
 
-    statics_dict, preprocessed_data = stat_info_collection(args=args, data=data)
+    statistics_dict, preprocessed_data = stat_info_collection(args=args, data=data)
 
-    return statics_dict, preprocessed_data
+    return statistics_dict, preprocessed_data
+
+
+def convert_stat_info_to_text(stat_info):
+    """
+    Convert the statistical information dictionary to natural language.
+    
+    :param stat_info: Dictionary containing statistical information about the dataset.
+    :return: A string describing the dataset characteristics in natural language.
+    """
+    import json
+    info = json.loads(stat_info)
+    
+    text = f"The dataset has the following characteristics:\n\n"
+    text += f"The sample size is {info['Sample Size']} with {info['Number of Features']} features. "
+    text += f"This dataset {'is' if info['Time-series'] else 'is not'} time-series data. "
+    
+    text += f"Data Type: The overall data type is {info['Data Type']}.\n\n"
+    text += f"Data Quality: {'There are' if info['Missingness'] else 'There are no'} missing values in the dataset.\n\n"
+    
+    if not info['Time-series']:
+        text += "Statistical Properties:\n"
+        text += f"- Linearity: The relationships between variables {'are' if info['Linearity'] else 'are not'} predominantly linear.\n"
+        text += f"- Gaussian Errors: The errors in the data {'do' if info['Gaussian Error'] else 'do not'} follow a Gaussian distribution.\n\n"
+        text += f"This dataset {'is' if info['Heterogeneity'] else 'is not'} heterogeneous. "
+
+        text += "Implications for Analysis:\n"
+        if info['Linearity'] and info['Gaussian Error']:
+            text += "1. The data is well-suited for linear modeling techniques.\n"
+        else:
+            if not info['Linearity']:
+                text += "1. Non-linear modeling techniques may be more appropriate.\n"
+            if not info['Gaussian Error']:
+                text += "2. Robust statistical methods or transformations might be necessary.\n"
+        
+        if info['Missingness']:
+            text += "3. Imputation techniques should be considered during preprocessing.\n"
+    else:
+        text += "Time Series Properties:\n"
+        text += f"- Stationarity: The time series {'is' if info['Stationary'] else 'is not'} stationary.\n\n"
+        
+        text += "Implications for Analysis:\n"
+        if info['Stationary']:
+            text += "1. Standard time series analysis techniques can be applied.\n"
+        else:
+            text += "1. Differencing or other stationarity-inducing transformations may be necessary.\n"
+        
+        if info['Missingness']:
+            text += "2. Time-series specific imputation methods should be considered.\n"
+
+    if 'Domain Index' in info and info['Domain Index'] is not None:
+        text += f"If the data is heterogeneous, the column/variable {info['Domain Index']} is the domain index indicating the heterogeneity. "
+        text += f"If the data is not heterogeneous, then the existed domain index is constant.\n\n"
+    else:
+        text += "\n\n"
+        
+    return text
 
 
 def knowledge_info(args, data):
@@ -206,5 +262,5 @@ if __name__ == '__main__':
         args = parser.parse_args()
         return args
     args = parse_args()
-    statics_dict = statics_info(args, data)
-    print(statics_dict)
+    statistics_dict = statistics_info(args, data)
+    print(statistics_dict)

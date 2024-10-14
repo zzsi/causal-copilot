@@ -1,6 +1,6 @@
 # Kun Zhou Implemented
 from data.simulation.simulation import SimulationManager
-from preprocess.dataset import load_data, statics_info, knowledge_info
+from preprocess.dataset import load_data, statistics_info, convert_stat_info_to_text,knowledge_info
 from algorithm.filter import Filter
 from algorithm.program import Programming
 from algorithm.rerank import Reranker
@@ -17,7 +17,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="data/simulation/simulated_data/20241012_145758_base_nodes4_samples1000",
+        default="simulated_data/20241012_145758_base_nodes4_samples1000",
         help='Path to the input dataset file (e.g., CSV format)'
     )
 
@@ -89,7 +89,7 @@ def parse_args():
     parser.add_argument(
         '--domain_index',
         type=str,
-        default= None,
+        default='domain_index',
         help='Name of the column which indicates the domain index'
     )
     parser.add_argument(
@@ -181,9 +181,6 @@ def main():
     # background info collection
     print("Original Data: ", data)
 
-    # TODO: add user query for initial data uploading
-    
-    # add sample size, variable size. 
     if args.debug:
         # Fake statistics_dict and knowledge_docs for debugging
         statistics_dict = {
@@ -197,20 +194,23 @@ def main():
         preprocessed_data = data  # For simplicity, use original data
         knowledge_docs = ["This is fake domain knowledge for debugging purposes."]
     else:
-        statistics_dict, preprocessed_data = statics_info(args, data)
+        statistics_dict, preprocessed_data = statistics_info(args, data)
         knowledge_docs = knowledge_info(args, preprocessed_data)
     
+    # Convert statistics_dict to text
+    statistics_desc = convert_stat_info_to_text(statistics_dict)
+    
     print("Preprocessed Data: ", preprocessed_data)
-    print("Statics Info: ", statistics_dict)
+    print("Statistics Info: ", statistics_desc)
     print("Knowledge Info: ", knowledge_docs)
 
     # algorithm selection and deliberation initialization
     filter = Filter(args)
-    algo_candidates = filter.forward(preprocessed_data, statistics_dict)
+    algo_candidates = filter.forward(preprocessed_data, statistics_desc)
     print(algo_candidates)
 
     reranker = Reranker(args)
-    algorithm, hyper_suggest = reranker.forward(preprocessed_data, algo_candidates, statistics_dict, knowledge_docs)
+    algorithm, hyper_suggest = reranker.forward(preprocessed_data, algo_candidates, statistics_desc, knowledge_docs)
     print(algorithm)
     print(hyper_suggest)
 

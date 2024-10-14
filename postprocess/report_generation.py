@@ -73,13 +73,13 @@ def parse_args():
     return args
 
 class Report_generation(object):
-    def __init__(self, args_setup, statics_dict):
+    def __init__(self, args_setup, statistics_dict):
         """
         :param args_setup: arguments for the report generation
-        :param statics_dict: statistics dictionary of the dataset
+        :param statistics_dict: statistics dictionary of the dataset
         """
         self.client = OpenAI(organization=args_setup.organization, project=args_setup.project, api_key=args_setup.apikey)
-        self.statics_dict = statics_dict
+        self.statistics_dict = statistics_dict
         # Data info
         self.data = pd.read_csv(args_setup.data_file)
         # Result graph matrix
@@ -106,18 +106,18 @@ class Report_generation(object):
         return response_doc
 
     def data_prop_prompt(self):
-        statics_dict = self.statics_dict
+        statistics_dict = self.statistics_dict
         # Data property prompt
-        if statics_dict.get("Stationary") == "non time-series":
-            missing = "has missing values," if statics_dict.get("Missingness") else "does not have missing values,"
-            data_type = f"is {statics_dict.get('Data Type')} data,"
-            linear = "satisfies the linearity assumption," if statics_dict.get(
+        if statistics_dict.get("Stationary") == "non time-series":
+            missing = "has missing values," if statistics_dict.get("Missingness") else "does not have missing values,"
+            data_type = f"is {statistics_dict.get('Data Type')} data,"
+            linear = "satisfies the linearity assumption," if statistics_dict.get(
                 "Linearity") else "violates the linearity assumption,"
-            gaussian = ",and satisfies the Gaussian error assumption" if statics_dict.get(
+            gaussian = ",and satisfies the Gaussian error assumption" if statistics_dict.get(
                 "Gaussian Error") else ",and violates the Gaussian error assumption"
             data_prop_prompt = "This dataset " + missing + data_type + linear + gaussian
         else:
-            data_prop_prompt = f"This dataset is {'stationary' if statics_dict.get('Stationary') else 'non-stationary'} time-series data"
+            data_prop_prompt = f"This dataset is {'stationary' if statistics_dict.get('Stationary') else 'non-stationary'} time-series data"
 
         return data_prop_prompt
 

@@ -3,13 +3,9 @@ Available Independence Tests have been implemented:
     - chisq
     - gsq
 
-
-
-
 - **Fisher's Z (fisherz):**
     - **Description**:
-        
-        Fisher's Z test is a parametric test based on the correlation between variables. It transforms the correlation coefficient into a Z-score to evaluate the null hypothesis that two variables are conditionally independent given a set of conditioning variables.
+    Fisher's Z test is a parametric test based on the correlation between variables. It transforms the correlation coefficient into a Z-score to evaluate the null hypothesis that two variables are conditionally independent given a set of conditioning variables.
         
     - **Assumptions**:
         - The data follows a Gaussian distribution.

@@ -2,7 +2,7 @@ Given a dataset with the following properties:
 
 1. Columns: [COLUMNS]
 2. Statistics:
-   [STATISTICS INFO]
+[STATISTICS INFO]
 
 We have selected the following algorithm for causal discovery:
 
@@ -16,7 +16,7 @@ Now, we need to set up the primary hyperparameters for this algorithm. Please co
 For each primary hyperparameter, provide:
 1. The suggested value
 2. A brief explanation of why this value is appropriate given the dataset characteristics and algorithm requirements
-3. Each primary hyperparamter is provided with a default value, which should be adjusted based on the dataset characteristics and algorithm requirements
+3. Each primary hyperparameter is provided with a default value, which should be adjusted based on the dataset characteristics and algorithm requirements
 
 Use the following information about each hyperparameter to inform your decisions:
 

@@ -15,19 +15,21 @@ When generating a dataset description, provide:
   "expert_description": "A narrative description as if provided by a domain expert",
   "simulation_function": "simulate_base_data",
   "arguments": {
-    "n_nodes": int,
-    "n_samples": int,
-    "edge_probability": float,
-    "noise_scale": float,
+    "n_nodes": int (range: 2-50),
+    "n_samples": int (range: 100-10000),
+    "edge_probability": float (range: 0.1-0.9),
+    "noise_scale": float (range: 0.01-0.5),
     "noise_type": "gaussian" | "uniform" | "laplace" | "student_t",
-    "function_type": dict[str, str],
-    "add_categorical": bool, # set to false, it is not implemented yet
+    "function_type": {
+      "variable_name": "linear" | "polynomial" | "gaussian_process" | "sigmoid" | "neural_network"
+    },
+    "add_categorical": false,
     "add_measurement_error": bool,
     "add_selection_bias": bool,
     "add_confounding": bool,
     "add_missing_values": bool,
-    "n_domains": int,
-    "variable_names": list[str]
+    "n_domains": int (range: 1-10),
+    "variable_names": list[str] (length must match n_nodes)
   }
 }
 
@@ -38,6 +40,7 @@ When creating these expert descriptions, consider:
 3. Data Collection Context: Include information about how the data was collected, over what time period, and with what instruments or methods.
 4. Known Limitations: Mention any known biases, missing data issues, or measurement challenges.
 5. Research Questions: Include the primary research questions or hypotheses the expert is interested in exploring.
+6. Strictly use the values from the ranges provided in the brackets, the values outside the ranges will cause errors in the simulation.
 
 Example:
 
@@ -67,3 +70,5 @@ Example:
 }
 
 Be creative and rigorous in your data generation requests. Ensure that your simulations reflect real-world complexities and challenges faced by researchers in various scientific domains. The expert's description should convey both their knowledge and the uncertainties they face in understanding the causal structures in their data.
+
+Note: The current implementation does not support adding categorical variables directly, so always set "add_categorical" to false. If you need categorical variables, specify them in the "function_type" dictionary with "categorical" as the value.

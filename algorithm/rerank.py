@@ -3,8 +3,8 @@ class Reranker(object):
     def __init__(self, args):
         self.args = args
 
-    def statics_dict2string(self, statics_dict):
-        return str(statics_dict)
+    def statistics_dict2string(self, statistics_dict):
+        return str(statistics_dict)
 
     def algo_can2string(self, algo_candidates, hp_context):
         algo_candidate_string = ''
@@ -34,12 +34,11 @@ class Reranker(object):
     #   a. give suggestions for the primary hyperparameters, use default values of the secondary hyperparameters
     #     i. for each primary hyperparameters, we might need to have some context about their meaning and possible values
     # 4. return the selected algorithm and its hyperparameters
-    def forward(self, data, algo_candidates, statics_dict, knowledge_docs):
+    def forward(self, data, algo_candidates, statistics_desc, knowledge_docs):
         '''
-
         :param data: Given Tabular Data in Pandas DataFrame format
         :param algo_candidates: A list containing all algorithm candidates and their description
-        :param statics_dict: A dict containing all necessary statics information
+        :param statistics_desc: A string containing the natural language description of statistics information
         :param knowledge_docs: A list containing all necessary domain knowledge information from GPT-4
         :return: A doc containing the selected algorithm and its hyperparameter settings
         '''
@@ -68,15 +67,15 @@ class Reranker(object):
         table_name = self.args.data_file
         table_columns = '\t'.join(data.columns._data)
         knowledge_info = '\n'.join(knowledge_docs)
-        statics_info = self.statics_dict2string(statics_dict)
+        statistics_info = statistics_desc
         algo_info, algo2des_cond_hyper = self.algo_can2string(algo_candidates, hp_context)
 
         # Select the Best Algorithm
         prompt = ("I will conduct causal discovery on the Tabular Dataset %s containing the following Columns:\n\n"
                   "%s\n\nThe Detailed Background Information is listed below:\n\n"
-                  "%s\n\nThe Statics Information about the dataset is:\n\n"
+                  "%s\n\nThe Statistics Information about the dataset is:\n\n"
                   "%s\n\nBased on the above information, please select the best-suited algorithm from the following candidate:\n\n"
-                  "%s\n\nPlease highlight the selected algorithm name using the following template <Algo>Name</Algo> in the ending of the output") % (table_name, table_columns, knowledge_info, statics_info, algo_info)
+                  "%s\n\nPlease highlight the selected algorithm name using the following template <Algo>Name</Algo> in the ending of the output") % (table_name, table_columns, knowledge_info, statistics_info, algo_info)
         selected_algo = ''
         print("Keys in algo2des_cond_hyper:", algo2des_cond_hyper.keys())
         while selected_algo not in algo2des_cond_hyper:
@@ -104,7 +103,7 @@ class Reranker(object):
         # Create the hyperparameter selection prompt
         hp_prompt = hp_prompt.replace("[COLUMNS]", table_columns)
         hp_prompt = hp_prompt.replace("[KNOWLEDGE_INFO]", knowledge_info)
-        hp_prompt = hp_prompt.replace("[STATISTICS INFO]", statics_dict)
+        hp_prompt = hp_prompt.replace("[STATISTICS INFO]", statistics_desc)
         hp_prompt = hp_prompt.replace("[ALGORITHM_NAME]", selected_algo)
         hp_prompt = hp_prompt.replace("[ALGORITHM_DESCRIPTION]", algo_description)
         hp_prompt = hp_prompt.replace("[PRIMARY_HYPERPARAMETERS]", str(primary_params))

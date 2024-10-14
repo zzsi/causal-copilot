@@ -220,6 +220,18 @@ def gaussian_check(df: pd.DataFrame,
 #                               test_pairs = combinations_select, reset_test = all_reset_results,
 #                               alpha = 0.1)
 
+def heterogeneity_check(df: pd.DataFrame, heterogeneity_indicator: str = "domain_index"):
+    '''
+    :param df: imputed data in Pandas DataFrame format.
+    :param test_pairs: maximum number of pairs to be tested.
+    :param alpha: significance level.
+    :return: indicator of heteroscedasticity.
+    '''
+    # check if there are multiple domain index
+    if heterogeneity_indicator in df.columns:
+        if df[heterogeneity_indicator].nunique() > 1:
+            return {"Heterogeneity": True}
+    return {"Heterogeneity": False}
 
 def stationary_check(df: pd.DataFrame, max_test: int = 1000, alpha: float = 0.1):
     '''
@@ -267,7 +279,7 @@ def stat_info_collection(args, data):
     '''
     :param args: configurations.
     :param data: given tabular data in pandas dataFrame format.
-    :return: a dict containing all necessary statics information.
+    :return: a dict containing all necessary statistics information.
     '''
 
     n,m = data.shape
@@ -277,6 +289,13 @@ def stat_info_collection(args, data):
     sample_size = {"Sample Size": n}
     feature_size = {"Number of Features": m}
     domain_index = {'Domain Index': args.domain_index}
+    heterogeneity = {'Heterogeneity': heterogeneity_check(df = data, heterogeneity_indicator = args.domain_index)}
+    # Drop the domain index column from the data
+    if args.domain_index in data.columns:
+        col_domain_index = data[args.domain_index]
+        data = data.drop(columns=[args.domain_index])
+    else:
+        col_domain_index = None
 
     # Data pre-processing
     clean_data, miss_res, each_type, dataset_type = data_preprocess(df = data, ratio = args.ratio, ts = args.ts)
@@ -329,14 +348,18 @@ def stat_info_collection(args, data):
         gaussian_res = {"Gaussian Error": False}
         stationary_res = stationary_check(df = imputed_data, max_test=args.num_test, alpha=args.alpha)
 
-    stat_info_combine = {**sample_size, **feature_size, **time_series_res, **domain_index,
+    stat_info_combine = {**sample_size, **feature_size, **time_series_res, **heterogeneity, **domain_index, 
                          **miss_res, **dataset_type, **linearity_res, **gaussian_res, **stationary_res}
 
     if stat_info_combine['Time-series'] == False:
         stat_info_combine.pop('Stationary')
-    stat_info_combine = json.dumps(stat_info_combine, indent=4)
+    stat_info_json = json.dumps(stat_info_combine, indent=4)
 
-    return stat_info_combine, imputed_data
+    # merge the domain index column back to the data if it exists
+    if col_domain_index is not None:
+        imputed_data[args.domain_index] = col_domain_index
+    
+    return stat_info_json, imputed_data
 
 
 # class ParaStatCollect:
@@ -350,7 +373,7 @@ def stat_info_collection(args, data):
 # args = ParaStatCollect()
 #
 #
-# stat_info_combine, _ = stat_info_collection(args = args, data = data)
+# stat_info_combine, _, _ = stat_info_collection(args = args, data = data)
 #
 # print(stat_info_combine)
 
