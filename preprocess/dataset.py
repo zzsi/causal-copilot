@@ -69,8 +69,8 @@ def convert_stat_info_to_text(stat_info):
     if not info['Time-series']:
         text += "Statistical Properties:\n"
         text += f"- Linearity: The relationships between variables {'are' if info['Linearity'] else 'are not'} predominantly linear.\n"
-        text += f"- Gaussian Errors: The errors in the data {'do' if info['Gaussian Error'] else 'do not'} follow a Gaussian distribution.\n\n"
-        text += f"This dataset {'is' if info['Heterogeneity'] else 'is not'} heterogeneous. "
+        text += f"- Gaussian Errors: The errors in the data {'do' if info['Gaussian Error'] else 'do not'} follow a Gaussian distribution.\n"
+        text += f"- This dataset {'is' if info['Heterogeneity'] else 'is not'} heterogeneous. \n\n"
 
         text += "Implications for Analysis:\n"
         if info['Linearity'] and info['Gaussian Error']:

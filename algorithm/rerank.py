@@ -12,7 +12,7 @@ class Reranker(object):
         for algo_name in algo_candidates:
             if algo_name in hp_context:
                 algo_des, algo_justify = algo_candidates[algo_name]['description'], algo_candidates[algo_name]['justification']
-                algo_string = algo_name + ':\nDescription: ' + algo_des + '\nJustification: ' + algo_justify
+                algo_string = algo_name + ':\n' + algo_des + '\nJustification: ' + algo_justify
                 algo2des_cond_hyper[algo_name] = algo_string
                 algo_candidate_string += algo_string + "\n\n"
         return algo_candidate_string, algo2des_cond_hyper
