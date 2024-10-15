@@ -18,9 +18,14 @@ class Visualization(object):
             converted_graph = full_graph.T
             return converted_graph
 
-    def process_boot_mat(self, boot_prob_mat: np.array):
+    def process_boot_mat(self, boot_prob_mat: np.array, full_graph: np.array):
         # causal graph using the full dataset - Matrix[i,j] = 1 indicates j->i
         boot_prob_mat = boot_prob_mat.T
+        np.fill_diagonal(boot_prob_mat, 0)
+
+        converted_graph = self.convert_mat(full_graph)
+        G = nx.from_numpy_array(converted_graph, parallel_edges=False, create_using=nx.DiGraph)
+
         # Get the indices of non-zero elements
         non_zero_indices = np.nonzero(boot_prob_mat)
         # Get the values of non-zero elements
@@ -28,7 +33,12 @@ class Visualization(object):
         # Get the probability dictionary
         boot_dict = {}
         for index, value in zip(zip(*non_zero_indices), non_zero_values):
-            boot_dict[index] = value
+            if value >= self.threshold:
+                boot_dict[index] = value
+            else:
+                if index in G.edges:
+                    print(index)
+                    boot_dict[index] = value
         return boot_dict
 
 
@@ -61,7 +71,7 @@ class Visualization(object):
                         node_size=1000,
                         linewidths=3,
                         edgecolors="#4a90e2d9",
-                        node_color=['#b45b1f' if str(node)==str(self.y) else '#1f78b4' for node in G.nodes],
+                        node_color=['#b45b1f' if str(variable) in self.y else '#1f78b4' for variable in labels.values()],
                         ###edge###
                         edge_color="gray",
                         width=2,
@@ -81,7 +91,7 @@ class Visualization(object):
                         node_size=1000,
                         linewidths=3,
                         edgecolors="#4a90e2d9",
-                        node_color=['#b45b1f' if str(node) == str(self.y) else '#1f78b4' for node in G.nodes]
+                        node_color=['#b45b1f' if str(variable) in self.y else '#1f78b4' for variable in labels.values()]
                         )
                 nx.draw_networkx_labels(G_ori,
                                        pos=nx.planar_layout(G_ori),
@@ -124,38 +134,12 @@ class Visualization(object):
                                                        fc=(1.0, 1.0, 1.0, 0))
                                              )
             #ax.set_title(title)
+            if not os.path.exists(self.save_dir):
+                os.makedirs(self.save_dir)
             save_path = os.path.join(self.save_dir, f'{title.replace(" ", "_")}.jpg')
             plt.savefig(fname=save_path, dpi=1000)
 
             return save_path
-
-
-
-
-true_mat = np.load('postprocess/test_data/20241007_184921_base_nodes8_samples1500/base_graph.npy')
-result_mat = np.load('postprocess/test_data/20241007_184921_base_nodes8_samples1500/initial_graph.npy')
-boot_probability = np.load('postprocess/test_data/20241007_184921_base_nodes8_samples1500/boot_prob.npy')
-revised_mat = np.load('postprocess/test_data/20241007_184921_base_nodes8_samples1500/revised_graph.npy')
-
-my_visual = Visualization(y='0', save_dir='postprocess/test_data/20241007_184921_base_nodes8_samples1500/output_graph', threshold=0.95)
-true_fig_path = my_visual.mat_to_graph(full_graph=true_mat,
-                                 labels=None,
-                                 edge_labels=None,
-                                 title='True Graph')
-
-boot_dict = my_visual.process_boot_mat(boot_probability)
-result_fig_path = my_visual.mat_to_graph(full_graph=result_mat,
-                                 labels=None,
-                                 edge_labels=boot_dict,
-                                 title='Initial Graph')
-
-revised_fig_path = my_visual.mat_to_graph(full_graph=revised_mat,
-                                ori_graph=result_mat,
-                                 labels=None,
-                                 edge_labels=None,
-                                 title='Revised Graph')
-
-
 
 
 
