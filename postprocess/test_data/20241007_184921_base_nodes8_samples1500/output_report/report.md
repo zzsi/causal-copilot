@@ -43,7 +43,7 @@ Overall, this network of causal relationships highlights the interconnectedness 
 
 ### Metrics Evaluation
 The following are some metrics measuring the difference between the true graph and the estimated one.
-- **MHD (Structural Hamming Distance)**: 0
+- **SHD (Structural Hamming Distance)**: 0
 - **precision**: 1
 - **Recall**: 1
 - **f1**: 1
