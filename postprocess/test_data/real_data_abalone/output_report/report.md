@@ -87,7 +87,7 @@ The following are result graphs produced by our algorithm. The initial graph sho
 
 | <center> Initial Graph | <center> Revised Graph |
 |--|--|
-| ![Initial Graph](/output_graph/Initial_Graph.jpg) | ![Revised Graph](/output_graph/Revised_Graph.jpg) |
+| ![Initial Graph](/postprocess/test_data/real_data_abalone/output_graph/Initial_Graph.jpg) | ![Revised Graph](/postprocess/test_data/real_data_abalone/output_graph/Revised_Graph.jpg) |
 
 ### Observations:
 The causal graph illustrates the relationships among the variables effectively. Notably:
