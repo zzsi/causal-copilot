@@ -288,13 +288,14 @@ def stat_info_collection(args, data):
     time_series_res = {"Time-series": args.ts}
     sample_size = {"Sample Size": n}
     feature_size = {"Number of Features": m}
-    domain_index = {'Domain Index': args.domain_index}
     heterogeneity = {'Heterogeneity': heterogeneity_check(df = data, heterogeneity_indicator = args.domain_index)}
     # Drop the domain index column from the data
     if args.domain_index in data.columns:
+        domain_index = {'Domain Index': args.domain_index}
         col_domain_index = data[args.domain_index]
         data = data.drop(columns=[args.domain_index])
     else:
+        domain_index = {'Domain Index': None}
         col_domain_index = None
 
     # Data pre-processing
