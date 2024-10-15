@@ -230,8 +230,8 @@ def heterogeneity_check(df: pd.DataFrame, heterogeneity_indicator: str = "domain
     # check if there are multiple domain index
     if heterogeneity_indicator in df.columns:
         if df[heterogeneity_indicator].nunique() > 1:
-            return {"Heterogeneity": True}
-    return {"Heterogeneity": False}
+            return True
+    return False
 
 def stationary_check(df: pd.DataFrame, max_test: int = 1000, alpha: float = 0.1):
     '''
