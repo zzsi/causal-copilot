@@ -288,7 +288,6 @@ def stat_info_collection(args, data):
     time_series_res = {"Time-series": args.ts}
     sample_size = {"Sample Size": n}
     feature_size = {"Number of Features": m}
-    
     heterogeneity = {'Heterogeneity': heterogeneity_check(df = data, heterogeneity_indicator = args.domain_index)}
     # Drop the domain index column from the data
     if args.domain_index in data.columns:
