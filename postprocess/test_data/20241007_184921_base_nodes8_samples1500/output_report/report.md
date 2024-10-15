@@ -28,9 +28,9 @@ To identify the causal relationships among the variables, we employed a structur
 
 The following are result graphs produced by our algorithm. The initial graph is the one observed in the first attempt, while the revised graph is pruned based on bootstrapping and LLM suggestions.
 
-| <center> Initial Graph | <center> Revised Graph |
-| -- | -- |
-| ![Initial Graph](/postprocess/test_data/20241007_184921_base_nodes8_samples1500/output_graph/Initial_Graph.jpg) | ![Revised Graph](/postprocess/test_data/20241007_184921_base_nodes8_samples1500/output_graph/Revised_Graph.jpg) |
+| <center> True Graph | <center> Initial Graph | <center> Revised Graph |
+| -- | -- | -- |
+| ![Initial Graph](/postprocess/test_data/20241007_184921_base_nodes8_samples1500/output_graph/True_Graph.jpg) | ![Initial Graph](/postprocess/test_data/20241007_184921_base_nodes8_samples1500/output_graph/Initial_Graph.jpg) | ![Revised Graph](/postprocess/test_data/20241007_184921_base_nodes8_samples1500/output_graph/Revised_Graph.jpg) |
 
 ### Interpretation of Causal Relationships
 - **X1 → X0**: There is a direct causal influence of X1 on X0, meaning that changes in X1 will directly impact X0.
@@ -40,3 +40,10 @@ The following are result graphs produced by our algorithm. The initial graph is 
 - **X6 → (X1, X4, X5)**: X6 is a causal agent for multiple outcomes, showing extensive influence across the network.
 
 Overall, this network of causal relationships highlights the interconnectedness of the variables, suggesting potential pathways for interventions or analysis regarding how altering one variable may impact the others. The insights derived from this causal structure can inform future research and practice, demonstrating the importance of understanding these complex interactions.
+
+### Metrics Evaluation
+The following are some metrics measuring the difference between the true graph and the estimated one.
+- **MHD (Structural Hamming Distance)**: 0
+- **precision**: 1
+- **Recall**: 1
+- **f1**: 1
