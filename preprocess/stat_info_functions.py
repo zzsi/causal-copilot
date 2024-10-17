@@ -13,8 +13,10 @@ from statsmodels.stats.multitest import multipletests
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.stats.stattools import jarque_bera
 from statsmodels.tsa.stattools import adfuller
+from scipy import stats
 
-# path = '/Users/fangnan/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/ML Research/Causality-Copilot/data/simulation/simulated_data/20241013_162600_base_nodes10_samples2000/base_data.csv'
+# Non-Linear Gaussian
+# path = '/Users/fangnan/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/ML Research/Causality-Copilot/data/simulation/simulated_data/20241016_213723_base_nodes15_samples1000/base_data.csv'
 # data = pd.read_csv(path)
 
 
@@ -23,6 +25,7 @@ def data_preprocess (df: pd.DataFrame, ratio: float = 0.5, ts: bool = False):
     :param df: Dataset in Panda DataFrame format.
     :param ratio: threshold to remove column.
     :param ts: indicator of time-series data.
+    :param domain_index: column name which represents the domin index in the dataset
     :return: cleaned data, indicator of missingness in cleaned data, overall data type, data type of each feature.
     '''
 
@@ -130,7 +133,7 @@ def linearity_check (df: pd.DataFrame, test_pairs: int = 1000, alpha: float = 0.
     '''
 
 
-    reset_pval = []
+    pval = []
     OLS_model = []
 
     pair_num = len(test_pairs)
@@ -148,17 +151,19 @@ def linearity_check (df: pd.DataFrame, test_pairs: int = 1000, alpha: float = 0.
 
         # Ramsey’s RESET - H0: linearity is satisfied
         reset_test = linear_reset(results, power=2)
-        reset_pval.append(reset_test.pvalue)
+        pval.append(reset_test.pvalue)
 
-    # Benjamini & Yekutieli procedure - True: reject H0 -- linearity is not satisfied
-    corrected_reset = multipletests(reset_pval, alpha=alpha, method='fdr_by')[0]
+    # Benjamini & Yekutieli procedure: return true for hypothesis that can be rejected for given alpha
+    # Return True: reject H0 (p value < alpha) -- linearity is not satisfied
+    corrected_result = multipletests(pval, alpha=alpha, method='fdr_by')[0]
 
-    if corrected_reset.sum() == 0:
+    # Once there is one pair of test has been rejected, we conclude non-linearity
+    if corrected_result.sum() == 0:
         check_result = {"Linearity": True}
     else:
         check_result = {"Linearity": False}
 
-    return check_result, corrected_reset, OLS_model
+    return check_result, corrected_result, OLS_model
 
 
 # linearity_res, all_reset_results, OLS_model = linearity_check(df = imputed_data,
@@ -184,7 +189,7 @@ def gaussian_check(df: pd.DataFrame,
     :return: indicator of gaussian errors.
     '''
 
-    JB_pval = []
+    pval = []
     pair_num = len(test_pairs)
 
     for i in range(pair_num):
@@ -202,13 +207,17 @@ def gaussian_check(df: pd.DataFrame,
             residuals = y - smoothed_values
 
         # Jarque–Bera test - H0: residuals are Gaussian
-        JB_test = jarque_bera(residuals)
-        JB_pval.append(JB_test[1])
+        # JB_test = jarque_bera(residuals)
+        # JB_pval.append(JB_test[1])
+
+        # Shapiro-Wilk test - H0: Gaussian errors
+        test = stats.shapiro(residuals)
+        pval = test.pvalue
 
         # Benjamini & Yekutieli procedure - True: reject H0 -- Gaussian error assumption is not satisfied
-        corrected_JB = multipletests(JB_pval, alpha=alpha, method='fdr_by')[0]
+        corrected_result = multipletests(pval, alpha=alpha, method='fdr_by')[0]
 
-        if corrected_JB.sum() == 0:
+        if corrected_result.sum() == 0:
             check_result = {"Gaussian Error": True}
             continue
         else:
@@ -284,11 +293,15 @@ def stat_info_collection(args, data):
 
     n,m = data.shape
 
+    if args.domain_index in data.columns:
+        m = m-1
+
     # Initialize output
     time_series_res = {"Time-series": args.ts}
     sample_size = {"Sample Size": n}
     feature_size = {"Number of Features": m}
     heterogeneity = {'Heterogeneity': heterogeneity_check(df = data, heterogeneity_indicator = args.domain_index)}
+
     # Drop the domain index column from the data
     if args.domain_index in data.columns:
         domain_index = {'Domain Index': args.domain_index}
@@ -374,7 +387,7 @@ def stat_info_collection(args, data):
 # args = ParaStatCollect()
 #
 #
-# stat_info_combine, _, _ = stat_info_collection(args = args, data = data)
+# stat_info_combine, imputed_data = stat_info_collection(args = args, data = data)
 #
 # print(stat_info_combine)
 

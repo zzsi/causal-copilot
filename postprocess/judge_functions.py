@@ -3,9 +3,11 @@
 # import numpy as np
 # import algorithm.wrappers as wrappers
 #
-# path = '/Users/fangnan/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/ML Research/Causality-Copilot/data/simulation/simulated_data/20241012_145758_base_nodes4_samples1000/base_data.csv'
+# path = '/Users/fangnan/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/ML Research/Causality-Copilot/data/simulation/simulated_data/20241016_205954_base_nodes10_samples1000/base_data.csv'
 # file_extension = os.path.splitext(path)[1].lower()
 # data = pd.read_csv(path)
+#
+# print(data)
 #
 # hyperparameters = {'alpha': 0.05,
 #                    'indep_test': 'fisherz',
@@ -24,7 +26,7 @@
 # print(graph)
 
 
-def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
+def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, domain_index):
     '''
     :param data: Given Tabular Data in Pandas DataFrame format
     :param full_graph: An adjacent matrix in Numpy Ndarray format -
@@ -33,6 +35,7 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
     :param hyperparameters: Dictionary of hyperparameter names and values
     :param boot_num: Number of bootstrap iterations
     :param ts: An indicator of time-series data
+    :param domain_index: column name which represents the domain index
     :return: a dict of obvious errors in causal analysis results based on bootstrap,
              e.g. {"X->Y: "Forced", "Y->Z: "Forbidden"};
              a matrix records bootstrap probability of directed edges, Matrix[i,j] records the
@@ -47,6 +50,10 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
 
     n, m = data.shape
     errors = {}
+
+
+    if domain_index in data.columns:
+        m = m-1
 
     boot_effect_save = np.empty((m, m, boot_num)) # Save graphs based on bootstrapping
 
@@ -105,7 +112,7 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
 
     return errors, boot_probability
 
-# errors, boot_probability = bootstrap(data, graph, 'PC', hyperparameters, 10, False)
+# errors, boot_probability = bootstrap(data, graph, 'PC', hyperparameters, 10, False, "domain_index")
 # print(boot_probability)
 
 
