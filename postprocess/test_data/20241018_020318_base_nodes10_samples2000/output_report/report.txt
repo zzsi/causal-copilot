@@ -86,7 +86,7 @@ Below is a comparison of metrics for the original and revised graphs:
 | Recall      | 0.1667         | 0.1667         |
 | F1 Score    | 0.2400         | 0.2500         |
 
-![Metric Graph](/postprocess/test_data/20241018_020318_base_nodes10_samples2000/output_graph/metrics.jpg)
+<img src="/postprocess/test_data/20241018_020318_base_nodes10_samples2000/output_graph/metrics.jpg" alt="Metric Graph" width="50%"/>
 
 ### Analysis of Metrics:
 - **Structural Hamming Distance (SHD)**: A reduction from 38.0 to 36.0 indicates an improvement in the accuracy of causal discovery.
