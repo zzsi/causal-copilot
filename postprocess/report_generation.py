@@ -6,22 +6,26 @@ from mdprint import mdprint
 
 class Report_generation(object):
     def __init__(self, args_setup, data, statistics_desc, knowledge_docs,
-                 prompt, hp_prompt, result_graph, visual_dir):
+                 prompt, hp_prompt, result_graph, original_metrics, revised_metrics, visual_dir):
         """
         :param args_setup: arguments for the report generation
         :param statistics_desc: statistics description of the dataset
         """
         self.client = OpenAI(organization=args_setup.organization, project=args_setup.project, api_key=args_setup.apikey)
+        self.data_mode = args_setup.data_mode
         self.statistics_desc = statistics_desc
         self.knowledge_docs = knowledge_docs
         # Data info
         self.data = data
         # Result graph matrix
         self.graph = result_graph
-        self.visual_dir = visual_dir
+        self.original_metrics = original_metrics.copy()
+        self.revised_metrics = revised_metrics.copy()
         # algo&hp selection prompts
         self.prompt = prompt
         self.hp_prompt = hp_prompt
+        # Path to find the visualization graph
+        self.visual_dir = visual_dir
 
     def background_info_prompts(self):
         data_columns = '\t'.join(self.data.columns)
@@ -65,6 +69,8 @@ class Report_generation(object):
         Then we let the LLM help us to select algorithms and hyper-parameters based on statistical characteristics of this dataset and background knowledge.
         This is the prompt for algorithm selection {self.prompt}, and this is the prompt for hyper-parameter selection {self.hp_prompt},
         you can find some useful information, i.e. the selected algorithms and parameters, in these prompts.
+        The first step is Data Preprocessing, the second Algorithm Selection assisted with LLM, the third is Hyperparameter Values Proposal assisted with LLM,
+        and the fourth is graph tuning with bootstrap and LLM suggestion.
         Please discribe the procedure step by step clearly.
         """
         print("Start to find discovery procedure")
@@ -121,24 +127,44 @@ class Report_generation(object):
             # Graph effect info
             graph_prompt = self.graph_effect_prompts()
             discover_process = self.discover_process_prompts()
-            # Report prompt
-            prompt_template = self.load_context("postprocess/context/report_templete")
             # Graph paths
+            graph_path0 = f'{self.visual_dir}/True_Graph.jpg'
             graph_path1 = f'{self.visual_dir}/Initial_Graph.jpg'
             graph_path2 = f'{self.visual_dir}/Revised_Graph.jpg'
+            graph_path3 = f'{self.visual_dir}/metrics.jpg'
 
-            replacements = {
-                "[BACKGROUND_INFO]": background_info,
-                "[DATA_PREVIEW]": data_preview,
-                "[DATA_PROP]": data_prop,
-                "[RESULT_ANALYSIS]": graph_prompt,
-                "[DISCOVER_PROCESS]": discover_process,
-                "[RESULT_GRAPH1]": graph_path1,
-                "[RESULT_GRAPH2]": graph_path2
-            }
+            if self.data_mode == 'simulated':
+                # Report prompt
+                prompt_template = self.load_context("postprocess/context/report_templete_simulated")
+                replacements = {
+                    "[BACKGROUND_INFO]": background_info,
+                    "[DATA_PREVIEW]": data_preview,
+                    "[DATA_PROP]": data_prop,
+                    "[RESULT_ANALYSIS]": graph_prompt,
+                    "[DISCOVER_PROCESS]": discover_process,
+                    "[RESULT_GRAPH0]": graph_path0,
+                    "[RESULT_GRAPH1]": graph_path1,
+                    "[RESULT_GRAPH2]": graph_path2,
+                    "[RESULT_GRAPH3]": graph_path3,
+                    "[RESULT_METRICS1]": str(self.original_metrics),
+                    "[RESULT_METRICS2]": str(self.revised_metrics)
+                }
+            else:
+                # Report prompt
+                prompt_template = self.load_context("postprocess/context/report_templete_real")
+                replacements = {
+                    "[BACKGROUND_INFO]": background_info,
+                    "[DATA_PREVIEW]": data_preview,
+                    "[DATA_PROP]": data_prop,
+                    "[RESULT_ANALYSIS]": graph_prompt,
+                    "[DISCOVER_PROCESS]": discover_process,
+                    "[RESULT_GRAPH1]": graph_path1,
+                    "[RESULT_GRAPH2]": graph_path2
+                }
 
             for placeholder, value in replacements.items():
                 prompt_template = prompt_template.replace(placeholder, value)
+
 
             print("Start to generate the report")
             response = self.client.chat.completions.create(
