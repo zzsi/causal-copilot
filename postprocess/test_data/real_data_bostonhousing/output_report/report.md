@@ -74,7 +74,7 @@ The following graphs were produced by our analysis. The initial graph represents
 
 | <center> Initial Graph | <center> Revised Graph |
 |------------------------|------------------------|
-| ![Initial Graph](t/postprocess/test_data/real_data_bostonhousing/output_graph/Initial_Graph.jpg) | ![Revised Graph](/postprocess/test_data/real_data_bostonhousing/output_graph/Revised_Graph.jpg) |
+| ![Initial Graph](/postprocess/test_data/real_data_bostonhousing/output_graph/Initial_Graph.jpg) | ![Revised Graph](/postprocess/test_data/real_data_bostonhousing/output_graph/Revised_Graph.jpg) |
 
 ### Causal Relationships Insights
 - The variable **ZN** influences **PTRATIO**, highlighting how zoning regulations affect pupil-teacher ratios.
