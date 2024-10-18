@@ -1,0 +1,33 @@
+# TITLE HERE
+
+## Background
+[BACKGROUND_INFO]
+
+## Dataset Descriptions
+The following is a preview of our dataset. Please include the preview dataset in the report.
+[DATA_PREVIEW]
+
+[DATA_PROP]
+
+## Discovery Procedure
+[DISCOVER_PROCESS]
+
+## Results Summary
+
+The following are result graphs produced by our algorithm.
+The initial graph is the graph in the first attempt, and the revised graph is the one pruned with bootstrapping and LLM suggestion.
+
+|<center> True Graph|<center> Initial Graph| <center> Revised Graph|
+|--|--|--|
+| ![True Graph]([RESULT_GRAPH0])| ![Initial Graph]([RESULT_GRAPH1])| ![Revised Graph]([RESULT_GRAPH2])|
+
+[RESULT_ANALYSIS]
+
+### Metrics Evaluation
+There are two dictionaries containing values of metrics: SHD (Structural Hamming Distance), precision, Recall, and f1 score.
+This is the value for the original graph:[RESULT_METRICS1]
+This is the value for the revised graph:[RESULT_METRICS2]
+
+Also include this graph:
+![Metric Graph]([RESULT_GRAPH3])
+Please convert it into a table to compare metrics of original and revised graph, include it in the report, and give some simple analysis.

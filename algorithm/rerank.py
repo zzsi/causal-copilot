@@ -129,4 +129,4 @@ class Reranker(object):
         print("Selected Algorithm: ", selected_algo)
         print("Hyperparameter Suggestions: ", hyper_suggest)
     
-        return selected_algo, hyper_suggest
+        return selected_algo, hyper_suggest, prompt, hp_prompt

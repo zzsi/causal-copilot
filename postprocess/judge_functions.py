@@ -26,7 +26,7 @@
 # print(graph)
 
 
-def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, domain_index):
+def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, domain_index=None):
     '''
     :param data: Given Tabular Data in Pandas DataFrame format
     :param full_graph: An adjacent matrix in Numpy Ndarray format -

@@ -5,9 +5,12 @@ from algorithm.filter import Filter
 from algorithm.program import Programming
 from algorithm.rerank import Reranker
 from postprocess.judge import Judge
+from postprocess.visualization import Visualization
+from postprocess.report_generation import Report_generation
 
 import json
 import argparse
+import pandas as pd
 
 
 def parse_args():
@@ -17,16 +20,8 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="simulated_data/20241012_145758_base_nodes4_samples1000",
-        help='Path to the input dataset file (e.g., CSV format)'
-    )
-
-    # Input data file of Ground Truth
-    parser.add_argument(
-        '--ground-truth',
-        type=str,
-        default="data/20240918_224140_base_nodes4_samples1000/base_graph.npy",
-        help='Path to the ground truth matrix (e.g., CSV format)'
+        default="test_data/20241018_020318_base_nodes10_samples2000",
+        help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
     # Target variable
@@ -61,10 +56,18 @@ def parse_args():
 
     # Output file for results
     parser.add_argument(
-        '--output-file',
+        '--output-report-dir',
         type=str,
-        default='results.txt',
-        help='File path to save the analysis results'
+        default='test_data/20241018_020318_base_nodes10_samples2000/output_report',
+        help='Directory to save the output report'
+    )
+
+    # Output directory for graphs
+    parser.add_argument(
+        '--output-graph-dir',
+        type=str,
+        default='test_data/20241018_020318_base_nodes10_samples2000/output_graph',
+        help='Directory to save the output graph'
     )
 
     # Data preprocessing options
@@ -158,6 +161,13 @@ def parse_args():
     )
 
     parser.add_argument(
+        '--data_mode',
+        type=str,
+        default="simulated",
+        help='Data mode: real or simulated'
+    )
+
+    parser.add_argument(
         '--debug',
         action='store_true',
         default=False,
@@ -174,7 +184,13 @@ def main():
         simulation_manager = SimulationManager(args)
         config, data, graph = simulation_manager.generate_dataset()
     elif args.simulation_mode == "offline":
-        config, data, graph = load_data(args.data_file)
+        if args.data_mode == "simulated":
+            config, data, graph = load_data(args.data_file)
+        elif args.data_mode == "real":
+            data = pd.read_csv(args.data_file)
+            config, graph = None, None
+        else:
+            raise ValueError("Invalid data mode. Please choose 'real' or 'simulated'.")
     else:
         raise ValueError("Invalid simulation mode. Please choose 'online' or 'offline'.")
 
@@ -210,7 +226,7 @@ def main():
     print(algo_candidates)
 
     reranker = Reranker(args)
-    algorithm, hyper_suggest = reranker.forward(preprocessed_data, algo_candidates, statistics_desc, knowledge_docs)
+    algorithm, hyper_suggest, prompt, hp_prompt = reranker.forward(preprocessed_data, algo_candidates, statistics_desc, knowledge_docs)
     print(algorithm)
     print(hyper_suggest)
 
@@ -218,6 +234,7 @@ def main():
     #hyper_suggest = {'score_func': 'local_score_CV_general', 'maxP': 5}
     programmer = Programming(args)
     code, results = programmer.forward(preprocessed_data, algorithm, hyper_suggest)
+    ori_graph = results.copy()
     print(results)
 
     judge = Judge(args)
@@ -227,6 +244,10 @@ def main():
 
     shd, precision, recall, f1 = judge.evaluation(results, mat_ground_truth)
     print(shd, precision, recall, f1)
+    original_metrics = {'shd': shd,
+                       'precision': precision,
+                       'recall': recall,
+                       'f1': f1}
 
     flag, _, boot_probability, revised_graph = judge.forward(preprocessed_data, results, algorithm, hyper_suggest, knowledge_docs)
     #print(flag)
@@ -236,7 +257,36 @@ def main():
     print("Mat Ground Truth: ", mat_ground_truth)
     shd, precision, recall, f1 = judge.evaluation(revised_graph, mat_ground_truth)
     print(shd, precision, recall, f1)
+    revised_metrics = {'shd': shd,
+                       'precision': precision,
+                       'recall': recall,
+                       'f1': f1}
 
+    #############Visualization###################
+    my_visual = Visualization(data=data,
+                              y=['MEDV'],
+                              save_dir=args.output_graph_dir,
+                              threshold=0.95)
+    if graph is not None:
+        true_fig_path = my_visual.mat_to_graph(full_graph=mat_ground_truth,
+                                               edge_labels=None,
+                                               title='True Graph')
+
+    boot_dict = my_visual.process_boot_mat(boot_probability, ori_graph)
+
+    result_fig_path = my_visual.mat_to_graph(full_graph=ori_graph,
+                                                 edge_labels=boot_dict,
+                                                 title='Initial Graph')
+
+    revised_fig_path = my_visual.mat_to_graph(full_graph=revised_graph,
+                                              ori_graph=ori_graph,
+                                              edge_labels=None,
+                                              title='Revised Graph')
+
+    metrics_fig_path = my_visual.matrics_plot(original_metrics.copy(), revised_metrics.copy())
+
+    ################################
+    
     # algorithm selection process
     '''
     round = 0
@@ -247,7 +297,15 @@ def main():
         flag, algorithm_setup = judge(preprocessed_data, code, results, statistics_dict, algorithm_setup, knowledge_docs)
     '''
 
-    # judge.report_generation(preprocessed_data, results, statistics_dict, hyper_suggest, knowledge_docs)
+    #############Report Generation###################
+    my_report = Report_generation(args, data,
+                                  statistics_desc, knowledge_docs, prompt, hp_prompt,
+                                  revised_graph, original_metrics, revised_metrics,
+                                  visual_dir=args.output_graph_dir)
+    report = my_report.generation()
+    my_report.save_report(report, save_path=args.output_report_dir)
+    ################################
+   
 
 if __name__ == '__main__':
     main()
