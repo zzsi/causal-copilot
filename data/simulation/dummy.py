@@ -67,9 +67,8 @@ class DataSimulator:
         self.variable_names = None
 
     def generate_graph(self, n_nodes: int, edge_probability: float = 0.3, variable_names: List[str] = None) -> None:
-        """Generate a random directed acyclic graph (DAG)."""
-        self.graph = nx.gnp_random_graph(n=n_nodes, p=edge_probability, directed=True)
-        self.graph = nx.DiGraph([(u, v) for (u, v) in self.graph.edges() if u < v])
+        """Generate a random directed acyclic graph (DAG) using Erdos-Renyi method."""
+        self.graph = self.generate_dag_erdos_renyi(n_nodes, edge_probability)
         if variable_names and len(variable_names) == n_nodes:
             self.variable_names = variable_names
             self.graph = nx.relabel_nodes(self.graph, {i: name for i, name in enumerate(variable_names)})
@@ -77,6 +76,21 @@ class DataSimulator:
             self.variable_names = [f'X{i}' for i in range(n_nodes)]
             self.graph = nx.relabel_nodes(self.graph, {i: f'X{i}' for i in range(n_nodes)})
         self.ground_truth['graph'] = self.graph
+        # print(nx.to_numpy_array(self.graph))
+
+    @staticmethod
+    def generate_dag_erdos_renyi(n_nodes, edge_probability):
+        # Create an empty directed graph
+        G = nx.DiGraph()
+        G.add_nodes_from(range(n_nodes))
+        
+        # Add edges
+        for i in range(n_nodes):
+            for j in range(i+1, n_nodes):
+                if np.random.random() < edge_probability:
+                    G.add_edge(i, j)
+        
+        return G
 
     def generate_domain_data(self, n_samples: int, noise_scale: float, noise_type: str, function_type: Union[str, List[str], Dict[str, str]]) -> pd.DataFrame:
         """Generate data for a single domain based on the graph structure."""
@@ -109,6 +123,8 @@ class DataSimulator:
                 print(f"Node {node} using function type: {func_type}")  # Debugging line
                 
                 func = getattr(self.transformation_library, func_type)
+                print('parent_node', parents)
+                print('child_node', node)
                 if func_type == 'polynomial':
                     degree = np.random.randint(2, 5)  # Random degree between 2 and 4
                     data[node] = func(parent_data, noise_func, noise_scale, degree=degree)
@@ -573,3 +589,63 @@ class DomainSpecificSimulator:
 
 # # Simulate and save gene regulatory network data
 # domain_simulator.simulate_and_save('gene_regulatory_network', n_genes=50, n_samples=500)
+
+
+if __name__ == "__main__":
+    import numpy as np
+    import pandas as pd
+    from causallearn.search.ConstraintBased.PC import pc
+    from sklearn.metrics import precision_score, recall_score, f1_score
+
+    # Use the base simulator to generate data
+    base_simulator = DataSimulator()
+    graph, data = base_simulator.generate_dataset(
+        function_type='linear',
+        n_nodes=5,
+        n_samples=10000,
+        edge_probability=0.3,
+        noise_type='gaussian'
+    )
+
+    # Convert data to DataFrame
+    df = pd.DataFrame(data)
+
+    # Run PC algorithm
+    cg = pc(df.values)
+
+    # Get the adjacency matrix
+    adj_matrix = cg.G.graph
+
+    print('adj_matrix', adj_matrix)
+
+    # Create inferred flat matrix
+    inferred_flat = np.zeros_like(adj_matrix)
+    indices = np.where(adj_matrix == 1)
+    for i, j in zip(indices[0], indices[1]):
+        if adj_matrix[j, i] == -1:
+            inferred_flat[i, j] = 1
+    indices = np.where(adj_matrix == -1)
+    for i, j in zip(indices[0], indices[1]):
+        if adj_matrix[j, i] == -1:
+            inferred_flat[i, j] = 1
+
+    true_adj = nx.to_numpy_array(graph).transpose()
+    print(inferred_flat)
+    print(true_adj)
+
+    # Flatten matrices for comparison
+    true_flat = true_adj.flatten()
+    inferred_flat = inferred_flat.flatten()
+
+    # Calculate metrics
+    precision = precision_score(true_flat, inferred_flat)
+    recall = recall_score(true_flat, inferred_flat)
+    f1 = f1_score(true_flat, inferred_flat)
+
+    print("PC Algorithm Results:")
+    print(f"Precision: {precision:.3f}")
+    print(f"Recall: {recall:.3f}")
+    print(f"F1 Score: {f1:.3f}")
+
+
+

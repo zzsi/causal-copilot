@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from typing import Union, Dict, List, Tuple
+from sklearn.metrics import f1_score, precision_score, recall_score
 
 # use the local causal-learn package
 import sys
@@ -15,7 +16,7 @@ from causallearn.search.ScoreBased.GES import ges as cl_ges
 from causallearn.search.FCMBased.lingam.direct_lingam import DirectLiNGAM as CLDirectLiNGAM
 from causallearn.search.FCMBased.lingam.ica_lingam import ICALiNGAM as CLICALiNGAM
 
-from .base import CausalDiscoveryAlgorithm
+from base import CausalDiscoveryAlgorithm
 
 
 class PC(CausalDiscoveryAlgorithm):
@@ -76,22 +77,32 @@ class PC(CausalDiscoveryAlgorithm):
         }
 
         return adj_matrix, info
-
+    
     def convert_to_adjacency_matrix(self, cg: CausalGraph) -> np.ndarray:
-        adj_matrix = np.zeros_like(cg.G.graph)
-        for i in range(cg.G.graph.shape[0]):
-            for j in range(cg.G.graph.shape[1]):
-                if cg.G.graph[i, j] == 1 and cg.G.graph[j, i] == -1:
-                    # only keep the determined arrows (j --> i)
-                    adj_matrix[i, j] = 1
-        return adj_matrix
+        adj_matrix = cg.G.graph
+        inferred_flat = np.zeros_like(adj_matrix)
+        indices = np.where(adj_matrix == 1)
+        # save all the determined edges (j -> i) and convert (j -- i) to (j -> i) and (i -> j)
+        for i, j in zip(indices[0], indices[1]):
+            if adj_matrix[j, i] == -1:
+                inferred_flat[i, j] = 1
+        indices = np.where(adj_matrix == -1)
+        for i, j in zip(indices[0], indices[1]):
+            if adj_matrix[j, i] == -1:
+                inferred_flat[i, j] = 1
+        return inferred_flat
 
     def test_algorithm(self):
-        # Generate some sample data
+        # Generate sample data with linear relationships
         np.random.seed(42)
-        n_samples, n_features = 1000, 5
-        X = np.random.randn(n_samples, n_features)
-        df = pd.DataFrame(X, columns=[f'X{i}' for i in range(n_features)])
+        n_samples = 1000
+        X1 = np.random.normal(0, 1, n_samples)
+        X2 = 0.5 * X1 + np.random.normal(0, 0.5, n_samples)
+        X3 = 0.3 * X1 + 0.7 * X2 + np.random.normal(0, 0.3, n_samples)
+        X4 = 0.6 * X2 + np.random.normal(0, 0.4, n_samples)
+        X5 = 0.4 * X3 + 0.5 * X4 + np.random.normal(0, 0.2, n_samples)
+        
+        df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
 
         print("Testing PC algorithm with pandas DataFrame:")
         params = {
@@ -108,6 +119,24 @@ class PC(CausalDiscoveryAlgorithm):
         print(f"PC elapsed time: {info['PC_elapsed']:.4f} seconds")
         print(f"Number of definite unshielded colliders: {len(info['definite_UC'])}")
         print(f"Number of definite non-unshielded colliders: {len(info['definite_non_UC'])}")
+
+        # Calculate metrics
+        gt_graph = np.array([
+            [0, 1, 1, 0, 0],
+            [0, 0, 1, 1, 0],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0]
+        ]).T
+        
+        f1 = f1_score(gt_graph.flatten(), adj_matrix.flatten())
+        precision = precision_score(gt_graph.flatten(), adj_matrix.flatten())
+        recall = recall_score(gt_graph.flatten(), adj_matrix.flatten())
+
+        print("\nMetrics:")
+        print(f"F1 Score: {f1:.4f}")
+        print(f"Precision: {precision:.4f}")
+        print(f"Recall: {recall:.4f}")
 
 
 class FCI(CausalDiscoveryAlgorithm):
@@ -162,21 +191,35 @@ class FCI(CausalDiscoveryAlgorithm):
 
         return adj_matrix, info
 
-    def convert_to_adjacency_matrix(self, graph: CausalGraph) -> np.ndarray:
-        adj_matrix = np.zeros_like(graph.graph, dtype=int)
-        for i in range(graph.graph.shape[0]):
-            for j in range(graph.graph.shape[1]):
-                # only keep the determined arrows (j --> i)
-                if graph.graph[i, j] == 1 and graph.graph[j, i] == -1:
-                    adj_matrix[i, j] = 1  # j --> i
-        return adj_matrix
+    def convert_to_adjacency_matrix(self, adj_matrix: CausalGraph) -> np.ndarray:
+        adj_matrix = adj_matrix.graph
+        inferred_flat = np.zeros_like(adj_matrix)
+        indices = np.where(adj_matrix == 1)
+        # save all the determined edges (j -> i) and convert (j -- i) to (j -> i) and (i -> j)
+        for i, j in zip(indices[0], indices[1]):
+            if adj_matrix[j, i] == -1 or adj_matrix[j, i] == 2:
+                inferred_flat[i, j] = 1
+        indices = np.where(adj_matrix == -1)
+        for i, j in zip(indices[0], indices[1]):
+            if adj_matrix[j, i] == -1:
+                inferred_flat[i, j] = 1
+        indices = np.where(adj_matrix == 2)
+        for i, j in zip(indices[0], indices[1]):
+            if adj_matrix[j, i] == 2:
+                inferred_flat[i, j] = 1
+        return inferred_flat
 
     def test_algorithm(self):
-        # Generate some sample data
+        # Generate sample data with linear relationships
         np.random.seed(42)
-        n_samples, n_features = 1000, 5
-        X = np.random.randn(n_samples, n_features)
-        df = pd.DataFrame(X, columns=[f'X{i}' for i in range(n_features)])
+        n_samples = 1000
+        X1 = np.random.normal(0, 1, n_samples)
+        X2 = 0.5 * X1 + np.random.normal(0, 0.5, n_samples)
+        X3 = 0.3 * X1 + 0.7 * X2 + np.random.normal(0, 0.3, n_samples)
+        X4 = 0.6 * X2 + np.random.normal(0, 0.4, n_samples)
+        X5 = 0.4 * X3 + 0.5 * X4 + np.random.normal(0, 0.2, n_samples)
+        
+        df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
 
         print("Testing FCI algorithm with pandas DataFrame:")
         params = {
@@ -188,6 +231,24 @@ class FCI(CausalDiscoveryAlgorithm):
         adj_matrix, info = self.fit(df)
         print("Adjacency Matrix:")
         print(adj_matrix)
+
+        # Calculate metrics
+        gt_graph = np.array([
+            [0, 1, 1, 0, 0],
+            [0, 0, 1, 1, 0],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0]
+        ]).T
+        
+        f1 = f1_score(gt_graph.flatten(), adj_matrix.flatten())
+        precision = precision_score(gt_graph.flatten(), adj_matrix.flatten())
+        recall = recall_score(gt_graph.flatten(), adj_matrix.flatten())
+
+        print("\nMetrics:")
+        print(f"F1 Score: {f1:.4f}")
+        print(f"Precision: {precision:.4f}")
+        print(f"Recall: {recall:.4f}")
 
 
 class CDNOD(CausalDiscoveryAlgorithm):
@@ -249,23 +310,31 @@ class CDNOD(CausalDiscoveryAlgorithm):
         return adj_matrix, info
 
     def convert_to_adjacency_matrix(self, cg: CausalGraph) -> np.ndarray:
-        # Skip the domain index variable
-        size = cg.G.graph.shape[0] - 1
-        adj_matrix = np.zeros((size, size), dtype=int)
-        for i in range(size):
-            for j in range(size):
-                # only keep the determined arrows (j --> i)
-                if cg.G.graph[i, j] == 1 and cg.G.graph[j, i] == -1:
-                    adj_matrix[i, j] = 1  # j --> i
-        return adj_matrix
+        adj_matrix = cg.G.graph[:-1, :-1]
+        inferred_flat = np.zeros_like(adj_matrix)
+        indices = np.where(adj_matrix == 1)
+        # save all the determined edges (j -> i) and convert (j -- i) to (j -> i) and (i -> j)
+        for i, j in zip(indices[0], indices[1]):
+            if adj_matrix[j, i] == -1:
+                inferred_flat[i, j] = 1
+        indices = np.where(adj_matrix == -1)
+        for i, j in zip(indices[0], indices[1]):
+            if adj_matrix[j, i] == -1:
+                inferred_flat[i, j] = 1
+        return inferred_flat
 
     def test_algorithm(self):
-        # Generate some sample data
+        # Generate sample data with linear relationships and domain index
         np.random.seed(42)
-        n_samples, n_features = 1000, 5
-        X = np.random.randn(n_samples, n_features)
-        c_indx = np.random.randint(0, 2, size=(n_samples, 1))
-        df = pd.DataFrame(np.hstack((X, c_indx)), columns=[f'X{i}' for i in range(n_features)] + ['domain_index'])
+        n_samples = 1000
+        X1 = np.random.normal(0, 1, n_samples)
+        X2 = 0.5 * X1 + np.random.normal(0, 0.5, n_samples)
+        X3 = 0.3 * X1 + 0.7 * X2 + np.random.normal(0, 0.3, n_samples)
+        X4 = 0.6 * X2 + np.random.normal(0, 0.4, n_samples)
+        X5 = 0.4 * X3 + 0.5 * X4 + np.random.normal(0, 0.2, n_samples)
+        domain_index = np.ones_like(X1)
+        
+        df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5, 'domain_index': domain_index})
 
         print("Testing CD-NOD algorithm with pandas DataFrame:")
         params = {
@@ -278,6 +347,24 @@ class CDNOD(CausalDiscoveryAlgorithm):
         print("Adjacency Matrix:")
         print(adj_matrix)
         print(f"CD-NOD elapsed time: {info['PC_elapsed']:.4f} seconds")
+
+        # Calculate metrics
+        gt_graph = np.array([
+            [0, 1, 1, 0, 0],
+            [0, 0, 1, 1, 0],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0]
+        ]).T
+        
+        f1 = f1_score(gt_graph.flatten(), adj_matrix.flatten())
+        precision = precision_score(gt_graph.flatten(), adj_matrix.flatten())
+        recall = recall_score(gt_graph.flatten(), adj_matrix.flatten())
+
+        print("\nMetrics:")
+        print(f"F1 Score: {f1:.4f}")
+        print(f"Precision: {precision:.4f}")
+        print(f"Recall: {recall:.4f}")
 
 
 class GES(CausalDiscoveryAlgorithm):
@@ -330,19 +417,30 @@ class GES(CausalDiscoveryAlgorithm):
         return adj_matrix, info
 
     def convert_to_adjacency_matrix(self, G: CausalGraph) -> np.ndarray:
-        adj_matrix = np.zeros_like(G.graph, dtype=int)
-        for i in range(G.graph.shape[0]):
-            for j in range(G.graph.shape[1]):
-                if G.graph[i, j] == 1 and G.graph[j, i] == -1:
-                    adj_matrix[i, j] = 1  # j --> i
-        return adj_matrix
+        adj_matrix = G.graph
+        inferred_flat = np.zeros_like(adj_matrix)
+        indices = np.where(adj_matrix == 1)
+        # save all the determined edges (j -> i) and convert (j -- i) to (j -> i) and (i -> j)
+        for i, j in zip(indices[0], indices[1]):
+            if adj_matrix[j, i] == -1:
+                inferred_flat[i, j] = 1
+        indices = np.where(adj_matrix == -1)
+        for i, j in zip(indices[0], indices[1]):
+            if adj_matrix[j, i] == -1:
+                inferred_flat[i, j] = 1
+        return inferred_flat
 
     def test_algorithm(self):
-        # Generate some sample data
+        # Generate sample data with linear relationships
         np.random.seed(42)
-        n_samples, n_features = 1000, 5
-        X = np.random.randn(n_samples, n_features)
-        df = pd.DataFrame(X, columns=[f'X{i}' for i in range(n_features)])
+        n_samples = 1000
+        X1 = np.random.normal(0, 1, n_samples)
+        X2 = 0.5 * X1 + np.random.normal(0, 0.5, n_samples)
+        X3 = 0.3 * X1 + 0.7 * X2 + np.random.normal(0, 0.3, n_samples)
+        X4 = 0.6 * X2 + np.random.normal(0, 0.4, n_samples)
+        X5 = 0.4 * X3 + 0.5 * X4 + np.random.normal(0, 0.2, n_samples)
+        
+        df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
 
         print("Testing GES algorithm with pandas DataFrame:")
         params = {
@@ -352,7 +450,25 @@ class GES(CausalDiscoveryAlgorithm):
         adj_matrix, info = self.fit(df)
         print("Adjacency Matrix:")
         print(adj_matrix)
-        print(f"GES score: {info['score']:.4f}")
+        print(f"GES score: {info['score']}")
+
+        # Calculate metrics
+        gt_graph = np.array([
+            [0, 1, 1, 0, 0],
+            [0, 0, 1, 1, 0],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0]
+        ]).T
+        
+        f1 = f1_score(gt_graph.flatten(), adj_matrix.flatten())
+        precision = precision_score(gt_graph.flatten(), adj_matrix.flatten())
+        recall = recall_score(gt_graph.flatten(), adj_matrix.flatten())
+
+        print("\nMetrics:")
+        print(f"F1 Score: {f1:.4f}")
+        print(f"Precision: {precision:.4f}")
+        print(f"Recall: {recall:.4f}")
 
 
 class DirectLiNGAM(CausalDiscoveryAlgorithm):
@@ -395,7 +511,7 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
         model.fit(data_values)
 
         # Convert the graph to adjacency matrix
-        adj_matrix = model.adjacency_matrix_
+        adj_matrix = self.convert_to_adjacency_matrix(model.adjacency_matrix_)
 
         # Prepare additional information
         info = {
@@ -403,13 +519,22 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
         }
 
         return adj_matrix, info
+    
+    def convert_to_adjacency_matrix(self, adjacency_matrix: np.ndarray) -> np.ndarray:
+        adj_matrix = np.where(adjacency_matrix != 0, 1, 0)
+        return adj_matrix
 
     def test_algorithm(self):
-        # Generate some sample data
+        # Generate sample data with linear relationships
         np.random.seed(42)
-        n_samples, n_features = 1000, 5
-        X = np.random.randn(n_samples, n_features)
-        df = pd.DataFrame(X, columns=[f'X{i}' for i in range(n_features)])
+        n_samples = 1000
+        X1 = np.random.normal(0, 1, n_samples)
+        X2 = 0.5 * X1 + np.random.normal(0, 0.5, n_samples)
+        X3 = 0.3 * X1 + 0.7 * X2 + np.random.normal(0, 0.3, n_samples)
+        X4 = 0.6 * X2 + np.random.normal(0, 0.4, n_samples)
+        X5 = 0.4 * X3 + 0.5 * X4 + np.random.normal(0, 0.2, n_samples)
+        
+        df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
 
         print("Testing DirectLiNGAM algorithm with pandas DataFrame:")
         params = {
@@ -421,6 +546,24 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
         print(adj_matrix)
         print("Causal Order:")
         print(info['causal_order'])
+
+        # Calculate metrics
+        gt_graph = np.array([
+            [0, 1, 1, 0, 0],
+            [0, 0, 1, 1, 0],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0]
+        ]).T
+        
+        f1 = f1_score(gt_graph.flatten(), adj_matrix.flatten())
+        precision = precision_score(gt_graph.flatten(), adj_matrix.flatten())
+        recall = recall_score(gt_graph.flatten(), adj_matrix.flatten())
+
+        print("\nMetrics:")
+        print(f"F1 Score: {f1:.4f}")
+        print(f"Precision: {precision:.4f}")
+        print(f"Recall: {recall:.4f}")
 
 
 class ICALiNGAM(CausalDiscoveryAlgorithm):
@@ -458,21 +601,29 @@ class ICALiNGAM(CausalDiscoveryAlgorithm):
         model.fit(data_values)
 
         # Convert the graph to adjacency matrix
-        adj_matrix = model.adjacency_matrix_
+        adj_matrix = self.convert_to_adjacency_matrix(model.adjacency_matrix_)
 
         # Prepare additional information
         info = {
             'causal_order': model.causal_order_
         }
-
         return adj_matrix, info
 
+    def convert_to_adjacency_matrix(self, adjacency_matrix: np.ndarray) -> np.ndarray:
+        adj_matrix = np.where(adjacency_matrix != 0, 1, 0)
+        return adj_matrix
+
     def test_algorithm(self):
-        # Generate some sample data
+        # Generate sample data with linear relationships
         np.random.seed(42)
-        n_samples, n_features = 1000, 5
-        X = np.random.randn(n_samples, n_features)
-        df = pd.DataFrame(X, columns=[f'X{i}' for i in range(n_features)])
+        n_samples = 1000
+        X1 = np.random.normal(0, 1, n_samples)
+        X2 = 0.5 * X1 + np.random.normal(0, 0.5, n_samples)
+        X3 = 0.3 * X1 + 0.7 * X2 + np.random.normal(0, 0.3, n_samples)
+        X4 = 0.6 * X2 + np.random.normal(0, 0.4, n_samples)
+        X5 = 0.4 * X3 + 0.5 * X4 + np.random.normal(0, 0.2, n_samples)
+        
+        df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
 
         print("Testing ICALiNGAM algorithm with pandas DataFrame:")
         params = {
@@ -485,7 +636,22 @@ class ICALiNGAM(CausalDiscoveryAlgorithm):
         print("Causal Order:")
         print(info['causal_order'])
 
+        # Calculate metrics
+        gt_graph = np.array([
+            [0, 1, 1, 0, 0],
+            [0, 0, 1, 1, 0],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0]
+        ]).T
+        
+        f1 = f1_score(gt_graph.flatten(), adj_matrix.flatten())
+        precision = precision_score(gt_graph.flatten(), adj_matrix.flatten())
+        recall = recall_score(gt_graph.flatten(), adj_matrix.flatten())
 
+        print("\nMetrics:")
+        print(f"F1 Score: {f1:.4f}")
+        print(f"Precision: {precision:.4f}")
 if __name__ == "__main__":
     pc_algo = PC({})
     pc_algo.test_algorithm()
