@@ -49,55 +49,30 @@ def statistics_info(args, data):
     return statistics_dict, preprocessed_data
 
 
-def convert_stat_info_to_text(stat_info):
+def convert_stat_info_to_text(statistics):
     """
-    Convert the statistical information dictionary to natural language.
+    Convert the statistical information from Statistics object to natural language.
     
-    :param stat_info: Dictionary containing statistical information about the dataset.
+    :param statistics: Statistics object containing statistical information about the dataset.
     :return: A string describing the dataset characteristics in natural language.
     """
-    import json
-    info = json.loads(stat_info)
-    
     text = f"The dataset has the following characteristics:\n\n"
-    text += f"The sample size is {info['Sample Size']} with {info['Number of Features']} features. "
-    text += f"This dataset {'is' if info['Time-series'] else 'is not'} time-series data. "
+    text += f"The sample size is {statistics.sample_size} with {statistics.feature_number} features. "
+    text += f"This dataset is {'time-series' if statistics.data_type == 'Time-series' else 'not time-series'} data. "
     
-    text += f"Data Type: The overall data type is {info['Data Type']}.\n\n"
-    text += f"Data Quality: {'There are' if info['Missingness'] else 'There are no'} missing values in the dataset.\n\n"
+    text += f"Data Type: The overall data type is {statistics.data_type}.\n\n"
+    text += f"Data Quality: {'There are' if statistics.missingness else 'There are no'} missing values in the dataset.\n\n"
     
-    if not info['Time-series']:
-        text += "Statistical Properties:\n"
-        text += f"- Linearity: The relationships between variables {'are' if info['Linearity'] else 'are not'} predominantly linear.\n"
-        text += f"- Gaussian Errors: The errors in the data {'do' if info['Gaussian Error'] else 'do not'} follow a Gaussian distribution.\n"
-        text += f"- This dataset {'is' if info['Heterogeneity'] else 'is not'} heterogeneous. \n\n"
+    text += "Statistical Properties:\n"
+    text += f"- Linearity: The relationships between variables {'are' if statistics.linearity else 'are not'} predominantly linear.\n"
+    text += f"- Gaussian Errors: The errors in the data {'do' if statistics.gaussian_error else 'do not'} follow a Gaussian distribution.\n"
+    text += f"- Heterogeneity: The dataset {'is' if statistics.heterogeneous else 'is not'} heterogeneous. \n\n"
+    
+    if statistics.missingness:
+        text += "3. Imputation techniques should be considered during preprocessing.\n"
 
-        text += "Implications for Analysis:\n"
-        if info['Linearity'] and info['Gaussian Error']:
-            text += "1. The data is well-suited for linear modeling techniques.\n"
-        else:
-            if not info['Linearity']:
-                text += "1. Non-linear modeling techniques may be more appropriate.\n"
-            if not info['Gaussian Error']:
-                text += "2. Robust statistical methods or transformations might be necessary.\n"
-        
-        if info['Missingness']:
-            text += "3. Imputation techniques should be considered during preprocessing.\n"
-    else:
-        text += "Time Series Properties:\n"
-        text += f"- Stationarity: The time series {'is' if info['Stationary'] else 'is not'} stationary.\n\n"
-        
-        text += "Implications for Analysis:\n"
-        if info['Stationary']:
-            text += "1. Standard time series analysis techniques can be applied.\n"
-        else:
-            text += "1. Differencing or other stationarity-inducing transformations may be necessary.\n"
-        
-        if info['Missingness']:
-            text += "2. Time-series specific imputation methods should be considered.\n"
-
-    if 'Domain Index' in info and info['Domain Index'] is not None:
-        text += f"If the data is heterogeneous, the column/variable {info['Domain Index']} is the domain index indicating the heterogeneity. "
+    if statistics.domain_index is not None:
+        text += f"If the data is heterogeneous, the column/variable {statistics.domain_index} is the domain index indicating the heterogeneity. "
         text += f"If the data is not heterogeneous, then the existed domain index is constant.\n\n"
     else:
         text += "\n\n"

@@ -53,17 +53,8 @@ class Judge(object):
 
 
     def forward(self, data, full_graph, algorithm, hyperparameters, knowledge_docs):
-        '''
-        :param data: Given Tabular Data in Pandas DataFrame format
-        :param full_graph: An adjacent matrix in Numpy Ndarray format -
-                           causal graph using the full dataset - Matrix[i,j] = 1 indicates j->i
-        :param algorithm: String representing the algorithm name
-        :param hyperparameters: Dictionary of hyperparameter names and values
-        :param knowledge_docs: A doc containing all necessary domain knowledge information from GPT-4.
-        :return: A dict containing the revised algorithm and its hyperparameter settings
-        '''
-        errors, boot_probability, revised_graph = self.quality_judge(data=data, full_graph=full_graph, algorithm = algorithm,
-                                                                     hyperparameters = hyperparameters, knowledge_docs=knowledge_docs)
+        errors, boot_probability, revised_graph = self.quality_judge(data=data, full_graph=full_graph, algorithm=algorithm,
+                                                                     hyperparameters=hyperparameters, knowledge_docs=knowledge_docs)
 
         if len(errors) == 0:
             return True, errors, boot_probability, revised_graph
@@ -92,6 +83,7 @@ class Judge(object):
         f1 = f1_score(ground_truth, est_graph, average='micro')
 
         return shd, precision, recall, f1
+
 
 
 

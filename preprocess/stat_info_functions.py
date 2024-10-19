@@ -282,98 +282,87 @@ def stationary_check(df: pd.DataFrame, max_test: int = 1000, alpha: float = 0.1)
     return check_result
 
 
-# stationary_res = stationary_check(df =  imputed_data, max_test=1000, alpha=0.1)
-
-def stat_info_collection(args, data):
+def stat_info_collection(global_state):
     '''
-    :param args: configurations.
     :param data: given tabular data in pandas dataFrame format.
-    :return: a dict containing all necessary statistics information.
+    :param global_state: GlobalState object to update and use.
+    :return: updated GlobalState object.
     '''
+    data = global_state.user_data.raw_data
+    n, m = data.shape
 
-    n,m = data.shape
+    # already exacted in the user query function
+    # if args.domain_index in data.columns:
+    #     m = m - 1
 
-    if args.domain_index in data.columns:
-        m = m-1
-
-    # Initialize output
-    time_series_res = {"Time-series": args.ts}
-    sample_size = {"Sample Size": n}
-    feature_size = {"Number of Features": m}
-    heterogeneity = {'Heterogeneity': heterogeneity_check(df = data, heterogeneity_indicator = args.domain_index)}
-
-    # Drop the domain index column from the data
-    if args.domain_index in data.columns:
-        domain_index = {'Domain Index': args.domain_index}
-        col_domain_index = data[args.domain_index]
-        data = data.drop(columns=[args.domain_index])
+    # Update global state
+    global_state.statistics.sample_size = n
+    global_state.statistics.feature_number = m
+    if global_state.statistics.global_stat.heterogeneous and global_state.statistics.domain_index is not None:
+        # Drop the domain index column from the data
+        domain_index = global_state.statistics.domain_index
+        col_domain_index = data[domain_index]
+        data = data.drop(columns=[domain_index])
     else:
-        domain_index = {'Domain Index': None}
         col_domain_index = None
 
     # Data pre-processing
-    clean_data, miss_res, each_type, dataset_type = data_preprocess(df = data, ratio = args.ratio, ts = args.ts)
+    clean_data, miss_res, each_type, dataset_type = data_preprocess(df=data, ratio=global_state.statistics.ratio, ts=False)
+
+    # Update global state
+    global_state.statistics.missingness = miss_res['Missingness']
+    global_state.statistics.data_type = dataset_type["Data Type"]
 
     # Imputation
-    if miss_res['Missingness'] == True:
-        imputed_data = imputation(df = clean_data, column_type = each_type, ts = args.ts)
+    if global_state.statistics.missingness:
+        imputed_data = imputation(df=clean_data, column_type=each_type, ts=False)
     else:
         imputed_data = clean_data
 
-    if not args.ts:
-        stationary_res = {"Stationary": False}
-        # Check assumption for continuous data
-        if dataset_type["Data Type"] == "Continuous":
-            # Generate combinations of pairs to be tested
-            m = clean_data.shape[1]
-            tot_pairs = m * (m - 1) / 2
+    # Check assumption for continuous data
+    if global_state.statistics.data_type == "Continuous":
+        m = clean_data.shape[1]
+        tot_pairs = m * (m - 1) / 2
 
-            # Sample pairs without replacement
-            combinations_list = list(combinations(list(range(m)), 2))
+        combinations_list = list(combinations(list(range(m)), 2))
+        num_test = min(int(tot_pairs), global_state.statistics.num_test)
+        combinations_select = random.sample(combinations_list, num_test)
 
-            if tot_pairs > args.num_test:
-                num_test = args.num_test
-            else:
-                num_test = tot_pairs
+        # Linearity assumption checking
+        linearity_res, all_reset_results, OLS_model = linearity_check(df=imputed_data,
+                                                                        test_pairs=combinations_select,
+                                                                        alpha=global_state.statistics.alpha)
+        # Gaussian error checking
+        gaussian_res = gaussian_check(df=imputed_data,
+                                        ols_fit=OLS_model,
+                                        test_pairs=combinations_select,
+                                        reset_test=all_reset_results,
+                                        alpha=global_state.statistics.alpha)
 
-            num_test = int(num_test)
-            combinations_select = random.sample(combinations_list, num_test)
-
-            # Linearity assumption checking
-            linearity_res, all_reset_results, OLS_model = linearity_check(df = imputed_data,
-                                                                        test_pairs = combinations_select,
-                                                                        alpha = args.alpha)
-
-            # Gaussian error checking
-            gaussian_res = gaussian_check(df = imputed_data,
-                                        ols_fit = OLS_model,
-                                        test_pairs = combinations_select,
-                                        reset_test = all_reset_results,
-                                        alpha = args.alpha)
-
-        # If the data type is Mixture or Category
-        else:
-            linearity_res = {"Linearity": False}
-            gaussian_res = {"Gaussian Error": False}
+        # Update global state
+        global_state.statistics.linearity = linearity_res["Linearity"]
+        global_state.statistics.gaussian_error = gaussian_res["Gaussian Error"]
+    else:
+        global_state.statistics.linearity = False
+        global_state.statistics.gaussian_error = False
 
     # Assumption checking for time-series data
-    if args.ts:
-        linearity_res = {"Linearity": False}
-        gaussian_res = {"Gaussian Error": False}
-        stationary_res = stationary_check(df = imputed_data, max_test=args.num_test, alpha=args.alpha)
-
-    stat_info_combine = {**sample_size, **feature_size, **time_series_res, **heterogeneity, **domain_index, 
-                         **miss_res, **dataset_type, **linearity_res, **gaussian_res, **stationary_res}
-
-    if stat_info_combine['Time-series'] == False:
-        stat_info_combine.pop('Stationary')
-    stat_info_json = json.dumps(stat_info_combine, indent=4)
+    # if args.ts:
+    #     global_state.statistics.linearity = False
+    #     global_state.statistics.gaussian_error = False
+    #     stationary_res = stationary_check(df=imputed_data, max_test=args.num_test, alpha=args.alpha)
+    #     global_state.statistics.stationary = stationary_res["Stationary"]
 
     # merge the domain index column back to the data if it exists
     if col_domain_index is not None:
-        imputed_data[args.domain_index] = col_domain_index
+        imputed_data[domain_index] = col_domain_index
+
+    global_state.user_data.processed_data = imputed_data
+
+    # Convert statistics to JSON for compatibility with existing code
+    # stat_info_json = json.dumps(vars(global_state.statistics), indent=4)
     
-    return stat_info_json, imputed_data
+    return global_state
 
 
 # class ParaStatCollect:

@@ -80,18 +80,8 @@ class Programming(object):
         return results
 
     def forward(self, data, algorithm, algorithm_setup):
-        '''
-
-        :param data: Given Tabular Data in Pandas DataFrame format
-        :param algorithm: Selected algorithm
-        :param algorithm_setup: A dict containing the selected algorithm and its hyperparameter settings
-        :return: executable programs based on Causal-Learn Toolkit
-        '''
         results = None
         if results is None:
-            # program = self.code_synthesis(algorithm, algorithm_setup)
-            # print("The final code for execution is: -------------------------------------------------------------------------")
-            # print(program)
             results = self.execute(data, algorithm, algorithm_setup)
             print(results)
         program = {'algorithm': algorithm, 'hyperparameters': algorithm_setup}

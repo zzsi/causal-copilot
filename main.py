@@ -7,6 +7,7 @@ from algorithm.rerank import Reranker
 from postprocess.judge import Judge
 from postprocess.visualization import Visualization
 from postprocess.report_generation import Report_generation
+from global_setting.Initialize_state import global_state_initialization, GlobalState, load_data
 
 import json
 import argparse
@@ -174,71 +175,66 @@ def parse_args():
         help='Enable debugging mode'
     )
 
+    parser.add_argument(
+        '--initial_query',
+        type=str,
+        default="",
+        help='Initial query for the algorithm'
+    )
+
     args = parser.parse_args()
     return args
 
 
 def main():
     args = parse_args()
-    if args.simulation_mode == "online":
-        simulation_manager = SimulationManager(args)
-        config, data, graph = simulation_manager.generate_dataset()
-    elif args.simulation_mode == "offline":
-        if args.data_mode == "simulated":
-            config, data, graph = load_data(args.data_file)
-        elif args.data_mode == "real":
-            data = pd.read_csv(args.data_file)
-            config, graph = None, None
-        else:
-            raise ValueError("Invalid data mode. Please choose 'real' or 'simulated'.")
-    else:
-        raise ValueError("Invalid simulation mode. Please choose 'online' or 'offline'.")
+    global_state = global_state_initialization(args.data_file, args.initial_query)
+    global_state = load_data(global_state, args)
 
     # background info collection
-    print("Original Data: ", data)
+    print("Original Data: ", global_state.user_data.raw_data)
 
     if args.debug:
-        # Fake statistics_dict and knowledge_docs for debugging
-        statistics_dict = {
-            "Missingness": False,
-            "Data Type": "Continuous",
-            "Linearity": True,
-            "Gaussian Error": True,
-            "Stationary": "non time-series"
-        }
-        statistics_dict = json.dumps(statistics_dict, indent=4)
-        preprocessed_data = data  # For simplicity, use original data
-        knowledge_docs = ["This is fake domain knowledge for debugging purposes."]
+        # Fake statistics for debugging
+        global_state.statistics.missingness = False
+        global_state.statistics.data_type = "Continuous"
+        global_state.statistics.linearity = True
+        global_state.statistics.gaussian_error = True
+        global_state.statistics.stationary = "non time-series"
+        preprocessed_data = global_state.user_data.raw_data
+        global_state.user_data.knowledge_docs = "This is fake domain knowledge for debugging purposes."
     else:
-        statistics_dict, preprocessed_data = statistics_info(args, data)
-        knowledge_docs = knowledge_info(args, preprocessed_data)
-    
-    # Convert statistics_dict to text
-    statistics_desc = convert_stat_info_to_text(statistics_dict)
-    
-    print("Preprocessed Data: ", preprocessed_data)
-    print("Statistics Info: ", statistics_desc)
-    print("Knowledge Info: ", knowledge_docs)
+        global_state = statistics_info(global_state)
+        global_state.user_data.knowledge_docs = knowledge_info(args, global_state.user_data.preprocessed_data)
 
-    # algorithm selection and deliberation initialization
+    # Convert statistics to text
+    global_state.statistics.description = convert_stat_info_to_text(global_state.)
+    
+    print("Preprocessed Data: ", global_state.user_data.processed_data)
+    print("Statistics Info: ", global_state.statistics.description)
+    print("Knowledge Info: ", global_state.user_data.knowledge_docs)
+    
+    # Algorithm selection and deliberation
     filter = Filter(args)
-    algo_candidates = filter.forward(preprocessed_data, statistics_desc)
-    print(algo_candidates)
+    algo_candidates = filter.forward(global_state)
+    global_state.algorithm.algorithm_candidates = algo_candidates
 
     reranker = Reranker(args)
-    algorithm, hyper_suggest, prompt, hp_prompt = reranker.forward(preprocessed_data, algo_candidates, statistics_desc, knowledge_docs)
-    print(algorithm)
-    print(hyper_suggest)
+    algorithm, hyper_suggest, prompt, hp_prompt = reranker.forward(
+        global_state.user_data.processed_data, 
+        global_state.algorithm.algorithm_candidates, 
+        global_state.statistics.description, 
+        global_state.user_data.knowledge_docs
+    )
+    global_state.algorithm.selected_algorithm = algorithm
+    global_state.algorithm.algorithm_arguments = hyper_suggest
 
-    #algorithm = 'GES'
-    #hyper_suggest = {'score_func': 'local_score_CV_general', 'maxP': 5}
     programmer = Programming(args)
-    code, results = programmer.forward(preprocessed_data, algorithm, hyper_suggest)
-    ori_graph = results.copy()
-    print(results)
+    code, results = programmer.forward(global_state.user_data.processed_data, algorithm, hyper_suggest)
+    global_state.results.raw_result = results
 
     judge = Judge(args)
-    mat_ground_truth = graph
+    mat_ground_truth = global_state.user_data.ground_truth
     print("Original Graph: ", results)
     print("Mat Ground Truth: ", mat_ground_truth)
 
@@ -249,7 +245,7 @@ def main():
                        'recall': recall,
                        'f1': f1}
 
-    flag, _, boot_probability, revised_graph = judge.forward(preprocessed_data, results, algorithm, hyper_suggest, knowledge_docs)
+    flag, _, boot_probability, revised_graph = judge.forward(preprocessed_data, results, algorithm, hyper_suggest, global_state.user_data.knowledge_docs)
     #print(flag)
     #print(boot_probability)
 
@@ -263,23 +259,23 @@ def main():
                        'f1': f1}
 
     #############Visualization###################
-    my_visual = Visualization(data=data,
+    my_visual = Visualization(data=global_state.user_data.raw_data,
                               y=['MEDV'],
                               save_dir=args.output_graph_dir,
                               threshold=0.95)
-    if graph is not None:
+    if global_state.user_data.ground_truth is not None:
         true_fig_path = my_visual.mat_to_graph(full_graph=mat_ground_truth,
                                                edge_labels=None,
                                                title='True Graph')
 
-    boot_dict = my_visual.process_boot_mat(boot_probability, ori_graph)
+    boot_dict = my_visual.process_boot_mat(boot_probability, global_state.results.raw_result)
 
-    result_fig_path = my_visual.mat_to_graph(full_graph=ori_graph,
+    result_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.raw_result,
                                                  edge_labels=boot_dict,
                                                  title='Initial Graph')
 
     revised_fig_path = my_visual.mat_to_graph(full_graph=revised_graph,
-                                              ori_graph=ori_graph,
+                                              ori_graph=global_state.results.raw_result,
                                               edge_labels=None,
                                               title='Revised Graph')
 
@@ -298,9 +294,11 @@ def main():
     '''
 
     #############Report Generation###################
-    my_report = Report_generation(args, data,
-                                  statistics_desc, knowledge_docs, prompt, hp_prompt,
-                                  revised_graph, original_metrics, revised_metrics,
+    my_report = Report_generation(args, global_state.user_data.raw_data,
+                                  global_state.statistics.description, global_state.user_data.knowledge_docs, 
+                                  prompt, hp_prompt,
+                                  global_state.results.revised_graph, 
+                                  original_metrics, revised_metrics,
                                   visual_dir=args.output_graph_dir)
     report = my_report.generation()
     my_report.save_report(report, save_path=args.output_report_dir)
