@@ -81,7 +81,7 @@ def global_configuration():
 
     #Statistical information
     stat_info = {"sample_size": None , "feature_number": None , "heterogeneity": None, "domain_index": None ,
-                 "missingness": None, "Data Type": None, "linearity": None, "gaussian_error": None}
+                 "missingness": None, "data_type": None, "linearity": None, "gaussian_error": None}
 
     parser.add_argument(
         '--stat_info',
