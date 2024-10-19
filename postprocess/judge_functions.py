@@ -26,7 +26,7 @@
 # print(graph)
 
 
-def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, domain_index=None):
+def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
     '''
     :param data: Given Tabular Data in Pandas DataFrame format
     :param full_graph: An adjacent matrix in Numpy Ndarray format -
@@ -35,7 +35,6 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, domain
     :param hyperparameters: Dictionary of hyperparameter names and values
     :param boot_num: Number of bootstrap iterations
     :param ts: An indicator of time-series data
-    :param domain_index: column name which represents the domain index
     :return: a dict of obvious errors in causal analysis results based on bootstrap,
              e.g. {"X->Y: "Forced", "Y->Z: "Forbidden"};
              a matrix records bootstrap probability of directed edges, Matrix[i,j] records the
@@ -50,10 +49,6 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, domain
 
     n, m = data.shape
     errors = {}
-
-
-    if domain_index in data.columns:
-        m = m-1
 
     boot_effect_save = np.empty((m, m, boot_num)) # Save graphs based on bootstrapping
 
@@ -81,7 +76,7 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, domain
         algo_func = getattr(wrappers, algorithm)
 
         # Execute the algorithm with data and hyperparameters
-        boot_graph, info = algo_func(hyperparameters).fit(boot_sample)
+        boot_graph, info, raw_result = algo_func(hyperparameters).fit(boot_sample)
 
         boot_effect_save[:, :, boot_time] = boot_graph
 

@@ -80,8 +80,7 @@ def data_preprocess (df: pd.DataFrame, ratio: float = 0.5, ts: bool = False):
 
     for column in categorical_features:
         clean_df[column] = pd.Categorical(clean_df[column])
-        clean_df[column] = clean_df[column].cat.codes.replace(-1, np.nan) # Keep NaN while converting
-
+        clean_df[column] = clean_df[column].cat.codes.replace(-1, np.nan) # Keep NaN while converting    
 
     return clean_df, miss_res, column_type, overall_type
 
@@ -298,7 +297,7 @@ def stat_info_collection(global_state):
     # Update global state
     global_state.statistics.sample_size = n
     global_state.statistics.feature_number = m
-    if global_state.statistics.global_stat.heterogeneous and global_state.statistics.domain_index is not None:
+    if global_state.statistics.heterogeneous and global_state.statistics.domain_index is not None:
         # Drop the domain index column from the data
         domain_index = global_state.statistics.domain_index
         col_domain_index = data[domain_index]
@@ -355,7 +354,7 @@ def stat_info_collection(global_state):
 
     # merge the domain index column back to the data if it exists
     if col_domain_index is not None:
-        imputed_data[domain_index] = col_domain_index
+        imputed_data['domain_index'] = col_domain_index
 
     global_state.user_data.processed_data = imputed_data
 
@@ -363,6 +362,36 @@ def stat_info_collection(global_state):
     # stat_info_json = json.dumps(vars(global_state.statistics), indent=4)
     
     return global_state
+
+def convert_stat_info_to_text(statistics):
+    """
+    Convert the statistical information from Statistics object to natural language.
+    
+    :param statistics: Statistics object containing statistical information about the dataset.
+    :return: A string describing the dataset characteristics in natural language.
+    """
+    text = f"The dataset has the following characteristics:\n\n"
+    text += f"The sample size is {statistics.sample_size} with {statistics.feature_number} features. "
+    text += f"This dataset is {'time-series' if statistics.data_type == 'Time-series' else 'not time-series'} data. "
+    
+    text += f"Data Type: The overall data type is {statistics.data_type}.\n\n"
+    text += f"Data Quality: {'There are' if statistics.missingness else 'There are no'} missing values in the dataset.\n\n"
+    
+    text += "Statistical Properties:\n"
+    text += f"- Linearity: The relationships between variables {'are' if statistics.linearity else 'are not'} predominantly linear.\n"
+    text += f"- Gaussian Errors: The errors in the data {'do' if statistics.gaussian_error else 'do not'} follow a Gaussian distribution.\n"
+    text += f"- Heterogeneity: The dataset {'is' if statistics.heterogeneous else 'is not'} heterogeneous. \n\n"
+    
+    if statistics.missingness:
+        text += "3. Imputation techniques should be considered during preprocessing.\n"
+
+    if statistics.domain_index is not None:
+        text += f"If the data is heterogeneous, the column/variable {statistics.domain_index} is the domain index indicating the heterogeneity. "
+        text += f"If the data is not heterogeneous, then the existed domain index is constant.\n\n"
+    else:
+        text += "\n\n"
+        
+    return text
 
 
 # class ParaStatCollect:

@@ -57,7 +57,7 @@ class NOTEARS(CausalDiscoveryAlgorithm):
             'structure_model': sm,
         }
 
-        return adj_matrix, info
+        return adj_matrix, info, sm
     
     def convert_to_adjacency_matrix(self, sm, node_names: List[str]) -> np.ndarray:
         n = len(node_names)

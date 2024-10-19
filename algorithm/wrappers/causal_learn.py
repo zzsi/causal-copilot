@@ -53,7 +53,7 @@ class PC(CausalDiscoveryAlgorithm):
                                       'background_knowledge', 'verbose', 'show_progress']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
-    def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict]:
+    def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, CausalGraph]:
         if 'domain_index' in data.columns:
             data = data.drop(columns=['domain_index'])
         node_names = list(data.columns)
@@ -76,7 +76,7 @@ class PC(CausalDiscoveryAlgorithm):
             'PC_elapsed': cg.PC_elapsed,
         }
 
-        return adj_matrix, info
+        return adj_matrix, info, cg
     
     def convert_to_adjacency_matrix(self, cg: CausalGraph) -> np.ndarray:
         adj_matrix = cg.G.graph
@@ -112,7 +112,7 @@ class PC(CausalDiscoveryAlgorithm):
             'verbose': False,
             'show_progress': False
         }
-        adj_matrix, info = self.fit(df)
+        adj_matrix, info, _ = self.fit(df)
         print("Adjacency Matrix:")
         print(adj_matrix)
         print("\nAdditional Info:")
@@ -168,7 +168,7 @@ class FCI(CausalDiscoveryAlgorithm):
         self._secondary_param_keys = ['max_path_length', 'verbose', 'background_knowledge', 'show_progress']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
-    def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict]:
+    def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, Tuple[CausalGraph, List]]:
         if 'domain_index' in data.columns:
             data = data.drop(columns=['domain_index'])
         node_names = list(data.columns)
@@ -189,7 +189,7 @@ class FCI(CausalDiscoveryAlgorithm):
             'graph': graph,
         }
 
-        return adj_matrix, info
+        return adj_matrix, info, (graph, edges)
 
     def convert_to_adjacency_matrix(self, adj_matrix: CausalGraph) -> np.ndarray:
         adj_matrix = adj_matrix.graph
@@ -228,7 +228,7 @@ class FCI(CausalDiscoveryAlgorithm):
             'verbose': False,
             'show_progress': False
         }
-        adj_matrix, info = self.fit(df)
+        adj_matrix, info, _ = self.fit(df)
         print("Adjacency Matrix:")
         print(adj_matrix)
 
@@ -285,7 +285,7 @@ class CDNOD(CausalDiscoveryAlgorithm):
                                 'background_knowledge', 'verbose', 'show_progress']
         return {k: v for k, v in self._params.items() if k in secondary_param_keys}
 
-    def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict]:
+    def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, CausalGraph]:
         node_names = list(data.columns)
         # Extract c_indx (assuming it's the last column)
         c_indx = data['domain_index'].values.reshape(-1, 1)
@@ -307,10 +307,10 @@ class CDNOD(CausalDiscoveryAlgorithm):
             'PC_elapsed': cg.PC_elapsed,
         }
 
-        return adj_matrix, info
+        return adj_matrix, info, cg
 
     def convert_to_adjacency_matrix(self, cg: CausalGraph) -> np.ndarray:
-        adj_matrix = cg.G.graph[:-1, :-1]
+        adj_matrix = cg.G.graph
         inferred_flat = np.zeros_like(adj_matrix)
         indices = np.where(adj_matrix == 1)
         # save all the determined edges (j -> i) and convert (j -- i) to (j -> i) and (i -> j)
@@ -343,7 +343,7 @@ class CDNOD(CausalDiscoveryAlgorithm):
             'verbose': False,
             'show_progress': False
         }
-        adj_matrix, info = self.fit(df)
+        adj_matrix, info, _ = self.fit(df)
         print("Adjacency Matrix:")
         print(adj_matrix)
         print(f"CD-NOD elapsed time: {info['PC_elapsed']:.4f} seconds")
@@ -357,9 +357,9 @@ class CDNOD(CausalDiscoveryAlgorithm):
             [0, 0, 0, 0, 0]
         ]).T
         
-        f1 = f1_score(gt_graph.flatten(), adj_matrix.flatten())
-        precision = precision_score(gt_graph.flatten(), adj_matrix.flatten())
-        recall = recall_score(gt_graph.flatten(), adj_matrix.flatten())
+        f1 = f1_score(gt_graph.flatten(), adj_matrix[:-1, :-1].flatten())
+        precision = precision_score(gt_graph.flatten(), adj_matrix[:-1, :-1].flatten())
+        recall = recall_score(gt_graph.flatten(), adj_matrix[:-1, :-1].flatten())
 
         print("\nMetrics:")
         print(f"F1 Score: {f1:.4f}")
@@ -392,7 +392,7 @@ class GES(CausalDiscoveryAlgorithm):
         self._secondary_param_keys = ['parameters']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
-    def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict]:
+    def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, Dict]:
         if 'domain_index' in data.columns:
             data = data.drop(columns=['domain_index'])
         node_names = list(data.columns)
@@ -414,7 +414,7 @@ class GES(CausalDiscoveryAlgorithm):
             'update2': record['update2'],
         }
 
-        return adj_matrix, info
+        return adj_matrix, info, record
 
     def convert_to_adjacency_matrix(self, G: CausalGraph) -> np.ndarray:
         adj_matrix = G.graph
@@ -447,7 +447,7 @@ class GES(CausalDiscoveryAlgorithm):
             'score_func': 'local_score_BIC',
             'maxP': None,
         }
-        adj_matrix, info = self.fit(df)
+        adj_matrix, info, _ = self.fit(df)
         print("Adjacency Matrix:")
         print(adj_matrix)
         print(f"GES score: {info['score']}")
@@ -497,7 +497,7 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
         self._secondary_param_keys = ['random_state', 'prior_knowledge', 'apply_prior_knowledge_softly']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
-    def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict]:
+    def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, CLDirectLiNGAM]:
         if 'domain_index' in data.columns:
             data = data.drop(columns=['domain_index'])
         node_names = list(data.columns)
@@ -518,7 +518,7 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
             'causal_order': model.causal_order_
         }
 
-        return adj_matrix, info
+        return adj_matrix, info, model
     
     def convert_to_adjacency_matrix(self, adjacency_matrix: np.ndarray) -> np.ndarray:
         adj_matrix = np.where(adjacency_matrix != 0, 1, 0)
@@ -541,7 +541,7 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
             'measure': 'pwling',
             'random_state': 42
         }
-        adj_matrix, info = self.fit(df)
+        adj_matrix, info, _ = self.fit(df)
         print("Adjacency Matrix:")
         print(adj_matrix)
         print("Causal Order:")
@@ -590,7 +590,7 @@ class ICALiNGAM(CausalDiscoveryAlgorithm):
         self._secondary_param_keys = ['random_state']
         return {}
 
-    def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict]:
+    def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, CLICALiNGAM]:
         if 'domain_index' in data.columns:
             data = data.drop(columns=['domain_index'])
         node_names = list(data.columns)
@@ -607,7 +607,7 @@ class ICALiNGAM(CausalDiscoveryAlgorithm):
         info = {
             'causal_order': model.causal_order_
         }
-        return adj_matrix, info
+        return adj_matrix, info, model
 
     def convert_to_adjacency_matrix(self, adjacency_matrix: np.ndarray) -> np.ndarray:
         adj_matrix = np.where(adjacency_matrix != 0, 1, 0)
@@ -630,7 +630,7 @@ class ICALiNGAM(CausalDiscoveryAlgorithm):
             'random_state': 42,
             'max_iter': 1000
         }
-        adj_matrix, info = self.fit(df)
+        adj_matrix, info, _ = self.fit(df)
         print("Adjacency Matrix:")
         print(adj_matrix)
         print("Causal Order:")

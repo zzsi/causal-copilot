@@ -49,17 +49,21 @@ class Judge(object):
             if errors[key] == "Forbidden":
                 revised_graph[j, i] = 0
 
-        return errors, boot_probability, revised_graph
+        return errors_llm, errors_stat, boot_probability, revised_graph
 
 
-    def forward(self, data, full_graph, algorithm, hyperparameters, knowledge_docs):
-        errors, boot_probability, revised_graph = self.quality_judge(data=data, full_graph=full_graph, algorithm=algorithm,
-                                                                     hyperparameters=hyperparameters, knowledge_docs=knowledge_docs)
-
-        if len(errors) == 0:
-            return True, errors, boot_probability, revised_graph
-        else:
-            return False, errors, boot_probability, revised_graph
+    def forward(self, global_state):
+        (global_state.results.llm_errors,
+         global_state.results.bootstrap_errors,
+         global_state.results.bootstrap_probability,
+         global_state.results.revised_graph) = self.quality_judge(
+            data=global_state.user_data.processed_data,
+            full_graph=global_state.results.converted_graph,
+            algorithm=global_state.algorithm.selected_algorithm,
+            hyperparameters=global_state.algorithm.algorithm_arguments,
+            knowledge_docs=global_state.user_data.knowledge_docs
+        )
+        return global_state
 
 
     def evaluation(self, est_graph, ground_truth):
@@ -72,17 +76,17 @@ class Judge(object):
         import numpy as np
         from sklearn.metrics import precision_score, recall_score, f1_score
 
-        # Structural Hamming Distance (SHD)
-        diff = np.abs(est_graph - ground_truth)
-        # Count how many edges are different
-        shd = np.sum(diff)
+        if est_graph.shape[0] - 1 == ground_truth.shape[0]:
+            # drop the domain index column
+            est_graph = est_graph[:-1, :-1]
+        ground_truth_flat = ground_truth.flatten()  
+        est_graph_flat = est_graph.flatten()
+        shd = np.sum(np.abs(ground_truth_flat - est_graph_flat))
+        precision = precision_score(ground_truth_flat, est_graph_flat)
+        recall = recall_score(ground_truth_flat, est_graph_flat)
+        f1 = f1_score(ground_truth_flat, est_graph_flat)
 
-        # Precision, Recall and F1-score
-        precision = precision_score(ground_truth, est_graph, average='micro')
-        recall = recall_score(ground_truth, est_graph, average='micro')
-        f1 = f1_score(ground_truth, est_graph, average='micro')
-
-        return shd, precision, recall, f1
+        return {'shd': shd, 'precision': precision, 'recall': recall, 'f1': f1}
 
 
 

@@ -1,6 +1,7 @@
 # Kun Zhou Implemented
 from data.simulation.simulation import SimulationManager
-from preprocess.dataset import load_data, statistics_info, convert_stat_info_to_text,knowledge_info
+from preprocess.dataset import load_data, knowledge_info
+from preprocess.stat_info_functions import stat_info_collection, convert_stat_info_to_text
 from algorithm.filter import Filter
 from algorithm.program import Programming
 from algorithm.rerank import Reranker
@@ -201,14 +202,14 @@ def main():
         global_state.statistics.linearity = True
         global_state.statistics.gaussian_error = True
         global_state.statistics.stationary = "non time-series"
-        preprocessed_data = global_state.user_data.raw_data
+        global_state.user_data.processed_data = global_state.user_data.raw_data
         global_state.user_data.knowledge_docs = "This is fake domain knowledge for debugging purposes."
     else:
-        global_state = statistics_info(global_state)
-        global_state.user_data.knowledge_docs = knowledge_info(args, global_state.user_data.preprocessed_data)
+        global_state = stat_info_collection(global_state)
+        global_state.user_data.knowledge_docs = knowledge_info(args, global_state.user_data.processed_data)
 
     # Convert statistics to text
-    global_state.statistics.description = convert_stat_info_to_text(global_state.)
+    global_state.statistics.description = convert_stat_info_to_text(global_state.statistics)
     
     print("Preprocessed Data: ", global_state.user_data.processed_data)
     print("Statistics Info: ", global_state.statistics.description)
@@ -216,47 +217,28 @@ def main():
     
     # Algorithm selection and deliberation
     filter = Filter(args)
-    algo_candidates = filter.forward(global_state)
-    global_state.algorithm.algorithm_candidates = algo_candidates
+    global_state.algorithm.algorithm_candidates = filter.forward(global_state.user_data.processed_data, global_state.statistics.description)
 
     reranker = Reranker(args)
-    algorithm, hyper_suggest, prompt, hp_prompt = reranker.forward(
-        global_state.user_data.processed_data, 
-        global_state.algorithm.algorithm_candidates, 
-        global_state.statistics.description, 
-        global_state.user_data.knowledge_docs
-    )
-    global_state.algorithm.selected_algorithm = algorithm
-    global_state.algorithm.algorithm_arguments = hyper_suggest
+    global_state = reranker.forward(global_state)
 
     programmer = Programming(args)
-    code, results = programmer.forward(global_state.user_data.processed_data, algorithm, hyper_suggest)
-    global_state.results.raw_result = results
+    global_state = programmer.forward(global_state)
 
     judge = Judge(args)
-    mat_ground_truth = global_state.user_data.ground_truth
-    print("Original Graph: ", results)
-    print("Mat Ground Truth: ", mat_ground_truth)
+    if global_state.user_data.ground_truth is not None:
+        print("Original Graph: ", global_state.results.converted_graph)
+        print("Mat Ground Truth: ", global_state.user_data.ground_truth)
+        global_state.results.metrics = judge.evaluation(global_state.results.converted_graph, global_state.user_data.ground_truth)
+        print(global_state.results.metrics)
+        
+    global_state = judge.forward(global_state)
 
-    shd, precision, recall, f1 = judge.evaluation(results, mat_ground_truth)
-    print(shd, precision, recall, f1)
-    original_metrics = {'shd': shd,
-                       'precision': precision,
-                       'recall': recall,
-                       'f1': f1}
-
-    flag, _, boot_probability, revised_graph = judge.forward(preprocessed_data, results, algorithm, hyper_suggest, global_state.user_data.knowledge_docs)
-    #print(flag)
-    #print(boot_probability)
-
-    print("Revised Graph: ", revised_graph)
-    print("Mat Ground Truth: ", mat_ground_truth)
-    shd, precision, recall, f1 = judge.evaluation(revised_graph, mat_ground_truth)
-    print(shd, precision, recall, f1)
-    revised_metrics = {'shd': shd,
-                       'precision': precision,
-                       'recall': recall,
-                       'f1': f1}
+    if global_state.user_data.ground_truth is not None:
+        print("Revised Graph: ", global_state.results.revised_graph)
+        print("Mat Ground Truth: ", global_state.user_data.ground_truth)
+        global_state.results.revised_metrics = judge.evaluation(global_state.results.revised_graph, global_state.user_data.ground_truth)
+        print(global_state.results.revised_metrics)
 
     #############Visualization###################
     my_visual = Visualization(data=global_state.user_data.raw_data,
@@ -264,22 +246,22 @@ def main():
                               save_dir=args.output_graph_dir,
                               threshold=0.95)
     if global_state.user_data.ground_truth is not None:
-        true_fig_path = my_visual.mat_to_graph(full_graph=mat_ground_truth,
+        true_fig_path = my_visual.mat_to_graph(full_graph=global_state.user_data.ground_truth,
                                                edge_labels=None,
                                                title='True Graph')
 
-    boot_dict = my_visual.process_boot_mat(boot_probability, global_state.results.raw_result)
+    boot_dict = my_visual.process_boot_mat(global_state.results.bootstrap_probability, global_state.results.converted_graph)
 
-    result_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.raw_result,
-                                                 edge_labels=boot_dict,
-                                                 title='Initial Graph')
+    result_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.converted_graph,
+                                             edge_labels=boot_dict,
+                                             title='Initial Graph')
 
-    revised_fig_path = my_visual.mat_to_graph(full_graph=revised_graph,
-                                              ori_graph=global_state.results.raw_result,
+    revised_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.revised_graph,
+                                              ori_graph=global_state.results.converted_graph,
                                               edge_labels=None,
                                               title='Revised Graph')
 
-    metrics_fig_path = my_visual.matrics_plot(original_metrics.copy(), revised_metrics.copy())
+    metrics_fig_path = my_visual.matrics_plot(global_state.results.metrics.copy(), global_state.results.revised_metrics.copy())
 
     ################################
     
@@ -298,7 +280,7 @@ def main():
                                   global_state.statistics.description, global_state.user_data.knowledge_docs, 
                                   prompt, hp_prompt,
                                   global_state.results.revised_graph, 
-                                  original_metrics, revised_metrics,
+                                  global_state.results.metrics, global_state.results.revised_metrics,
                                   visual_dir=args.output_graph_dir)
     report = my_report.generation()
     my_report.save_report(report, save_path=args.output_report_dir)

@@ -28,57 +28,11 @@ def load_data(directory):
         raise FileNotFoundError(f"The data file {data_path} does not exist.")
     if os.path.exists(graph_path):
         graph = np.load(graph_path)
-        graph = graph.T
+        graph = graph
     else:
         graph = None
 
     return config, data, graph
-
-
-def statistics_info(args, data):
-    # Fang Nan Implemented
-    '''
-    :param args: configurations.
-    :param data: Given Tabular Data in Pandas DataFrame format
-    :return: A dict containing all necessary statistics information
-    '''
-    from preprocess.stat_info_functions import stat_info_collection
-
-    statistics_dict, preprocessed_data = stat_info_collection(args=args, data=data)
-
-    return statistics_dict, preprocessed_data
-
-
-def convert_stat_info_to_text(statistics):
-    """
-    Convert the statistical information from Statistics object to natural language.
-    
-    :param statistics: Statistics object containing statistical information about the dataset.
-    :return: A string describing the dataset characteristics in natural language.
-    """
-    text = f"The dataset has the following characteristics:\n\n"
-    text += f"The sample size is {statistics.sample_size} with {statistics.feature_number} features. "
-    text += f"This dataset is {'time-series' if statistics.data_type == 'Time-series' else 'not time-series'} data. "
-    
-    text += f"Data Type: The overall data type is {statistics.data_type}.\n\n"
-    text += f"Data Quality: {'There are' if statistics.missingness else 'There are no'} missing values in the dataset.\n\n"
-    
-    text += "Statistical Properties:\n"
-    text += f"- Linearity: The relationships between variables {'are' if statistics.linearity else 'are not'} predominantly linear.\n"
-    text += f"- Gaussian Errors: The errors in the data {'do' if statistics.gaussian_error else 'do not'} follow a Gaussian distribution.\n"
-    text += f"- Heterogeneity: The dataset {'is' if statistics.heterogeneous else 'is not'} heterogeneous. \n\n"
-    
-    if statistics.missingness:
-        text += "3. Imputation techniques should be considered during preprocessing.\n"
-
-    if statistics.domain_index is not None:
-        text += f"If the data is heterogeneous, the column/variable {statistics.domain_index} is the domain index indicating the heterogeneity. "
-        text += f"If the data is not heterogeneous, then the existed domain index is constant.\n\n"
-    else:
-        text += "\n\n"
-        
-    return text
-
 
 def knowledge_info(args, data):
     # Kun Zhou Implemented

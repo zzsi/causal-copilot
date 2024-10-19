@@ -48,20 +48,20 @@ class Logging:
 class Algorithm:
     selected_algorithm: Optional[str] = None
     selected_reason: Optional[str] = None
-    algorithm_candidates: Dict[Dict] = field(default_factory=dict)
-    algorithm_candidate_name: Optional[str] = None
-    algorithm_candidate_desc: Optional[str] = None
-    algorithm_candidate_just: Optional[str] = None
+    algorithm_candidates: Optional[Dict] = field(default_factory=dict)
     algorithm_arguments: Dict = field(default_factory=dict)
 
 @dataclass
 class Results:
-    raw_result: Optional[np.ndarray] = None
+    raw_result: Optional[object] = None
+    raw_info: Optional[Dict] = None
+    converted_graph: Optional[str] = None
     metrics: Optional[Dict] = None
+    revised_graph: Optional[np.ndarray] = None
+    revised_metrics: Optional[Dict] = None
     bootstrap_probability: Optional[np.ndarray] = None
     llm_errors: List[Dict] = field(default_factory=list)
     bootstrap_errors: List[Dict] = field(default_factory=list)
-    revised_graph: Optional[np.ndarray] = None
 
 @dataclass
 class GlobalState:

@@ -49,7 +49,7 @@ class Visualization(object):
             converted_graph = self.convert_mat(full_graph)
             G = nx.from_numpy_array(converted_graph, parallel_edges=False, create_using=nx.DiGraph)
             # Dict of node labels
-            variables = self.data.columns
+            variables = self.data.columns[:full_graph.shape[0]]
             labels = {i: variables[i] for i in range(len(variables))}
 
             plt.subplots(figsize=(8, 8))

@@ -39,10 +39,7 @@ class Filter(object):
             print("Error: Unable to parse JSON response")
             return {}
 
-    def forward(self, global_state):
-        data = global_state.user_data.processed_data
-        statistics_desc = global_state.statistics.description
-
+    def forward(self, data, statistics_desc):
         prompt = self.create_prompt(data, statistics_desc)
 
         response = self.client.chat.completions.create(
@@ -56,6 +53,6 @@ class Filter(object):
         )
 
         output = response.choices[0].message.content
-        global_state.algorithm.algorithm_candidates = self.parse_response(output)
+        algorithm_candidates = self.parse_response(output)
 
-        return global_state.algorithm.algorithm_candidates
+        return algorithm_candidates
