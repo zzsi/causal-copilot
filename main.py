@@ -22,7 +22,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="data/simulation/simulated_data/20241019_173126_Linear-Non-gaussian_nodes25_samples10000",
+        default="data/simulation/simulated_data/20241019_202628_base_nodes7_samples1000",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -92,6 +92,13 @@ def parse_args():
         help='Initial query for the algorithm'
     )
 
+    parser.add_argument(
+        '--parallel',
+        type=bool,
+        default=True,
+        help='Parallel computing for bootstrapping.'
+    )
+
     args = parser.parse_args()
     return args
 
@@ -154,51 +161,51 @@ def main():
         global_state.results.revised_metrics = judge.evaluation(global_state.results.revised_graph, global_state.user_data.ground_truth)
         print(global_state.results.revised_metrics)
 
-    #############Visualization###################
-    my_visual = Visualization(data=global_state.user_data.raw_data,
-                              y=['MEDV'],
-                              save_dir=args.output_graph_dir,
-                              threshold=0.95)
-    if global_state.user_data.ground_truth is not None:
-        true_fig_path = my_visual.mat_to_graph(full_graph=global_state.user_data.ground_truth,
-                                               edge_labels=None,
-                                               title='True Graph')
-
-    boot_dict = my_visual.process_boot_mat(global_state.results.bootstrap_probability, global_state.results.converted_graph)
-
-    result_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.converted_graph,
-                                             edge_labels=boot_dict,
-                                             title='Initial Graph')
-
-    revised_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.revised_graph,
-                                              ori_graph=global_state.results.converted_graph,
-                                              edge_labels=None,
-                                              title='Revised Graph')
-
-    metrics_fig_path = my_visual.matrics_plot(global_state.results.metrics.copy(), global_state.results.revised_metrics.copy())
-
-    ################################
-
-    # algorithm selection process
-    '''
-    round = 0
-    flag = False
-
-    while round < args.max_iterations and flag == False:
-        code, results = programmer.forward(preprocessed_data, algorithm, hyper_suggest)
-        flag, algorithm_setup = judge(preprocessed_data, code, results, statistics_dict, algorithm_setup, knowledge_docs)
-    '''
-
-    #############Report Generation###################
-    my_report = Report_generation(args, global_state.user_data.raw_data,
-                                  global_state.statistics.description, global_state.user_data.knowledge_docs,
-                                  global_state.logging.select_conversation, global_state.logging.argument_conversation,
-                                  global_state.results.revised_graph,
-                                  global_state.results.metrics, global_state.results.revised_metrics,
-                                  visual_dir=args.output_graph_dir)
-    report = my_report.generation()
-    my_report.save_report(report, save_path=args.output_report_dir)
-    ################################
+    # #############Visualization###################
+    # my_visual = Visualization(data=global_state.user_data.raw_data,
+    #                           y=['MEDV'],
+    #                           save_dir=args.output_graph_dir,
+    #                           threshold=0.95)
+    # if global_state.user_data.ground_truth is not None:
+    #     true_fig_path = my_visual.mat_to_graph(full_graph=global_state.user_data.ground_truth,
+    #                                            edge_labels=None,
+    #                                            title='True Graph')
+    #
+    # boot_dict = my_visual.process_boot_mat(global_state.results.bootstrap_probability, global_state.results.converted_graph)
+    #
+    # result_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.converted_graph,
+    #                                          edge_labels=boot_dict,
+    #                                          title='Initial Graph')
+    #
+    # revised_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.revised_graph,
+    #                                           ori_graph=global_state.results.converted_graph,
+    #                                           edge_labels=None,
+    #                                           title='Revised Graph')
+    #
+    # metrics_fig_path = my_visual.matrics_plot(global_state.results.metrics.copy(), global_state.results.revised_metrics.copy())
+    #
+    # ################################
+    #
+    # # algorithm selection process
+    # '''
+    # round = 0
+    # flag = False
+    #
+    # while round < args.max_iterations and flag == False:
+    #     code, results = programmer.forward(preprocessed_data, algorithm, hyper_suggest)
+    #     flag, algorithm_setup = judge(preprocessed_data, code, results, statistics_dict, algorithm_setup, knowledge_docs)
+    # '''
+    #
+    # #############Report Generation###################
+    # my_report = Report_generation(args, global_state.user_data.raw_data,
+    #                               global_state.statistics.description, global_state.user_data.knowledge_docs,
+    #                               global_state.logging.select_conversation, global_state.logging.argument_conversation,
+    #                               global_state.results.revised_graph,
+    #                               global_state.results.metrics, global_state.results.revised_metrics,
+    #                               visual_dir=args.output_graph_dir)
+    # report = my_report.generation()
+    # my_report.save_report(report, save_path=args.output_report_dir)
+    # ################################
 
 
 if __name__ == '__main__':

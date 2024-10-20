@@ -10,7 +10,8 @@ class Judge(object):
         :param algorithm: String representing the algorithm name
         :param hyperparameters: Dictionary of hyperparameter names and values
         :param knowledge_docs: A doc containing all necessary domain knowledge information from GPT-4.
-        :param boot_num: Number of bootstrap iterations..
+        :param boot_num: Number of bootstrap iterations.
+        :param parallel: Indicator of bootstrap parallelization.
         :return: obvious errors in causal analysis results,
                  bootstrap probability of directed edges,
                  revised causal graph based on errors.
@@ -20,7 +21,7 @@ class Judge(object):
 
         # Statistics Perspective: Bootstrapping to get probability of edges using the selected algorithm.
         errors_stat, boot_probability = bootstrap(data=data, full_graph=full_graph, algorithm=algorithm, hyperparameters=hyperparameters,
-                                                  boot_num=boot_num, ts=False)
+                                                  boot_num=boot_num, ts=False, parallel=self.args.parallel)
         print("Errors from Bootstrap method: ", errors_stat)
         print("Bootstrap Probability: ", boot_probability)
 
