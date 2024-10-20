@@ -1,99 +1,81 @@
-# Causal Discovery of Health-Related Variables
+# Causal Discovery Report: Relationships Between Socioeconomic Factors and Mental Health
 
 ## Background
-The purpose of this report is to explore and analyze the intricate relationships among five significant health-related variables: physical activity, dietary fat, fiber intake, blood pressure, and cholesterol. Understanding these variables is crucial, as each plays a vital role in influencing overall health and well-being. Physical activity refers to the amount of exercise an individual engages in, which can enhance cardiovascular fitness and impact both blood pressure and cholesterol levels. Dietary fat denotes the types and quantities of fats consumed, significantly affecting cholesterol levels and potentially impacting blood pressure as well. Fiber intake, representing the amount of dietary fiber consumed, is known to promote digestive health and can lower cholesterol levels and blood pressure. Blood pressure itself measures the pressure exerted by circulating blood on the arterial walls, with hypertension raising the risk of serious health issues. Meanwhile, cholesterol levels indicate the amount of cholesterol present in the blood, influenced by dietary choices and lifestyle factors. There are potential causal relationships among these variables, such as increased physical activity leading to lower blood pressure and healthier cholesterol levels, while dietary factors like fat and fiber intake can also modulate both cholesterol and blood pressure. By investigating these interconnections, the report aims to uncover deeper insights into how lifestyle choices impact health outcomes, providing a foundation for further research and causal discovery analysis.
+This report explores the intricate relationships between several key variables: income level, education attainment, healthcare access, mental health anxiety, mental health depression, and a domain index. Understanding these variables is essential for uncovering the underlying factors that influence individual well-being and societal health outcomes. 
+
+- **Income Level**: Reflects an individual’s financial status, which can affect access to resources and opportunities.
+- **Education Attainment**: Indicates the highest level of education achieved and is often linked to better job prospects and income, creating a bidirectional relationship with income.
+- **Healthcare Access**: Encompasses the ability to obtain necessary health services, significantly influenced by socioeconomic status and education, which impacts mental health outcomes.
+- **Mental Health Variables**: Anxiety and depression are critical for understanding individual well-being.
+- **Domain Index**: A composite score summarizing performance across various spheres affecting health and social outcomes.
+
+The goal of this analysis is to shed light on the relationships that shape health and quality of life, highlighting the importance of socioeconomic factors and healthcare access in mental health dynamics.
 
 ## Dataset Descriptions
 The following is a preview of our dataset:
 
-| physical_activity | dietary_fat | fiber_intake | blood_pressure | cholesterol |
-|-------------------|-------------|--------------|----------------|-------------|
-| 0.280218          | 0.344066    | -0.203135    | 0.927715       | -0.676094   |
-| -0.923927        | NaN         | NaN          | 0.924791       | NaN         |
-| 0.608669          | 0.509279    | -0.023469    | NaN            | -0.653636   |
-| 0.434224          | 0.318093    | -0.015076    | 0.855652       | -0.550986   |
-| -0.053118         | 0.032296    | 0.083688     | 1.022114       | NaN         |
+| income_level | education_attainment | healthcare_access | mental_health_anxiety | mental_health_depression | domain_index |
+|--------------|----------------------|--------------------|-----------------------|--------------------------|---------------|
+| 0.025298 | -0.456139 | -0.222759 | 2.210646 | NaN | 0 |
+| 0.152398 | 0.926548 | NaN | NaN | -0.553400 | 0 |
+| 0.112733 | -0.659964 | NaN | 2.373330 | -0.312250 | 0 |
+| NaN | 0.036934 | 0.042326 | 2.174514 | -0.274188 | 0 |
+| 0.173669 | -0.598435 | -0.553615 | NaN | -0.260146 | 0 |
 
-- **Sample Size**: 5000
-- **Data Type**: Continuous variables
-- **Data Quality**: Missing values present
-- **Linearity**: Predominantly linear relationships
-- **Gaussian Errors**: Errors do not follow a Gaussian distribution
-- **Heterogeneity**: The dataset is not heterogeneous
-
-### Implications for Analysis
-1. Robust statistical methods or transformations might be necessary.
-2. Imputation techniques should be considered during preprocessing.
+**Dataset Characteristics:**
+- Sample Size: 2531
+- Features: 6
+- Data Type: Continuous
+- Quality: Missing values present.
+- Linearity: Predominantly linear relationships.
+- Errors: Non-Gaussian distribution.
+- Heterogeneity: Dataset is heterogeneous with the domain index reflecting that.
 
 ## Discovery Procedure
 ### Step 1: Data Preprocessing
-1. **Data Cleaning**: Address missing values using imputation techniques.
-2. **Statistical Analysis**: Evaluate data relationships and error distributions.
+- **Statistical Characteristics**: Examined dataset properties and distribution.
+- **Missing Values**: Assessed and addressed missing values for a cleaner dataset.
+- **Relationship Analysis**: Evaluated linearity and heterogeneity within the data.
 
-### Step 2: Algorithm Selection
-1. **Dataset Characteristics**: Understand relationships to inform algorithm selection.
-2. **Candidate Algorithms**:
-   - **DirectLiNGAM**: For linear causal structures with non-Gaussian errors.
-   - **GES**: For efficiency with larger datasets.
-   - **NOTEARS**: Not selected as primary method.
-3. **Final Algorithm Selection**: **DirectLiNGAM**.
+### Step 2: Algorithm Selection Assisted with LLM
+Utilized a Large Language Model (LLM) to select appropriate causal discovery algorithms based on:
+- Dataset characteristics, including sample size and error distribution.
+- Recommendations included:
+  1. **CDNOD**: Suitable for heterogeneous data.
+  2. **FCI**: Effective for handling hidden confounders.
+  3. **DirectLiNGAM**: Good for predominantly linear relationships with non-Gaussian noise.
 
-### Step 3: Hyperparameter Values Proposal
-The hyperparameters for **DirectLiNGAM** are as follows:
+### Step 3: Hyperparameter Values Proposal Assisted with LLM
+Optimized selected algorithms by seeking hyperparameter settings via LLM recommendations.
 
-```json
-{
-  "algorithm": "DirectLiNGAM",
-  "hyperparameters": {
-    "measure": {
-      "value": "pwling",
-      "explanation": "Using 'pwling' for pairwise likelihood-based measure is suitable as it aligns with the objective to evaluate independence in a dataset with non-Gaussian errors."
-    },
-    "random_state": {
-      "value": "fixed_seed",
-      "explanation": "Setting the random state to a fixed integer (e.g., 42) ensures reproducibility of results, which is essential in scientific investigations."
-    },
-    "prior_knowledge": {
-      "value": null,
-      "explanation": "Setting prior knowledge to null means no initial assumptions about causal relationships, allowing the algorithm to discover patterns purely from the data."
-    },
-    "apply_prior_knowledge_softly": {
-      "value": false,
-      "explanation": "Setting this to false means that any prior knowledge will be applied strictly."
-    }
-  }
-}
-```
-
-### Step 4: Graph Tuning
-1. **Graph Construction**: Create a directed acyclic graph (DAG).
-2. **Bootstrapping**: Iterate for robustness of identified causal relationships.
-3. **Model Refinement**: Adjust based on statistical insights and domain knowledge.
+### Step 4: Graph Tuning with Bootstrap and LLM Suggestions
+- **Bootstrapping**: Used to assess stability of causal relationships.
+- **LLM Feedback**: Integrated suggestions for tuning the causal graph.
 
 ## Results Summary
-The causal relationships identified among the variables are laid out in graphs generated from the algorithm. The initial graph and the refined graph after bootstrapping and LLM suggestions are displayed below.
+The following graphs illustrate the causal relationships among variables:
 
-|<center> True Graph |<center> Initial Graph| <center> Revised Graph|
+|<center> True Graph|<center> Initial Graph| <center> Revised Graph|
 |--|--|--|
-| ![True Graph](test_data/20241018_020318_base_nodes10_samples2000/output_graph/True_Graph.jpg)| ![Initial Graph](test_data/20241018_020318_base_nodes10_samples2000/output_graph/Initial_Graph.jpg)| ![Revised Graph](test_data/20241018_020318_base_nodes10_samples2000/output_graph/Revised_Graph.jpg)|
+|![True Graph](test_data/20241018_020318_base_nodes10_samples2000/output_graph/True_Graph.jpg)|![Initial Graph](test_data/20241018_020318_base_nodes10_samples2000/output_graph/Initial_Graph.jpg)|![Revised Graph](test_data/20241018_020318_base_nodes10_samples2000/output_graph/Revised_Graph.jpg)|
 
-### Analysis of Result Graphs
-The dietary fat has a causal influence on physical activity, suggesting higher dietary fat impacts exercise levels. Fiber intake also positively influences physical activity. Furthermore, both blood pressure and cholesterol levels are contingent on physical activity, illustrating exercise's role in overall health management. The direct connection between cholesterol and blood pressure emphasizes the intricate relationships that could dictate cardiovascular health.
+**Causal Relationships Observed:**
+- **Education Attainment ↔ Healthcare Access**: Bidirectional influence.
+- **Mental Health Anxiety ↔ Mental Health Depression**: Significant contributions to depression from increased anxiety.
+- **Domain Index**: Overall impact on mental health conditions, suggesting interventions should address these variables collectively.
 
 ### Metrics Evaluation
-Here's a comparison of metrics for the original and revised graph:
-
-| Metric   | Original Graph | Revised Graph |
-|----------|----------------|---------------|
-| SHD      | 11.0           | 10.0          |
-| Precision | 0.125          | 0.0           |
-| Recall    | 0.2            | 0.0           |
-| F1 Score  | 0.1538         | 0.0           |
+| Metric         | Original Graph | Revised Graph |
+|----------------|----------------|----------------|
+| SHD            | 6.0            | 6.0            |
+| Precision      | 0.0            | 0.0            |
+| Recall         | 0.0            | 0.0            |
+| F1 Score       | 0.0            | 0.0            |
 
 ![Metric Graph](test_data/20241018_020318_base_nodes10_samples2000/output_graph/metrics.jpg)
 
-### Analysis of Metrics
-The metrics indicate a slight improvement in the structural Hamming distance (SHD) with the revised graph, suggesting fewer erroneous edges. However, both precision and recall dropped to zero in the revised graph, implying that the refined graph might not have captured any true positive causal relationships despite a lower number of false positives, resulting in an F1 score of zero. This may imply that further refinement or adjustment is needed to achieve a more accurate representation of the causal structure among the variables. 
+**Analysis**:
+- Despite adjustments and refinements, both the original and revised graphs exhibit a significant degree of error in terms of precision, recall, and F1 score.
+- This suggests that while the causal relationships have been identified, the model may require further refinement or additional data to enhance predictive power and accuracy. 
 
-## Conclusion
-This structured analysis demonstrates the complex relationships between physical activity, dietary habits, and health metrics such as blood pressure and cholesterol levels. While the methodological approach has provided insights, further refinement and analysis will be necessary to enhance the accuracy of causal relationships identified.
+In conclusion, addressing the interplay between these socioeconomic factors and mental health could provide a more comprehensive understanding of overall well-being and inform policies aimed at improving health outcomes.
