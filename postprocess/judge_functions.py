@@ -179,7 +179,12 @@ def llm_evaluation(data, full_graph, args, knowledge_docs):
                 if exist_ij:
                     errors[key] = "Forbidden"
 
-    return errors
+    conversation = {
+        "prompt": prompt,
+        "response": known_effect
+    }
+
+    return conversation, errors
 
 
 

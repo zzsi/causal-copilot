@@ -34,7 +34,7 @@ def load_data(directory):
 
     return config, data, graph
 
-def knowledge_info(args, data):
+def knowledge_info(args, global_state):
     # Kun Zhou Implemented
     '''
     :param args: configurations
@@ -44,7 +44,7 @@ def knowledge_info(args, data):
     from openai import OpenAI
     client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
     table_name = args.data_file
-    table_columns = '\t'.join(data.columns._data)
+    table_columns = '\t'.join(global_state.user_data.processed_data.columns._data)
     prompt = ("I will conduct causal discovery on the Tabular Dataset %s containing the following Columns: \n\n"
               "%s\n\nIf the Variables Names are Meaningful, Please list the following information with clear format and accurate expression:"
               "\n1.Detailed Explanation about the Variables;"
@@ -61,7 +61,13 @@ def knowledge_info(args, data):
     )
     knowledge_doc = response.choices[0].message.content
     knowledge_docs = [knowledge_doc]
-    return knowledge_docs
+
+    global_state.user_data.knowledge_docs = knowledge_docs
+    global_state.logging.knowledge_conversation.append({
+        "prompt": prompt,
+        "response": response.choices[0].message.content
+    })
+    return global_state
 
 
 if __name__ == '__main__':

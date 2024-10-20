@@ -174,10 +174,8 @@ def load_data(global_state: GlobalState, args: argparse.Namespace):
 
     return global_state
 
-
-
-
-def global_state_initialization(data_path: str, user_query: str = None, args) -> GlobalState:
+def global_state_initialization(args: argparse.Namespace = None) -> GlobalState:
+    user_query = args.initial_query
     global_state = GlobalState()
     #user_query = "I’m analyzing a biological dataset with 2000 samples and 12 features. The data has some missing values, and I assume the relationships between the variables are linear. I believe the error terms follow a Gaussian distribution. The dataset is homogeneous, and there’s no specific domain index. I’d like to use the NOTEARS algorithm for causal discovery. Can you guide me through the process?"
 
@@ -202,13 +200,14 @@ def global_state_initialization(data_path: str, user_query: str = None, args) ->
               "The data is heterogeneous (for this kind of information, you just need to extract if the data is heterogeneous or not).\n\n "
               "The feature which represents the domain index is 'sea_level' in the dataset. (for this kind of information, you just need to extract the column name that stands for the domain index in the dataset).\n\n"
               "I would like to use PC to do causal discovery. Other options for algorithm include FCI, CDNOD, GES, NOTEARS, DirectLiNGAM, ICALiNGAM. \n\n"
-              "Then you should give me the output that is in a dict format: \n\n"
+              "Then you should give me the output that is in a json format: \n\n"
               "{'linearity': True, 'gaussian_error': True, 'missingness': True, 'alpha': 0.05, 'data_type': 'Mixture', 'heterogeneous': True, 'domain_index':'sea_level', 'selected_algorithm': 'PC'}.  \n\n"
               "If the information does not match the options I provided above or the queries do not provide such information, you would give value of None for such key !"
               "Just give me the output in a dict format, do not provide other information! \n\n")
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
+        response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt}
@@ -217,10 +216,8 @@ def global_state_initialization(data_path: str, user_query: str = None, args) ->
 
     # The output from GPT is str
     info_extracted = response.choices[0].message.content
-    info_extracted = info_extracted.replace('```python', '').replace('```', '').strip()
+    info_extracted = json.loads(info_extracted)
 
-    # Convert to dict
-    info_extracted = ast.literal_eval(info_extracted)
 
     # Assign extracted information from user queries to global_stat
     global_state.statistics.linearity = info_extracted["linearity"]

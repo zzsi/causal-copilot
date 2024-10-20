@@ -189,7 +189,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    global_state = global_state_initialization(args.data_file, args.initial_query)
+    global_state = global_state_initialization(args)
     global_state = load_data(global_state, args)
 
     # background info collection
@@ -206,7 +206,7 @@ def main():
         global_state.user_data.knowledge_docs = "This is fake domain knowledge for debugging purposes."
     else:
         global_state = stat_info_collection(global_state)
-        global_state.user_data.knowledge_docs = knowledge_info(args, global_state.user_data.processed_data)
+        global_state = knowledge_info(args, global_state)
 
     # Convert statistics to text
     global_state.statistics.description = convert_stat_info_to_text(global_state.statistics)
@@ -217,7 +217,7 @@ def main():
     
     # Algorithm selection and deliberation
     filter = Filter(args)
-    global_state.algorithm.algorithm_candidates = filter.forward(global_state.user_data.processed_data, global_state.statistics.description)
+    global_state = filter.forward(global_state)
 
     reranker = Reranker(args)
     global_state = reranker.forward(global_state)
@@ -231,7 +231,7 @@ def main():
         print("Mat Ground Truth: ", global_state.user_data.ground_truth)
         global_state.results.metrics = judge.evaluation(global_state.results.converted_graph, global_state.user_data.ground_truth)
         print(global_state.results.metrics)
-        
+
     global_state = judge.forward(global_state)
 
     if global_state.user_data.ground_truth is not None:
@@ -278,7 +278,7 @@ def main():
     #############Report Generation###################
     my_report = Report_generation(args, global_state.user_data.raw_data,
                                   global_state.statistics.description, global_state.user_data.knowledge_docs, 
-                                  prompt, hp_prompt,
+                                  global_state.logging.select_conversation, global_state.logging.argument_conversation,
                                   global_state.results.revised_graph, 
                                   global_state.results.metrics, global_state.results.revised_metrics,
                                   visual_dir=args.output_graph_dir)

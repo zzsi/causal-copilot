@@ -25,10 +25,10 @@ class Judge(object):
 
         # LLM perspective: errors based on domain knowledge from GPT-4
         if len(knowledge_docs) == 0 or "no knowledge" in knowledge_docs[0].lower():
-            errors_llm = {}
+            conversation, errors_llm = {}, {}
             print("No Errors are found by LLM, due to No Knowledge")
         else:
-            errors_llm = llm_evaluation(data=data, full_graph=full_graph, args=self.args, knowledge_docs=knowledge_docs)
+            conversation, errors_llm = llm_evaluation(data=data, full_graph=full_graph, args=self.args, knowledge_docs=knowledge_docs)
             print("Errors from LLMs: ", errors_llm)
 
         # Combine error obtained from both statistics and LLM perspectives
@@ -49,11 +49,12 @@ class Judge(object):
             if errors[key] == "Forbidden":
                 revised_graph[j, i] = 0
 
-        return errors_llm, errors_stat, boot_probability, revised_graph
+        return conversation, errors_llm, errors_stat, boot_probability, revised_graph
 
 
     def forward(self, global_state):
-        (global_state.results.llm_errors,
+        (conversation,
+         global_state.results.llm_errors,
          global_state.results.bootstrap_errors,
          global_state.results.bootstrap_probability,
          global_state.results.revised_graph) = self.quality_judge(
@@ -63,6 +64,7 @@ class Judge(object):
             hyperparameters=global_state.algorithm.algorithm_arguments,
             knowledge_docs=global_state.user_data.knowledge_docs
         )
+        global_state.logging.knowledge_conversation.append(conversation)
         return global_state
 
 

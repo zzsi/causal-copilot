@@ -39,8 +39,8 @@ class Filter(object):
             print("Error: Unable to parse JSON response")
             return {}
 
-    def forward(self, data, statistics_desc):
-        prompt = self.create_prompt(data, statistics_desc)
+    def forward(self, global_state):
+        prompt = self.create_prompt(global_state.user_data.processed_data, global_state.statistics.description)
 
         response = self.client.chat.completions.create(
             model="gpt-4o-mini",
@@ -55,4 +55,10 @@ class Filter(object):
         output = response.choices[0].message.content
         algorithm_candidates = self.parse_response(output)
 
-        return algorithm_candidates
+        global_state.algorithm.algorithm_candidates = algorithm_candidates
+        global_state.logging.select_conversation.append({
+            "prompt": prompt,
+            "response": response.choices[0].message.content
+        })
+
+        return global_state

@@ -381,9 +381,6 @@ def convert_stat_info_to_text(statistics):
     text += f"- Linearity: The relationships between variables {'are' if statistics.linearity else 'are not'} predominantly linear.\n"
     text += f"- Gaussian Errors: The errors in the data {'do' if statistics.gaussian_error else 'do not'} follow a Gaussian distribution.\n"
     text += f"- Heterogeneity: The dataset {'is' if statistics.heterogeneous else 'is not'} heterogeneous. \n\n"
-    
-    if statistics.missingness:
-        text += "3. Imputation techniques should be considered during preprocessing.\n"
 
     if statistics.domain_index is not None:
         text += f"If the data is heterogeneous, the column/variable {statistics.domain_index} is the domain index indicating the heterogeneity. "

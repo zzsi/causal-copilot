@@ -95,7 +95,13 @@ class Reranker(object):
                 print("The received answer for rerank is: -------------------------------------------------------------------------")
                 print(output)
                 selected_algo = self.extract(output, '<Algo>', '</Algo>')
+            print("Selected Algorithm: ", selected_algo)
+
             global_state.algorithm.selected_algorithm = selected_algo
+            global_state.logging.select_conversation.append({
+                "prompt": prompt,
+                "response": response.choices[0].message.content
+            })
         else:
             print("User has already selected the algorithm, skip the reranking process.")
             print("Selected Algorithm: ", global_state.algorithm.selected_algorithm)
@@ -138,9 +144,13 @@ class Reranker(object):
             global_state.algorithm.algorithm_arguments = hyper_suggest
             print("Selected Algorithm: ", selected_algo)
             print("Hyperparameter Suggestions: ", hyper_suggest)
+
+            global_state.logging.argument_conversation.append({
+                "prompt": hp_prompt,
+                "response": response.choices[0].message.content
+            })
         else:
             print("User has already selected the hyperparameters, skip the hyperparameter selection process.")
             print("Selected Hyperparameters: ", global_state.algorithm.algorithm_arguments)
 
-        global_state.logging.
         return global_state
