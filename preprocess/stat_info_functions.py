@@ -15,8 +15,8 @@ from statsmodels.stats.stattools import jarque_bera
 from statsmodels.tsa.stattools import adfuller
 from scipy import stats
 
-# Non-Linear Gaussian
-# path = '/Users/fangnan/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/ML Research/Causality-Copilot/data/simulation/simulated_data/20241016_213723_base_nodes15_samples1000/base_data.csv'
+#Linear Non-Gaussian
+# path = '/Users/fangnan/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/ML Research/Causality-Copilot/data/simulation/simulated_data/20241019_202628_base_nodes7_samples1000/base_data.csv'
 # data = pd.read_csv(path)
 
 
@@ -25,7 +25,6 @@ def data_preprocess (df: pd.DataFrame, ratio: float = 0.5, ts: bool = False):
     :param df: Dataset in Panda DataFrame format.
     :param ratio: threshold to remove column.
     :param ts: indicator of time-series data.
-    :param domain_index: column name which represents the domin index in the dataset
     :return: cleaned data, indicator of missingness in cleaned data, overall data type, data type of each feature.
     '''
 
@@ -123,19 +122,22 @@ def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
 
 
 
-def linearity_check (df: pd.DataFrame, test_pairs: int = 1000, alpha: float = 0.1):
+def linearity_check (df: pd.DataFrame, num_test: int = 100, alpha: float = 0.1):
     '''
     :param df: imputed data in Pandas DataFrame format.
-    :param test_pairs: maximum number of pairs to be tested.
+    :param num_test: maximum number of tests.
     :param alpha: significance level.
     :return: indicator of linearity, reset testing results for each pair, fitted OLS model.
     '''
 
-
     pval = []
-    OLS_model = []
 
-    pair_num = len(test_pairs)
+    m = df.shape[1]
+
+    tot_pairs = m * (m - 1) / 2
+    combinations_list = list(combinations(list(range(m)), 2))
+    pair_num = min(int(tot_pairs), num_test)
+    test_pairs = random.sample(combinations_list, pair_num)
 
     for i in range(pair_num):
         x = df.iloc[:, test_pairs[i][0]]
@@ -146,7 +148,7 @@ def linearity_check (df: pd.DataFrame, test_pairs: int = 1000, alpha: float = 0.
         model = sm.OLS(y, x)
         results = model.fit()
 
-        OLS_model.append(results)
+        # OLS_model.append(results)
 
         # Ramsey’s RESET - H0: linearity is satisfied
         reset_test = linear_reset(results, power=2)
@@ -162,39 +164,45 @@ def linearity_check (df: pd.DataFrame, test_pairs: int = 1000, alpha: float = 0.
     else:
         check_result = {"Linearity": False}
 
-    return check_result, corrected_result, OLS_model
+    return check_result
 
 
-# linearity_res, all_reset_results, OLS_model = linearity_check(df = imputed_data,
-#                                                                test_pairs = combinations_select,
-#                                                                alpha = 0.1)
-
+# linearity_res = linearity_check(df = imputed_data)
+# print(linearity_res)
 
 
  # Gaussian error Checking
  #
  # Input: cleaned and transformed data & Linearity testing results
  # Output: testing results
-def gaussian_check(df: pd.DataFrame,
-                    ols_fit: list,
-                    reset_test: list,
-                    test_pairs: int = 1000, alpha: float = 0.1):
+def gaussian_check(df: pd.DataFrame, linearity, num_test: int = 100, alpha: float = 0.1):
     '''
     :param df: imputed data in Pandas DataFrame format.
-    :param ols_fit: fitted OLS model for each pair.
-    :param reset_test: results of RESET test for each pair.
-    :param test_pairs: maximum number of pairs to be tested.
+    :param linearity: indicator of linearity.
+    :param num_test: maximum number of tests.
     :param alpha: significance level.
     :return: indicator of gaussian errors.
     '''
 
     pval = []
-    pair_num = len(test_pairs)
+
+    m = df.shape[1]
+    tot_pairs = m * (m - 1) / 2
+    combinations_list = list(combinations(list(range(m)), 2))
+    pair_num = min(int(tot_pairs), num_test)
+    test_pairs = random.sample(combinations_list, pair_num)
 
     for i in range(pair_num):
-        if not reset_test[i]:
-            residuals = ols_fit[i].resid
-        else:
+        if linearity:
+            x = df.iloc[:, test_pairs[i][0]]
+            x = sm.add_constant(x).to_numpy()
+
+            y = df.iloc[:, test_pairs[i][1]].to_numpy()
+
+            model = sm.OLS(y, x)
+            results = model.fit()
+            residuals = results.resid
+        elif not linearity:
             x = df.iloc[:, test_pairs[i][0]].to_numpy()
             y = df.iloc[:, test_pairs[i][1]].to_numpy()
 
@@ -205,13 +213,9 @@ def gaussian_check(df: pd.DataFrame,
             smoothed_values = np.interp(x, smoothed_x, smoothed_y)
             residuals = y - smoothed_values
 
-        # Jarque–Bera test - H0: residuals are Gaussian
-        # JB_test = jarque_bera(residuals)
-        # JB_pval.append(JB_test[1])
-
         # Shapiro-Wilk test - H0: Gaussian errors
         test = stats.shapiro(residuals)
-        pval = test.pvalue
+        pval.append(test.pvalue)
 
         # Benjamini & Yekutieli procedure - True: reject H0 -- Gaussian error assumption is not satisfied
         corrected_result = multipletests(pval, alpha=alpha, method='fdr_by')[0]
@@ -224,9 +228,9 @@ def gaussian_check(df: pd.DataFrame,
 
     return check_result
 
-# gaussian_res = gaussian_check(df = imputed_data, ols_fit = OLS_model,
-#                               test_pairs = combinations_select, reset_test = all_reset_results,
-#                               alpha = 0.1)
+# gaussian_res = gaussian_check(df = imputed_data, linearity = linearity_res)
+#
+# print(gaussian_res)
 
 def heterogeneity_check(df: pd.DataFrame, heterogeneity_indicator: str = "domain_index"):
     '''
@@ -240,6 +244,7 @@ def heterogeneity_check(df: pd.DataFrame, heterogeneity_indicator: str = "domain
         if df[heterogeneity_indicator].nunique() > 1:
             return True
     return False
+
 
 def stationary_check(df: pd.DataFrame, max_test: int = 1000, alpha: float = 0.1):
     '''
@@ -297,6 +302,7 @@ def stat_info_collection(global_state):
     # Update global state
     global_state.statistics.sample_size = n
     global_state.statistics.feature_number = m
+
     if global_state.statistics.heterogeneous and global_state.statistics.domain_index is not None:
         # Drop the domain index column from the data
         domain_index = global_state.statistics.domain_index
@@ -306,7 +312,7 @@ def stat_info_collection(global_state):
         col_domain_index = None
 
     # Data pre-processing
-    clean_data, miss_res, each_type, dataset_type = data_preprocess(df=data, ratio=global_state.statistics.ratio, ts=False)
+    clean_data, miss_res, each_type, dataset_type = data_preprocess(df = data, ratio=global_state.statistics.ratio, ts=False)
 
     # Update global state
     global_state.statistics.missingness = miss_res['Missingness']
@@ -320,27 +326,18 @@ def stat_info_collection(global_state):
 
     # Check assumption for continuous data
     if global_state.statistics.data_type == "Continuous":
-        m = clean_data.shape[1]
-        tot_pairs = m * (m - 1) / 2
+        if global_state.statistics.linearity is None:
+            # Linearity assumption checking
+            linearity_res = linearity_check(df=imputed_data, num_test=global_state.statistics.num_test, alpha=global_state.statistics.alpha)
+            # Update global state
+            global_state.statistics.linearity = linearity_res["Linearity"]
 
-        combinations_list = list(combinations(list(range(m)), 2))
-        num_test = min(int(tot_pairs), global_state.statistics.num_test)
-        combinations_select = random.sample(combinations_list, num_test)
+        if global_state.statistics.gaussian_error is None:
+            # Gaussian error checking
+            gaussian_res = gaussian_check(df=imputed_data, linearity=global_state.statistics.linearity, num_test=global_state.statistics.num_test, alpha=global_state.statistics.alpha)
+            # Update global state
+            global_state.statistics.gaussian_error = gaussian_res["Gaussian Error"]
 
-        # Linearity assumption checking
-        linearity_res, all_reset_results, OLS_model = linearity_check(df=imputed_data,
-                                                                        test_pairs=combinations_select,
-                                                                        alpha=global_state.statistics.alpha)
-        # Gaussian error checking
-        gaussian_res = gaussian_check(df=imputed_data,
-                                        ols_fit=OLS_model,
-                                        test_pairs=combinations_select,
-                                        reset_test=all_reset_results,
-                                        alpha=global_state.statistics.alpha)
-
-        # Update global state
-        global_state.statistics.linearity = linearity_res["Linearity"]
-        global_state.statistics.gaussian_error = gaussian_res["Gaussian Error"]
     else:
         global_state.statistics.linearity = False
         global_state.statistics.gaussian_error = False
@@ -360,8 +357,10 @@ def stat_info_collection(global_state):
 
     # Convert statistics to JSON for compatibility with existing code
     # stat_info_json = json.dumps(vars(global_state.statistics), indent=4)
-    
+
     return global_state
+
+
 
 def convert_stat_info_to_text(statistics):
     """
@@ -405,4 +404,4 @@ def convert_stat_info_to_text(statistics):
 # stat_info_combine, imputed_data = stat_info_collection(args = args, data = data)
 #
 # print(stat_info_combine)
-
+#

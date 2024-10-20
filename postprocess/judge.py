@@ -2,7 +2,7 @@ class Judge(object):
     def __init__(self, args):
         self.args = args
 
-    def quality_judge(self, data, full_graph, algorithm, hyperparameters, knowledge_docs):
+    def quality_judge(self, data, full_graph, algorithm, hyperparameters, knowledge_docs, boot_num):
         '''
         :param data: Given Tabular Data in Pandas DataFrame format
         :param full_graph: An adjacent matrix in Numpy Ndarray format -
@@ -10,6 +10,7 @@ class Judge(object):
         :param algorithm: String representing the algorithm name
         :param hyperparameters: Dictionary of hyperparameter names and values
         :param knowledge_docs: A doc containing all necessary domain knowledge information from GPT-4.
+        :param boot_num: Number of bootstrap iterations..
         :return: obvious errors in causal analysis results,
                  bootstrap probability of directed edges,
                  revised causal graph based on errors.
@@ -19,7 +20,7 @@ class Judge(object):
 
         # Statistics Perspective: Bootstrapping to get probability of edges using the selected algorithm.
         errors_stat, boot_probability = bootstrap(data=data, full_graph=full_graph, algorithm=algorithm, hyperparameters=hyperparameters,
-                                                  boot_num=self.args.boot_num, ts=self.args.ts)
+                                                  boot_num=boot_num, ts=False)
         print("Errors from Bootstrap method: ", errors_stat)
         print("Bootstrap Probability: ", boot_probability)
 
@@ -62,7 +63,8 @@ class Judge(object):
             full_graph=global_state.results.converted_graph,
             algorithm=global_state.algorithm.selected_algorithm,
             hyperparameters=global_state.algorithm.algorithm_arguments,
-            knowledge_docs=global_state.user_data.knowledge_docs
+            knowledge_docs=global_state.user_data.knowledge_docs,
+            boot_num=global_state.statistics.boot_num
         )
         global_state.logging.knowledge_conversation.append(conversation)
         return global_state

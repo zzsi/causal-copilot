@@ -1,6 +1,6 @@
 # Kun Zhou Implemented
 from data.simulation.simulation import SimulationManager
-from preprocess.dataset import load_data, knowledge_info
+from preprocess.dataset import knowledge_info
 from preprocess.stat_info_functions import stat_info_collection, convert_stat_info_to_text
 from algorithm.filter import Filter
 from algorithm.program import Programming
@@ -22,7 +22,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="test_data/20241018_020318_base_nodes10_samples2000",
+        default="/Users/fangnan/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/ML Research/Causality-Copilot/data/simulation/simulated_data/20241019_202628_base_nodes7_samples1000",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -78,51 +78,11 @@ def parse_args():
         action='store_true',
         help='Apply normalization to the dataset'
     )
+
     parser.add_argument(
         '--impute-missing',
         action='store_true',
         help='Impute missing values in the dataset'
-    )
-
-    # Data Preprocess Hyper-parameters
-    parser.add_argument(
-        '--ratio',
-        type=float,
-        default=0.5,
-        help=''
-    )
-    parser.add_argument(
-        '--domain_index',
-        type=str,
-        default='domain_index',
-        help='Name of the column which indicates the domain index'
-    )
-    parser.add_argument(
-        '--ts',
-        type=bool,
-        default=False,
-        help=''
-    )
-    parser.add_argument(
-        '--num_test',
-        type=int,
-        default=100,
-        help=''
-    )
-    # Verbosity level
-    parser.add_argument(
-        '--alpha',
-        type=float,
-        default=0.1,
-        help='Enable verbose output during analysis'
-    )
-
-    # Postprocess options
-    parser.add_argument(
-        '--boot_num',
-        type=int,
-        default=5,
-        help='Number of bootstrap iterations'
     )
 
     # Max Deliberation Round
@@ -179,7 +139,7 @@ def parse_args():
     parser.add_argument(
         '--initial_query',
         type=str,
-        default="",
+        default="I’m analyzing a biological dataset with 2000 samples and 12 features.",
         help='Initial query for the algorithm'
     )
 
@@ -193,7 +153,7 @@ def main():
     global_state = load_data(global_state, args)
 
     # background info collection
-    print("Original Data: ", global_state.user_data.raw_data)
+    #print("Original Data: ", global_state.user_data.raw_data)
 
     if args.debug:
         # Fake statistics for debugging
@@ -208,13 +168,15 @@ def main():
         global_state = stat_info_collection(global_state)
         global_state = knowledge_info(args, global_state)
 
+    # print(global_state.statistics)
+
     # Convert statistics to text
     global_state.statistics.description = convert_stat_info_to_text(global_state.statistics)
-    
+
     print("Preprocessed Data: ", global_state.user_data.processed_data)
     print("Statistics Info: ", global_state.statistics.description)
     print("Knowledge Info: ", global_state.user_data.knowledge_docs)
-    
+
     # Algorithm selection and deliberation
     filter = Filter(args)
     global_state = filter.forward(global_state)
@@ -264,7 +226,7 @@ def main():
     metrics_fig_path = my_visual.matrics_plot(global_state.results.metrics.copy(), global_state.results.revised_metrics.copy())
 
     ################################
-    
+
     # algorithm selection process
     '''
     round = 0
@@ -277,15 +239,15 @@ def main():
 
     #############Report Generation###################
     my_report = Report_generation(args, global_state.user_data.raw_data,
-                                  global_state.statistics.description, global_state.user_data.knowledge_docs, 
+                                  global_state.statistics.description, global_state.user_data.knowledge_docs,
                                   global_state.logging.select_conversation, global_state.logging.argument_conversation,
-                                  global_state.results.revised_graph, 
+                                  global_state.results.revised_graph,
                                   global_state.results.metrics, global_state.results.revised_metrics,
                                   visual_dir=args.output_graph_dir)
     report = my_report.generation()
     my_report.save_report(report, save_path=args.output_report_dir)
     ################################
-   
+
 
 if __name__ == '__main__':
     main()

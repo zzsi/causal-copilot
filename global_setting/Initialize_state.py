@@ -74,12 +74,6 @@ class GlobalState:
     algorithm: Algorithm = field(default_factory=Algorithm)
     results: Results = field(default_factory=Results)
 
-def global_state_initialization(data_path: str, user_query: str = None) -> GlobalState:
-    global_state = GlobalState()
-    global_state.user_data.initial_query = user_query
-    # TODO: initial the state with the exaction information from user query
-
-    return global_state
 
 def load_data(global_state: GlobalState, args: argparse.Namespace):
     if args.simulation_mode == "online":
@@ -145,65 +139,41 @@ def load_local_data(directory: str):
 
     return config, data, graph
 
-
-def load_data(global_state: GlobalState, args: argparse.Namespace):
-    if args.simulation_mode == "online":
-        simulation_manager = SimulationManager(args)
-        config, data, graph = simulation_manager.generate_dataset()
-    elif args.simulation_mode == "offline":
-        if args.data_mode == "simulated":
-            config, data, graph = load_local_data(args.data_file)
-        elif args.data_mode == "real":
-            data = pd.read_csv(args.data_file)
-            graph = None
-        else:
-            raise ValueError("Invalid data mode. Please choose 'real' or 'simulated'.")
-    else:
-        raise ValueError("Invalid simulation mode. Please choose 'online' or 'offline'.")
-
-    global_state.user_data.raw_data = data
-    global_state.user_data.ground_truth = graph
-
-    # hard-coded heterogeneous and domain index, later would be set by the user query
-    if 'domain_index' in data.columns:
-        if data.nunique(axis=0)['domain_index'] > 1:
-            global_state.statistics.heterogeneous = True
-        else:
-            global_state.statistics.heterogeneous = False
-        global_state.statistics.domain_index = 'domain_index'
-
-    return global_state
-
 def global_state_initialization(args: argparse.Namespace = None) -> GlobalState:
     user_query = args.initial_query
     global_state = GlobalState()
-    #user_query = "I’m analyzing a biological dataset with 2000 samples and 12 features. The data has some missing values, and I assume the relationships between the variables are linear. I believe the error terms follow a Gaussian distribution. The dataset is homogeneous, and there’s no specific domain index. I’d like to use the NOTEARS algorithm for causal discovery. Can you guide me through the process?"
 
     global_state.user_data.initial_query = user_query
 
     # Extract information from user queries
     from openai import OpenAI
-
-    # organization = "org-5NION61XDUXh0ib0JZpcppqS"
-    # project = "proj_Ry1rvoznXAMj8R2bujIIkhQN"
-    # apikey = "sk-l4ETwy_5kOgNvt5OzHf_YtBevR1pxQyNrlW8NRNPw2T3BlbkFJdKpqpbcDG0IhInYcsS3CXdz_EMHkJO7s1Bo3e4BBcA"
+    import json
 
     client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
-    prompt = (f"Using the query that I provided: {user_query} \n\n, "
-              "and extract the following information for me based on the format of the example I provided. "
-              "For example, if my query is: \n\n "
-              "The relationship between the variables are assumed to be linear (for this kind of information, you just need to extract if the relationship is linear or non-linear).\n\n "
-              "The errors are assumed to be Gaussian (for this kind of information, you just need to extract if the error follows Gaussian distribution or not).\n\n "
-              "There is missingness in the dataset (for this kind of information, you just need to extract if there is missing values or not in the dataset).\n\n "
-              "The suggested significant level for in the analysis is 0.05 (it should be a value that is larger than 0 and smaller than 1).\n\n "
-              "The datatype is mixture, which means it contain both continuous and categorical variables. Other options for data type is 'Continuous' or 'Category'.\n\n "
-              "The data is heterogeneous (for this kind of information, you just need to extract if the data is heterogeneous or not).\n\n "
-              "The feature which represents the domain index is 'sea_level' in the dataset. (for this kind of information, you just need to extract the column name that stands for the domain index in the dataset).\n\n"
-              "I would like to use PC to do causal discovery. Other options for algorithm include FCI, CDNOD, GES, NOTEARS, DirectLiNGAM, ICALiNGAM. \n\n"
-              "Then you should give me the output that is in a json format: \n\n"
-              "{'linearity': True, 'gaussian_error': True, 'missingness': True, 'alpha': 0.05, 'data_type': 'Mixture', 'heterogeneous': True, 'domain_index':'sea_level', 'selected_algorithm': 'PC'}.  \n\n"
-              "If the information does not match the options I provided above or the queries do not provide such information, you would give value of None for such key !"
-              "Just give me the output in a dict format, do not provide other information! \n\n")
+    prompt = (f"Based on the query that I provided: {user_query} \n\n; "
+              "extract the following information and summarize them in a json format, and output this json object."
+              "Within the output, the key, the corresponding value options and their meanings are: \n\n "
+              "1. Describe whether the relationship between the variables are assumed to be linear or not:"
+              "Key: 'linearity'. \n\n"
+              "Options of value (bool): True, False. \n\n"
+              "2. Describe whether the when fitting models between two variables, the error terms are assumed to be Gaussian or not:"
+              "Key: 'gaussian_error'. \n\n"
+              "Options of value (bool): True, False. \n\n"
+              "3. The significance level (denoted as alpha) for doing statistical testing in the following analysis:"
+              "Key: 'alpha'. \n\n"
+              "Options of value (float): A numeric value that is greater than 0 and less than 1. \n\n"
+              "4. Describe whether the dataset is heterogeneous or not:"
+              "Key: 'heterogeneous'. \n\n"
+              "Options of value (bool): True, False. \n\n"
+              "5. If the dataset is heterogeneous, what is the name of the column in the dataset that represents the domain index:"
+              "Key: 'domain_index'. \n\n"
+              "Options of value (str): The name of the column that represents the domain index. \n\n"
+              "6. Which algorithm the user would like to use to do causal discovery:"
+              "Key: 'selected_algorithm'. \n\n"
+              "Options of value (str): 'PC','FCI', 'CDNOD', 'GES', 'NOTEARS', 'DirectLiNGAM', 'ICALiNGAM'. \n\n"
+              "However, for each key, if the value extracted from queries does not match provided options, or if the queries do not provide enough information and you cannot summarize them,"
+              "the value for such key should be set to None! \n\n"
+              "Just give me the output in a json format, do not provide other information! \n\n")
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -218,24 +188,15 @@ def global_state_initialization(args: argparse.Namespace = None) -> GlobalState:
     info_extracted = response.choices[0].message.content
     info_extracted = json.loads(info_extracted)
 
-
     # Assign extracted information from user queries to global_stat
     global_state.statistics.linearity = info_extracted["linearity"]
     global_state.statistics.gaussian_error = info_extracted["gaussian_error"]
-    global_state.statistics.missingness = info_extracted["missingness"]
-    global_state.statistics.alpha = info_extracted["alpha"]
-    global_state.statistics.data_type = info_extracted["data_type"]
     global_state.statistics.heterogeneous = info_extracted["heterogeneous"]
     global_state.statistics.domain_index = info_extracted["domain_index"]
     global_state.algorithm.selected_algorithm = info_extracted["selected_algorithm"]
 
-    # Load Data
-    # _, data, graph = load_local_data(data_path)
-    # global_state.user_data.raw_data = data
-    # global_state.user_data.ground_truth = graph
-
-    # Statistics Information Collection
-
+    if info_extracted["alpha"] is not None:
+        global_state.statistics.alpha = info_extracted["alpha"]
 
     return global_state
 
