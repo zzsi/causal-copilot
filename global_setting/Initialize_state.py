@@ -53,6 +53,7 @@ class Algorithm:
     selected_reason: Optional[str] = None
     algorithm_candidates: Optional[Dict] = field(default_factory=dict)
     algorithm_arguments: Dict = field(default_factory=dict)
+    waiting_minutes: float = 2.0
 
 @dataclass
 class Results:
@@ -121,21 +122,45 @@ def load_local_data(directory: str):
     data_path = f"{directory}/base_data.csv"
     graph_path = f"{directory}/base_graph.npy"
 
+    files = os.listdir(directory)
+
     if os.path.exists(config_path):
         with open(config_path, 'r') as f:
             config = json.load(f)
     else:
-        config = None
+        config_path = None
+        for file in files:
+            if file.endswith(".json"):
+                config_path = file
+        if config_path != None:
+            with open(os.path.join(directory, config_path), 'r') as f:
+                config = json.load(f)
+        else:
+            config = None
 
     if os.path.exists(data_path):
         data = pd.read_csv(data_path)
     else:
-        raise FileNotFoundError(f"The data file {data_path} does not exist.")
+        data_path = None
+        for file in files:
+            if file.endswith(".csv"):
+                data_path = file
+        if data_path != None:
+            data = pd.read_csv(os.path.join(directory, data_path))
+        else:
+            raise FileNotFoundError(f"The data file {data_path} does not exist.")
 
     if os.path.exists(graph_path):
         graph = np.load(graph_path)
     else:
-        graph = None
+        graph_path = None
+        for file in files:
+            if file.endswith(".npy"):
+                graph_path = file
+        if graph_path != None:
+            graph = np.load(os.path.join(directory, graph_path))
+        else:
+            graph = None
 
     return config, data, graph
 
@@ -171,6 +196,9 @@ def global_state_initialization(args: argparse.Namespace = None) -> GlobalState:
               "6. Which algorithm the user would like to use to do causal discovery:"
               "Key: 'selected_algorithm'. \n\n"
               "Options of value (str): 'PC','FCI', 'CDNOD', 'GES', 'NOTEARS', 'DirectLiNGAM', 'ICALiNGAM'. \n\n"
+              "7. How many minutes the user can wait for the causal discovery algorithm:"
+              "Key: 'waiting_minutes'. \n\n"
+              "Options of value (float): A numeric value that is greater than 0. \n\n"
               "However, for each key, if the value extracted from queries does not match provided options, or if the queries do not provide enough information and you cannot summarize them,"
               "the value for such key should be set to None! \n\n"
               "Just give me the output in a json format, do not provide other information! \n\n")
@@ -195,6 +223,8 @@ def global_state_initialization(args: argparse.Namespace = None) -> GlobalState:
     global_state.statistics.domain_index = info_extracted["domain_index"]
     global_state.algorithm.selected_algorithm = info_extracted["selected_algorithm"]
 
+    if info_extracted["waiting_minutes"] is not None:
+        global_state.algorithm.waiting_minutes = info_extracted["waiting_minutes"]
     if info_extracted["alpha"] is not None:
         global_state.statistics.alpha = info_extracted["alpha"]
 

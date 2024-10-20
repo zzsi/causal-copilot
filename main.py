@@ -22,7 +22,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="/Users/fangnan/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/ML Research/Causality-Copilot/data/simulation/simulated_data/20241019_202628_base_nodes7_samples1000",
+        default="data/simulation/simulated_data/20241019_173126_Linear-Non-gaussian_nodes25_samples10000",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 

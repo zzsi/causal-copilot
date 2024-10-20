@@ -1,7 +1,10 @@
+import json
+import numpy as np
 class Reranker(object):
     # Kun Zhou Implemented
     def __init__(self, args):
         self.args = args
+        self.algo2time_cost = json.load(open('algorithm/context/algo2time_cost.json', encoding='utf-8'))
 
     def statistics_dict2string(self, statistics_dict):
         return str(statistics_dict)
@@ -16,6 +19,38 @@ class Reranker(object):
                 algo2des_cond_hyper[algo_name] = algo_string
                 algo_candidate_string += algo_string + "\n\n"
         return algo_candidate_string, algo2des_cond_hyper
+
+    def time_estimate(self, algo_can, n_sample, variable):
+        def fitting(data, a, b):
+            x, y = data
+            return a * np.log(x) * y ** 2 + b
+        def find_neighbor(x, x_list):
+            x_list = list(x_list)
+            x_list.sort()
+            for ele in x_list:
+                if x <= ele:
+                    return ele
+            return x_list[-1]
+
+        algo_cost = self.algo2time_cost[algo_can]['cost']
+        algo_para = self.algo2time_cost[algo_can]['hyper']
+        n_sample_list = [int(ele) for ele in algo_cost.keys()]
+        if n_sample > max(n_sample_list):
+            return fitting((n_sample, variable), algo_para[0], algo_para[1])
+        neighbor_n_sample = find_neighbor(n_sample, n_sample_list)
+
+        variable_list = [int(ele) for ele in algo_cost[str(neighbor_n_sample)].keys()]
+        if variable > max(variable_list):
+            return fitting((n_sample, variable), algo_para[0], algo_para[1])
+        neighbor_variable = find_neighbor(variable, variable_list)
+        return algo_cost[str(neighbor_n_sample)][str(neighbor_variable)]
+
+    def algo_cans2time_string(self, algo_cans, n_sample, variable):
+        prompt = ""
+        for algo_can in algo_cans:
+            time_cost = self.time_estimate(algo_can, n_sample, variable)
+            prompt += algo_can + ": " + str(time_cost) + "min\n"
+        return prompt
 
     def extract(self, output, start_str, end_str):
         if start_str in output and end_str in output:
@@ -72,13 +107,18 @@ class Reranker(object):
             knowledge_info = '\n'.join(knowledge_docs)
             statistics_info = statistics_desc
             algo_info, algo2des_cond_hyper = self.algo_can2string(algo_candidates, hp_context)
+            wait_time = global_state.algorithm.waiting_minutes
+            time_info = self.algo_cans2time_string(algo_candidates, global_state.statistics.sample_size, global_state.statistics.feature_number)
 
             # Select the Best Algorithm
-            prompt = ("I will conduct causal discovery on the Tabular Dataset %s containing the following Columns:\n\n"
+            prompt = (("I will conduct causal discovery on the Tabular Dataset %s containing the following Columns:\n\n"
                     "%s\n\nThe Detailed Background Information is listed below:\n\n"
                     "%s\n\nThe Statistics Information about the dataset is:\n\n"
                     "%s\n\nBased on the above information, please select the best-suited algorithm from the following candidate:\n\n"
-                    "%s\n\nPlease highlight the selected algorithm name using the following template <Algo>Name</Algo> in the ending of the output") % (table_name, table_columns, knowledge_info, statistics_info, algo_info)
+                    "%s\n\nNote that the user can only wait for %f minutes for the algorithm execution, please ensure the time cost of the selected algorithm would not exceed it!!\n"
+                    "The estimated time costs of the following algorithms are:\n\n"
+                    "%s\n\nPlease highlight the selected algorithm name using the following template <Algo>Name</Algo> in the ending of the output") %
+                    (table_name, table_columns, knowledge_info, statistics_info, algo_info, wait_time, time_info))
             selected_algo = ''
             print("Keys in algo2des_cond_hyper:", algo2des_cond_hyper.keys())
             while selected_algo not in algo2des_cond_hyper:

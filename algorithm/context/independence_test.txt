@@ -50,20 +50,6 @@ Not Available Independence Tests:
         - May not be as interpretable or straightforward as the Chi-squared test for small sample sizes.
     - **Time Complexity**: O(n), where n is the number of samples. Similar efficiency to Chi-squared test.
 
-- **Kernel-based (kci)**
-    - **Description**:
-    The Kernel-based Conditional Independence (KCI) test is a non-parametric test that uses kernel methods to assess independence. It is particularly effective for detecting non-linear dependencies between variables.
-    - **Assumptions**:
-        - Does not assume linearity or specific distributions, making it highly flexible.
-        - Complexity is cubic in the sample size, making it computationally intensive.
-    - **Advantages**:
-        - Capable of detecting non-linear relationships.
-        - Flexible and applicable to a wide range of data types, including continuous and high-dimensional data.
-    - **Limitations**:
-        - Computationally expensive, especially for large datasets.
-        - Requires careful selection of kernel parameters, which can be challenging without prior knowledge.
-    - **Time Complexity**: O(n^3), where n is the number of samples. Significantly slower than other methods, especially for large datasets.
-
 - **Missing-value Fisher's Z Conditional Independence Test (mv_fisherz)**
     - **Description**:
     A variant of the Fisher's Z test designed to handle datasets with missing values. It uses testwise deletion or other correction techniques to adjust for missing data.
