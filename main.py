@@ -101,6 +101,9 @@ def main():
     global_state = global_state_initialization(args)
     global_state = load_data(global_state, args)
 
+    # Show the exacted global state
+    print(global_state)
+
     # background info collection
     #print("Original Data: ", global_state.user_data.raw_data)
 
