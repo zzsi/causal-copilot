@@ -48,8 +48,12 @@ class Reranker(object):
     def algo_cans2time_string(self, algo_cans, n_sample, variable):
         prompt = ""
         for algo_can in algo_cans:
-            time_cost = self.time_estimate(algo_can, n_sample, variable)
-            prompt += algo_can + ": " + str(time_cost) + "min\n"
+            try:
+                time_cost = self.time_estimate(algo_can, n_sample, variable)
+                prompt += algo_can + ": " + str(time_cost) + "min\n"
+            except:
+                prompt += algo_can + ": " + 'Unknown Time' + "\n"
+                print(f"Meeting Error for {algo_can}")
         return prompt
 
     def extract(self, output, start_str, end_str):
