@@ -1,31 +1,3 @@
-# import os
-# import pandas as pd
-# import numpy as np
-# import algorithm.wrappers as wrappers
-#
-# path = '/Users/fangnan/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/ML Research/Causality-Copilot/data/simulation/simulated_data/20241016_205954_base_nodes10_samples1000/base_data.csv'
-# file_extension = os.path.splitext(path)[1].lower()
-# data = pd.read_csv(path)
-#
-# print(data)
-#
-# hyperparameters = {'alpha': 0.05,
-#                    'indep_test': 'fisherz',
-#                     'depth': -1,
-#                     'stable': True,
-#                     'uc_rule': 0,
-#                     'uc_priority': -1,
-#                     'mvpc': False,
-#                     'correction_name': 'MV_Crtn_Fisher_Z',
-#                     'background_knowledge': None,
-#                     'verbose': False,
-#                     'show_progress': False}
-# algo_func = getattr(wrappers, 'PC')
-# graph, _ = algo_func(hyperparameters).fit(data)
-#
-# print(graph)
-
-
 def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
     '''
     :param data: Given Tabular Data in Pandas DataFrame format
@@ -50,9 +22,7 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
     n, m = data.shape
     errors = {}
 
-    boot_effect_save = np.empty((m, m, boot_num)) # Save graphs based on bootstrapping
-
-    boot_probability = np.empty((m, m)) # Save bootstrap probability of directed edges
+    boot_effect_save = [] # Save graphs based on bootstrapping
 
     for boot_time in range(boot_num):
 
@@ -74,42 +44,37 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
 
         # Get the algorithm function from wrappers
         algo_func = getattr(wrappers, algorithm)
-
         # Execute the algorithm with data and hyperparameters
         boot_graph, info, raw_result = algo_func(hyperparameters).fit(boot_sample)
 
-        boot_effect_save[:, :, boot_time] = boot_graph
+        boot_effect_save.append(boot_graph)
+
+    boot_effect_save_array = np.array(boot_effect_save)
+    boot_probability = np.mean(boot_effect_save_array, axis=0)
 
 
-        for i in range(m):
-            for j in range(m):
-                if i==j:
-                    continue
-                else:
-                    # Only consider directed edge: i->j
-                    # boot_probability[j,i] represent the bootstrap probability of the edge i –> j
-                    boot_probability[j, i] = np.mean(boot_effect_save[j, i, :] == 1)
+    for i in range(m):
+        for j in range(m):
+            if i == j:
+                continue
+            else:
+                # Only consider directed edge: i->j
+                # Indicator of existence of path i->j in full graph
+                exist_ij = (full_graph[j, i] == 1)
 
-                    # Indicator of existence of path i->j in full graph
-                    exist_ij = (full_graph[j, i] == 1)
+                # Force the path if the probability is greater than 0.95
+                if boot_probability[j, i] >= 0.95:
+                    # Compare with the initial graph: if the path doesn't exist then force it
+                    if not exist_ij:
+                        errors[data.columns[i] + "->" + data.columns[j]] = "Forced"
 
-                    # Force the path if the probability is greater than 0.95
-                    if boot_probability[j, i] >= 0.95:
-                        # Compare with the initial graph: if the path doesn't exist then force it
-                        if not exist_ij:
-                            errors[data.columns[i] + "->" + data.columns[j]] = "Forced"
-
-                    # Forbid the path if the probability is less than 0.05
-                    elif boot_probability[j, i] <= 0.05:
-                        # Compare with the initial graph: if the path exist then forbid it
-                        if exist_ij:
-                            errors[data.columns[i] + "->" + data.columns[j]] = "Forbidden"
+                # Forbid the path if the probability is less than 0.05
+                elif boot_probability[j, i] <= 0.05:
+                    # Compare with the initial graph: if the path exist then forbid it
+                    if exist_ij:
+                        errors[data.columns[i] + "->" + data.columns[j]] = "Forbidden"
 
     return errors, boot_probability
-
-# errors, boot_probability = bootstrap(data, graph, 'PC', hyperparameters, 10, False, "domain_index")
-# print(boot_probability)
-
 
 
 def llm_evaluation(data, full_graph, args, knowledge_docs):
