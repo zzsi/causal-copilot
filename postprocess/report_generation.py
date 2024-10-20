@@ -5,7 +5,7 @@ import networkx as nx
 from mdprint import mdprint
 
 class Report_generation(object):
-    def __init__(self, args_setup, data, statistics_desc, knowledge_docs,
+    def __init__(self, args_setup, data, statistics_desc, knowledge_docs, eda_result,
                  prompt, hp_prompt, result_graph, original_metrics, revised_metrics, visual_dir):
         """
         :param args_setup: arguments for the report generation
@@ -17,6 +17,8 @@ class Report_generation(object):
         self.knowledge_docs = knowledge_docs
         # Data info
         self.data = data
+        # EDA info
+        self.eda_result = eda_result
         # Result graph matrix
         self.graph = result_graph
         self.original_metrics = original_metrics.copy()
@@ -61,6 +63,40 @@ class Report_generation(object):
             data_prop_prompt = f"This dataset is {'stationary' if statics_dict.get('Stationary') else 'non-stationary'} time-series data"
 
         return data_prop_prompt
+
+    def eda_prompt(self):
+        dist_input = self.eda_result['dist_analysis']
+        corr_input = self.eda_result['corr_analysis']
+        prompt_dist = (
+            "Given the following statistics about features in a dataset:\n\n"
+            f"{dist_input}\n"
+            "Please provide an analysis of the distributions of these features."
+        )
+        prompt_corr = (
+            "Given the following statistics about features in a dataset:\n\n"
+            f"{corr_input}\n"
+            "Please provide an analysis of the distributions of these features."
+        )
+
+        print("Start to find EDA Description")
+        response_dist = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
+                {"role": "user", "content": prompt_dist}
+            ]
+        )
+        response_dist_doc = response_dist.choices[0].message.content
+        response_corr = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
+                {"role": "user", "content": prompt_corr}
+            ]
+        )
+        response_corr_doc = response_corr.choices[0].message.content
+
+        return response_dist_doc, response_corr_doc
 
     def discover_process_prompts(self):
         prompt = f"""
@@ -124,6 +160,8 @@ class Report_generation(object):
             data_prop = self.statistics_desc
             # Background info
             background_info = self.background_info_prompts()
+            # EDA info
+            dist_info, corr_info = self.eda_prompt()
             # Graph effect info
             graph_prompt = self.graph_effect_prompts()
             discover_process = self.discover_process_prompts()
@@ -132,6 +170,10 @@ class Report_generation(object):
             graph_path1 = f'{self.visual_dir}/Initial_Graph.jpg'
             graph_path2 = f'{self.visual_dir}/Revised_Graph.jpg'
             graph_path3 = f'{self.visual_dir}/metrics.jpg'
+            # EDA Graph paths
+            dist_graph_path = self.eda_result['plot_path_dist']
+            scat_graph_path = self.eda_result['plot_path_scat']
+            corr_graph_path = self.eda_result['plot_path_corr']
 
             if self.data_mode == 'simulated':
                 # Report prompt
@@ -140,6 +182,11 @@ class Report_generation(object):
                     "[BACKGROUND_INFO]": background_info,
                     "[DATA_PREVIEW]": data_preview,
                     "[DATA_PROP]": data_prop,
+                    "[DIST_INFO]": dist_info,
+                    "[CORR_INFO]": corr_info,
+                    "[DIST_GRAPH]": dist_graph_path,
+                    "[SCAT_GRAPH_PATH]": scat_graph_path,
+                    "[CORR_GRAPH_PATH]": corr_graph_path,
                     "[RESULT_ANALYSIS]": graph_prompt,
                     "[DISCOVER_PROCESS]": discover_process,
                     "[RESULT_GRAPH0]": graph_path0,
@@ -156,6 +203,11 @@ class Report_generation(object):
                     "[BACKGROUND_INFO]": background_info,
                     "[DATA_PREVIEW]": data_preview,
                     "[DATA_PROP]": data_prop,
+                    "[DIST_INFO]": dist_info,
+                    "[CORR_INFO]": corr_info,
+                    "[DIST_GRAPH]": dist_graph_path,
+                    "[SCAT_GRAPH_PATH]": scat_graph_path,
+                    "[CORR_GRAPH_PATH]": corr_graph_path,
                     "[RESULT_ANALYSIS]": graph_prompt,
                     "[DISCOVER_PROCESS]": discover_process,
                     "[RESULT_GRAPH1]": graph_path1,
