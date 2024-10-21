@@ -145,7 +145,7 @@ class Report_generation(object):
         
         For example, you can write in the following way, and please analyze 1. the reliability and 2. give conclusion 
         base on both bootstrap probability and expert knowledge background.
-        Templete:
+        Template:
         From the Statistics perspective, we have high confidence to believe that these edges exist:..., and these edges don't exist:...
         However, based on the expert knowledge, we know that these edges exist:...., and these edges don't exist:... 
         Therefore, the result of this causal graph is reliable/not reliable.
