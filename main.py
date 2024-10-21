@@ -7,6 +7,7 @@ from algorithm.program import Programming
 from algorithm.rerank import Reranker
 from postprocess.judge import Judge
 from postprocess.visualization import Visualization
+from postprocess.eda_generation import EDA
 from postprocess.report_generation import Report_generation
 from global_setting.Initialize_state import global_state_initialization, GlobalState, load_data
 
@@ -202,20 +203,20 @@ def main():
         global_state.results.revised_metrics = judge.evaluation(global_state.results.revised_graph, global_state.user_data.ground_truth)
         print(global_state.results.revised_metrics)
 
+    #############EDA###################
+    my_eda = EDA(global_state, args)
+    my_eda.generate_eda()
     #############Visualization###################
-    my_visual = Visualization(data=global_state.user_data.raw_data,
-                              y=['MEDV'],
-                              save_dir=args.output_graph_dir,
-                              threshold=0.95)
+    my_visual = Visualization(global_state, args)
     if global_state.user_data.ground_truth is not None:
         true_fig_path = my_visual.mat_to_graph(full_graph=global_state.user_data.ground_truth,
                                                edge_labels=None,
                                                title='True Graph')
 
-    boot_dict = my_visual.process_boot_mat(global_state.results.bootstrap_probability, global_state.results.converted_graph)
-
+    #boot_dict = my_visual.process_boot_mat(global_state.results.bootstrap_probability, global_state.results.converted_graph)
+    boot_heatmap_path = my_visual.boot_heatmap_plot()
     result_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.converted_graph,
-                                             edge_labels=boot_dict,
+                                             #edge_labels=boot_dict,
                                              title='Initial Graph')
 
     revised_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.revised_graph,
@@ -238,12 +239,7 @@ def main():
     '''
 
     #############Report Generation###################
-    my_report = Report_generation(args, global_state.user_data.raw_data,
-                                  global_state.statistics.description, global_state.user_data.knowledge_docs,
-                                  global_state.logging.select_conversation, global_state.logging.argument_conversation,
-                                  global_state.results.revised_graph,
-                                  global_state.results.metrics, global_state.results.revised_metrics,
-                                  visual_dir=args.output_graph_dir)
+    my_report = Report_generation(global_state, args)
     report = my_report.generation()
     my_report.save_report(report, save_path=args.output_report_dir)
     ################################
