@@ -93,13 +93,13 @@ This categorization identifies patterns and potential outliers, informing subseq
 ![Scatter Plot](/postprocess/test_data/real_data_abalone_v2/output_graph/eda_scat.jpg)
 ![Correlation Graph](/postprocess/test_data/real_data_abalone_v2/output_graph/eda_corr.jpg)
 
-#### Strong Correlations ( \( r \geq 0.8 \) )
+#### Strong Correlations ( \( $r \geq 0.8$ \) )
 - E.g., **Diameter & Length (0.99)**, **Whole Weight & Length (0.93)** - indicates tightly linked relationships.
 
-#### Moderate Correlations ( \( 0.5 \leq r < 0.8 \) )
+#### Moderate Correlations ( \( $0.5 \leq r < 0.8$ \) )
 - E.g., **Height & Length (0.83)**, **Rings with various dimensions (e.g., 0.56 with Length)** indicative of less robust relationships.
 
-#### Weak Correlations ( \( r < 0.5 \) )
+#### Weak Correlations ( \( $r \leq 0.5$ \) )
 - No correlations fit into this category; the lowest correlation is **0.50**.
 
 ### Summary
