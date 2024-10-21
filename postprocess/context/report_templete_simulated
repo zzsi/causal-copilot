@@ -12,9 +12,11 @@ figures provided and analyze results in a structured way.
 
 [DATA_PROP]
 
+### Distribution Analysis
 ![Distribution Graph]([DIST_GRAPH])
 [DIST_INFO]
 
+### Correlation Analysis
 ![Scatter Plot]([SCAT_GRAPH])
 
 ![Correlation Graph]([CORR_GRAPH])
@@ -24,15 +26,20 @@ figures provided and analyze results in a structured way.
 [DISCOVER_PROCESS]
 
 ## Results Summary
-
+Include the following sentenses and graphs in the report:
 The following are result graphs produced by our algorithm.
 The initial graph is the graph in the first attempt, and the revised graph is the one pruned with bootstrapping and LLM suggestion.
 
-|<center> True Graph|<center> Initial Graph| <center> Revised Graph|
+|<center> True Graph|<center> Result Graph| <center> Reliability|
 |--|--|--|
-| ![True Graph]([RESULT_GRAPH0])| ![Initial Graph]([RESULT_GRAPH1])| ![Revised Graph]([RESULT_GRAPH2])|
+| ![True Graph]([RESULT_GRAPH0])| ![Result Graph]([RESULT_GRAPH1])| ![Reliability Graph]([RESULT_GRAPH4])|
 
 [RESULT_ANALYSIS]
+
+### Graph Reliability Analysis
+Based on the confidence probability heatmap and background knowledge, we can analyze the reliability of our graph.
+
+[RELIABILITY_ANALYSIS]
 
 ### Metrics Evaluation
 There are two dictionaries containing values of metrics: SHD (Structural Hamming Distance), precision, Recall, and f1 score.
