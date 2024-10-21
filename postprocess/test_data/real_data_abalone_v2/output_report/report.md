@@ -155,9 +155,9 @@ The dataset reveals strong interdependencies amongst size and weight variables, 
 ## Results Summary
 The following are result graphs produced by our algorithm:
 
-| <center> Initial Graph                                                                      | <center> Revised Graph                                                                                |
+| <center> Initial Graph                                                                      | <center> Reliability                                                                                |
 |---------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
-| ![Initial Graph](postprocess/test_data/real_data_abalone_v2/output_graph/Initial_Graph.jpg) | ![Confidence Heatmap](postprocess/test_data/real_data_abalone_v2/output_graph/confidence_heatmap.jpg) |
+| ![Initial Graph](/postprocess/test_data/real_data_abalone_v2/output_graph/Initial_Graph.jpg) | ![Confidence Heatmap](/postprocess/test_data/real_data_abalone_v2/output_graph/confidence_heatmap.jpg) |
 
 The result graph identifies relationships essential to understanding how these biological variables interconnect. The Length influences both Diameter and Viscera weight, indicating size interdependence.
 
