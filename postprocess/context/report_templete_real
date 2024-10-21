@@ -30,7 +30,7 @@ Include the following sentenses and graphs in the report:
 The following are result graphs produced by our algorithm.
 The initial graph is the graph in the first attempt, and the revised graph is the one pruned with bootstrapping and LLM suggestion.
 
-|<center> Initial Graph| <center> Revised Graph|
+|<center> Initial Graph| <center> Reliability|
 |--|--|
 | ![Initial Graph]([RESULT_GRAPH1])| ![Confidence Heatmap]([RESULT_GRAPH4])|
 
