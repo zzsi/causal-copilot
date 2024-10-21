@@ -1,18 +1,19 @@
-import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder
 import os
 
 class EDA(object):
-    def __init__(self, data: pd.DataFrame, save_dir: str):
+    def __init__(self, global_state, args):
         """
-        :param data: original dataset
-        :param save_dir: path to save the EDA plot
+        :param global_state: a dict containing global variables and information
+        :param args: arguments for the report generation
         """
-        self.data = data
+        self.global_state = global_state
+        self.data = global_state.user_data.raw_data
+        self.save_dir = args.output_graph_dir
         # Identify categorical features
-        self.categorical_features = data.select_dtypes(include=['object', 'category']).columns
+        self.categorical_features = global_state.user_data.raw_data.select_dtypes(include=['object', 'category']).columns
 
     def plot_dist(self):
         df = self.data.copy()
@@ -136,7 +137,7 @@ class EDA(object):
                       'dist_analysis': dist_analysis,
                       'corr_analysis': corr_analysis}
 
-        return eda_result
+        self.global_state.results.eda = eda_result
 
 
 
