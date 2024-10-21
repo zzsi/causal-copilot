@@ -120,11 +120,9 @@ class DataSimulator:
                 else:  # function_type is a dictionary
                     func_type = function_type.get(node, np.random.choice(function_types))
                 
-                print(f"Node {node} using function type: {func_type}")  # Debugging line
+                # print(f"Node {node} using function type: {func_type}")  # Debugging line
                 
                 func = getattr(self.transformation_library, func_type)
-                print('parent_node', parents)
-                print('child_node', node)
                 if func_type == 'polynomial':
                     degree = np.random.randint(2, 5)  # Random degree between 2 and 4
                     data[node] = func(parent_data, noise_func, noise_scale, degree=degree)

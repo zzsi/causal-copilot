@@ -3,6 +3,10 @@ from typing import List, Dict, Optional, Union, Any
 import pandas as pd
 import numpy as np
 
+# Update logic and priority of the state initialization
+# 1. All values are intialized to None, later would be set its valid values by information exaction from the user query
+# 2. The priority of the state initialization is from the user query > from the data > default values, if previously value is set, the later corresponding operation would be skipped
+
 @dataclass
 class UserData:
     raw_data: Optional[pd.DataFrame] = None
@@ -40,8 +44,9 @@ class Logging:
 class Algorithm:
     selected_algorithm: Optional[str] = None
     selected_reason: Optional[str] = None
-    algorithm_candidates: Optional[Dict] = field(default_factory=dict)
-    algorithm_arguments: Dict = field(default_factory=dict)
+    algorithm_candidates: Optional[Dict] = None
+    algorithm_arguments: Optional[Dict] = None
+    waiting_minutes: float = 2.0
 
 @dataclass
 class Results:

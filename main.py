@@ -23,38 +23,8 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="data/simulation/simulated_data/20241019_173126_Linear-Non-gaussian_nodes25_samples10000",
+        default="data/simulation/simulated_data/20241019_202628_base_nodes7_samples1000",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
-    )
-
-    # Target variable
-    parser.add_argument(
-        '--target-variable',
-        type=str,
-        help='Name of the target variable in the dataset'
-    )
-
-    # Covariates or features
-    parser.add_argument(
-        '--features',
-        type=str,
-        nargs='+',
-        help='List of feature names to include in the analysis'
-    )
-
-    # Causal model selection
-    parser.add_argument(
-        '--model',
-        type=str,
-        choices=['linear_regression', 'propensity_score_matching', 'causal_forest', 'do_calculus'],
-        help='Causal inference model to use for the analysis'
-    )
-
-    # Hyperparameters for the model
-    parser.add_argument(
-        '--hyperparameters',
-        type=str,
-        help='JSON string or path to JSON file containing hyperparameters for the chosen model'
     )
 
     # Output file for results
@@ -71,27 +41,6 @@ def parse_args():
         type=str,
         default='test_data/20241018_020318_base_nodes10_samples2000/output_graph',
         help='Directory to save the output graph'
-    )
-
-    # Data preprocessing options
-    parser.add_argument(
-        '--normalize',
-        action='store_true',
-        help='Apply normalization to the dataset'
-    )
-
-    parser.add_argument(
-        '--impute-missing',
-        action='store_true',
-        help='Impute missing values in the dataset'
-    )
-
-    # Max Deliberation Round
-    parser.add_argument(
-        '--max-iterations',
-        type=int,
-        default=10,
-        help='The maximum number of iterations to run the algorithm'
     )
 
     # OpenAI Settings
@@ -144,6 +93,13 @@ def parse_args():
         help='Initial query for the algorithm'
     )
 
+    parser.add_argument(
+        '--parallel',
+        type=bool,
+        default=True,
+        help='Parallel computing for bootstrapping.'
+    )
+
     args = parser.parse_args()
     return args
 
@@ -152,6 +108,9 @@ def main():
     args = parse_args()
     global_state = global_state_initialization(args)
     global_state = load_data(global_state, args)
+
+    # Show the exacted global state
+    print(global_state)
 
     # background info collection
     #print("Original Data: ", global_state.user_data.raw_data)
@@ -243,6 +202,7 @@ def main():
     report = my_report.generation()
     my_report.save_report(report, save_path=args.output_report_dir)
     ################################
+
 
 
 if __name__ == '__main__':

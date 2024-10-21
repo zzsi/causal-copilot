@@ -1,32 +1,42 @@
-# import os
-# import pandas as pd
-# import numpy as np
-# import algorithm.wrappers as wrappers
-#
-# path = '/Users/fangnan/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/ML Research/Causality-Copilot/data/simulation/simulated_data/20241016_205954_base_nodes10_samples1000/base_data.csv'
-# file_extension = os.path.splitext(path)[1].lower()
-# data = pd.read_csv(path)
-#
-# print(data)
-#
-# hyperparameters = {'alpha': 0.05,
-#                    'indep_test': 'fisherz',
-#                     'depth': -1,
-#                     'stable': True,
-#                     'uc_rule': 0,
-#                     'uc_priority': -1,
-#                     'mvpc': False,
-#                     'correction_name': 'MV_Crtn_Fisher_Z',
-#                     'background_knowledge': None,
-#                     'verbose': False,
-#                     'show_progress': False}
-# algo_func = getattr(wrappers, 'PC')
-# graph, _ = algo_func(hyperparameters).fit(data)
-#
-# print(graph)
+def bootstrap_iteration(data, ts, algorithm, hyperparameters):
+    '''
+    :param data: Given Tabular Data in Pandas DataFrame format
+    :param ts: Indicator of time-series
+    :param algorithm: String representing the algorithm name
+    :param hyperparameters: Dictionary of hyperparameter names and values
+    :return: Bootstrap result of one iteration
+    '''
+    import random
+    import math
+    import pandas as pd
+    import algorithm.wrappers as wrappers
+
+    n = data.shape[0]
+
+    # Choose bootstrap method based on the ts flag
+    if not ts:
+        # General bootstrapping
+        boot_index = random.choices(range(n), k=n)
+        boot_sample = data.iloc[boot_index, :]
+    else:
+        # Moving block bootstrapping for time-series
+        block_size = 10
+        block_num = math.ceil(n / block_size)
+        block_start = random.sample(range(n - block_size + 1), block_num)
+
+        blocks = [list(range(start, start + block_size)) for start in block_start]
+        subsets = [data.iloc[block] for block in blocks]
+
+        boot_sample = pd.concat(subsets, ignore_index=True).iloc[0:n]
+
+    # Get the algorithm function from wrappers
+    algo_func = getattr(wrappers, algorithm)
+    # Execute the algorithm with data and hyperparameters
+    boot_graph, info, raw_result = algo_func(hyperparameters).fit(boot_sample)
+    return boot_graph
 
 
-def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
+def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, parallel):
     '''
     :param data: Given Tabular Data in Pandas DataFrame format
     :param full_graph: An adjacent matrix in Numpy Ndarray format -
@@ -35,6 +45,7 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
     :param hyperparameters: Dictionary of hyperparameter names and values
     :param boot_num: Number of bootstrap iterations
     :param ts: An indicator of time-series data
+    :param parallel: indicator of parallel computing
     :return: a dict of obvious errors in causal analysis results based on bootstrap,
              e.g. {"X->Y: "Forced", "Y->Z: "Forbidden"};
              a matrix records bootstrap probability of directed edges, Matrix[i,j] records the
@@ -42,74 +53,54 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
     '''
 
     import numpy as np
-    import pandas as pd
-    import random
-    import math
-    import algorithm.wrappers as wrappers
+    from multiprocessing import Pool
 
-    n, m = data.shape
+    m = data.shape[1]
     errors = {}
 
-    boot_effect_save = np.empty((m, m, boot_num)) # Save graphs based on bootstrapping
+    boot_effect_save = []  # Save graphs based on bootstrapping
 
-    boot_probability = np.empty((m, m)) # Save bootstrap probability of directed edges
+    if not parallel:
+        for boot_time in range(boot_num):
+            boot_graph = bootstrap_iteration(data, ts, algorithm, hyperparameters)
+            boot_effect_save.append(boot_graph)
 
-    for boot_time in range(boot_num):
+    if parallel:
+        pool = Pool()
 
-        # Bootstrap samples
-        if not ts:
-            # General bootstrapping
-            boot_index = random.choices(range(n), k=n)
-            boot_sample = data.iloc[boot_index, :]
-        elif ts:
-            # Moving block bootstrapping for time-series
-            block_size = 10
-            block_num = math.ceil(n / block_size)
-            block_start = random.sample(range(n - block_size + 1), block_num)
+        # Prepare arguments for each process
+        args = [(data, ts, algorithm, hyperparameters) for _ in range(boot_num)]
+        boot_effect_save = pool.starmap(bootstrap_iteration, args)
 
-            blocks = [list(range(start, start + block_size)) for start in block_start]
-            subsets = [data.iloc[block] for block in blocks]
+        pool.close()
+        pool.join()
 
-            boot_sample = pd.concat(subsets, ignore_index=True).iloc[1:n]
-
-        # Get the algorithm function from wrappers
-        algo_func = getattr(wrappers, algorithm)
-
-        # Execute the algorithm with data and hyperparameters
-        boot_graph, info, raw_result = algo_func(hyperparameters).fit(boot_sample)
-
-        boot_effect_save[:, :, boot_time] = boot_graph
+    boot_effect_save_array = np.array(boot_effect_save)
+    boot_probability = np.mean(boot_effect_save_array, axis=0)
 
 
-        for i in range(m):
-            for j in range(m):
-                if i==j:
-                    continue
-                else:
-                    # Only consider directed edge: i->j
-                    # boot_probability[j,i] represent the bootstrap probability of the edge i –> j
-                    boot_probability[j, i] = np.mean(boot_effect_save[j, i, :] == 1)
+    for i in range(m):
+        for j in range(m):
+            if i == j:
+                continue
+            else:
+                # Only consider directed edge: i->j
+                # Indicator of existence of path i->j in full graph
+                exist_ij = (full_graph[j, i] == 1)
 
-                    # Indicator of existence of path i->j in full graph
-                    exist_ij = (full_graph[j, i] == 1)
+                # Force the path if the probability is greater than 0.95
+                if boot_probability[j, i] >= 0.95:
+                    # Compare with the initial graph: if the path doesn't exist then force it
+                    if not exist_ij:
+                        errors[data.columns[i] + "->" + data.columns[j]] = "Forced"
 
-                    # Force the path if the probability is greater than 0.95
-                    if boot_probability[j, i] >= 0.95:
-                        # Compare with the initial graph: if the path doesn't exist then force it
-                        if not exist_ij:
-                            errors[data.columns[i] + "->" + data.columns[j]] = "Forced"
-
-                    # Forbid the path if the probability is less than 0.05
-                    elif boot_probability[j, i] <= 0.05:
-                        # Compare with the initial graph: if the path exist then forbid it
-                        if exist_ij:
-                            errors[data.columns[i] + "->" + data.columns[j]] = "Forbidden"
+                # Forbid the path if the probability is less than 0.05
+                elif boot_probability[j, i] <= 0.05:
+                    # Compare with the initial graph: if the path exist then forbid it
+                    if exist_ij:
+                        errors[data.columns[i] + "->" + data.columns[j]] = "Forbidden"
 
     return errors, boot_probability
-
-# errors, boot_probability = bootstrap(data, graph, 'PC', hyperparameters, 10, False, "domain_index")
-# print(boot_probability)
-
 
 
 def llm_evaluation(data, full_graph, args, knowledge_docs):
