@@ -152,8 +152,11 @@ def llm_evaluation(data, full_graph, args, knowledge_docs):
         # Consider directed path
         if "->" in key:
             split_key = key.split("->")
-            i = data.columns.get_loc(split_key[0])
-            j = data.columns.get_loc(split_key[1])
+            try:
+                i = data.columns.get_loc(split_key[0])
+                j = data.columns.get_loc(split_key[1])
+            except:
+                continue
 
             # Indicator of existence of path i->j
             exist_ij = (full_graph[j, i] == 1)

@@ -59,6 +59,7 @@ class Results:
     bootstrap_probability: Optional[np.ndarray] = None
     llm_errors: List[Dict] = field(default_factory=list)
     bootstrap_errors: List[Dict] = field(default_factory=list)
+    eda_result: Optional[Dict] = None
 
 @dataclass
 class GlobalState:
