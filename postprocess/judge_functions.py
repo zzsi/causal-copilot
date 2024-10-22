@@ -1,4 +1,42 @@
-def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
+def bootstrap_iteration(data, ts, algorithm, hyperparameters):
+    '''
+    :param data: Given Tabular Data in Pandas DataFrame format
+    :param ts: Indicator of time-series
+    :param algorithm: String representing the algorithm name
+    :param hyperparameters: Dictionary of hyperparameter names and values
+    :return: Bootstrap result of one iteration
+    '''
+    import random
+    import math
+    import pandas as pd
+    import algorithm.wrappers as wrappers
+
+    n = data.shape[0]
+
+    # Choose bootstrap method based on the ts flag
+    if not ts:
+        # General bootstrapping
+        boot_index = random.choices(range(n), k=n)
+        boot_sample = data.iloc[boot_index, :]
+    else:
+        # Moving block bootstrapping for time-series
+        block_size = 10
+        block_num = math.ceil(n / block_size)
+        block_start = random.sample(range(n - block_size + 1), block_num)
+
+        blocks = [list(range(start, start + block_size)) for start in block_start]
+        subsets = [data.iloc[block] for block in blocks]
+
+        boot_sample = pd.concat(subsets, ignore_index=True).iloc[0:n]
+
+    # Get the algorithm function from wrappers
+    algo_func = getattr(wrappers, algorithm)
+    # Execute the algorithm with data and hyperparameters
+    boot_graph, info, raw_result = algo_func(hyperparameters).fit(boot_sample)
+    return boot_graph
+
+
+def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, parallel):
     '''
     :param data: Given Tabular Data in Pandas DataFrame format
     :param full_graph: An adjacent matrix in Numpy Ndarray format -
@@ -7,6 +45,7 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
     :param hyperparameters: Dictionary of hyperparameter names and values
     :param boot_num: Number of bootstrap iterations
     :param ts: An indicator of time-series data
+    :param parallel: indicator of parallel computing
     :return: a dict of obvious errors in causal analysis results based on bootstrap,
              e.g. {"X->Y: "Forced", "Y->Z: "Forbidden"};
              a matrix records bootstrap probability of directed edges, Matrix[i,j] records the
@@ -14,40 +53,27 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts):
     '''
 
     import numpy as np
-    import pandas as pd
-    import random
-    import math
-    import algorithm.wrappers as wrappers
+    from multiprocessing import Pool
 
-    n, m = data.shape
+    m = data.shape[1]
     errors = {}
 
-    boot_effect_save = [] # Save graphs based on bootstrapping
+    boot_effect_save = []  # Save graphs based on bootstrapping
 
-    for boot_time in range(boot_num):
+    if not parallel:
+        for boot_time in range(boot_num):
+            boot_graph = bootstrap_iteration(data, ts, algorithm, hyperparameters)
+            boot_effect_save.append(boot_graph)
 
-        # Bootstrap samples
-        if not ts:
-            # General bootstrapping
-            boot_index = random.choices(range(n), k=n)
-            boot_sample = data.iloc[boot_index, :]
-        elif ts:
-            # Moving block bootstrapping for time-series
-            block_size = 10
-            block_num = math.ceil(n / block_size)
-            block_start = random.sample(range(n - block_size + 1), block_num)
+    if parallel:
+        pool = Pool()
 
-            blocks = [list(range(start, start + block_size)) for start in block_start]
-            subsets = [data.iloc[block] for block in blocks]
+        # Prepare arguments for each process
+        args = [(data, ts, algorithm, hyperparameters) for _ in range(boot_num)]
+        boot_effect_save = pool.starmap(bootstrap_iteration, args)
 
-            boot_sample = pd.concat(subsets, ignore_index=True).iloc[1:n]
-
-        # Get the algorithm function from wrappers
-        algo_func = getattr(wrappers, algorithm)
-        # Execute the algorithm with data and hyperparameters
-        boot_graph, info, raw_result = algo_func(hyperparameters).fit(boot_sample)
-
-        boot_effect_save.append(boot_graph)
+        pool.close()
+        pool.join()
 
     boot_effect_save_array = np.array(boot_effect_save)
     boot_probability = np.mean(boot_effect_save_array, axis=0)
@@ -126,8 +152,11 @@ def llm_evaluation(data, full_graph, args, knowledge_docs):
         # Consider directed path
         if "->" in key:
             split_key = key.split("->")
-            i = data.columns.get_loc(split_key[0])
-            j = data.columns.get_loc(split_key[1])
+            try:
+                i = data.columns.get_loc(split_key[0])
+                j = data.columns.get_loc(split_key[1])
+            except:
+                continue
 
             # Indicator of existence of path i->j
             exist_ij = (full_graph[j, i] == 1)

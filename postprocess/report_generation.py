@@ -4,74 +4,91 @@ import argparse
 import networkx as nx
 from mdprint import mdprint
 
+from postprocess.judge_functions import graph_effect_prompts
+
 class Report_generation(object):
-    def __init__(self, args_setup, data, statistics_desc, knowledge_docs,
-                 prompt, hp_prompt, result_graph, original_metrics, revised_metrics, visual_dir):
+    def __init__(self, global_state, args):
         """
-        :param args_setup: arguments for the report generation
-        :param statistics_desc: statistics description of the dataset
+        :param global_state: a dict containing global variables and information
+        :param args: arguments for the report generation
         """
-        self.client = OpenAI(organization=args_setup.organization, project=args_setup.project, api_key=args_setup.apikey)
-        self.data_mode = args_setup.data_mode
-        self.statistics_desc = statistics_desc
-        self.knowledge_docs = knowledge_docs
+
+        self.client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+        self.data_mode = args.data_mode
+        self.statistics_desc = global_state.statistics.description
+        self.knowledge_docs = global_state.user_data.knowledge_docs[0]
         # Data info
-        self.data = data
+        self.data = global_state.user_data.raw_data
+        # EDA info
+        self.eda_result = global_state.results.eda
         # Result graph matrix
-        self.graph = result_graph
-        self.original_metrics = original_metrics.copy()
-        self.revised_metrics = revised_metrics.copy()
+        self.graph = global_state.results.converted_graph
+        self.bootstrap_probability = global_state.results.bootstrap_probability
+        self.original_metrics = global_state.results.metrics
+        self.revised_metrics = global_state.results.revised_metrics
         # algo&hp selection prompts
-        self.prompt = prompt
-        self.hp_prompt = hp_prompt
+        self.prompt = global_state.logging.select_conversation[0]['response']
+        self.hp_prompt = global_state.logging.argument_conversation[0]['response']
         # Path to find the visualization graph
-        self.visual_dir = visual_dir
+        self.visual_dir = args.output_graph_dir
 
-    def background_info_prompts(self):
-        data_columns = '\t'.join(self.data.columns)
-        prompt = f"""
-        In this report we want to explore the relationship among these variables: {data_columns}, and here are background information: {self.knowledge_docs}.
-        please write a paragraph to describe the purpose of this report and background knowledge of these variables, 
-        like meanings of variable names and potential relationships.
-        """
+    def eda_prompt(self):
+        dist_input = self.eda_result['dist_analysis']
+        corr_input = self.eda_result['corr_analysis']
+        prompt_dist = (
+            f"""
+            Given the following statistics about features in a dataset:\n\n
+            {dist_input}\n
+            Please provide an analysis of the distributions of these features. 
+            Please categorize variables according to their distribution features.
+            For example, you can say:
+            - Slight left skew distributed variables: Length, ...
+            - Slight right skew distributed variables: Whole Weight, ...
+            - Symmetric distributed variables: Height, ...
+            """
+        )
+        prompt_corr = (
+            f"""
+            Given the following correlation statistics about features in a dataset:\n\n
+            {corr_input}\n
+            Please provide an analysis of the correlations of these features.
+            You can seperate your analysis into three categories: Strong correlations, Moderate correlations, and Weak correlations.            
+            """
+        )
 
-        print("Start to find background information")
-        response = self.client.chat.completions.create(
+        print("Start to find EDA Description")
+        response_dist = self.client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": prompt_dist}
             ]
         )
-        response_doc = response.choices[0].message.content
-        return response_doc
+        response_dist_doc = response_dist.choices[0].message.content
 
-    def data_prop_prompt(self):
-        statics_dict = self.statics_dict
-        # Data property prompt
-        if statics_dict.get("Stationary") == "non time-series":
-            missing = "has missing values," if statics_dict.get("Missingness") else "does not have missing values,"
-            data_type = f"is {statics_dict.get('Data Type')} data,"
-            linear = "satisfies the linearity assumption," if statics_dict.get(
-                "Linearity") else "violates the linearity assumption,"
-            gaussian = ",and satisfies the Gaussian error assumption" if statics_dict.get(
-                "Gaussian Error") else ",and violates the Gaussian error assumption"
-            data_prop_prompt = "This dataset " + missing + data_type + linear + gaussian
-        else:
-            data_prop_prompt = f"This dataset is {'stationary' if statics_dict.get('Stationary') else 'non-stationary'} time-series data"
+        response_corr = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
+                {"role": "user", "content": prompt_corr}
+            ]
+        )
+        response_corr_doc = response_corr.choices[0].message.content
 
-        return data_prop_prompt
+        return response_dist_doc, response_corr_doc
 
     def discover_process_prompts(self):
         prompt = f"""
         I want to describe the causal discovery procedure of this project. 
         Firstly, we preprocessed the data and checked statistical characteristics of this dataset.
+        
         Then we let the LLM help us to select algorithms and hyper-parameters based on statistical characteristics of this dataset and background knowledge.
         This is the prompt for algorithm selection {self.prompt}, and this is the prompt for hyper-parameter selection {self.hp_prompt},
-        you can find some useful information, i.e. the selected algorithms and parameters, in these prompts.
+        you can find some useful information, i.e. the selected algorithms and parameters, and justifications for them in these prompts.
+        You should include which algorithm we choose, what hyperparameters we choose, and justifications for them in the report.
         The first step is Data Preprocessing, the second Algorithm Selection assisted with LLM, the third is Hyperparameter Values Proposal assisted with LLM,
         and the fourth is graph tuning with bootstrap and LLM suggestion.
-        Please discribe the procedure step by step clearly.
+        Please discribe the procedure step by step clearly, and also present the choosen parameters in json format.
         """
         print("Start to find discovery procedure")
         response = self.client.chat.completions.create(
@@ -110,6 +127,41 @@ class Report_generation(object):
         response_doc = response.choices[0].message.content
         return response_doc
 
+    def confidence_analysis_prompts(self):
+
+        relation_prob = graph_effect_prompts(self.data,
+                                             self.graph,
+                                             self.bootstrap_probability)
+
+        variables = '\t'.join(self.data.columns)
+        print(relation_prob)
+        prompt = f"""
+        Now we have a causal relationship about these variables:{variables}, and we want to analize the reliability of it.
+        The following describes how much confidence we have on each relationship edge: {relation_prob}.
+        For example, if it says X1 -> X0 (the bootstrap probability of such edge is 0.99), it means that we have 99% confidence to believe that X1 causes X0.
+        The following is the background knowledge about these variables: {self.knowledge_docs}
+        Based on this statistical confidence result, and background knowledge about these variables,
+        Please write a paragraph to analyze the reliability of this causal relationship graph. 
+        
+        For example, you can write in the following way, and please analyze 1. the reliability and 2. give conclusion 
+        base on both bootstrap probability and expert knowledge background.
+        Template:
+        From the Statistics perspective, we have high confidence to believe that these edges exist:..., and these edges don't exist:...
+        However, based on the expert knowledge, we know that these edges exist:...., and these edges don't exist:... 
+        Therefore, the result of this causal graph is reliable/not reliable.
+        """
+
+        print("Start to analyze graph reliability")
+        response = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        response_doc = response.choices[0].message.content
+        return response_doc
+
     def load_context(self, filepath):
         with open(filepath, "r") as f:
             return f.read()
@@ -123,15 +175,24 @@ class Report_generation(object):
             data_preview = self.data.head().to_string()
             data_prop = self.statistics_desc
             # Background info
-            background_info = self.background_info_prompts()
+            background_info = self.knowledge_docs
+            # EDA info
+            dist_info, corr_info = self.eda_prompt()
             # Graph effect info
             graph_prompt = self.graph_effect_prompts()
             discover_process = self.discover_process_prompts()
+            # Graph Reliability info
+            reliability_prompt = self.confidence_analysis_prompts()
             # Graph paths
             graph_path0 = f'{self.visual_dir}/True_Graph.jpg'
             graph_path1 = f'{self.visual_dir}/Initial_Graph.jpg'
             graph_path2 = f'{self.visual_dir}/Revised_Graph.jpg'
             graph_path3 = f'{self.visual_dir}/metrics.jpg'
+            graph_path4 = f'{self.visual_dir}/confidence_heatmap.jpg'
+            # EDA Graph paths
+            dist_graph_path = self.eda_result['plot_path_dist']
+            scat_graph_path = self.eda_result['plot_path_scat']
+            corr_graph_path = self.eda_result['plot_path_corr']
 
             if self.data_mode == 'simulated':
                 # Report prompt
@@ -140,12 +201,19 @@ class Report_generation(object):
                     "[BACKGROUND_INFO]": background_info,
                     "[DATA_PREVIEW]": data_preview,
                     "[DATA_PROP]": data_prop,
+                    "[DIST_INFO]": dist_info,
+                    "[CORR_INFO]": corr_info,
+                    "[DIST_GRAPH]": dist_graph_path,
+                    "[SCAT_GRAPH]": scat_graph_path,
+                    "[CORR_GRAPH]": corr_graph_path,
                     "[RESULT_ANALYSIS]": graph_prompt,
                     "[DISCOVER_PROCESS]": discover_process,
+                    "[RELIABILITY_ANALYSIS]": reliability_prompt,
                     "[RESULT_GRAPH0]": graph_path0,
                     "[RESULT_GRAPH1]": graph_path1,
                     "[RESULT_GRAPH2]": graph_path2,
                     "[RESULT_GRAPH3]": graph_path3,
+                    "[RESULT_GRAPH4]": graph_path4,
                     "[RESULT_METRICS1]": str(self.original_metrics),
                     "[RESULT_METRICS2]": str(self.revised_metrics)
                 }
@@ -156,10 +224,17 @@ class Report_generation(object):
                     "[BACKGROUND_INFO]": background_info,
                     "[DATA_PREVIEW]": data_preview,
                     "[DATA_PROP]": data_prop,
+                    "[DIST_INFO]": dist_info,
+                    "[CORR_INFO]": corr_info,
+                    "[DIST_GRAPH]": dist_graph_path,
+                    "[SCAT_GRAPH]": scat_graph_path,
+                    "[CORR_GRAPH]": corr_graph_path,
                     "[RESULT_ANALYSIS]": graph_prompt,
                     "[DISCOVER_PROCESS]": discover_process,
+                    "[RELIABILITY_ANALYSIS]": reliability_prompt,
                     "[RESULT_GRAPH1]": graph_path1,
-                    "[RESULT_GRAPH2]": graph_path2
+                    "[RESULT_GRAPH2]": graph_path2,
+                    "[RESULT_GRAPH4]": graph_path4
                 }
 
             for placeholder, value in replacements.items():
