@@ -88,7 +88,7 @@ def parse_args():
     parser.add_argument(
         '--initial_query',
         type=str,
-        default="I’m analyzing a biological dataset with 2000 samples and 12 features.",
+        default="",
         help='Initial query for the algorithm'
     )
 
