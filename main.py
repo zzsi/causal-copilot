@@ -9,7 +9,7 @@ from postprocess.judge import Judge
 from postprocess.visualization import Visualization
 from postprocess.eda_generation import EDA
 from postprocess.report_generation import Report_generation
-from global_setting.Initialize_state import global_state_initialization, GlobalState, load_data
+from global_setting.Initialize_state import global_state_initialization, load_data
 
 import json
 import argparse
@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="data/simulation/simulated_data/20241019_173125_Linear-Gaussian_nodes50_samples5000",
+        default="data/simulation/simulated_data/20241024_145159_Linear-Gaussian_id_8_nodes10_samples1000",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 

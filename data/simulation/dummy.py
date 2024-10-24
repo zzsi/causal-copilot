@@ -138,7 +138,7 @@ class DataSimulator:
                 else:  # function_type is a dictionary
                     func_type = function_type.get(node, np.random.choice(function_types))
                 
-                # print(f"Node {node} using function type: {func_type}")  # Debugging line
+                print(f"Node {node} using function type: {func_type}, parents: {parents}")  # Debugging line
                 
                 func = getattr(self.transformation_library, func_type)
                 if func_type == 'polynomial':
@@ -611,13 +611,16 @@ if __name__ == "__main__":
     import numpy as np
     import pandas as pd
     from causallearn.search.ConstraintBased.PC import pc
-    from sklearn.metrics import precision_score, recall_score, f1_score
+    from causallearn.utils.GraphUtils import GraphUtils
+    from causallearn.search.FCMBased import lingam
+    from causallearn.graph.AdjacencyConfusion import AdjacencyConfusion
+    from causallearn.graph.SHD import SHD
 
     # Use the base simulator to generate data
     base_simulator = DataSimulator()
     graph, data = base_simulator.generate_dataset(
         function_type='linear',
-        n_nodes=5,
+        n_nodes=10,
         n_samples=10000,
         edge_probability=0.3,
         noise_type='gaussian'
@@ -629,39 +632,84 @@ if __name__ == "__main__":
     # Run PC algorithm
     cg = pc(df.values)
 
-    # Get the adjacency matrix
-    adj_matrix = cg.G.graph
+    # Run DirectLiNGAM
+    model = lingam.DirectLiNGAM()
+    model.fit(df.values)
 
-    print('adj_matrix', adj_matrix)
+    print('DirectLiNGAM causal order:', model.causal_order_)
+    print('DirectLiNGAM adjacency matrix:', model.adjacency_matrix_)
 
-    # Create inferred flat matrix
-    inferred_flat = np.zeros_like(adj_matrix)
-    indices = np.where(adj_matrix == 1)
-    for i, j in zip(indices[0], indices[1]):
-        if adj_matrix[j, i] == -1:
-            inferred_flat[i, j] = 1
-    indices = np.where(adj_matrix == -1)
-    for i, j in zip(indices[0], indices[1]):
-        if adj_matrix[j, i] == -1:
-            inferred_flat[i, j] = 1
+    # Create inferred flat matrix for DirectLiNGAM
+    inferred_flat_lingam = np.where(model.adjacency_matrix_ != 0, 1, 0)
 
     true_adj = nx.to_numpy_array(graph).transpose()
-    print(inferred_flat)
-    print(true_adj)
 
-    # Flatten matrices for comparison
-    true_flat = true_adj.flatten()
-    inferred_flat = inferred_flat.flatten()
-
-    # Calculate metrics
-    precision = precision_score(true_flat, inferred_flat)
-    recall = recall_score(true_flat, inferred_flat)
-    f1 = f1_score(true_flat, inferred_flat)
-
-    print("PC Algorithm Results:")
-    print(f"Precision: {precision:.3f}")
-    print(f"Recall: {recall:.3f}")
-    print(f"F1 Score: {f1:.3f}")
+    # shd, f1, precision, recall
+    
 
 
 
+    from causallearn.graph.GeneralGraph import GeneralGraph
+    from causallearn.graph.GraphNode import GraphNode
+    from causallearn.graph.Edge import Edge
+    from causallearn.graph.Endpoint import Endpoint
+    from causallearn.utils.DAG2CPDAG import dag2cpdag
+
+    def array2cpdag(adj_array):
+        g = GeneralGraph([])
+        node_map = {}
+        num_nodes = adj_array.shape[0]
+        
+        # Create nodes
+        for i in range(num_nodes):
+            node_name = f"X{i+1}"
+            node_map[node_name] = GraphNode(node_name)
+            g.add_node(node_map[node_name])
+        
+        # Create edges
+        for i in range(num_nodes):
+            for j in range(num_nodes):
+                if adj_array[i, j] == 1:
+                    node1 = node_map[f"X{i+1}"]
+                    node2 = node_map[f"X{j+1}"]
+                    edge = Edge(node1, node2, Endpoint.TAIL, Endpoint.ARROW)
+                    g.add_edge(edge)
+        
+        truth_cpdag = dag2cpdag(g)
+        return truth_cpdag
+
+    # Convert true_adj to GeneralGraph object
+    true_graph = array2cpdag(nx.to_numpy_array(graph))
+    print("True Graph:", true_graph)
+
+    for node in true_graph.nodes:
+        print(node.name)
+
+    for node in cg.G.nodes:
+        print(node.name)
+
+    print(cg.G.node_map, true_graph.node_map)
+    cg.G.node_map = true_graph.node_map
+    shd = SHD(true_graph, cg.G)
+
+    print("SHD:", shd.get_shd())
+
+    # For adjacency matrices
+    adj = AdjacencyConfusion(true_graph, cg.G)
+
+    adjTp = adj.get_adj_tp()
+    adjFp = adj.get_adj_fp()
+    adjFn = adj.get_adj_fn()
+    adjTn = adj.get_adj_tn()
+
+    adjPrec = adj.get_adj_precision()
+    adjRec = adj.get_adj_recall()
+
+    print("adjTp:", adjTp)
+    print("adjFp:", adjFp)
+    print("adjFn:", adjFn)
+    print("adjTn:", adjTn)
+    print("adjPrec:", adjPrec)
+    print("adjRec:", adjRec)
+
+   

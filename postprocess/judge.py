@@ -10,8 +10,7 @@ class Judge(object):
         :param algorithm: String representing the algorithm name
         :param hyperparameters: Dictionary of hyperparameter names and values
         :param knowledge_docs: A doc containing all necessary domain knowledge information from GPT-4.
-        :param boot_num: Number of bootstrap iterations.
-        :param parallel: Indicator of bootstrap parallelization.
+        :param boot_num: Number of bootstrap iterations..
         :return: obvious errors in causal analysis results,
                  bootstrap probability of directed edges,
                  revised causal graph based on errors.
@@ -21,7 +20,7 @@ class Judge(object):
 
         # Statistics Perspective: Bootstrapping to get probability of edges using the selected algorithm.
         errors_stat, boot_probability = bootstrap(data=data, full_graph=full_graph, algorithm=algorithm, hyperparameters=hyperparameters,
-                                                  boot_num=boot_num, ts=False, parallel=self.args.parallel)
+                                                  boot_num=boot_num, ts=False)
         print("Errors from Bootstrap method: ", errors_stat)
         print("Bootstrap Probability: ", boot_probability)
 
@@ -79,19 +78,30 @@ class Judge(object):
         '''
 
         import numpy as np
+        from sklearn.metrics import precision_score, recall_score, f1_score
 
         if est_graph.shape[0] - 1 == ground_truth.shape[0]:
             # drop the domain index column
             est_graph = est_graph[:-1, :-1]
         ground_truth_flat = ground_truth.flatten()  
         est_graph_flat = est_graph.flatten()
-
         shd = np.sum(np.abs(ground_truth_flat - est_graph_flat))
 
-        TP = (ground_truth_flat & est_graph_flat).sum()
-        precision = TP / est_graph_flat.sum()
-        recall = TP / ground_truth_flat.sum()
-        f1 = 2 * (precision * recall) / (precision + recall)
+        adj_metrics = {'tp': 0, 'fp': 0, 'fn': 0, 'tn': 0}
+
+        for truth, est in zip(ground_truth_flat, est_graph_flat):
+            if truth == 1 and est == 0:
+                adj_metrics['fn'] += 1
+            elif truth == 0 and est == 1:
+                adj_metrics['fp'] += 1
+            elif truth == 1 and est == 1:
+                adj_metrics['tp'] += 1
+            else:
+                adj_metrics['tn'] += 1
+
+        precision = adj_metrics['tp'] / (adj_metrics['tp'] + adj_metrics['fp']) if (adj_metrics['tp'] + adj_metrics['fp']) > 0 else 0
+        recall = adj_metrics['tp'] / (adj_metrics['tp'] + adj_metrics['fn']) if (adj_metrics['tp'] + adj_metrics['fn']) > 0 else 0
+        f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
 
         return {'shd': shd, 'precision': precision, 'recall': recall, 'f1': f1}
 
