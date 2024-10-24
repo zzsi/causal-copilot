@@ -79,17 +79,27 @@ class Judge(object):
         '''
 
         import numpy as np
-        from sklearn.metrics import precision_score, recall_score, f1_score
 
         if est_graph.shape[0] - 1 == ground_truth.shape[0]:
             # drop the domain index column
             est_graph = est_graph[:-1, :-1]
         ground_truth_flat = ground_truth.flatten()  
         est_graph_flat = est_graph.flatten()
+
         shd = np.sum(np.abs(ground_truth_flat - est_graph_flat))
-        precision = precision_score(ground_truth_flat, est_graph_flat)
-        recall = recall_score(ground_truth_flat, est_graph_flat)
-        f1 = f1_score(ground_truth_flat, est_graph_flat)
+
+        TP = 0
+        FP = 0
+        FN = 0
+
+        for i in range(len(est_graph_flat)):
+            if ground_truth_flat[i] == est_graph_flat[i]: TP += 1
+            if est_graph_flat[i] == 1 and ground_truth_flat[i] == 0: FP += 1
+            if est_graph_flat[i] == 0 and ground_truth_flat[i] == 1: FN += 1
+
+        precision = TP / (TP + FP)
+        recall = TP / (TP + FN)
+        f1 = 2 * (precision * recall) / (precision + recall)
 
         return {'shd': shd, 'precision': precision, 'recall': recall, 'f1': f1}
 
