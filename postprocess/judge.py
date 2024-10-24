@@ -88,9 +88,7 @@ class Judge(object):
 
         shd = np.sum(np.abs(ground_truth_flat - est_graph_flat))
 
-        TP = 0
-        FP = 0
-        FN = 0
+        TP = FP = FN = 0
 
         for i in range(len(est_graph_flat)):
             if ground_truth_flat[i] == est_graph_flat[i]: TP += 1
