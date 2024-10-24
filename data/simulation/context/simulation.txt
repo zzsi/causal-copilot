@@ -21,7 +21,7 @@ When generating a dataset description, provide:
     "noise_scale": float (range: 0.01-0.5),
     "noise_type": "gaussian" | "uniform" | "laplace" | "student_t",
     "function_type": {
-      "variable_name": "linear" | "polynomial" | "gaussian_process" | "sigmoid" | "neural_network"
+      "variable_name": "linear" | "polynomial" | "sigmoid" | "neural_network"
     },
     "add_categorical": false,
     "add_measurement_error": bool,

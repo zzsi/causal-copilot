@@ -32,37 +32,37 @@ def generate_datasets():
             "noise_type": "gaussian",
             "heterogeneous": True
         },
-        {
-            "name": "Non-Linear-Gaussian",
-            "function_type": "neural_network",
-            "noise_type": "gaussian",
-            "heterogeneous": False
-        },
-        {
-            "name": "Non-Linear-Non-gaussian",
-            "function_type": "neural_network",
-            "noise_type": "uniform",
-            "heterogeneous": False
-        },
-        {
-            "name": "Heterogenous-Non-Linear-Gaussian",
-            "function_type": "neural_network",
-            "noise_type": "gaussian",
-            "heterogeneous": True
-        },
-        {
-            "name": "Heterogenous-Non-Linear-Non-Gaussian",
-            "function_type": "neural_network",
-            "noise_type": "uniform",
-            "heterogeneous": True
-        }
+        # {
+        #     "name": "Non-Linear-Gaussian",
+        #     "function_type": "polynomial",
+        #     "noise_type": "gaussian",
+        #     "heterogeneous": False
+        # },
+        # {
+        #     "name": "Non-Linear-Non-gaussian",
+        #     "function_type": "polynomial",
+        #     "noise_type": "uniform",
+        #     "heterogeneous": False
+        # },
+        # {
+        #     "name": "Heterogenous-Non-Linear-Gaussian",
+        #     "function_type": "polynomial",
+        #     "noise_type": "gaussian",
+        #     "heterogeneous": True
+        # },
+        # {
+        #     "name": "Heterogenous-Non-Linear-Non-Gaussian",
+        #     "function_type": "polynomial",
+        #     "noise_type": "uniform",
+        #     "heterogeneous": True
+        # }
     ]
 
     output_dir = os.path.join(os.getcwd(), "simulated_data")
     os.makedirs(output_dir, exist_ok=True)
 
     for config in dataset_configs:
-        for _ in range(10):  # Generate 10 datasets for each configuration
+        for i in range(10):  # Generate 10 datasets for each configuration
             n_nodes = np.random.choice([5, 10, 25, 50])
             n_samples = np.random.choice([1000, 2500, 5000, 10000])
             edge_probability = 0.3  # You can adjust this if needed
@@ -76,7 +76,7 @@ def generate_datasets():
                     function_type=config["function_type"],
                     noise_type=config["noise_type"],
                     n_domains=n_domains,
-                    prefix=config["name"],
+                    prefix=f"{config['name']}_id_{i}",
                     output_dir=output_dir
                 )
             else:
@@ -86,7 +86,7 @@ def generate_datasets():
                     edge_probability=edge_probability,
                     function_type=config["function_type"],
                     noise_type=config["noise_type"],
-                    prefix=config["name"],
+                    prefix=f"{config['name']}_id_{i}",
                     output_dir=output_dir
                 )
 

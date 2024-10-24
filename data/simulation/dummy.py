@@ -1,12 +1,11 @@
 import numpy as np
 import pandas as pd
+import torch
+import torch.nn as nn
+import numpy as np
 import networkx as nx
 from typing import Dict, List, Tuple, Callable, Union
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF
-from sklearn.neural_network import MLPRegressor
 import os
-import time
 import json
 from datetime import datetime
 
@@ -26,11 +25,30 @@ class NoiseDistribution:
     @staticmethod
     def student_t(size, df=3, scale=1.0):
         return np.random.standard_t(df, size) * scale
+    
+class ThreeLayerMLP(nn.Module):
+    def __init__(self, input_dim):
+        super(ThreeLayerMLP, self).__init__()
+        self.layer1 = nn.Linear(input_dim, 10)
+        nn.init.orthogonal_(self.layer1.weight)
+        self.layer2 = nn.Linear(10, 5)
+        nn.init.orthogonal_(self.layer2.weight)
+        self.layer3 = nn.Linear(5, 1)
+        nn.init.orthogonal_(self.layer3.weight)
+        self.leaky_relu = nn.LeakyReLU()
+
+    def forward(self, x):
+        x = self.leaky_relu(self.layer1(x))
+        x = self.leaky_relu(self.layer2(x))
+        x = self.layer3(x)
+        return x
 
 class TransformationLibrary:
     @staticmethod
-    def linear(X: np.ndarray, noise_func: Callable, noise_scale: float = 0.1) -> np.ndarray:
-        W = np.random.randn(X.shape[1])
+    def linear(X: np.ndarray, noise_func: Callable, noise_scale: float = 0.1, high: float = 0.9, low: float = 0.5, negative_ratio: float = 0.5) -> np.ndarray:
+        W = np.random.uniform(low, high, X.shape[1])
+        negative_indices = np.random.choice([True, False], size=W.shape, p=[negative_ratio, 1 - negative_ratio])
+        W[negative_indices] *= -1
         return X.dot(W) + noise_func(X.shape[0], noise_scale)
 
     @staticmethod
@@ -40,22 +58,22 @@ class TransformationLibrary:
         return y + noise_func(X.shape[0], noise_scale)
 
     @staticmethod
-    def gaussian_process(X: np.ndarray, noise_func: Callable, noise_scale: float = 0.1) -> np.ndarray:
-        gp = GaussianProcessRegressor(kernel=RBF(length_scale_bounds=(1e-3, 1e3)), n_restarts_optimizer=5, random_state=0)
-        y = np.random.randn(X.shape[0])
-        gp.fit(X, y)
-        return gp.predict(X) + noise_func(X.shape[0], noise_scale)
-
-    @staticmethod
-    def sigmoid(X: np.ndarray, noise_func: Callable, noise_scale: float = 0.1) -> np.ndarray:
-        W = np.random.randn(X.shape[1])
+    def sigmoid(X: np.ndarray, noise_func: Callable, noise_scale: float = 0.1, low: float = 0.5, high: float = 0.9, negative_ratio: float = 0.5) -> np.ndarray:
+        W = np.random.uniform(low, high, X.shape[1])
+        negative_indices = np.random.choice([True, False], size=W.shape, p=[negative_ratio, 1 - negative_ratio])
+        W[negative_indices] *= -1
         return np.sum(W * (1 / (1 + np.exp(-X))), axis=1) + noise_func(X.shape[0], noise_scale)
 
     @staticmethod
     def neural_network(X: np.ndarray, noise_func: Callable, noise_scale: float = 0.1) -> np.ndarray:
-        nn = MLPRegressor(hidden_layer_sizes=(10, 5), max_iter=1000)
-        nn.fit(X, np.random.randn(X.shape[0]))
-        return nn.predict(X) + noise_func(X.shape[0], noise_scale)
+        input_dim = X.shape[1]
+        model = ThreeLayerMLP(input_dim)
+        model.eval()
+        with torch.no_grad():
+            X_tensor = torch.tensor(X, dtype=torch.float32)
+            predictions = model(X_tensor).numpy().flatten()
+
+        return predictions + noise_func(X.shape[0], noise_scale)
 
 class DataSimulator:
     def __init__(self):
@@ -95,7 +113,7 @@ class DataSimulator:
     def generate_domain_data(self, n_samples: int, noise_scale: float, noise_type: str, function_type: Union[str, List[str], Dict[str, str]]) -> pd.DataFrame:
         """Generate data for a single domain based on the graph structure."""
         data = {}
-        function_types = ['linear', 'polynomial', 'gaussian_process', 'sigmoid', 'neural_network']
+        function_types = ['linear', 'polynomial', 'sigmoid', 'neural_network']
         noise_func = getattr(self.noise_distribution, noise_type)
 
         for node in nx.topological_sort(self.graph):

@@ -88,15 +88,9 @@ class Judge(object):
 
         shd = np.sum(np.abs(ground_truth_flat - est_graph_flat))
 
-        TP = FP = FN = 0
-
-        for i in range(len(est_graph_flat)):
-            if ground_truth_flat[i] == est_graph_flat[i]: TP += 1
-            if est_graph_flat[i] == 1 and ground_truth_flat[i] == 0: FP += 1
-            if est_graph_flat[i] == 0 and ground_truth_flat[i] == 1: FN += 1
-
-        precision = TP / (TP + FP)
-        recall = TP / (TP + FN)
+        TP = (ground_truth_flat & est_graph_flat).sum()
+        precision = TP / est_graph_flat.sum()
+        recall = TP / ground_truth_flat.sum()
         f1 = 2 * (precision * recall) / (precision + recall)
 
         return {'shd': shd, 'precision': precision, 'recall': recall, 'f1': f1}
