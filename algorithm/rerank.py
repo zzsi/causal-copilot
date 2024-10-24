@@ -90,28 +90,32 @@ class Reranker(object):
         statistics_desc = global_state.statistics.description
         knowledge_docs = global_state.user_data.knowledge_docs
 
+        # Load hyperparameters context
+        with open("algorithm/context/hyperparameters.json", "r") as f:
+            hp_context = json.load(f)
+
+        # Load additional context files for parameters that have them
+        for algo in hp_context:
+            for param in hp_context[algo]:
+                if 'context_file' in hp_context[algo][param]:
+                    context_file_path = hp_context[algo][param]['context_file']
+                    with open(context_file_path, "r") as cf:
+                        hp_context[algo][param]['context_content'] = cf.read()
+
+        if global_state.algorithm.selected_algorithm is not None:
+            algo_candidates = {global_state.algorithm.selected_algorithm: {'description': '', 'justification': ''}}
+        algo_info, algo2des_cond_hyper = self.algo_can2string(algo_candidates, hp_context)
+
+        table_name = self.args.data_file
+        table_columns = '\t'.join(data.columns._data)
+        knowledge_info = '\n'.join(knowledge_docs)
+        statistics_info = statistics_desc
+        wait_time = global_state.algorithm.waiting_minutes
+
+        with open("algorithm/context/hyperparameters_prompt.txt", "r") as f:
+            hp_prompt = f.read()
+
         if global_state.algorithm.selected_algorithm is None:
-            with open("algorithm/context/hyperparameters_prompt.txt", "r") as f:
-                hp_prompt = f.read()
-
-            # Load hyperparameters context
-            with open("algorithm/context/hyperparameters.json", "r") as f:
-                hp_context = json.load(f)
-
-            # Load additional context files for parameters that have them
-            for algo in hp_context:
-                for param in hp_context[algo]:
-                    if 'context_file' in hp_context[algo][param]:
-                        context_file_path = hp_context[algo][param]['context_file']
-                        with open(context_file_path, "r") as cf:
-                            hp_context[algo][param]['context_content'] = cf.read()
-
-            table_name = self.args.data_file
-            table_columns = '\t'.join(data.columns._data)
-            knowledge_info = '\n'.join(knowledge_docs)
-            statistics_info = statistics_desc
-            algo_info, algo2des_cond_hyper = self.algo_can2string(algo_candidates, hp_context)
-            wait_time = global_state.algorithm.waiting_minutes
             time_info = self.algo_cans2time_string(algo_candidates, global_state.statistics.sample_size, global_state.statistics.feature_number)
 
             # Select the Best Algorithm
@@ -139,8 +143,6 @@ class Reranker(object):
                 print("The received answer for rerank is: -------------------------------------------------------------------------")
                 print(output)
                 selected_algo = self.extract(output, '<Algo>', '</Algo>')
-            print("Selected Algorithm: ", selected_algo)
-
             global_state.algorithm.selected_algorithm = selected_algo
             global_state.logging.select_conversation.append({
                 "prompt": prompt,
@@ -148,7 +150,8 @@ class Reranker(object):
             })
         else:
             print("User has already selected the algorithm, skip the reranking process.")
-            print("Selected Algorithm: ", global_state.algorithm.selected_algorithm)
+            selected_algo = global_state.algorithm.selected_algorithm
+        print("Selected Algorithm: ", global_state.algorithm.selected_algorithm)
 
         if global_state.algorithm.selected_algorithm is not None and global_state.algorithm.algorithm_arguments is None:
             # Get algorithm description and hyperparameters

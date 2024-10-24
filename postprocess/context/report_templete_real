@@ -7,18 +7,36 @@
 The following is a preview of our dataset. Please include the preview dataset in the report.
 [DATA_PREVIEW]
 
+The following are some data properties and Exploratory Data Analysis result. Please include
+figures provided and analyze results in a structured way.
+
 [DATA_PROP]
+
+### Distribution Analysis
+![Distribution Graph]([DIST_GRAPH])
+[DIST_INFO]
+
+### Correlation Analysis
+![Scatter Plot]([SCAT_GRAPH])
+
+![Correlation Graph]([CORR_GRAPH])
+[CORR_INFO]
 
 ## Discovery Procedure
 [DISCOVER_PROCESS]
 
 ## Results Summary
-
+Include the following sentenses and graphs in the report:
 The following are result graphs produced by our algorithm.
 The initial graph is the graph in the first attempt, and the revised graph is the one pruned with bootstrapping and LLM suggestion.
 
-|<center> Initial Graph| <center> Revised Graph|
+|<center> Initial Graph| <center> Reliability|
 |--|--|
-| ![Initial Graph]([RESULT_GRAPH1])| ![Revised Graph]([RESULT_GRAPH2])|
+| ![Initial Graph]([RESULT_GRAPH1])| ![Confidence Heatmap]([RESULT_GRAPH4])|
 
 [RESULT_ANALYSIS]
+
+### Graph Reliability Analysis
+Based on the confidence probability heatmap and background knowledge, we can analyze the reliability of our graph.
+
+[RELIABILITY_ANALYSIS]
