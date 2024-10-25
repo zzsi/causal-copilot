@@ -1,3 +1,34 @@
+from causallearn.graph.GeneralGraph import GeneralGraph
+from causallearn.graph.GraphNode import GraphNode
+from causallearn.graph.Edge import Edge
+from causallearn.graph.Endpoint import Endpoint
+from causallearn.utils.DAG2CPDAG import dag2cpdag
+
+def array2cpdag(adj_array, node_names):
+    # for methods return cpdag
+    g = GeneralGraph([])
+    node_map = {}
+    num_nodes = adj_array.shape[0]
+    
+    # Create nodes
+    for i in range(num_nodes):
+        node_name = node_names[i]
+        node_map[node_name] = GraphNode(node_name)
+        g.add_node(node_map[node_name])
+    
+    # Create edges
+    for i in range(num_nodes):
+        for j in range(num_nodes):
+            if adj_array[i, j] == 1:
+                node1 = node_map[node_names[i]]
+                node2 = node_map[node_names[j]]
+                edge = Edge(node1, node2, Endpoint.TAIL, Endpoint.ARROW)
+                g.add_edge(edge)
+    
+    truth_cpdag = dag2cpdag(g)
+    return truth_cpdag
+
+
 class Judge(object):
     def __init__(self, args):
         self.args = args
@@ -70,7 +101,7 @@ class Judge(object):
         return global_state
 
 
-    def evaluation(self, est_graph, ground_truth):
+    def evaluation(self, global_state):
         '''
         :param est_graph: estimated adjacent matrix of causal graph in Panda Ndarray format
         :param ground_truth: ground truth, represented by adjacent matrix in Panda Ndarray format - Matrix[i,j] indicates j->i
@@ -79,28 +110,45 @@ class Judge(object):
 
         import numpy as np
         from sklearn.metrics import precision_score, recall_score, f1_score
+        from causallearn.graph.AdjacencyConfusion import AdjacencyConfusion
+        from causallearn.graph.SHD import SHD
 
-        if est_graph.shape[0] - 1 == ground_truth.shape[0]:
-            # drop the domain index column
-            est_graph = est_graph[:-1, :-1]
-        ground_truth_flat = ground_truth.flatten()  
-        est_graph_flat = est_graph.flatten()
-        shd = np.sum(np.abs(ground_truth_flat - est_graph_flat))
 
-        adj_metrics = {'tp': 0, 'fp': 0, 'fn': 0, 'tn': 0}
+        if global_state.algorithm.selected_algorithm in ['PC', 'FCI', 'GES', 'CDNOD']:
+            print('Selected Algorithm: ', global_state.algorithm.selected_algorithm)
+            if global_state.algorithm.selected_algorithm == 'PC':
+                est_graph = global_state.results.raw_result.G
+            elif global_state.algorithm.selected_algorithm == 'CDNOD':
+                est_graph = global_state.results.raw_result.G
+            elif global_state.algorithm.selected_algorithm == 'GES':
+                est_graph = global_state.results.raw_result['G']
+            elif global_state.algorithm.selected_algorithm == 'FCI':
+                est_graph = global_state.results.raw_result[0].G
+            ground_truth = array2cpdag(global_state.user_data.ground_truth.transpose(), 
+                                       node_names=global_state.user_data.processed_data.columns)
+            shd = SHD(ground_truth, est_graph).get_shd()
+            adj = AdjacencyConfusion(ground_truth, est_graph)
+            precision = adj.get_adj_precision()
+            recall = adj.get_adj_recall()
+        else:
+            ground_truth_flat = global_state.user_data.ground_truth.flatten()  
+            est_graph_flat = global_state.results.converted_graph.flatten()
+            shd = np.sum(np.abs(ground_truth_flat - est_graph_flat))
 
-        for truth, est in zip(ground_truth_flat, est_graph_flat):
-            if truth == 1 and est == 0:
-                adj_metrics['fn'] += 1
-            elif truth == 0 and est == 1:
-                adj_metrics['fp'] += 1
-            elif truth == 1 and est == 1:
-                adj_metrics['tp'] += 1
-            else:
-                adj_metrics['tn'] += 1
+            adj_metrics = {'tp': 0, 'fp': 0, 'fn': 0, 'tn': 0}
 
-        precision = adj_metrics['tp'] / (adj_metrics['tp'] + adj_metrics['fp']) if (adj_metrics['tp'] + adj_metrics['fp']) > 0 else 0
-        recall = adj_metrics['tp'] / (adj_metrics['tp'] + adj_metrics['fn']) if (adj_metrics['tp'] + adj_metrics['fn']) > 0 else 0
+            for truth, est in zip(ground_truth_flat, est_graph_flat):
+                if truth == 1 and est == 0:
+                    adj_metrics['fn'] += 1
+                elif truth == 0 and est == 1:
+                    adj_metrics['fp'] += 1
+                elif truth == 1 and est == 1:
+                    adj_metrics['tp'] += 1
+                else:
+                    adj_metrics['tn'] += 1
+
+            precision = adj_metrics['tp'] / (adj_metrics['tp'] + adj_metrics['fp']) if (adj_metrics['tp'] + adj_metrics['fp']) > 0 else 0
+            recall = adj_metrics['tp'] / (adj_metrics['tp'] + adj_metrics['fn']) if (adj_metrics['tp'] + adj_metrics['fn']) > 0 else 0
         f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
 
         return {'shd': shd, 'precision': precision, 'recall': recall, 'f1': f1}

@@ -151,7 +151,7 @@ def main():
     if global_state.user_data.ground_truth is not None:
         print("Original Graph: ", global_state.results.converted_graph)
         print("Mat Ground Truth: ", global_state.user_data.ground_truth)
-        global_state.results.metrics = judge.evaluation(global_state.results.converted_graph, global_state.user_data.ground_truth)
+        global_state.results.metrics = judge.evaluation(global_state)
         print(global_state.results.metrics)
 
     global_state = judge.forward(global_state)
@@ -159,7 +159,7 @@ def main():
     if global_state.user_data.ground_truth is not None:
         print("Revised Graph: ", global_state.results.revised_graph)
         print("Mat Ground Truth: ", global_state.user_data.ground_truth)
-        global_state.results.revised_metrics = judge.evaluation(global_state.results.revised_graph, global_state.user_data.ground_truth)
+        global_state.results.revised_metrics = judge.evaluation(global_state)
         print(global_state.results.revised_metrics)
 
     #############EDA###################
