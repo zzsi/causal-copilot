@@ -194,7 +194,7 @@ def simulate_nonlinear_sem(B, n, sem_type, noise_scale=None):
         return x
 
     d = B.shape[0]
-    scale_vec = noise_scale if noise_scale else np.ones(d)
+    scale_vec = noise_scale * np.ones(d) if noise_scale else np.ones(d)
     X = np.zeros([n, d])
     G = ig.Graph.Adjacency(B.tolist())
     ordered_vertices = G.topological_sorting()
@@ -305,8 +305,7 @@ class DataSimulator:
     def generate_data(self, n_samples: int, noise_scale: float = 1.0, 
                       noise_type: str = 'gaussian', 
                       function_type: Union[str, List[str], Dict[str, str]] = 'linear',
-                      n_domains: int = 1,
-                      variable_names: List[str] = None) -> None:
+                      n_domains: int = 1, variable_names: List[str] = None) -> None:
         """Generate heterogeneous data from multiple domains."""
         if self.graph is None:
             raise ValueError("Generate graph first")
@@ -317,12 +316,18 @@ class DataSimulator:
         for domain in range(n_domains):
             domain_df = self.generate_domain_data(domain_size, noise_scale, noise_type, function_type)
             if n_domains > 1:
-                domain_df['domain_index'] = domain
+                domain_df['domain_index'] = domain + 1
             domain_data.append(domain_df)
 
-        self.data = pd.concat(domain_data, ignore_index=True)
-        np.random.shuffle(self.data.values)  # Shuffle the rows
-        
+        self.data = pd.concat(domain_data, ignore_index=True).reset_index(drop=True)
+        # shuffle the self.data
+        self.data = self.data.sample(frac=1).reset_index(drop=True)
+        if variable_names is not None:
+            if n_domains == 1:
+                self.data.columns = variable_names
+            else:
+                self.data.columns = variable_names + ['domain_index']
+            
         self.ground_truth['noise_type'] = noise_type
         self.ground_truth['function_type'] = function_type
         self.ground_truth['n_domains'] = n_domains
@@ -525,42 +530,16 @@ class DataSimulator:
 if __name__ == "__main__":
     import numpy as np
     import pandas as pd
+    import sys
+    sys.path.insert(0, 'causal-learn')
     from causallearn.search.ConstraintBased.PC import pc
+    from causallearn.search.ConstraintBased.FCI import fci
+    from causallearn.search.ConstraintBased.CDNOD import cdnod
     from causallearn.utils.GraphUtils import GraphUtils
     from causallearn.search.FCMBased import lingam
     from causallearn.graph.AdjacencyConfusion import AdjacencyConfusion
     from causallearn.graph.SHD import SHD
-
-    # Use the base simulator to generate data
-    base_simulator = DataSimulator()
-    graph, data = base_simulator.generate_dataset(
-        function_type='linear',
-        n_nodes=15,
-        n_samples=1000,
-        edge_probability=0.3,
-        noise_type='gaussian'
-    )
-
-    # Convert data to DataFrame
-    df = pd.DataFrame(data)
-
-    # Run PC algorithm
-    cg = pc(df.values)
-
-    # # Run DirectLiNGAM
-    # model = lingam.DirectLiNGAM()
-    # model.fit(df.values)
-
-    # print('DirectLiNGAM causal order:', model.causal_order_)
-    # print('DirectLiNGAM adjacency matrix:', model.adjacency_matrix_)
-
-    # # Create inferred flat matrix for DirectLiNGAM
-    # inferred_flat_lingam = np.where(model.adjacency_matrix_ != 0, 1, 0)
-
-    # true_adj = graph
-
-    # shd, f1, precision, recall
-
+    import sklearn.metrics
 
     from causallearn.graph.GeneralGraph import GeneralGraph
     from causallearn.graph.GraphNode import GraphNode
@@ -591,38 +570,93 @@ if __name__ == "__main__":
         truth_cpdag = dag2cpdag(g)
         return truth_cpdag
 
-    # Convert true_adj to GeneralGraph object
-    true_graph = array2cpdag(graph)
-    print("True Graph:", graph)
+    def evaluate_algorithms():
+        results = {'PC': [], 'FCI': [], 'CDNOD': [], 'LiNGAM': []}
+        
+        for _ in range(1):
+            base_simulator = DataSimulator()
+            graph, data = base_simulator.generate_dataset(
+                function_type='mlp',
+                n_nodes=10,
+                n_samples=1000,
+                edge_probability=0.3,
+                noise_type='gaussian',
+                n_domains=5
+            )
+            # Convert data to DataFrame
+            df = pd.DataFrame(data)
+            df_wo_domain = df.drop(columns=['domain_index']).values
+            c_indx = df['domain_index'].values.reshape(-1, 1)
+            
+            # PC Algorithm
+            pc_graph = pc(df_wo_domain, indep_test='kci')
+            pc_shd = SHD(array2cpdag(graph), pc_graph.G).get_shd()
+            print(pc_graph.G.graph)
 
-    for node in true_graph.nodes:
-        print(node.name)
+            adj = AdjacencyConfusion(array2cpdag(graph), pc_graph.G)
+            pc_precision = adj.get_adj_precision()
+            pc_recall = adj.get_adj_recall()
+            pc_f1 = 2 * pc_precision * pc_recall / (pc_precision + pc_recall)
+            results['PC'].append((pc_shd, pc_precision, pc_recall, pc_f1))
 
-    for node in cg.G.nodes:
-        print(node.name)
+            # FCI Algorithm
+            fci_graph, _ = fci(df_wo_domain)
+            fci_shd = SHD(array2cpdag(graph), fci_graph).get_shd()
+            adj = AdjacencyConfusion(array2cpdag(graph), fci_graph)
+            fci_precision = adj.get_adj_precision()
+            fci_recall = adj.get_adj_recall()
+            fci_f1 = 2 * fci_precision * fci_recall / (fci_precision + fci_recall)
+            results['FCI'].append((fci_shd, fci_precision, fci_recall, fci_f1))
+            
+            # CDNOD Algorithm
+            cdnod_graph = cdnod(df_wo_domain, c_indx, indep_test='kci')
+            print(cdnod_graph.G.graph)
+            cdnod_graph.G.remove_node(GraphNode(f'X{len(cdnod_graph.G.nodes)}'))
+            print(cdnod_graph.G.graph)
+            cdnod_shd = SHD(array2cpdag(graph), cdnod_graph.G).get_shd()
+            adj = AdjacencyConfusion(array2cpdag(graph), cdnod_graph.G)
+            cdnod_precision = adj.get_adj_precision()
+            cdnod_recall = adj.get_adj_recall()
+            cdnod_f1 = 2 * cdnod_precision * cdnod_recall / (cdnod_precision + cdnod_recall)
+            results['CDNOD'].append((cdnod_shd, cdnod_precision, cdnod_recall, cdnod_f1))
+            
+            # Drop the last node of the estimated graph
+            cdnod_graph_dropped = cdnod_graph.G
+            cdnod_shd_dropped = SHD(array2cpdag(graph), cdnod_graph_dropped).get_shd()
+            adj = AdjacencyConfusion(array2cpdag(graph), cdnod_graph_dropped)
+            cdnod_precision_dropped = adj.get_adj_precision()
+            cdnod_recall_dropped = adj.get_adj_recall()
+            cdnod_f1_dropped = 2 * cdnod_precision_dropped * cdnod_recall_dropped / (cdnod_precision_dropped + cdnod_recall_dropped)
+            results['CDNOD_dropped'] = results.get('CDNOD_dropped', []) + [(cdnod_shd_dropped, cdnod_precision_dropped, cdnod_recall_dropped, cdnod_f1_dropped)]
+            
+            # LiNGAM Algorithm
+            model = lingam.DirectLiNGAM()
+            model.fit(df_wo_domain)
+            inferred_flat_lingam = np.where(model.adjacency_matrix_ != 0, 1, 0)
+            lingam_shd = np.sum(graph.flatten() != inferred_flat_lingam.flatten())
+            lingam_precision = sklearn.metrics.precision_score(graph.flatten(), inferred_flat_lingam.flatten())
+            lingam_recall = sklearn.metrics.recall_score(graph.flatten(), inferred_flat_lingam.flatten())
+            lingam_f1 = sklearn.metrics.f1_score(graph.flatten(), inferred_flat_lingam.flatten())
+            results['LiNGAM'].append((lingam_shd, lingam_precision, lingam_recall, lingam_f1))
+        
+        return results
 
-    print(cg.G.node_map, true_graph.node_map)
-    cg.G.node_map = true_graph.node_map
-    shd = SHD(true_graph, cg.G)
+    # Use the base simulator to generate data
 
-    print("SHD:", shd.get_shd())
+    # Evaluate algorithms
+    results = evaluate_algorithms()
 
-    # For adjacency matrices
-    adj = AdjacencyConfusion(true_graph, cg.G)
+    # Calculate average performance
+    avg_results = {}
+    for alg, metrics in results.items():
+        shds, precisions, recalls, f1s = zip(*metrics)
+        avg_results[alg] = {
+            'avg_shd': np.mean(shds),
+            'avg_precision': np.mean(precisions),
+            'avg_recall': np.mean(recalls),
+            'avg_f1': np.mean(f1s)
+        }
 
-    adjTp = adj.get_adj_tp()
-    adjFp = adj.get_adj_fp()
-    adjFn = adj.get_adj_fn()
-    adjTn = adj.get_adj_tn()
-
-    adjPrec = adj.get_adj_precision()
-    adjRec = adj.get_adj_recall()
-
-    print("adjTp:", adjTp)
-    print("adjFp:", adjFp)
-    print("adjFn:", adjFn)
-    print("adjTn:", adjTn)
-    print("adjPrec:", adjPrec)
-    print("adjRec:", adjRec)
-
-    
+    print("Average performance for each algorithm over 10 simulations:")
+    for alg, avg_metrics in avg_results.items():
+        print(f"{alg}: SHD={avg_metrics['avg_shd']}, Precision={avg_metrics['avg_precision']}, Recall={avg_metrics['avg_recall']}, F1={avg_metrics['avg_f1']}")

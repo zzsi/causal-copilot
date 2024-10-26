@@ -2,7 +2,7 @@ import json
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, Tuple, List
-from .dummy import DataSimulator, DomainSpecificSimulator
+from .dummy import DataSimulator
 import networkx as nx
 from openai import OpenAI
 

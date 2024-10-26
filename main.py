@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="data/simulation/simulated_data/20241024_145159_Linear-Gaussian_id_8_nodes10_samples1000",
+        default="data/simulation/simulated_data/20241025_202435_Linear-Gaussian_id_0_nodes10_samples2500",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 

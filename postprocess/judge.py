@@ -113,17 +113,19 @@ class Judge(object):
         from causallearn.graph.AdjacencyConfusion import AdjacencyConfusion
         from causallearn.graph.SHD import SHD
 
-
         if global_state.algorithm.selected_algorithm in ['PC', 'FCI', 'GES', 'CDNOD']:
             print('Selected Algorithm: ', global_state.algorithm.selected_algorithm)
             if global_state.algorithm.selected_algorithm == 'PC':
                 est_graph = global_state.results.raw_result.G
             elif global_state.algorithm.selected_algorithm == 'CDNOD':
                 est_graph = global_state.results.raw_result.G
+                # remove the domain index node
+                est_graph.remove_node(GraphNode(f'X{len(est_graph.nodes)}'))
             elif global_state.algorithm.selected_algorithm == 'GES':
                 est_graph = global_state.results.raw_result['G']
             elif global_state.algorithm.selected_algorithm == 'FCI':
-                est_graph = global_state.results.raw_result[0].G
+                # TODO: improve for better handling edge o-o, o->, o-, currently ignore this part
+                est_graph = global_state.results.raw_result[0]
             ground_truth = array2cpdag(global_state.user_data.ground_truth.transpose(), 
                                        node_names=global_state.user_data.processed_data.columns)
             shd = SHD(ground_truth, est_graph).get_shd()
