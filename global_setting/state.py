@@ -60,6 +60,7 @@ class Results:
     llm_errors: List[Dict] = field(default_factory=list)
     bootstrap_errors: List[Dict] = field(default_factory=list)
     eda_result: Optional[Dict] = None
+    llm_directions: Optional[object] = None
 
 @dataclass
 class GlobalState:
