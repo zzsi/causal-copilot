@@ -167,23 +167,15 @@ def main():
     my_eda.generate_eda()
     #############Visualization###################
     my_visual = Visualization(global_state, args)
+    # Plot True Graph
     if global_state.user_data.ground_truth is not None:
-        true_fig_path = my_visual.mat_to_graph(full_graph=global_state.user_data.ground_truth,
-                                               edge_labels=None,
-                                               title='True Graph')
-
-    #boot_dict = my_visual.process_boot_mat(global_state.results.bootstrap_probability, global_state.results.converted_graph)
+        pos_true = my_visual.plot_pdag(global_state.user_data.ground_truth, 'true_graph.png')
+    # Plot Initial Graph
+    pos_raw = my_visual.plot_pdag(global_state.results.raw_result, 'initial_graph.png', pos_true)
+    # Plot Revised Graph
+    pos_new = my_visual.plot_pdag(global_state.results.revised_graph, 'revised_graph.png', pos_true)
+    # Plot Bootstrap Heatmap
     boot_heatmap_path = my_visual.boot_heatmap_plot()
-    result_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.converted_graph,
-                                             #edge_labels=boot_dict,
-                                             title='Initial Graph')
-
-    revised_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.revised_graph,
-                                              ori_graph=global_state.results.converted_graph,
-                                              edge_labels=None,
-                                              title='Revised Graph')
-
-    metrics_fig_path = my_visual.matrics_plot(global_state.results.metrics.copy(), global_state.results.revised_metrics.copy())
 
     ################################
 
