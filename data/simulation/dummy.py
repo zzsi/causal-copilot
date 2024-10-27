@@ -456,7 +456,8 @@ class DataSimulator:
         
         # Save the graph structure as NPY
         graph_filename = os.path.join(save_dir, f'{prefix}_graph.npy')
-        np.save(graph_filename, self.graph)
+        # original (i, j) == 1 (i -> j), here we return the transpose of the graph to be (i, j) == 1 -> (j -> i)
+        np.save(graph_filename, self.graph.T)
         print(f"Graph structure saved to {graph_filename}")
         
         # Save the simulation settings as JSON
@@ -576,20 +577,20 @@ if __name__ == "__main__":
         for _ in range(1):
             base_simulator = DataSimulator()
             graph, data = base_simulator.generate_dataset(
-                function_type='mlp',
-                n_nodes=10,
-                n_samples=1000,
+                function_type='linear',
+                n_nodes=50,
+                n_samples=10000,
                 edge_probability=0.3,
                 noise_type='gaussian',
-                n_domains=5
+                n_domains=2
             )
             # Convert data to DataFrame
             df = pd.DataFrame(data)
             df_wo_domain = df.drop(columns=['domain_index']).values
             c_indx = df['domain_index'].values.reshape(-1, 1)
             
-            # PC Algorithm
-            pc_graph = pc(df_wo_domain, indep_test='kci')
+            # # PC Algorithm
+            pc_graph = pc(df_wo_domain)
             pc_shd = SHD(array2cpdag(graph), pc_graph.G).get_shd()
             print(pc_graph.G.graph)
 
@@ -609,7 +610,7 @@ if __name__ == "__main__":
             results['FCI'].append((fci_shd, fci_precision, fci_recall, fci_f1))
             
             # CDNOD Algorithm
-            cdnod_graph = cdnod(df_wo_domain, c_indx, indep_test='kci')
+            cdnod_graph = cdnod(df_wo_domain, c_indx)
             print(cdnod_graph.G.graph)
             cdnod_graph.G.remove_node(GraphNode(f'X{len(cdnod_graph.G.nodes)}'))
             print(cdnod_graph.G.graph)

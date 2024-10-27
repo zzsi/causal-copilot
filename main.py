@@ -104,8 +104,7 @@ def parse_args():
     return args
 
 
-def main():
-    args = parse_args()
+def main(args):
     global_state = global_state_initialization(args)
     global_state = load_data(global_state, args)
 
@@ -183,7 +182,7 @@ def main():
                                               edge_labels=None,
                                               title='Revised Graph')
 
-    metrics_fig_path = my_visual.matrics_plot(global_state.results.metrics.copy(), global_state.results.revised_metrics.copy())
+    metrics_fig_path = my_visual.metrics_plot(global_state.results.metrics.copy(), global_state.results.revised_metrics.copy())
 
     ################################
 
@@ -206,4 +205,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    args = parse_args()
+    main(args)
