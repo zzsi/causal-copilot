@@ -103,6 +103,9 @@ class Report_generation(object):
         ### 2. Possible Causal Relations among These Variables
         ### 3. Other Background Domain Knowledge that may be Helpful for Experts
         Please give me text in the second section ### 2. Possible Causal Relations among These Variables
+        In this part, all relationships should be listed in this format: **A -> B**: explanation. 
+        For example: 
+        - **'Raf' -> 'Mek'**: Raf activates Mek through phosphorylation, initiating the MAPK signaling cascade.
         I only need the text, do not include title
         Background about this dataset: {self.knowledge_docs}
         """
@@ -115,28 +118,29 @@ class Report_generation(object):
             ]
         )
         section2 = response_background.choices[0].message.content
-         
         variables = self.data.columns
-        pattern = r'\*\*(.*?)\s*([→↔])\s*(.*?)\*\*'
+        pattern = r'\*\*(.*?)\s*(→|↔|->|<->)\s*(.*?)\*\*'
         relations = []
         # Find all matches
         matches = re.findall(pattern, section2)
+        print(matches)
         for match in matches:
-            left_part = match[0].strip()
+            print('match: ', match)
+            left_part = match[0]
             #arrow = match[1]
-            right_part = match[2].strip()
+            right_part = match[2]
 
             elements = [left_part]
-            split_elements = re.split(r'\s*([→↔])\s*', right_part)
+            split_elements = re.split(r'\s*(→|↔|->|<->)\s*', right_part)
             # Iterate over the split elements
             for i in range(0, len(split_elements), 2):
-                element = split_elements[i].strip()
+                element = split_elements[i]
                 if element:  # Avoid empty strings
                     elements.append(element)
             # Create pairs for the elements
             for i in range(len(elements) - 1):
                 if '/' in elements[i + 1]:
-                    targets = [t.strip() for t in elements[i + 1].split('/')]
+                    targets = [t for t in elements[i + 1].split('/')]
                     for target in targets:
                         relations.append((elements[i], target))
                 else:
@@ -149,7 +153,7 @@ class Report_generation(object):
                 ind2 = variables.get_loc(tuple[1])
                 zero_matrix[ind2, ind1] = 1
         my_visual = Visualization(self.global_state, self.args)
-        pos_potential = my_visual.plot_pdag(zero_matrix, 'potential_relation.png')
+        pos_potential = my_visual.plot_pdag(zero_matrix, 'potential_relation.png', relation=True)
         return section1, section2, zero_matrix
 
     def data_prop_prompt(self):
