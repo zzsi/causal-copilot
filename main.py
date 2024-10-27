@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="data/simulation/simulated_data/20241025_202435_Linear-Gaussian_id_0_nodes10_samples2500",
+        default="data/simulation/simulated_data_v2/20241025_225531_Linear-Gaussian_id_0_nodes5_samples2500",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -146,7 +146,7 @@ def main(args):
     programmer = Programming(args)
     global_state = programmer.forward(global_state)
 
-    judge = Judge(args)
+    judge = Judge(global_state, args)
     if global_state.user_data.ground_truth is not None:
         print("Original Graph: ", global_state.results.converted_graph)
         print("Mat Ground Truth: ", global_state.user_data.ground_truth)
@@ -175,7 +175,7 @@ def main(args):
     pos_new = my_visual.plot_pdag(global_state.results.revised_graph, 'revised_graph.png', pos_true)
     # Plot Bootstrap Heatmap
     boot_heatmap_path = my_visual.boot_heatmap_plot()
-<<<<<<< HEAD
+
     result_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.converted_graph,
                                              #edge_labels=boot_dict,
                                              title='Initial Graph')
@@ -186,8 +186,6 @@ def main(args):
                                               title='Revised Graph')
 
     metrics_fig_path = my_visual.metrics_plot(global_state.results.metrics.copy(), global_state.results.revised_metrics.copy())
-=======
->>>>>>> 77ac517910b8fdd55a3bfaff283005469f1ae71f
 
     ################################
 
