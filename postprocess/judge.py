@@ -30,7 +30,8 @@ def array2cpdag(adj_array, node_names):
 
 
 class Judge(object):
-    def __init__(self, args):
+    def __init__(self, global_state, args):
+        self.global_state = global_state
         self.args = args
 
     def quality_judge(self, data, full_graph, algorithm, hyperparameters, knowledge_docs, boot_num):
@@ -51,7 +52,7 @@ class Judge(object):
 
         # Statistics Perspective: Bootstrapping to get probability of edges using the selected algorithm.
         errors_stat, boot_probability = bootstrap(data=data, full_graph=full_graph, algorithm=algorithm, hyperparameters=hyperparameters,
-                                                  boot_num=boot_num, ts=False)
+                                                  boot_num=boot_num, ts=False, parallel=self.args.parallel)
         print("Errors from Bootstrap method: ", errors_stat)
         print("Bootstrap Probability: ", boot_probability)
 
@@ -81,7 +82,11 @@ class Judge(object):
             if errors[key] == "Forbidden":
                 revised_graph[j, i] = 0
 
-        return conversation, errors_llm, errors_stat, boot_probability, revised_graph
+        ###### New Version Revision ######
+        from postprocess.judge_functions import llm_direction
+        llm_directions, revised_graph = llm_direction(self.global_state, self.args)
+
+        return conversation, errors_llm, errors_stat, boot_probability, revised_graph, llm_directions
 
 
     def forward(self, global_state):
@@ -89,7 +94,8 @@ class Judge(object):
          global_state.results.llm_errors,
          global_state.results.bootstrap_errors,
          global_state.results.bootstrap_probability,
-         global_state.results.revised_graph) = self.quality_judge(
+         global_state.results.revised_graph,
+         global_state.results.llm_directions) = self.quality_judge(
             data=global_state.user_data.processed_data,
             full_graph=global_state.results.converted_graph,
             algorithm=global_state.algorithm.selected_algorithm,
@@ -113,19 +119,17 @@ class Judge(object):
         from causallearn.graph.AdjacencyConfusion import AdjacencyConfusion
         from causallearn.graph.SHD import SHD
 
+
         if global_state.algorithm.selected_algorithm in ['PC', 'FCI', 'GES', 'CDNOD']:
             print('Selected Algorithm: ', global_state.algorithm.selected_algorithm)
             if global_state.algorithm.selected_algorithm == 'PC':
                 est_graph = global_state.results.raw_result.G
             elif global_state.algorithm.selected_algorithm == 'CDNOD':
                 est_graph = global_state.results.raw_result.G
-                # remove the domain index node
-                est_graph.remove_node(GraphNode(f'X{len(est_graph.nodes)}'))
             elif global_state.algorithm.selected_algorithm == 'GES':
                 est_graph = global_state.results.raw_result['G']
             elif global_state.algorithm.selected_algorithm == 'FCI':
-                # TODO: improve for better handling edge o-o, o->, o-, currently ignore this part
-                est_graph = global_state.results.raw_result[0]
+                est_graph = global_state.results.raw_result[0].G
             ground_truth = array2cpdag(global_state.user_data.ground_truth.transpose(), 
                                        node_names=global_state.user_data.processed_data.columns)
             shd = SHD(ground_truth, est_graph).get_shd()

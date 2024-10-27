@@ -206,3 +206,90 @@ def graph_effect_prompts (data, graph, boot_probability):
     graph_prompt = "All of the edges suggested by the causal discovery are below:\n" + "\n".join(effect_prompt)
 
     return graph_prompt
+
+def llm_direction(global_state, args):
+    '''
+    :param data: Given Tabular Data in Pandas DataFrame format
+    :param full_graph: An adjacent matrix in Numpy Ndarray format -
+                       causal graph using the full dataset - Matrix[i,j] = 1 indicates j->i
+    :param gpt_setup: Contain information of configurations of GPT-4
+    :param knowledge_docs: A doc containing all necessary domain knowledge information from GPT-4.
+    :return: obvious errors based on LLM, e.g. {"X->Y: "Forced", "Y->Z: "Forbidden"}
+    '''
+
+    import ast
+    import json 
+    from openai import OpenAI
+    from postprocess.visualization import Visualization
+
+    data = global_state.user_data.raw_data
+    variables = data.columns
+    table_columns = '\t'.join(data.columns)
+    full_graph = global_state.results.raw_result
+    try:
+        revised_graph = full_graph.graph.copy()
+    except:
+        revised_graph = full_graph.G.graph.copy()
+    knowledge_docs = global_state.user_data.knowledge_docs
+
+    my_visual = Visualization(global_state, args)
+    edges_dict = my_visual.convert_to_edges(full_graph)
+    uncertain_edges = edges_dict['uncertain_edges']
+    # bi_edges = edges_dict['bi_edges']
+    # half_edges = edges_dict['half_edges']
+    # none_edges = edges_dict['none_edges']
+    # Let GPT determine direction of uncertain edges
+    print(uncertain_edges)
+    prompt = f"""
+    I have a list of tuples where each tuple represents a pair of entities that have a relationship with each other. 
+    For each tuple, please determine the causal relationship between the two entities, indicating which entity causes the other. 
+    1. Use each tuple as the key of JSON, for example, if the tuple is ('Raf', 'Mek'), then use ('Raf', 'Mek') as a key
+    1. If the first entity causes the second, the direction is 'right'. If the second entity causes the first, the direction should be 'left'. The order is very important
+    2. The direction can only be 'right' or 'left', do not reply other things
+    3. Provide a brief justification for your decision based on the following background knowledge {knowledge_docs}.
+    Here is the list of tuples: {uncertain_edges}
+    Return me a json following the template below. Do not include anything else.
+    JSON format:
+    {{
+        "tuple": {{
+            "direction": 'right' or 'left',
+            "justification": 'Your reasoning here.'
+        }},
+        ...
+    }}
+    """
+    client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    # The output from GPT is str
+    directions = response.choices[0].message.content
+    directions_cleaned = directions.replace('```json', '').replace('```', '').strip()
+    try:
+        json_directions = json.loads(directions_cleaned)
+    except:
+        print('The returned LLM Direction JSON file is wrong')
+        return {}, revised_graph
+    for key in json_directions.keys():
+        tuple = ast.literal_eval(key)
+        direction = json_directions[key]['direction']
+        try:
+            i = variables.get_loc(tuple[0])
+            j = variables.get_loc(tuple[1])
+            if direction.lower() == 'right':
+                revised_graph[j, i] = 1
+            elif direction.lower() == 'left':
+                revised_graph[i, j] = 1
+        except:
+            print(tuple)
+            continue
+
+    return json_directions, revised_graph
+        
+        
+
+    
