@@ -46,7 +46,7 @@ class Algorithm:
     selected_reason: Optional[str] = None
     algorithm_candidates: Optional[Dict] = None
     algorithm_arguments: Optional[Dict] = None
-    waiting_minutes: float = 1440.0
+    waiting_minutes: float = 60.0
 
 @dataclass
 class Results:

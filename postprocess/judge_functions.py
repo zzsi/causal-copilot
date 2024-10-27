@@ -36,7 +36,7 @@ def bootstrap_iteration(data, ts, algorithm, hyperparameters):
     return boot_graph
 
 
-def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, parallel=False):
+def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, parallel):
     '''
     :param data: Given Tabular Data in Pandas DataFrame format
     :param full_graph: An adjacent matrix in Numpy Ndarray format -
@@ -226,10 +226,18 @@ def llm_direction(global_state, args):
     variables = data.columns
     table_columns = '\t'.join(data.columns)
     full_graph = global_state.results.raw_result
-    try:
-        revised_graph = full_graph.graph.copy()
-    except:
-        revised_graph = full_graph.G.graph.copy()
+
+    if global_state.algorithm.selected_algorithm == 'PC':
+        revised_graph = global_state.results.raw_result.G.graph.copy()
+    elif global_state.algorithm.selected_algorithm == 'CDNOD':
+        revised_graph = global_state.results.raw_result.G.graph.copy()
+    elif global_state.algorithm.selected_algorithm == 'GES':
+        revised_graph = global_state.results.raw_result['G'].graph.copy()
+    elif global_state.algorithm.selected_algorithm == 'FCI':
+        revised_graph = global_state.results.raw_result[0].graph.copy()
+    else:
+        return {}, full_graph
+
     knowledge_docs = global_state.user_data.knowledge_docs
 
     my_visual = Visualization(global_state, args)
