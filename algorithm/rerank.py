@@ -184,6 +184,7 @@ class Reranker(object):
 
             print("Hyperparameter Response: ", response.choices[0].message.content)
             hyper_suggest = json.loads(response.choices[0].message.content)
+            global_state.algorithm.algorithm_arguments_json = hyper_suggest
 
             # only use the hyperparameter keys and values, explanation is added later
             hyper_suggest = {k: v['value'] for k, v in hyper_suggest['hyperparameters'].items() if k in primary_params}
