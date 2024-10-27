@@ -9,7 +9,7 @@ from postprocess.judge import Judge
 from postprocess.visualization import Visualization
 from postprocess.eda_generation import EDA
 from postprocess.report_generation import Report_generation
-from global_setting.initialize_state import global_state_initialization, load_data
+from global_setting.Initialize_state import global_state_initialization, load_data
 
 import json
 import argparse
@@ -175,17 +175,6 @@ def main(args):
     pos_new = my_visual.plot_pdag(global_state.results.revised_graph, 'revised_graph.png', pos_true)
     # Plot Bootstrap Heatmap
     boot_heatmap_path = my_visual.boot_heatmap_plot()
-
-    result_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.converted_graph,
-                                             #edge_labels=boot_dict,
-                                             title='Initial Graph')
-
-    revised_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.revised_graph,
-                                              ori_graph=global_state.results.converted_graph,
-                                              edge_labels=None,
-                                              title='Revised Graph')
-
-    metrics_fig_path = my_visual.metrics_plot(global_state.results.metrics.copy(), global_state.results.revised_metrics.copy())
 
     ################################
 
