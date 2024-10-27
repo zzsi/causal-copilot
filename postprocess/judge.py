@@ -141,6 +141,8 @@ class Judge(object):
             precision = adj.get_adj_precision()
             recall = adj.get_adj_recall()
         else:
+            if global_state.statistics.domain_index != None:
+                global_state.results.converted_graph = global_state.results.converted_graph[:-1, :-1]
             ground_truth_flat = global_state.user_data.ground_truth.flatten()  
             est_graph_flat = global_state.results.converted_graph.flatten()
             shd = np.sum(np.abs(ground_truth_flat - est_graph_flat))
