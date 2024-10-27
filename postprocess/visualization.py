@@ -58,11 +58,11 @@ class Visualization(object):
         variables = self.data.columns
         labels = {i: variables[i] for i in range(len(variables))}
 
-        certain_edges = []
-        uncertain_edges = []
-        bi_edges = []
-        half_edges = []
-        none_edges = []
+        certain_edges = [] # ->
+        uncertain_edges = []  # -
+        bi_edges = []    #<->
+        half_edges = []  # o->
+        none_edges = []  # o-o
 
         indices = np.where(adj_matrix == 1)
 
@@ -116,11 +116,11 @@ class Visualization(object):
 
         return boot_dict
 
-    def plot_pdag(self, g, save_path, pos=None):
+    def plot_pdag(self, g, save_path, pos=None, relation=False):
         algo = self.global_state.algorithm.selected_algorithm
         path = os.path.join(self.save_dir, save_path)
 
-        if algo in ['PC', 'FCI', 'CDNOD', 'GES']:
+        if algo in ['PC', 'FCI', 'CDNOD', 'GES'] or relation:
             if isinstance(g, np.ndarray):
                 edges_dict = self.convert_to_edges_truth(g)
             else:
@@ -164,94 +164,10 @@ class Visualization(object):
                         mat[j, i] = g.get_edge_data(parent, child)['weight']
                 else:
                     mat = g.adjacency_matrix_
-                pyd = make_dot(mat, labels=labels)  
-                #pyd = make_dot_highlight(mat, labels=labels, cmap="cool", vmargin=2, hmargin=2)         
-                pyd.render(outfile=path, cleanup=True)
+            pyd = make_dot(mat, labels=labels)  
+            #pyd = make_dot_highlight(mat, labels=labels, cmap="cool", vmargin=2, hmargin=2)         
+            pyd.render(outfile=path, cleanup=True)
             return None
-
-    # def mat_to_graph(self, full_graph: np.array, ori_graph: np.array = None,
-    #                  edge_labels: str = None, title: str = None):
-    #         '''
-    #         :param full_graph: An adjacent matrix in Numpy Ndarray format -
-    #                            causal graph using the full dataset - Matrix[i,j] = 1 indicates j->i
-    #         :param ori_graph: It's used when we need to plot the new graph based on the position of the original graph
-    #         :param edge_labels: Edge labels in a dictionary of labels keyed by edge two-tuple.
-    #                             Only labels for the keys in the dictionary are drawn.
-    #         :param title: graph title.
-    #         :return: Path of the output graph
-    #         '''
-    #
-    #         # Convert adjacent matrix into graph
-    #         converted_graph = self.convert_mat(full_graph)
-    #         G = nx.from_numpy_array(converted_graph, parallel_edges=False, create_using=nx.DiGraph)
-    #         # Dict of node labels
-    #         variables = self.data.columns[:full_graph.shape[0]]
-    #         labels = {i: variables[i] for i in range(len(variables))}
-    #
-    #         plt.subplots(figsize=(8, 8))
-    #         plt.axis("off")
-    #
-    #         if ori_graph is None:
-    #             try:
-    #                 position = nx.planar_layout(G)
-    #             except:
-    #                 position = nx.spring_layout(G)
-    #             nx.draw(G,
-    #                     with_labels=True,
-    #                     pos=position,
-    #                     ###node###
-    #                     node_shape="o",
-    #                     node_size=1500,
-    #                     linewidths=3,
-    #                     edgecolors="#4a90e2d9",
-    #                     #node_color=['#b45b1f' if str(variable) in self.y else '#1f78b4' for variable in labels.values()],
-    #                     ###edge###
-    #                     edge_color="gray",
-    #                     width=2,
-    #                     ###labels###
-    #                     labels=labels,
-    #                     font_weight="bold",
-    #                     font_family="Helvetica",
-    #                     font_size=12
-    #                     )
-    #         else:
-    #             converted_graph_ori = self.convert_mat(ori_graph)
-    #             G_ori = nx.from_numpy_array(converted_graph_ori, parallel_edges=False, create_using=nx.DiGraph)
-    #             try:
-    #                 position = nx.planar_layout(G_ori)
-    #             except:
-    #                 position = nx.spring_layout(G_ori)
-    #             nx.draw_networkx_nodes(G_ori.copy(),
-    #                     pos=position,
-    #                     ###node###
-    #                     node_shape="o",
-    #                     node_size=1500,
-    #                     linewidths=3,
-    #                     edgecolors="#4a90e2d9",
-    #                     #node_color=['#b45b1f' if str(variable) in self.y else '#1f78b4' for variable in labels.values()]
-    #                     )
-    #             nx.draw_networkx_labels(G_ori.copy(),
-    #                                    pos=position,
-    #                                    ###labels###
-    #                                    labels=labels,
-    #                                    font_weight="bold",
-    #                                    font_family="Helvetica",
-    #                                    font_size=12
-    #                                    )
-    #             nx.draw_networkx_edges(G.copy(),
-    #                                     pos=position,
-    #                                     ###edge###
-    #                                     edge_color="gray",
-    #                                     width=2,
-    #                                    node_size=1500
-    #                                     )
-    #
-    #         if not os.path.exists(self.save_dir):
-    #             os.makedirs(self.save_dir)
-    #         save_path = os.path.join(self.save_dir, f'{title.replace(" ", "_")}.jpg')
-    #         plt.savefig(fname=save_path, dpi=1000)
-
-    #        return save_path
 
     def boot_heatmap_plot(self):
         # Create a heatmap
