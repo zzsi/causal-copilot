@@ -176,17 +176,6 @@ def main(args):
     # Plot Bootstrap Heatmap
     boot_heatmap_path = my_visual.boot_heatmap_plot()
 
-    result_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.converted_graph,
-                                             #edge_labels=boot_dict,
-                                             title='Initial Graph')
-
-    revised_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.revised_graph,
-                                              ori_graph=global_state.results.converted_graph,
-                                              edge_labels=None,
-                                              title='Revised Graph')
-
-    metrics_fig_path = my_visual.metrics_plot(global_state.results.metrics.copy(), global_state.results.revised_metrics.copy())
-
     ################################
 
     # algorithm selection process
