@@ -46,6 +46,10 @@ class Visualization(object):
         return edges_dict 
 
     def convert_to_edges(self, g):
+        if self.global_state.algorithm.selected_algorithm == 'FCI':
+            g = g[0]
+        elif self.global_state.algorithm.selected_algorithm == 'GES':
+            g = g['G']
         try:
             adj_matrix = g.graph
         except:
@@ -148,13 +152,22 @@ class Visualization(object):
             
         elif algo in ['DirectLiNGAM', 'ICALiNGAM', 'NOTEARS']:
             labels = [f'{col}' for i, col in enumerate(self.data.columns)]
+            variables = self.data.columns
             if isinstance(g, np.ndarray):
-                pyd = make_dot(g, labels=labels)
+                mat = g
             else:
-                pyd = make_dot(g.adjacency_matrix_, labels=labels)
-            
-            pyd.write_png(path, cleanup=True)
-
+                if algo in ['NOTEARS']:
+                    mat = np.zeros((len(variables), len(variables)))
+                    for parent, child in g.edges():
+                        i = variables.get_loc(parent)
+                        j = variables.get_loc(child) 
+                        mat[j, i] = g.get_edge_data(parent, child)['weight']
+                else:
+                    mat = g.adjacency_matrix_
+                pyd = make_dot(mat, labels=labels)  
+                #pyd = make_dot_highlight(mat, labels=labels, cmap="cool", vmargin=2, hmargin=2)         
+                pyd.render(outfile=path, cleanup=True)
+            return None
 
     # def mat_to_graph(self, full_graph: np.array, ori_graph: np.array = None,
     #                  edge_labels: str = None, title: str = None):
@@ -244,7 +257,7 @@ class Visualization(object):
         # Create a heatmap
         plt.figure(figsize=(8, 6))
         plt.rcParams['font.family'] = 'Times New Roman'
-        sns.heatmap(self.bootstrap_prob, annot=True, cmap='PuBu', fmt=".2f", square=True, cbar_kws={"shrink": .8},
+        sns.heatmap(self.bootstrap_prob, annot=True, cmap='Reds', fmt=".2f", square=True, cbar_kws={"shrink": .8},
                     xticklabels=self.data.columns,
                     yticklabels=self.data.columns)
         plt.title('Confidence Heatmap', fontsize=16, fontweight='bold')
