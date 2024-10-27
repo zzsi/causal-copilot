@@ -9,7 +9,7 @@ from postprocess.judge import Judge
 from postprocess.visualization import Visualization
 from postprocess.eda_generation import EDA
 from postprocess.report_generation import Report_generation
-from global_setting.initialize_state import global_state_initialization, load_data
+from global_setting.Initialize_state import global_state_initialization, load_data
 
 import json
 import argparse
