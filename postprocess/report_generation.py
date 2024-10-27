@@ -153,7 +153,7 @@ class Report_generation(object):
                 ind2 = variables.get_loc(tuple[1])
                 zero_matrix[ind2, ind1] = 1
         my_visual = Visualization(self.global_state, self.args)
-        pos_potential = my_visual.plot_pdag(zero_matrix, 'potential_relation.png')
+        pos_potential = my_visual.plot_pdag(zero_matrix, 'potential_relation.png', relation=True)
         return section1, section2, zero_matrix
 
     def data_prop_prompt(self):
