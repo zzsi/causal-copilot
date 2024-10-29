@@ -106,26 +106,19 @@ class EDA(object):
         # Convert categorical features using label encoding
         for feature in self.categorical_features:
             df[feature] = label_encoder.fit_transform(df[feature])
-
-        # Generate scatter plots for each pair of features
-        plt.figure(figsize=(8, 8))
-        plt.rcParams['font.family'] = 'Times New Roman'
-        sns.pairplot(df)
-        # Save the plot
-        save_path_scat = os.path.join(self.save_dir, 'eda_scat.jpg')
-        plt.savefig(fname=save_path_scat, dpi=1000)
-
+        
         # Calculate the correlation matrix
         correlation_matrix = df.corr()
         # Create a heatmap
         plt.figure(figsize=(8, 6))
+        plt.rcParams['font.family'] = 'Times New Roman'
         sns.heatmap(correlation_matrix, annot=True, cmap='PuBu', fmt=".2f", square=True, cbar_kws={"shrink": .8})
         plt.title('Correlation Heatmap', fontsize=16, fontweight='bold')
         # Save the plot
         save_path_corr = os.path.join(self.save_dir, 'eda_corr.jpg')
         plt.savefig(fname=save_path_corr, dpi=1000)
 
-        return correlation_matrix, save_path_scat, save_path_corr
+        return correlation_matrix, save_path_corr
 
     def desc_corr(self, correlation_matrix, threshold=0.5):
         """
@@ -147,13 +140,12 @@ class EDA(object):
 
     def generate_eda(self):
         plot_path_dist = self.plot_dist()
-        corr_mat, plot_path_scat, plot_path_corr = self.plot_corr()
+        corr_mat, plot_path_corr = self.plot_corr()
 
         dist_analysis = self.desc_dist()
         corr_analysis = self.desc_corr(corr_mat)
 
         eda_result = {'plot_path_dist': plot_path_dist,
-                      'plot_path_scat': plot_path_scat,
                       'plot_path_corr': plot_path_corr,
                       'dist_analysis': dist_analysis,
                       'corr_analysis': corr_analysis}
