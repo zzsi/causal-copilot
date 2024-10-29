@@ -7,7 +7,7 @@
         "small_sample": 0.1,
         "large_sample": 0.01
       },
-      "reasoning": "Lower values are more conservative. Use higher values (e.g., 0.1) for small samples to avoid missing true edges, and lower values (e.g., 0.01) for large samples to reduce false positives."
+      "reasoning": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
     },
     "indep_test": {
       "meaning": "Independence test method",
@@ -51,7 +51,7 @@
         "small_sample": 0.1,
         "large_sample": 0.01
       },
-      "reasoning": "Adjust based on sample size. More conservative (lower) values for larger samples."
+      "reasoning": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
     },
     "independence_test_method": {
       "meaning": "Independence test method",
@@ -164,7 +164,7 @@
         "small_sample": 0.1,
         "large_sample": 0.01
       },
-      "reasoning": "Adjust based on sample size. More conservative (lower) values for larger samples."
+      "reasoning": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
     },
     "indep_test": {
       "meaning": "Independence test method",
@@ -172,9 +172,10 @@
         "default": "fisherz",
         "continuous": "fisherz",
         "discrete": "chisq",
-        "mixed": "gsq"
+        "mixed": "gsq",
+        "nonlinear": "kci"
       },
-      "reasoning": "Choose based on data type: 'fisherz' for continuous, 'chisq' for discrete, 'gsq' for mixed data types.",
+      "reasoning": "Choose based on data type: 'fisherz' for continuous, it is fast and general; 'kci' is suitable for nonlinear data but slow (need consider time cost); 'chisq' for discrete, 'gsq' for mixed data types.",
       "context_file": "algorithm/context/independence_test.txt"
     },
     "depth": {
