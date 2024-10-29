@@ -140,3 +140,4 @@ output/
 test.py
 demo.py
 .vscode
+.history/

@@ -96,7 +96,8 @@ class Report_generation(object):
             if file.endswith(".csv"):
                 data_path = file
                 filename = os.path.splitext(os.path.basename(data_path))[0]
-                filename = filename.capitalize().replace('_', '-')
+                filename = filename.capitalize()
+                filename = filename.capitalize().replace("_", r"\_")
                 title = f'Causal Discovery Report on {filename}'
                 break
             else:
@@ -120,6 +121,7 @@ class Report_generation(object):
             ]
         )
         response_intro = response_dist.choices[0].message.content
+        response_intro = response_intro.replace("_", r"\_")
         return response_intro
     
     def background_prompt(self):
@@ -193,12 +195,20 @@ class Report_generation(object):
                         relations.append((elements[i], target))
                 else:
                     relations.append((elements[i], elements[i + 1]))
+        # deal with case like ('Length, Diameter, Height', 'Viscera Weight')
+        result = []
+        for relation in relations:
+            left = relation[0].split(',')
+            right = relation[1].split(',')
+            for l in left:
+                for r in right:
+                    result.append((l.strip(), r.strip()))
 
         zero_matrix = np.zeros((len(variables), len(variables)))
-        for tuple in relations:
-            if tuple[0] in variables and tuple[1] in variables:
-                ind1 = variables.get_loc(tuple[0])
-                ind2 = variables.get_loc(tuple[1])
+        for tuple in result:
+            if tuple[0].lower() in variables.str.lower() and tuple[1].lower() in variables.str.lower():
+                ind1 = variables.str.lower().get_loc(tuple[0].lower())
+                ind2 = variables.str.lower().get_loc(tuple[1].lower())
                 zero_matrix[ind2, ind1] = 1
         my_visual = Visualization(self.global_state)
         pos_potential = my_visual.plot_pdag(zero_matrix, 'potential_relation.png', relation=True)
@@ -213,14 +223,15 @@ class Report_generation(object):
         gaussian_error = 'True' if self.statistics.gaussian_error else 'False'
         stationary = 'True' if self.statistics.data_type == 'Time-series' else 'False'
         heterogeneous = 'True' if self.statistics.heterogeneous else 'False'
+
         prop_table = f"""
-    \begin{{tabular}}{{rrrrrrr}}
-        \toprule
-        Shape ($n$ x $d$) & Data Type & Missing Value & Linearity & Gaussian Errors & Time-Series & Heterogeneity \\
-        \midrule
-        {shape}   & {data_type} & {missingness} & {linearity} & {gaussian_error} & {stationary} & {heterogeneous} \\
-        \bottomrule
-    \end{{tabular}}
+        \begin{{tabular}}{{rrrrrrr}}
+            \toprule
+            Shape ($n$ x $d$) & Data Type & Missing Value & Linearity & Gaussian Errors & Time-Series & Heterogeneity \\
+            \midrule
+            {shape}   & {data_type} & {missingness} & {linearity} & {gaussian_error} & {stationary} & {heterogeneous} \\
+            \bottomrule
+        \end{{tabular}}
         """
         return prop_table
         
@@ -359,14 +370,22 @@ class Report_generation(object):
         for the [ALGO] algorithm, which are specified below:
         {param_list}
 
-        \subsection{{Graph Tuning with LLM Suggestion}}
-        In the final step, we performed graph tuning with suggestions provided by the LLM.
-        We utilize LLM to help us determine the direction of undirected edges according to its knowledge repository.
-        By integrating insights from the LLM to refine the causal graph, we can achieve improvements in graph's accuracy and robustness.
-        {llm_direction_reason}
+        """
 
+        if self.args.data_mode == 'real':
+            repsonse += f"""
+            \subsection{{Graph Tuning with LLM Suggestion}}
+            In the final step, we performed graph tuning with suggestions provided by the LLM.
+            We utilize LLM to help us determine the direction of undirected edges according to its knowledge repository.
+            By integrating insights from the LLM to refine the causal graph, we can achieve improvements in graph's accuracy and robustness.
+            {llm_direction_reason}
+
+            """
+        
+        repsonse += """
         This structured approach ensures a comprehensive and methodical analysis of the causal relationships within the dataset.
         """
+
         return repsonse
     
     def graph_effect_prompts(self):
@@ -377,11 +396,12 @@ class Report_generation(object):
         prompt = f"""
         This list of tuples reflects the causal relationship among variables {relations}.
         For example, if the tuple is (X1, X0), it means that {variables[1]} causes {variables[0]}, that is {variables[1]} -> {variables[0]}.
-        Please write a paragraph to describe the causal relationship, and you can add some analysis.
-        If you want to list something or add subtitles, make sure they are in latex format. 
-        Don't mention tuples in the paragraph, 
+        1. Please write one paragraph to describe the causal relationship, do not include any lists, subtitles, etc.
+        2. Don't mention tuples in the paragraph
+        3. If variable names have meanings, please integrate background knowledge of these variables in the causal relationship analysis.
         Please use variable names {variables[0]}, {variables[1]}, ... in your description.
-        For example, you can begin in this way:
+        
+        For example:
         The result graph shows the causal relationship among variables clearly. The {variables[1]} causes the {variables[0]}, ...
         """
 
@@ -402,14 +422,9 @@ class Report_generation(object):
         prompts = '\begin{itemize}\n'
         for key in reason_json:
             tuple = ast.literal_eval(key)
-            direction = reason_json[key]['direction']
-            reason = reason_json[key]['justification']
-            if direction == 'right':
-                pair = f'{tuple[0]} \rightarrow {tuple[1]}'
-            elif direction == 'left':
-                pair = f'{tuple[1]} \rightarrow {tuple[0]}'
-            else:
-                continue
+            reason = reason_json[key]
+            pair = f'{tuple[0]} \rightarrow {tuple[1]}'
+            
             block = f"""
             \item \textbf{pair}: {reason}
 
@@ -478,6 +493,7 @@ class Report_generation(object):
             )
 
         response_doc = response.choices[0].message.content
+        response_doc = response_doc.replace("_", r"\_")
         return response_doc
     
     def keyword_prompt(self):
@@ -541,6 +557,13 @@ class Report_generation(object):
             '''
             # Data info
             data_preview = self.data.head().to_latex(index=False)
+            if len(self.data.columns) >= 9:
+                print(1)
+                data_preview = f"""
+                \resizebox{{\textwidth}}{{!}}{{
+                {data_preview}
+                }}
+                """
             data_prop_table = self.data_prop_prompt()
             # Intro info
             self.title, dataset = self.get_title()
@@ -554,8 +577,6 @@ class Report_generation(object):
             dist_info = self.latex_convert(dist_info)
             corr_info = self.latex_convert(corr_info)
             # ALGO info
-            #algo_list = self.algo_selection_prompt()
-            #param_list = self.param_selection_prompt()
             self.discover_process = self.procedure_prompt()
             # Graph effect info
             self.graph_prompt = self.latex_convert(self.graph_effect_prompts())
@@ -564,75 +585,49 @@ class Report_generation(object):
             self.abstract = self.abstract_prompt()
             self.keywords = self.keyword_prompt()
             # Graph paths
-            graph_path0 = f'{self.visual_dir}/true_graph.png'
-            graph_path1 = f'{self.visual_dir}/initial_graph.png'
-            graph_path2 = f'{self.visual_dir}/revised_graph.png'
+            graph_path0 = f'{self.visual_dir}/true_graph.pdf'
+            graph_path1 = f'{self.visual_dir}/initial_graph.pdf'
+            graph_path2 = f'{self.visual_dir}/revised_graph.pdf'
             graph_path3 = f'{self.visual_dir}/metrics.jpg'
             graph_path4 = f'{self.visual_dir}/confidence_heatmap.jpg'
-            graph_relation_path = f'{self.visual_dir}/potential_relation.png'
+            graph_relation_path = f'{self.visual_dir}/potential_relation.pdf'
             # EDA Graph paths
             dist_graph_path = self.eda_result['plot_path_dist']
-            scat_graph_path = self.eda_result['plot_path_scat']
             corr_graph_path = self.eda_result['plot_path_corr']
 
             if self.data_mode == 'simulated':
-                # Report prompt
-                prompt_template = self.load_context("postprocess/context/template.tex")
-                replacements = {
-                    "[TITLE]": self.title,
-                    "[DATASET]": dataset,
-                    "[ABSTRACT]": self.abstract,
-                    "[INTRO_INFO]": self.intro_info,
-                    "[BACKGROUND_INFO1]": self.background_info1,
-                    "[BACKGROUND_INFO2]": self.background_info2,
-                    "[POTENTIAL_GRAPH]": graph_relation_path,
-                    "[DATA_PREVIEW]": data_preview,
-                    "[DATA_PROP_TABLE]": data_prop_table,
-                    "[DIST_INFO]": dist_info,
-                    "[CORR_INFO]": corr_info,
-                    "[DIST_GRAPH]": dist_graph_path,
-                    "[CORR_GRAPH]": corr_graph_path,
-                    "[RESULT_ANALYSIS]": self.graph_prompt,
-                    "[ALGO]": self.algo,
-                    #"[ALGO_LIST]": algo_list,
-                    #"[PARAM_LIST]": param_list,
-                    "[DISCOVER_PROCESS]": self.discover_process,
-                    "[RELIABILITY_ANALYSIS]": self.reliability_prompt,
-                    "[RESULT_GRAPH0]": graph_path0,
-                    "[RESULT_GRAPH1]": graph_path1,
-                    "[RESULT_GRAPH2]": graph_path2,
-                    "[RESULT_GRAPH3]": graph_path3,
-                    "[RESULT_GRAPH4]": graph_path4,
-                    "[RESULT_METRICS1]": str(self.original_metrics),
-                    "[RESULT_METRICS2]": str(self.revised_metrics)
-                }
+                prompt_template = self.load_context("postprocess/context/template_simulated.tex")
             else:
-                # Report prompt
-                prompt_template = self.load_context("postprocess/context/template.tex")
-                replacements = {
-                    "[TITLE]": self.title,
-                    "[DATASET]": dataset,
-                    "[ABSTRACT]": self.abstract,
-                    "[INTRO_INFO]": self.intro_info,
-                    "[BACKGROUND_INFO1]": self.background_info1,
-                    "[BACKGROUND_INFO2]": self.background_info2,
-                    "[POTENTIAL_GRAPH]": graph_relation_path,
-                    "[DATA_PREVIEW]": data_preview,
-                    "[DATA_PROP_TABLE]": data_prop_table,
-                    "[DIST_INFO]": dist_info,
-                    "[CORR_INFO]": corr_info,
-                    "[DIST_GRAPH]": dist_graph_path,
-                    "[CORR_GRAPH]": corr_graph_path,
-                    "[RESULT_ANALYSIS]": self.graph_prompt,
-                    "[ALGO]": self.algo,
-                    #"[ALGO_LIST]": algo_list,
-                    #"[PARAM_LIST]": param_list,
-                    "[DISCOVER_PROCESS]": self.discover_process,
-                    "[RELIABILITY_ANALYSIS]": self.reliability_prompt,
-                    "[RESULT_GRAPH1]": graph_path1,
-                    "[RESULT_GRAPH2]": graph_path2,
-                    "[RESULT_GRAPH4]": graph_path4
-                }
+                if self.global_state.user_data.ground_truth is not None:
+                    prompt_template = self.load_context("postprocess/context/template_real.tex")
+                else:
+                    prompt_template = self.load_context("postprocess/context/template_real_notruth.tex")
+            replacements = {
+                "[TITLE]": self.title,
+                "[DATASET]": dataset,
+                "[ABSTRACT]": self.abstract,
+                "[INTRO_INFO]": self.intro_info,
+                "[BACKGROUND_INFO1]": self.background_info1,
+                "[BACKGROUND_INFO2]": self.background_info2,
+                "[POTENTIAL_GRAPH]": graph_relation_path,
+                "[DATA_PREVIEW]": data_preview,
+                "[DATA_PROP_TABLE]": data_prop_table,
+                "[DIST_INFO]": dist_info,
+                "[CORR_INFO]": corr_info,
+                "[DIST_GRAPH]": dist_graph_path,
+                "[CORR_GRAPH]": corr_graph_path,
+                "[RESULT_ANALYSIS]": self.graph_prompt,
+                "[ALGO]": self.algo,
+                "[DISCOVER_PROCESS]": self.discover_process,
+                "[RELIABILITY_ANALYSIS]": self.reliability_prompt,
+                "[RESULT_GRAPH0]": graph_path0,
+                "[RESULT_GRAPH1]": graph_path1,
+                "[RESULT_GRAPH2]": graph_path2,
+                "[RESULT_GRAPH3]": graph_path3,
+                "[RESULT_GRAPH4]": graph_path4,
+                "[RESULT_METRICS1]": str(self.original_metrics),
+                "[RESULT_METRICS2]": str(self.revised_metrics)
+            }
 
             for placeholder, value in replacements.items():
                 prompt_template = prompt_template.replace(placeholder, value)
