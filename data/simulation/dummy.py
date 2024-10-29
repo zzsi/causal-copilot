@@ -605,20 +605,20 @@ if __name__ == "__main__":
         for _ in range(1):
             base_simulator = DataSimulator()
             graph, data = base_simulator.generate_dataset(
-                function_type='mlp',
-                n_nodes=5,
+                function_type='linear',
+                n_nodes=25,
                 n_samples=10000,
                 edge_probability=0.3,
                 noise_type='gaussian',
-                n_domains=2
+                n_domains=1
             )
             # Convert data to DataFrame
             df = pd.DataFrame(data)
-            df_wo_domain = df.drop(columns=['domain_index']).values
-            c_indx = df['domain_index'].values.reshape(-1, 1)
+            # df_wo_domain = df.drop(columns=['domain_index']).values
+            # c_indx = df['domain_index'].values.reshape(-1, 1)
             
             # # PC Algorithm
-            pc_graph = pc(df_wo_domain)
+            pc_graph = pc(df.values, alpha=0.01, depth=0)
             pc_shd = SHD(array2cpdag(graph), pc_graph.G).get_shd()
 
             adj = AdjacencyConfusion(array2cpdag(graph), pc_graph.G)
@@ -626,6 +626,7 @@ if __name__ == "__main__":
             pc_recall = adj.get_adj_recall()
             pc_f1 = 2 * pc_precision * pc_recall / (pc_precision + pc_recall)
             results['PC'].append((pc_shd, pc_precision, pc_recall, pc_f1))
+            print(results['PC'])
 
             # FCI Algorithm
             fci_graph, _ = fci(df_wo_domain)
