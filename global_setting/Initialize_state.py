@@ -6,9 +6,11 @@ import ast
 import numpy as np
 import os
 import json
-
+from datetime import datetime
 from global_setting.state import GlobalState
 from data.simulation.simulation import SimulationManager
+
+
 
 def load_data(global_state: GlobalState, args: argparse.Namespace):
     if args.simulation_mode == "online":
@@ -149,6 +151,11 @@ def global_state_initialization(args: argparse.Namespace = None) -> GlobalState:
     # The output from GPT is str
     info_extracted = response.choices[0].message.content
     info_extracted = json.loads(info_extracted)
+
+    # data management
+    date_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+    global_state.user_data.output_report_dir = f'output/{args.data_file.split("/")[-1]}/{date_time}/output_report'
+    global_state.user_data.output_graph_dir = f'output/{args.data_file.split("/")[-1]}/{date_time}/output_graph'
 
     # Assign extracted information from user queries to global_stat
     global_state.statistics.linearity = info_extracted["linearity"]

@@ -9,7 +9,7 @@ from pywhy_graphs.viz import draw
 from causallearn.search.FCMBased.lingam.utils import make_dot
 
 class Visualization(object):
-    def __init__(self, global_state, args, threshold: float=0.95):
+    def __init__(self, global_state, threshold: float=0.95):
         """
         :param global_state: a dict containing global variables and information
         :param args: arguments for the report generation
@@ -18,7 +18,7 @@ class Visualization(object):
         self.global_state = global_state
         self.data = global_state.user_data.raw_data
         self.bootstrap_prob = global_state.results.bootstrap_probability
-        self.save_dir = args.output_graph_dir
+        self.save_dir = global_state.user_data.output_graph_dir
         self.threshold = threshold
 
     def convert_to_edges_truth(self, mat):

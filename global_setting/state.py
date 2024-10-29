@@ -14,6 +14,8 @@ class UserData:
     ground_truth: Optional[np.ndarray] = None
     initial_query: Optional[str] = None
     knowledge_docs: Optional[str] = None
+    output_report_dir: Optional[str] = None
+    output_graph_dir: Optional[str] = None
 
 @dataclass
 class Statistics:

@@ -4,11 +4,59 @@ import re
 import numpy as np 
 import shutil
 import argparse
+from plumbum.cmd import latexmk
+from plumbum import local
 import networkx as nx
+from pylatex import Document
 from postprocess.visualization import Visualization
-import subprocess
-
 from postprocess.judge_functions import graph_effect_prompts
+
+def compile_tex_to_pdf_with_refs(tex_file, output_dir=None, clean=True):
+    """
+    Silently compile a TeX file to PDF with multiple passes for references
+    
+    Args:
+        tex_file (str): Path to the .tex file
+        output_dir (str, optional): Output directory for the PDF
+        clean (bool): Whether to clean auxiliary files after compilation
+    
+    Returns:
+        bool: True if compilation successful, False otherwise
+    """
+    try:
+        tex_dir = os.path.dirname(tex_file)
+        if output_dir is None:
+            output_dir = tex_dir
+
+        # Multiple passes for references 
+        try:
+            # Build latexmk arguments
+            args = [
+                '-pdf',                     # Generate PDF output
+                '-interaction=nonstopmode', # Don't stop for errors
+                '-halt-on-error',           # Stop on errors
+                '-f',
+                '-bibtex',                   # Use bibtex for references
+                f'-output-directory={output_dir}'
+            ]
+                
+            # Add input file
+            args.append(tex_file)
+            
+            # Run latexmk
+            with local.env(TEXINPUTS=":./"):
+                latexmk[args]()
+        except Exception as e:
+            print(f"Error in compilation pass")
+            print(str(e))
+            return False
+        
+        print(f"Successfully compiled {tex_file} to {output_dir}")
+        return True
+            
+    except Exception as e:
+        print(f"Exception occurred: {str(e)}")
+        return False
 
 class Report_generation(object):
     def __init__(self, global_state, args):
@@ -41,7 +89,7 @@ class Report_generation(object):
         self.prompt = global_state.logging.select_conversation[0]['response']
         self.hp_prompt = global_state.logging.argument_conversation[0]['response']
         # Path to find the visualization graph
-        self.visual_dir = args.output_graph_dir
+        self.visual_dir = global_state.user_data.output_graph_dir
 
     def get_title(self):
         for file in os.listdir(self.data_file):
@@ -49,7 +97,7 @@ class Report_generation(object):
                 data_path = file
                 filename = os.path.splitext(os.path.basename(data_path))[0]
                 filename = filename.capitalize()
-                filename = filename.replace("_", r"\_")
+                filename = filename.capitalize().replace("_", r"\_")
                 title = f'Causal Discovery Report on {filename}'
                 break
             else:
@@ -162,10 +210,8 @@ class Report_generation(object):
                 ind1 = variables.str.lower().get_loc(tuple[0].lower())
                 ind2 = variables.str.lower().get_loc(tuple[1].lower())
                 zero_matrix[ind2, ind1] = 1
-
-        print(zero_matrix)
-        my_visual = Visualization(self.global_state, self.args)
-        pos_potential = my_visual.plot_pdag(zero_matrix, 'potential_relation.pdf', relation=True)
+        my_visual = Visualization(self.global_state)
+        pos_potential = my_visual.plot_pdag(zero_matrix, 'potential_relation.png', relation=True)
         return section1, section2, zero_matrix
 
     def data_prop_prompt(self):
@@ -373,7 +419,7 @@ class Report_generation(object):
     def llm_direction_prompts(self):
         import ast 
         reason_json = self.global_state.results.llm_directions
-        prompts = ''
+        prompts = '\begin{itemize}\n'
         for key in reason_json:
             tuple = ast.literal_eval(key)
             direction = reason_json[key]['direction']
@@ -389,7 +435,8 @@ class Report_generation(object):
 
             """
             prompts += block
-        return prompts
+    
+        return prompts + '\end{itemize}'
     
     def confidence_analysis_prompts(self):
 
@@ -625,9 +672,8 @@ class Report_generation(object):
             file.write(report)
 
         # Compile the .tex file to PDF using pdflatex
-        try:
-            subprocess.run(['xelatex', '-output-directory', save_path, '-interaction=nonstopmode', f'{save_path}/report.tex'], check=False)
-            print("PDF generated successfully.")
-        except subprocess.CalledProcessError:
-            print("An error occurred while generating the PDF.")
+        compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
 
+if __name__ == "__main__":
+    # Test compiling
+    compile_tex_to_pdf_with_refs("/Users/charon/学习/PhD projects/Causality-Copilot/output/20241025_225531_Linear-Gaussian_id_0_nodes5_samples2500/20241028_173140/output_report/report.tex", "output")
