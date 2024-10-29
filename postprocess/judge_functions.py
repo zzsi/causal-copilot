@@ -207,7 +207,7 @@ def graph_effect_prompts (data, graph, boot_probability):
 
     return graph_prompt
 
-def llm_direction(global_state, args):
+def llm_direction(global_state, args, voting=10):
     '''
     :param data: Given Tabular Data in Pandas DataFrame format
     :param full_graph: An adjacent matrix in Numpy Ndarray format -
@@ -224,7 +224,6 @@ def llm_direction(global_state, args):
 
     data = global_state.user_data.raw_data
     variables = data.columns
-    table_columns = '\t'.join(data.columns)
     full_graph = global_state.results.raw_result
 
     if global_state.algorithm.selected_algorithm == 'PC':
@@ -248,56 +247,150 @@ def llm_direction(global_state, args):
     # none_edges = edges_dict['none_edges']
     # Let GPT determine direction of uncertain edges
     print(uncertain_edges)
-    prompt = f"""
+    if len(uncertain_edges) == 0:
+        print('Empty uncertain_edges')
+        return {}, full_graph
+    
+    prompt_direction = f"""
     I have a list of tuples where each tuple represents a pair of entities that have a relationship with each other. 
     For each tuple, please determine the causal relationship between the two entities, indicating which entity causes the other. 
     1. Use each tuple as the key of JSON, for example, if the tuple is ('Raf', 'Mek'), then use ('Raf', 'Mek') as a key
-    1. If the first entity causes the second, the direction is 'right'. If the second entity causes the first, the direction should be 'left'. The order is very important
-    2. The direction can only be 'right' or 'left', do not reply other things
-    3. Provide a brief justification for your decision based on the following background knowledge {knowledge_docs}.
+    1. If the first entity causes the second, the value is 'A'. If the second entity causes the first, the value should be 'B'. If cannot decide, the value is 'C'. The order is very important
+    2. The direction can only be 'A' or 'B' or 'C', do not reply other things
     Here is the list of tuples: {uncertain_edges}
     Return me a json following the template below. Do not include anything else.
     JSON format:
     {{
-        "tuple": {{
-            "direction": 'right' or 'left',
-            "justification": 'Your reasoning here.'
-        }},
-        ...
+        "tuple1": "A" or "B" or "C",    
+        "tuple2": "A" or "B" or "C",   
+        ......   
     }}
     """
     client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+    import numpy as np
+    prob_mat = np.zeros((global_state.statistics.feature_number, global_state.statistics.feature_number))
+    for i in range(voting):
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt_direction}
+            ]
+        )
+        # The output from GPT is str
+        directions = response.choices[0].message.content
+        directions_cleaned = directions.replace('```json', '').replace('```', '').strip()
+        print('direction json')
+        print(directions_cleaned)
+        try:
+            json_directions = json.loads(directions_cleaned)
+        except:
+            print('The returned LLM Direction JSON file is wrong')
+            return {}, revised_graph
+        
+        for key in json_directions.keys():
+            tuple = ast.literal_eval(key)
+            direction = json_directions[key]
+            try:
+                i = variables.get_loc(tuple[0])
+                j = variables.get_loc(tuple[1])
+                if direction == 'A':
+                    prob_mat[j, i] += 1
+                elif direction == 'B':
+                    prob_mat[i, j] += 1
+            except:
+                print(tuple)
+                continue
+    
+    prob_mat /= voting
+    print(prob_mat)
+    revise_indice = np.where(prob_mat>0.5)
+    edges_list = []
+    for i, j in zip(revise_indice[0], revise_indice[1]):
+        revised_graph[i, j] = 1
+        revised_graph[j, i] = -1
+        edges_list.append((variables[j], variables[i]))
+
+    prompt_justification = f"""
+    I have a list of tuples where each tuple represents a pair of entities that have a relationship with each other. 
+    For example, ('Raf', 'Mek') means 'Raf' causes 'Mek'.
+    1. Provide a brief justification for each tuple's causal relationship based on the following background knowledge {knowledge_docs}.
+    2. Follow this JSON format, you should impute justifications for each tuple as the value
+    3. Only Return me a json. Do not include anything else.
+    JSON format:
+    {{
+    
+    """
+    for item in edges_list:
+        prompt_justification += f"""
+                                "{item}": justification here,
+
+                                """
+    prompt_justification += f"""
+                             }}
+                            """
+    
+    client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": prompt_justification}
         ]
     )
-    # The output from GPT is str
-    directions = response.choices[0].message.content
-    directions_cleaned = directions.replace('```json', '').replace('```', '').strip()
+        # The output from GPT is str
+    justification = response.choices[0].message.content
+    justification_cleaned = justification.replace('```json', '').replace('```', '').strip()
+    print('justification json')
+    print(justification_cleaned)
     try:
-        json_directions = json.loads(directions_cleaned)
+        json_justification = json.loads(justification_cleaned)
     except:
-        print('The returned LLM Direction JSON file is wrong')
+        print('The returned LLM Justification JSON file is wrong')
         return {}, revised_graph
-    for key in json_directions.keys():
-        tuple = ast.literal_eval(key)
-        direction = json_directions[key]['direction']
-        try:
-            i = variables.get_loc(tuple[0])
-            j = variables.get_loc(tuple[1])
-            if direction.lower() == 'right':
-                revised_graph[j, i] = 1
-            elif direction.lower() == 'left':
-                revised_graph[i, j] = 1
-        except:
-            print(tuple)
-            continue
+    
+    return json_justification, revised_graph
+        
 
-    return json_directions, revised_graph
-        
-        
+
+def llm_direction_evaluation(global_state):
+    from postprocess.visualization import Visualization
+    
+    true_graph = global_state.user_data.ground_truth
+    full_graph = global_state.results.raw_result
+    revised_graph = global_state.results.revised_graph
+    my_visual = Visualization(global_state)
+    edges_dict = my_visual.convert_to_edges(full_graph)
+    uncertain_edges = edges_dict['uncertain_edges']
+    variables = global_state.user_data.raw_data.columns
+
+    denom = 0
+    nom = 0
+    for item in uncertain_edges:
+        i = variables.get_loc(item[0])
+        j = variables.get_loc(item[1])
+        if true_graph[i, j]==1 or true_graph[j, i]==1:
+            denom += 1
+        if true_graph[i, j]==revised_graph[i, j] or true_graph[j, i]==revised_graph[j, i]:
+            nom += 1
+    
+    all_edges = sum(true_graph.flatten())
+    exist_uncertain_edges = denom
+    if denom>0:
+        correct_rate = nom/denom
+    else:
+        correct_rate = 'NA'
+
+    print(f"""
+        all_edges: {all_edges},
+        exist_uncertain_edges: {exist_uncertain_edges},
+        correct_rate: {correct_rate}
+          """)
+
+    
+
+
+
 
     

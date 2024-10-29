@@ -9,7 +9,7 @@ from postprocess.judge import Judge
 from postprocess.visualization import Visualization
 from postprocess.eda_generation import EDA
 from postprocess.report_generation import Report_generation
-from global_setting.initialize_state import global_state_initialization, load_data
+from global_setting.Initialize_state import global_state_initialization, load_data
 
 import json
 import argparse
@@ -23,8 +23,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="data/simulation/simulated_data/20241025_225531_Linear-Gaussian_id_0_nodes5_samples2500",
-        default="dataset/DWD",
+        default="postprocess/test_data/sachs",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -32,7 +31,7 @@ def parse_args():
     parser.add_argument(
         '--output-report-dir',
         type=str,
-        default='dataset/DWD/output_report',
+        default='dataset/sachs/output_report',
         help='Directory to save the output report'
     )
 
@@ -40,7 +39,7 @@ def parse_args():
     parser.add_argument(
         '--output-graph-dir',
         type=str,
-        default='dataset/DWD/output_graph',
+        default='dataset/sachs/output_graph',
         help='Directory to save the output graph'
     )
 
@@ -90,7 +89,7 @@ def parse_args():
     parser.add_argument(
         '--initial_query',
         type=str,
-        default="",
+        default="selected_algorithm: PC",
         help='Initial query for the algorithm'
     )
 
@@ -128,8 +127,6 @@ def main(args):
         global_state = stat_info_collection(global_state)
         global_state = knowledge_info(args, global_state)
 
-    # print(global_state.statistics)
-
     # Convert statistics to text
     global_state.statistics.description = convert_stat_info_to_text(global_state.statistics)
 
@@ -156,6 +153,9 @@ def main(args):
 
     global_state = judge.forward(global_state)
 
+    ##############################
+    from postprocess.judge_functions import llm_direction_evaluation
+    llm_direction_evaluation(global_state)
     if global_state.user_data.ground_truth is not None:
         print("Revised Graph: ", global_state.results.revised_graph)
         print("Mat Ground Truth: ", global_state.user_data.ground_truth)
