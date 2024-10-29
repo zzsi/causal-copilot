@@ -422,14 +422,9 @@ class Report_generation(object):
         prompts = '\begin{itemize}\n'
         for key in reason_json:
             tuple = ast.literal_eval(key)
-            direction = reason_json[key]['direction']
-            reason = reason_json[key]['justification']
-            if direction == 'right':
-                pair = f'{tuple[0]} \rightarrow {tuple[1]}'
-            elif direction == 'left':
-                pair = f'{tuple[1]} \rightarrow {tuple[0]}'
-            else:
-                continue
+            reason = reason_json[key]
+            pair = f'{tuple[0]} \rightarrow {tuple[1]}'
+            
             block = f"""
             \item \textbf{pair}: {reason}
 
