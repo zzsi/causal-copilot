@@ -84,6 +84,7 @@ class Judge(object):
 
         ###### New Version Revision ######
         from postprocess.judge_functions import llm_direction
+        print('LLM Direction Decision')
         llm_directions, revised_graph = llm_direction(self.global_state, self.args)
 
         return conversation, errors_llm, errors_stat, boot_probability, revised_graph, llm_directions
@@ -96,18 +97,18 @@ class Judge(object):
          global_state.results.bootstrap_probability,
          global_state.results.revised_graph,
          global_state.results.llm_directions) = self.quality_judge(
-            data=global_state.user_data.processed_data,
-            full_graph=global_state.results.converted_graph,
-            algorithm=global_state.algorithm.selected_algorithm,
-            hyperparameters=global_state.algorithm.algorithm_arguments,
-            knowledge_docs=global_state.user_data.knowledge_docs,
-            boot_num=global_state.statistics.boot_num
+        data=global_state.user_data.processed_data,
+        full_graph=global_state.results.converted_graph,
+        algorithm=global_state.algorithm.selected_algorithm,
+        hyperparameters=global_state.algorithm.algorithm_arguments,
+        knowledge_docs=global_state.user_data.knowledge_docs,
+        boot_num=global_state.statistics.boot_num
         )
         global_state.logging.knowledge_conversation.append(conversation)
         return global_state
 
 
-    def evaluation(self, global_state):
+    def evaluation(self, global_state, revise=False):
         '''
         :param est_graph: estimated adjacent matrix of causal graph in Panda Ndarray format
         :param ground_truth: ground truth, represented by adjacent matrix in Panda Ndarray format - Matrix[i,j] indicates j->i
@@ -119,20 +120,19 @@ class Judge(object):
         from causallearn.graph.AdjacencyConfusion import AdjacencyConfusion
         from causallearn.graph.SHD import SHD
 
-        if global_state.algorithm.selected_algorithm in ['PC', 'FCI', 'GES', 'CDNOD']:
+        if global_state.algorithm.selected_algorithm in ['PC', 'FCI', 'GES', 'CDNOD'] and not revise:
             print('Selected Algorithm: ', global_state.algorithm.selected_algorithm)
             if global_state.algorithm.selected_algorithm == 'PC':
                 est_graph = global_state.results.raw_result.G
             elif global_state.algorithm.selected_algorithm == 'CDNOD':
                 est_graph = global_state.results.raw_result.G
-                # remove the domain index node
             elif global_state.algorithm.selected_algorithm == 'GES':
                 est_graph = global_state.results.raw_result['G']
             elif global_state.algorithm.selected_algorithm == 'FCI':
                 # TODO: improve for better handling edge o-o, o->, o-, currently ignore this part
                 est_graph = global_state.results.raw_result[0]
 
-            if global_state.statistics.domain_index != None:
+            if global_state.statistics.domain_index is not None:
                 est_graph.remove_node(list(est_graph.node_map.keys())[-1])
             ground_truth = array2cpdag(global_state.user_data.ground_truth.transpose(), 
                                        node_names=global_state.user_data.processed_data.columns)
@@ -141,10 +141,13 @@ class Judge(object):
             precision = adj.get_adj_precision()
             recall = adj.get_adj_recall()
         else:
-            if global_state.statistics.domain_index != None:
+            if global_state.statistics.domain_index is not None:
                 global_state.results.converted_graph = global_state.results.converted_graph[:-1, :-1]
-            ground_truth_flat = global_state.user_data.ground_truth.flatten()  
-            est_graph_flat = global_state.results.converted_graph.flatten()
+            ground_truth_flat = global_state.user_data.ground_truth.flatten() 
+            if revise:
+                 est_graph_flat = np.where(global_state.results.revised_graph==1, 1, 0).flatten()
+            else:
+                est_graph_flat = global_state.results.converted_graph.flatten()
             shd = np.sum(np.abs(ground_truth_flat - est_graph_flat))
 
             adj_metrics = {'tp': 0, 'fp': 0, 'fn': 0, 'tn': 0}

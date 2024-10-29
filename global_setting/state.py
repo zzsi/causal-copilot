@@ -14,6 +14,8 @@ class UserData:
     ground_truth: Optional[np.ndarray] = None
     initial_query: Optional[str] = None
     knowledge_docs: Optional[str] = None
+    output_report_dir: Optional[str] = None
+    output_graph_dir: Optional[str] = None
 
 @dataclass
 class Statistics:
@@ -47,6 +49,7 @@ class Algorithm:
     algorithm_candidates: Optional[Dict] = None
     algorithm_arguments: Optional[Dict] = None
     waiting_minutes: float = 1440.0
+    algorithm_arguments_json: Optional[object] = None
 
 @dataclass
 class Results:

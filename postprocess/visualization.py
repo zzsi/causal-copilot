@@ -9,7 +9,7 @@ from pywhy_graphs.viz import draw
 from causallearn.search.FCMBased.lingam.utils import make_dot
 
 class Visualization(object):
-    def __init__(self, global_state, args, threshold: float=0.95):
+    def __init__(self, global_state, threshold: float=0.95):
         """
         :param global_state: a dict containing global variables and information
         :param args: arguments for the report generation
@@ -18,7 +18,7 @@ class Visualization(object):
         self.global_state = global_state
         self.data = global_state.user_data.raw_data
         self.bootstrap_prob = global_state.results.bootstrap_probability
-        self.save_dir = args.output_graph_dir
+        self.save_dir = global_state.user_data.output_graph_dir
         self.threshold = threshold
 
     def convert_to_edges_truth(self, mat):
@@ -125,7 +125,6 @@ class Visualization(object):
                 edges_dict = self.convert_to_edges_truth(g)
             else:
                 edges_dict = self.convert_to_edges(g)
-
             pag = PAG()
             for edge in edges_dict['certain_edges']:
                 pag.add_edge(edge[0], edge[1], pag.directed_edge_name)
@@ -142,12 +141,13 @@ class Visualization(object):
 
             if pos is None:
                 pos_G = nx.spring_layout(pag)
-                dot_graph = draw(pag, pos=pos_G, shape='circle')
+                
+                dot_graph = draw(pag, pos=pos_G, shape='circle')                
             else:
                 dot_graph = draw(pag, pos=pos, shape='circle')
                 pos_G = None
-
             dot_graph.render(outfile=path, cleanup=True)
+            
             return pos_G
             
         elif algo in ['DirectLiNGAM', 'ICALiNGAM', 'NOTEARS']:

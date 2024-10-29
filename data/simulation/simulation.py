@@ -11,7 +11,6 @@ class SimulationManager:
         self.args = args
         self.client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
         self.base_simulator = DataSimulator()
-        self.domain_simulator = DomainSpecificSimulator()
 
     def generate_simulation_config(self) -> Dict[str, Any]:
         """

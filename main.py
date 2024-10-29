@@ -9,7 +9,7 @@ from postprocess.judge import Judge
 from postprocess.visualization import Visualization
 from postprocess.eda_generation import EDA
 from postprocess.report_generation import Report_generation
-from global_setting.initialize_state import global_state_initialization, load_data
+from global_setting.Initialize_state import global_state_initialization, load_data
 
 import json
 import argparse
@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="data/simulation/simulated_data_v2/20241025_225531_Linear-Gaussian_id_0_nodes5_samples2500",
+        default="postprocess/test_data/sachs",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument(
         '--output-report-dir',
         type=str,
-        default='test_data/20241018_020318_base_nodes10_samples2000/output_report',
+        default='dataset/sachs/output_report',
         help='Directory to save the output report'
     )
 
@@ -39,7 +39,7 @@ def parse_args():
     parser.add_argument(
         '--output-graph-dir',
         type=str,
-        default='test_data/20241018_020318_base_nodes10_samples2000/output_graph',
+        default='dataset/sachs/output_graph',
         help='Directory to save the output graph'
     )
 
@@ -75,7 +75,7 @@ def parse_args():
     parser.add_argument(
         '--data_mode',
         type=str,
-        default="simulated",
+        default="real",
         help='Data mode: real or simulated'
     )
 
@@ -89,14 +89,14 @@ def parse_args():
     parser.add_argument(
         '--initial_query',
         type=str,
-        default="",
+        default="selected_algorithm: PC",
         help='Initial query for the algorithm'
     )
 
     parser.add_argument(
         '--parallel',
         type=bool,
-        default=True,
+        default=False,
         help='Parallel computing for bootstrapping.'
     )
 
@@ -127,8 +127,6 @@ def main(args):
         global_state = stat_info_collection(global_state)
         global_state = knowledge_info(args, global_state)
 
-    # print(global_state.statistics)
-
     # Convert statistics to text
     global_state.statistics.description = convert_stat_info_to_text(global_state.statistics)
 
@@ -155,6 +153,9 @@ def main(args):
 
     global_state = judge.forward(global_state)
 
+    ##############################
+    from postprocess.judge_functions import llm_direction_evaluation
+    llm_direction_evaluation(global_state)
     if global_state.user_data.ground_truth is not None:
         print("Revised Graph: ", global_state.results.revised_graph)
         print("Mat Ground Truth: ", global_state.user_data.ground_truth)
@@ -162,30 +163,19 @@ def main(args):
         print(global_state.results.revised_metrics)
 
     #############EDA###################
-    my_eda = EDA(global_state, args)
+    my_eda = EDA(global_state)
     my_eda.generate_eda()
     #############Visualization###################
-    my_visual = Visualization(global_state, args)
+    my_visual = Visualization(global_state)
     # Plot True Graph
     if global_state.user_data.ground_truth is not None:
-        pos_true = my_visual.plot_pdag(global_state.user_data.ground_truth, 'true_graph.png')
+        pos_true = my_visual.plot_pdag(global_state.user_data.ground_truth, 'true_graph.pdf')
     # Plot Initial Graph
-    pos_raw = my_visual.plot_pdag(global_state.results.raw_result, 'initial_graph.png', pos_true)
+    pos_raw = my_visual.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf')
     # Plot Revised Graph
-    pos_new = my_visual.plot_pdag(global_state.results.revised_graph, 'revised_graph.png', pos_true)
+    pos_new = my_visual.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf')
     # Plot Bootstrap Heatmap
     boot_heatmap_path = my_visual.boot_heatmap_plot()
-
-    result_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.converted_graph,
-                                             #edge_labels=boot_dict,
-                                             title='Initial Graph')
-
-    revised_fig_path = my_visual.mat_to_graph(full_graph=global_state.results.revised_graph,
-                                              ori_graph=global_state.results.converted_graph,
-                                              edge_labels=None,
-                                              title='Revised Graph')
-
-    metrics_fig_path = my_visual.metrics_plot(global_state.results.metrics.copy(), global_state.results.revised_metrics.copy())
 
     ################################
 
@@ -202,8 +192,10 @@ def main(args):
     #############Report Generation###################
     my_report = Report_generation(global_state, args)
     report = my_report.generation()
-    my_report.save_report(report, save_path=args.output_report_dir)
+    my_report.save_report(report, save_path=global_state.user_data.output_report_dir)
     ################################
+
+    return report, global_state
 
 
 
