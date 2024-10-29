@@ -47,14 +47,19 @@ class Reranker(object):
 
     def algo_cans2time_string(self, algo_cans, n_sample, variable):
         prompt = ""
+        CDNOD_prompt = ""
         for algo_can in algo_cans:
             try:
                 time_cost = self.time_estimate(algo_can, n_sample, variable)
                 prompt += algo_can + ": " + str(time_cost) + "min\n"
+                if algo_can == 'CDNOD':
+                    CDNOD_prompt += "CDNOD using fisherz for indep_test: " + str(time_cost) + "min\n"
+                    time_cost = self.time_estimate('CDNOD-kci', n_sample, variable)
+                    CDNOD_prompt += "CDNOD using kci for indep_test: " + str(time_cost) + "min\n"
             except:
                 prompt += algo_can + ": " + 'Unknown Time' + "\n"
                 print(f"Meeting Error for {algo_can}")
-        return prompt
+        return prompt, CDNOD_prompt
 
     def extract(self, output, start_str, end_str):
         if start_str in output and end_str in output:
@@ -116,16 +121,20 @@ class Reranker(object):
             hp_prompt = f.read()
 
         if global_state.algorithm.selected_algorithm is None:
-            time_info = self.algo_cans2time_string(algo_candidates, global_state.statistics.sample_size, global_state.statistics.feature_number)
+            time_info, time_info_cdnod = self.algo_cans2time_string(algo_candidates, global_state.statistics.sample_size, global_state.statistics.feature_number)
 
             # Select the Best Algorithm
             prompt = (("I will conduct causal discovery on the Tabular Dataset %s containing the following Columns:\n\n"
                     "%s\n\nThe Detailed Background Information is listed below:\n\n"
                     "%s\n\nThe Statistics Information about the dataset is:\n\n"
                     "%s\n\nBased on the above information, please select the best-suited algorithm from the following candidate:\n\n"
-                    "%s\n\nNote that the user can only wait for %f minutes for the algorithm execution, please ensure the time cost of the selected algorithm would not exceed it!!\n"
-                    "The estimated time costs of the following algorithms are:\n\n"
-                    "%s\n\nPlease highlight the selected algorithm name using the following template <Algo>Name</Algo> in the ending of the output") %
+                    "%s\n\nNote that the user can wait for %f minutes for the algorithm execution, please ensure the time cost of the selected algorithm would not exceed it!\n"
+                    "The estimated time costs of the following algorithms are:\n\n%s\n\n"
+                    "Tips:\n1.If the data is nonstationary or heterogeneous across domains/time, Use CDNOD as the first choice;"
+                    "\n2.If the noise is non-Gaussian, Try DirectLiNGAM or ICALiNGAM first;"
+                    "\n3.If the data is linear, Try GES first;"
+                    "\n4.If the data is large (i.e., > 100 variables), Start with PC algorithm;"
+                    "\n\nPlease highlight the selected algorithm name using the following template <Algo>Name</Algo> in the ending of the output") %
                     (table_name, table_columns, knowledge_info, statistics_info, algo_info, wait_time, time_info))
             selected_algo = ''
             print("Keys in algo2des_cond_hyper:", algo2des_cond_hyper.keys())
@@ -151,6 +160,11 @@ class Reranker(object):
         else:
             print("User has already selected the algorithm, skip the reranking process.")
             selected_algo = global_state.algorithm.selected_algorithm
+            if selected_algo == 'CDNOD':
+                time_info, time_info_cdnod = self.algo_cans2time_string([selected_algo], global_state.statistics.sample_size, global_state.statistics.feature_number)
+            else:
+                time_info, time_info_cdnod = "", ""
+
         print("Selected Algorithm: ", global_state.algorithm.selected_algorithm)
 
         if global_state.algorithm.selected_algorithm is not None and global_state.algorithm.algorithm_arguments is None:
@@ -170,6 +184,12 @@ class Reranker(object):
             hp_prompt = hp_prompt.replace("[ALGORITHM_DESCRIPTION]", algo_description)
             hp_prompt = hp_prompt.replace("[PRIMARY_HYPERPARAMETERS]", str(primary_params))
             hp_prompt = hp_prompt.replace("[HYPERPARAMETER_INFO]", hp_info_str)
+
+            if selected_algo == 'CDNOD' and global_state.statistics.linearity == False:
+                kci_prompt = (f'\nAs it is nonlinear data, it is suggested to use kci for indep_test. '
+                              f'As the user can wait for {wait_time} minutes for the algorithm execution. If kci can not exceed it, we MUST select it:\n\n'
+                              f'The estimated time costs of CDNOD algorithms using the two indep_test settings are: {time_info_cdnod}')
+                hp_prompt = hp_prompt + kci_prompt
 
             # Get hyperparameter suggestions from GPT-4
             print("Hyperparameter Prompt: ", hp_prompt)
