@@ -318,7 +318,6 @@ class DataSimulator:
             data = []
             W = simulate_parameter(self.graph)
             for i in range(self.n_domains):
-                print(simulate_linear_sem(W, n_samples, noise_type, noise_scale).shape, C[:, i].shape)
                 data.extend(simulate_linear_sem(W, n_samples, noise_type, noise_scale) + C[:, i])
         else:
             data = []
