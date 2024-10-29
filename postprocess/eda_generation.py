@@ -5,14 +5,13 @@ import numpy as np
 import os
 
 class EDA(object):
-    def __init__(self, global_state, args):
+    def __init__(self, global_state):
         """
         :param global_state: a dict containing global variables and information
-        :param args: arguments for the report generation
         """
         self.global_state = global_state
         self.data = global_state.user_data.raw_data
-        self.save_dir = args.output_graph_dir
+        self.save_dir = global_state.user_data.output_graph_dir
         # Identify categorical features
         self.categorical_features = global_state.user_data.raw_data.select_dtypes(include=['object', 'category']).columns
 

@@ -9,7 +9,7 @@ from postprocess.judge import Judge
 from postprocess.visualization import Visualization
 from postprocess.eda_generation import EDA
 from postprocess.report_generation import Report_generation
-from global_setting.Initialize_state import global_state_initialization, load_data
+from global_setting.initialize_state import global_state_initialization, load_data
 
 import json
 import argparse
@@ -25,22 +25,6 @@ def parse_args():
         type=str,
         default="data/simulation/simulated_data/20241025_225531_Linear-Gaussian_id_0_nodes5_samples2500",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
-    )
-
-    # Output file for results
-    parser.add_argument(
-        '--output-report-dir',
-        type=str,
-        default='test_data/20241018_020318_base_nodes10_samples2000/output_report',
-        help='Directory to save the output report'
-    )
-
-    # Output directory for graphs
-    parser.add_argument(
-        '--output-graph-dir',
-        type=str,
-        default='test_data/20241018_020318_base_nodes10_samples2000/output_graph',
-        help='Directory to save the output graph'
     )
 
     # OpenAI Settings
@@ -162,10 +146,10 @@ def main(args):
         print(global_state.results.revised_metrics)
 
     #############EDA###################
-    my_eda = EDA(global_state, args)
+    my_eda = EDA(global_state)
     my_eda.generate_eda()
     #############Visualization###################
-    my_visual = Visualization(global_state, args)
+    my_visual = Visualization(global_state)
     # Plot True Graph
     if global_state.user_data.ground_truth is not None:
         pos_true = my_visual.plot_pdag(global_state.user_data.ground_truth, 'true_graph.png')
@@ -191,7 +175,7 @@ def main(args):
     #############Report Generation###################
     my_report = Report_generation(global_state, args)
     report = my_report.generation()
-    my_report.save_report(report, save_path=args.output_report_dir)
+    my_report.save_report(report, save_path=global_state.user_data.output_report_dir)
     ################################
 
 

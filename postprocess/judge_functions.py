@@ -240,7 +240,7 @@ def llm_direction(global_state, args):
 
     knowledge_docs = global_state.user_data.knowledge_docs
 
-    my_visual = Visualization(global_state, args)
+    my_visual = Visualization(global_state)
     edges_dict = my_visual.convert_to_edges(full_graph)
     uncertain_edges = edges_dict['uncertain_edges']
     # bi_edges = edges_dict['bi_edges']

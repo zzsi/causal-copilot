@@ -578,8 +578,8 @@ if __name__ == "__main__":
             base_simulator = DataSimulator()
             graph, data = base_simulator.generate_dataset(
                 function_type='linear',
-                n_nodes=50,
-                n_samples=10000,
+                n_nodes=5,
+                n_samples=1000,
                 edge_probability=0.3,
                 noise_type='gaussian',
                 n_domains=2
@@ -590,9 +590,9 @@ if __name__ == "__main__":
             c_indx = df['domain_index'].values.reshape(-1, 1)
             
             # # PC Algorithm
-            pc_graph = pc(df_wo_domain)
+            pc_graph = pc(df.values)
+            print('PC graph: ', pc_graph.G.graph)
             pc_shd = SHD(array2cpdag(graph), pc_graph.G).get_shd()
-            print(pc_graph.G.graph)
 
             adj = AdjacencyConfusion(array2cpdag(graph), pc_graph.G)
             pc_precision = adj.get_adj_precision()
@@ -639,7 +639,13 @@ if __name__ == "__main__":
             lingam_recall = sklearn.metrics.recall_score(graph.flatten(), inferred_flat_lingam.flatten())
             lingam_f1 = sklearn.metrics.f1_score(graph.flatten(), inferred_flat_lingam.flatten())
             results['LiNGAM'].append((lingam_shd, lingam_precision, lingam_recall, lingam_f1))
-        
+
+            # 1. evluation difference between cpdag and dag
+            #    pc/ges/fci/cdnod: cpdag - cpdag
+            #    lingam/notears: dag - dag
+            # 2. cdnod (fisherz) -- pc (fisherz)
+            # 3. post-processing: pc/ges/fci/cdnod -> --? -> dag -> evaluation()
+            # 4. x-y-z => x->y<-z, keep it there
         return results
 
     # Use the base simulator to generate data

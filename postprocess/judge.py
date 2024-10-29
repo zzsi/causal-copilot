@@ -125,14 +125,13 @@ class Judge(object):
                 est_graph = global_state.results.raw_result.G
             elif global_state.algorithm.selected_algorithm == 'CDNOD':
                 est_graph = global_state.results.raw_result.G
-                # remove the domain index node
             elif global_state.algorithm.selected_algorithm == 'GES':
                 est_graph = global_state.results.raw_result['G']
             elif global_state.algorithm.selected_algorithm == 'FCI':
                 # TODO: improve for better handling edge o-o, o->, o-, currently ignore this part
                 est_graph = global_state.results.raw_result[0]
 
-            if global_state.statistics.domain_index != None:
+            if global_state.statistics.domain_index is not None:
                 est_graph.remove_node(list(est_graph.node_map.keys())[-1])
             ground_truth = array2cpdag(global_state.user_data.ground_truth.transpose(), 
                                        node_names=global_state.user_data.processed_data.columns)
@@ -141,7 +140,7 @@ class Judge(object):
             precision = adj.get_adj_precision()
             recall = adj.get_adj_recall()
         else:
-            if global_state.statistics.domain_index != None:
+            if global_state.statistics.domain_index is not None:
                 global_state.results.converted_graph = global_state.results.converted_graph[:-1, :-1]
             ground_truth_flat = global_state.user_data.ground_truth.flatten()  
             est_graph_flat = global_state.results.converted_graph.flatten()
