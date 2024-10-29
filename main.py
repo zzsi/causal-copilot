@@ -24,7 +24,24 @@ def parse_args():
         '--data-file',
         type=str,
         default="data/simulation/simulated_data/20241025_225531_Linear-Gaussian_id_0_nodes5_samples2500",
+        default="dataset/DWD",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
+    )
+
+    # Output file for results
+    parser.add_argument(
+        '--output-report-dir',
+        type=str,
+        default='dataset/DWD/output_report',
+        help='Directory to save the output report'
+    )
+
+    # Output directory for graphs
+    parser.add_argument(
+        '--output-graph-dir',
+        type=str,
+        default='dataset/DWD/output_graph',
+        help='Directory to save the output graph'
     )
 
     # OpenAI Settings
@@ -59,7 +76,7 @@ def parse_args():
     parser.add_argument(
         '--data_mode',
         type=str,
-        default="simulated",
+        default="real",
         help='Data mode: real or simulated'
     )
 
@@ -80,7 +97,7 @@ def parse_args():
     parser.add_argument(
         '--parallel',
         type=bool,
-        default=True,
+        default=False,
         help='Parallel computing for bootstrapping.'
     )
 
@@ -152,11 +169,11 @@ def main(args):
     my_visual = Visualization(global_state)
     # Plot True Graph
     if global_state.user_data.ground_truth is not None:
-        pos_true = my_visual.plot_pdag(global_state.user_data.ground_truth, 'true_graph.png')
+        pos_true = my_visual.plot_pdag(global_state.user_data.ground_truth, 'true_graph.pdf')
     # Plot Initial Graph
-    pos_raw = my_visual.plot_pdag(global_state.results.raw_result, 'initial_graph.png', pos_true)
+    pos_raw = my_visual.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf')
     # Plot Revised Graph
-    pos_new = my_visual.plot_pdag(global_state.results.revised_graph, 'revised_graph.png', pos_true)
+    pos_new = my_visual.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf')
     # Plot Bootstrap Heatmap
     boot_heatmap_path = my_visual.boot_heatmap_plot()
 

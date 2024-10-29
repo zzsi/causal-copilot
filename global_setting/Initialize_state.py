@@ -17,11 +17,11 @@ def load_data(global_state: GlobalState, args: argparse.Namespace):
         simulation_manager = SimulationManager(args)
         config, data, graph = simulation_manager.generate_dataset()
     elif args.simulation_mode == "offline":
-        if args.data_mode == "simulated":
+        if args.data_mode in ["simulated", "real"]:
             config, data, graph = load_local_data(args.data_file)
-        elif args.data_mode == "real":
-            data = pd.read_csv(args.data_file)
-            graph = None
+        # elif args.data_mode == "real":
+        #     data = pd.read_csv(args.data_file)
+        #     graph = None
         else:
             raise ValueError("Invalid data mode. Please choose 'real' or 'simulated'.")
     else:
