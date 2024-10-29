@@ -32,30 +32,18 @@ def generate_datasets():
             "noise_type": "gaussian",
             "heterogeneous": True
         },
-        # {
-        #     "name": "Non-Linear-Gaussian",
-        #     "function_type": "polynomial",
-        #     "noise_type": "gaussian",
-        #     "heterogeneous": False
-        # },
-        # {
-        #     "name": "Non-Linear-Non-gaussian",
-        #     "function_type": "polynomial",
-        #     "noise_type": "uniform",
-        #     "heterogeneous": False
-        # },
-        # {
-        #     "name": "Heterogenous-Non-Linear-Gaussian",
-        #     "function_type": "polynomial",
-        #     "noise_type": "gaussian",
-        #     "heterogeneous": True
-        # },
-        # {
-        #     "name": "Heterogenous-Non-Linear-Non-Gaussian",
-        #     "function_type": "polynomial",
-        #     "noise_type": "uniform",
-        #     "heterogeneous": True
-        # }
+        {
+            "name": "Non-Linear-Gaussian",
+            "function_type": "mlp",
+            "noise_type": "gaussian",
+            "heterogeneous": False
+        },
+        {
+            "name": "Heterogenous-Non-Linear-Gaussian",
+            "function_type": "mlp",
+            "noise_type": "gaussian",
+            "heterogeneous": True
+        },
     ]
 
     output_dir = os.path.join(os.getcwd(), "simulated_data")

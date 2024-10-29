@@ -178,6 +178,8 @@ def main(args):
     my_report.save_report(report, save_path=global_state.user_data.output_report_dir)
     ################################
 
+    return report, global_state
+
 
 
 if __name__ == '__main__':

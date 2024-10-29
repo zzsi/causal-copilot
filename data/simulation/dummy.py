@@ -283,7 +283,7 @@ class DataSimulator:
             self.graph_dict = {i: f'X{i+1}' for i in range(n_nodes)}
         self.ground_truth['graph'] = self.graph_dict
 
-    def generate_domain_data(self, n_samples: int, noise_scale: float, noise_type: str, function_type: Union[str, List[str], Dict[str, str]]) -> pd.DataFrame:
+    def generate_single_domain_data(self, n_samples: int, noise_scale: float, noise_type: str, function_type: Union[str, List[str], Dict[str, str]]) -> pd.DataFrame:
         """Generate data for a single domain based on the graph structure."""
         # assert if function_type, noise_type, noise_scale are valid
         print(f"function_type: {function_type}, noise_type: {noise_type}, noise_scale: {noise_scale}")
@@ -301,6 +301,34 @@ class DataSimulator:
         
         data_df = pd.DataFrame(data, columns=self.variable_names)
         return data_df
+    
+    def generate_multi_domain_data(self, n_samples: int, noise_scale: float, noise_type: str, function_type: Union[str, List[str], Dict[str, str]]) -> pd.DataFrame:
+        """Generate data for a single domain based on the graph structure."""
+        # assert if function_type, noise_type, noise_scale are valid
+        print(f"function_type: {function_type}, noise_type: {noise_type}, noise_scale: {noise_scale}")
+        assert isinstance(function_type, str) and function_type in ['linear', 'mlp', 'mim', 'gp', 'gp-add']
+        assert noise_type in ['gaussian', 'exponential', 'gumbel', 'uniform', 'logistic', 'poisson']
+        # if function_type is not linear, then the noise_type must be gaussian
+        if function_type != 'linear':
+            print(f"When function_type is not linear, noise_type is set to gaussian")
+        assert isinstance(noise_scale, float) and noise_scale > 0
+
+        C = np.random.uniform(0, 1, (self.graph.shape[0], self.n_domains))
+        if function_type == 'linear':
+            data = []
+            W = simulate_parameter(self.graph)
+            for i in range(self.n_domains):
+                print(simulate_linear_sem(W, n_samples, noise_type, noise_scale).shape, C[:, i].shape)
+                data.extend(simulate_linear_sem(W, n_samples, noise_type, noise_scale) + C[:, i])
+        else:
+            data = []
+            for i in range(self.n_domains):
+                data.extend(simulate_nonlinear_sem(self.graph, n_samples, function_type, noise_scale) + C[:, i])
+        
+        data_df = pd.DataFrame(data, columns=self.variable_names)
+        data_df['domain_index'] = np.repeat(range(self.n_domains), n_samples)
+        return data_df
+
 
     def generate_data(self, n_samples: int, noise_scale: float = 1.0, 
                       noise_type: str = 'gaussian', 
@@ -312,14 +340,15 @@ class DataSimulator:
 
         domain_data = []
         domain_size = n_samples // n_domains
-        
-        for domain in range(n_domains):
-            domain_df = self.generate_domain_data(domain_size, noise_scale, noise_type, function_type)
-            if n_domains > 1:
-                domain_df['domain_index'] = domain + 1
-            domain_data.append(domain_df)
 
-        self.data = pd.concat(domain_data, ignore_index=True).reset_index(drop=True)
+        self.n_domains = n_domains
+
+        if n_domains == 1:
+            domain_df = self.generate_single_domain_data(domain_size, noise_scale, noise_type, function_type)
+        else:
+            domain_df = self.generate_multi_domain_data(domain_size, noise_scale, noise_type, function_type)
+    
+        self.data = domain_df
         # shuffle the self.data
         self.data = self.data.sample(frac=1).reset_index(drop=True)
         if variable_names is not None:
@@ -577,9 +606,9 @@ if __name__ == "__main__":
         for _ in range(1):
             base_simulator = DataSimulator()
             graph, data = base_simulator.generate_dataset(
-                function_type='linear',
+                function_type='mlp',
                 n_nodes=5,
-                n_samples=1000,
+                n_samples=10000,
                 edge_probability=0.3,
                 noise_type='gaussian',
                 n_domains=2
@@ -590,8 +619,7 @@ if __name__ == "__main__":
             c_indx = df['domain_index'].values.reshape(-1, 1)
             
             # # PC Algorithm
-            pc_graph = pc(df.values)
-            print('PC graph: ', pc_graph.G.graph)
+            pc_graph = pc(df_wo_domain)
             pc_shd = SHD(array2cpdag(graph), pc_graph.G).get_shd()
 
             adj = AdjacencyConfusion(array2cpdag(graph), pc_graph.G)

@@ -135,6 +135,7 @@ dmypy.json
 # data/simulation/dummy
 data/simulation/simulated_data
 simulated_data
+gradio_output/
 output/
 test.py
 demo.py
