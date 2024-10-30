@@ -57,30 +57,31 @@ class Judge(object):
         print("Bootstrap Probability: ", boot_probability)
 
         # LLM perspective: errors based on domain knowledge from GPT-4
-        if len(knowledge_docs) == 0 or "no knowledge" in knowledge_docs[0].lower():
-            conversation, errors_llm = {}, {}
-            print("No Errors are found by LLM, due to No Knowledge")
-        else:
-            conversation, errors_llm = llm_evaluation(data=data, full_graph=full_graph, args=self.args, knowledge_docs=knowledge_docs)
-            print("Errors from LLMs: ", errors_llm)
+        conversation, errors_llm = {}, {}
+        # if len(knowledge_docs) == 0 or "no knowledge" in knowledge_docs[0].lower():
+        #     conversation, errors_llm = {}, {}
+        #     print("No Errors are found by LLM, due to No Knowledge")
+        # else:
+        #     conversation, errors_llm = llm_evaluation(data=data, full_graph=full_graph, args=self.args, knowledge_docs=knowledge_docs)
+        #     print("Errors from LLMs: ", errors_llm)
 
         # Combine error obtained from both statistics and LLM perspectives
-        errors = {**errors_stat, **errors_llm}
-
-        # Revise causal graph based on errors
-        revised_graph = full_graph
-
-        for key in errors.keys():
-            # i -> j
-            split_key = key.split("->")
-            i = data.columns.get_loc(split_key[0])
-            j = data.columns.get_loc(split_key[1])
-
-            if errors[key] == "Forced":
-                revised_graph[j, i] = 1
-
-            if errors[key] == "Forbidden":
-                revised_graph[j, i] = 0
+        # errors = {}
+        #
+        # # Revise causal graph based on errors
+        # revised_graph = full_graph
+        #
+        # for key in errors.keys():
+        #     # i -> j
+        #     split_key = key.split("->")
+        #     i = data.columns.get_loc(split_key[0])
+        #     j = data.columns.get_loc(split_key[1])
+        #
+        #     if errors[key] == "Forced":
+        #         revised_graph[j, i] = 1
+        #
+        #     if errors[key] == "Forbidden":
+        #         revised_graph[j, i] = 0
 
         ###### New Version Revision ######
         from postprocess.judge_functions import llm_direction
@@ -98,7 +99,7 @@ class Judge(object):
          global_state.results.revised_graph,
          global_state.results.llm_directions) = self.quality_judge(
         data=global_state.user_data.processed_data,
-        full_graph=global_state.results.converted_graph,
+        full_graph=global_state.results,
         algorithm=global_state.algorithm.selected_algorithm,
         hyperparameters=global_state.algorithm.algorithm_arguments,
         knowledge_docs=global_state.user_data.knowledge_docs,
