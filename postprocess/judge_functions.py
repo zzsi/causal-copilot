@@ -256,7 +256,7 @@ def llm_direction(global_state, args, voting=10):
     For each tuple, please determine the causal relationship between the two entities, indicating which entity causes the other. 
     1. Use each tuple as the key of JSON, for example, if the tuple is ('Raf', 'Mek'), then use ('Raf', 'Mek') as a key
     1. If the first entity causes the second, the value is 'A'. If the second entity causes the first, the value should be 'B'. If cannot decide, the value is 'C'. The order is very important
-    2. The direction can only be 'A' or 'B' or 'C', do not reply other things
+    2. The direction can only be 'A' or 'B' or 'C', do not reply other things 
     Here is the list of tuples: {uncertain_edges}
     Return me a json following the template below. Do not include anything else.
     JSON format:

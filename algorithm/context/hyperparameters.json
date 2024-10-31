@@ -182,9 +182,9 @@
       "meaning": "Maximum depth for fast adjacency search",
       "suggested_values": {
         "default": -1,
-        "small_graph": 3,
+        "small_graph": 7,
         "medium_graph": 5,
-        "large_graph": 7
+        "large_graph": 3
       },
       "reasoning": "Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 5-7) can significantly speed up the algorithm at the cost of some accuracy."
     },
