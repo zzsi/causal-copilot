@@ -358,7 +358,7 @@ def graph_effect_prompts (data, graph, boot_probability):
 
     return graph_prompt
 
-def llm_direction(global_state, args, voting=10):
+def llm_direction(global_state, args, voting=10, threshold=0.7):
     '''
     :param data: Given Tabular Data in Pandas DataFrame format
     :param full_graph: An adjacent matrix in Numpy Ndarray format -
@@ -455,7 +455,7 @@ def llm_direction(global_state, args, voting=10):
     
     prob_mat /= voting
     print(prob_mat)
-    revise_indice = np.where(prob_mat>0.5)
+    revise_indice = np.where(prob_mat>threshold)
     edges_list = []
     for i, j in zip(revise_indice[0], revise_indice[1]):
         revised_graph[i, j] = 1

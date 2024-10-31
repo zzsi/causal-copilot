@@ -211,7 +211,7 @@ class Report_generation(object):
                 ind2 = variables.str.lower().get_loc(tuple[1].lower())
                 zero_matrix[ind2, ind1] = 1
         my_visual = Visualization(self.global_state)
-        pos_potential = my_visual.plot_pdag(zero_matrix, 'potential_relation.png', relation=True)
+        pos_potential = my_visual.plot_pdag(zero_matrix, 'potential_relation.pdf', relation=True)
         return section1, section2, zero_matrix
 
     def data_prop_prompt(self):
@@ -433,11 +433,65 @@ class Report_generation(object):
     
         return prompts + '\end{itemize}'
     
-    def confidence_analysis_prompts(self):
+    def confidence_graph_prompts(self):
+        name_map = {'certain_edges': 'Directed Edge', #(->)
+                    'uncertain_edges': 'Undirected Edge', #(-)
+                    'bi_edges': 'Bi-Directed Edge', #(<->)
+                    'half_edges': 'Non-Ancestor Edge', #(o->)
+                    'non_edges': 'No D-Seperation Edge', #(o-o)
+                    'non_existence':'No Edge'}
+        graph_prompt = """
+        \begin{figure}[H]
+            \centering
 
+        """
+        bootstrap_dict = {k: v for k, v in self.bootstrap_probability.items() if v is not None and sum(v.flatten())>0}
+        length = round(1/len(bootstrap_dict), 2)-0.04
+        for key in bootstrap_dict.keys():
+            graph_path = f'{self.visual_dir}/{key}_confidence_heatmap.jpg'
+            caption = f'{name_map[key]} Edge'
+            graph_prompt += f"""
+            \begin{{subfigure}}{{{length}\textwidth}}
+                    \centering
+                    \vspace{{-0.5cm}}
+                    \includegraphics[width=\linewidth]{graph_path}
+                    \vfill
+                    \caption{caption}
+                \end{{subfigure}}"""
+        
+        graph_prompt += """
+        \caption{Confidence Heatmap of Different Edges}
+        \end{figure}        
+        """
+
+        if self.algo in ['PC','GES','CDNOD']:
+            graph_text = """
+            The above heatmaps show the confidence probability we have on different kinds of edges, including directed edge ($->$),
+            undirected edge ($-$), edge with hidden confounders ($<->$), and probability of no edge.
+                            
+            """
+        elif self.algo == 'FCI':
+            graph_text = """
+            The above heatmaps show the confidence probability we have on different kinds of edges, including directed edge ($->$),
+            undirected edge ($-$), edge with hidden confounders ($<->$), edge of non-ancestor ($o->$), egde of no D-Seperation set ($o-o$), and probability of no edge.
+                            
+            """
+        else: 
+            graph_text = """
+            The above heatmaps show the confidence probability we have on directed edge ($->$), and and probability of no edge.
+            
+            """
+
+        graph_prompt += graph_text
+        graph_prompt += """Based on the confidence probability heatmap and background knowledge, we can analyze the reliability of our graph."""
+        
+        return graph_prompt
+        
+
+    def confidence_analysis_prompts(self):
         relation_prob = graph_effect_prompts(self.data,
                                              self.graph,
-                                             self.bootstrap_probability)
+                                             self.bootstrap_probability['certain_edges'])
 
         variables = '\t'.join(self.data.columns)
         prompt = f"""
@@ -584,19 +638,23 @@ class Report_generation(object):
             self.reliability_prompt = self.confidence_analysis_prompts()
             self.abstract = self.abstract_prompt()
             self.keywords = self.keyword_prompt()
+            # EDA Graph paths
+            dist_graph_path = self.eda_result['plot_path_dist']
+            corr_graph_path = self.eda_result['plot_path_corr']
             # Graph paths
             graph_path0 = f'{self.visual_dir}/true_graph.pdf'
             graph_path1 = f'{self.visual_dir}/initial_graph.pdf'
             graph_path2 = f'{self.visual_dir}/revised_graph.pdf'
             graph_path3 = f'{self.visual_dir}/metrics.jpg'
-            graph_path4 = f'{self.visual_dir}/confidence_heatmap.jpg'
+            #graph_path4 = f'{self.visual_dir}/confidence_heatmap.jpg'
+            confidence_graph = self.confidence_graph_prompts()
             graph_relation_path = f'{self.visual_dir}/potential_relation.pdf'
-            # EDA Graph paths
-            dist_graph_path = self.eda_result['plot_path_dist']
-            corr_graph_path = self.eda_result['plot_path_corr']
-
+            
             if self.data_mode == 'simulated':
-                prompt_template = self.load_context("postprocess/context/template_simulated.tex")
+                if self.global_state.user_data.ground_truth is not None:
+                    prompt_template = self.load_context("postprocess/context/template_simulated.tex")
+                else:
+                    prompt_template = self.load_context("postprocess/context/template_simulated_notruth.tex")
             else:
                 if self.global_state.user_data.ground_truth is not None:
                     prompt_template = self.load_context("postprocess/context/template_real.tex")
@@ -624,7 +682,7 @@ class Report_generation(object):
                 "[RESULT_GRAPH1]": graph_path1,
                 "[RESULT_GRAPH2]": graph_path2,
                 "[RESULT_GRAPH3]": graph_path3,
-                "[RESULT_GRAPH4]": graph_path4,
+                "[CONFIDENCE_GRAPH]": confidence_graph,
                 "[RESULT_METRICS1]": str(self.original_metrics),
                 "[RESULT_METRICS2]": str(self.revised_metrics)
             }
@@ -660,15 +718,11 @@ class Report_generation(object):
     def save_report(self, report, save_path):
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-        with open(f'{save_path}/report.txt', 'w') as file:
+        with open(f'{save_path}/report.txt', 'w', encoding='utf-8') as file:
             # Write some text to the file
             file.write(report)
-        with open(f'{save_path}/report.tex', 'w') as file:
+        with open(f'{save_path}/report.tex', 'w', encoding='utf-8') as file:
             file.write(report)
 
         # Compile the .tex file to PDF using pdflatex
         compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
-
-if __name__ == "__main__":
-    # Test compiling
-    compile_tex_to_pdf_with_refs("/Users/charon/学习/PhD projects/Causality-Copilot/output/20241025_225531_Linear-Gaussian_id_0_nodes5_samples2500/20241028_173140/output_report/report.tex", "output")
