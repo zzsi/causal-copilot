@@ -3,8 +3,8 @@
 \usepackage{postprocess/context/arxiv}
 
 \usepackage[utf8]{inputenc} % allow utf-8 input
-\usepackage{unicode-math}
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{unicode-math}
 \usepackage{hyperref}       % hyperlinks
 \usepackage{url}            % simple URL typesetting
 \usepackage{booktabs}       % professional-quality tables
@@ -17,8 +17,6 @@
 \usepackage{doi}
 \usepackage{float}
 \usepackage{subcaption}
-\usepackage{wrapfig}
-
 
 
 \title{[TITLE]}
@@ -33,7 +31,7 @@
 \hypersetup{
 pdftitle={[TITLE]},
 pdfauthor={Causal Copilot},
-pdfkeywords={Causal Discovery, Large Language Model, [ALGO], [DATASET]},
+pdfkeywords={Causal Discovery, Large Language Model, [ALGO]},
 }
 
 \begin{document}
@@ -43,32 +41,11 @@ pdfkeywords={Causal Discovery, Large Language Model, [ALGO], [DATASET]},
 [ABSTRACT]
 \end{abstract}
 
-\keywords{Causal Discovery, Large Language Model, [ALGO], [DATASET]}
+\keywords{Causal Discovery, Large Language Model, [ALGO]}
 
 \raggedbottom
 \section{Introduction}
 [INTRO_INFO]
-
-\section{Background Knowledge}
-\subsection{Detailed Explanation about the Variables}
-[BACKGROUND_INFO1]
-
-\subsection{Possible Causal Relations among these Variables}
-
-\begin{minipage}[t]{0.7\linewidth}
-    [BACKGROUND_INFO2]
-\vfill
-\end{minipage}
-\hspace{0.05\textwidth}
-\begin{minipage}[t]{0.3\linewidth}
-    \begin{figure}[H]
-        \centering
-        \vspace{-0.5cm}
-        \resizebox{\linewidth}{!}{\includegraphics[height=0.4\textheight]{[POTENTIAL_GRAPH]}}
-        \caption{\label{fig:relation}Possible Causal Relation Graph}
-    \end{figure}
-\end{minipage}
-
 
 \section{Dataset Descriptions and EDA}
 The following is a preview of our original dataset.
@@ -152,8 +129,7 @@ and the black line represents the median. Variables are categorized into three t
     \label{fig:main}
 \end{figure}
 
-The above are result graphs produced by our algorithm.
-The initial graph is the graph in the first attempt, and the revised graph is the one pruned with LLM suggestion.
+The above are the initial graph and the revised graph produced by our algorithm.
 
 [RESULT_ANALYSIS]
 

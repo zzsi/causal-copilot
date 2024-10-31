@@ -51,9 +51,9 @@ class Judge(object):
         from postprocess.judge_functions import bootstrap, llm_evaluation
 
         # Statistics Perspective: Bootstrapping to get probability of edges using the selected algorithm.
-        errors_stat, boot_probability = bootstrap(data=data, full_graph=full_graph, algorithm=algorithm, hyperparameters=hyperparameters,
+        edge_recom, boot_probability = bootstrap(data=data, full_graph=full_graph, algorithm=algorithm, hyperparameters=hyperparameters,
                                                   boot_num=boot_num, ts=False, parallel=self.args.parallel)
-        print("Errors from Bootstrap method: ", errors_stat)
+        print("Edge Recommendations from Bootstrap method: ", edge_recom)
         print("Bootstrap Probability: ", boot_probability)
 
         # LLM perspective: errors based on domain knowledge from GPT-4
@@ -88,7 +88,7 @@ class Judge(object):
         print('LLM Direction Decision')
         llm_directions, revised_graph = llm_direction(self.global_state, self.args)
 
-        return conversation, errors_llm, errors_stat, boot_probability, revised_graph, llm_directions
+        return conversation, errors_llm, edge_recom, boot_probability, revised_graph, llm_directions
 
 
     def forward(self, global_state):
