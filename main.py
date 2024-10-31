@@ -7,7 +7,7 @@ from algorithm.program import Programming
 from algorithm.rerank import Reranker
 from postprocess.judge import Judge
 from postprocess.visualization import Visualization
-from postprocess.eda_generation import EDA
+from preprocess.eda_generation import EDA
 from postprocess.report_generation import Report_generation
 from global_setting.Initialize_state import global_state_initialization, load_data
 
@@ -134,6 +134,10 @@ def main(args):
     print("Statistics Info: ", global_state.statistics.description)
     print("Knowledge Info: ", global_state.user_data.knowledge_docs)
 
+    #############EDA###################
+    my_eda = EDA(global_state)
+    my_eda.generate_eda()
+
     # Algorithm selection and deliberation
     filter = Filter(args)
     global_state = filter.forward(global_state)
@@ -143,6 +147,13 @@ def main(args):
 
     programmer = Programming(args)
     global_state = programmer.forward(global_state)
+    #############Visualization for Initial Graph###################
+    my_visual_initial = Visualization(global_state)
+    # Plot True Graph
+    if global_state.user_data.ground_truth is not None:
+        pos_true = my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.pdf')
+    # Plot Initial Graph
+    pos_raw = my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf')
 
     judge = Judge(global_state, args)
     if global_state.user_data.ground_truth is not None:
@@ -161,23 +172,13 @@ def main(args):
         print("Mat Ground Truth: ", global_state.user_data.ground_truth)
         global_state.results.revised_metrics = judge.evaluation(global_state)
         print(global_state.results.revised_metrics)
-
-    #############EDA###################
-    my_eda = EDA(global_state)
-    my_eda.generate_eda()
-    #############Visualization###################
-    my_visual = Visualization(global_state)
-    # Plot True Graph
-    if global_state.user_data.ground_truth is not None:
-        pos_true = my_visual.plot_pdag(global_state.user_data.ground_truth, 'true_graph.pdf')
-    # Plot Initial Graph
-    pos_raw = my_visual.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf')
-    # Plot Revised Graph
-    pos_new = my_visual.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf')
-    # Plot Bootstrap Heatmap
-    boot_heatmap_path = my_visual.boot_heatmap_plot()
-
     ################################
+    #############Visualization for Revised Graph###################
+    # Plot Revised Graph
+    my_visual_revise = Visualization(global_state)
+    pos_new = my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf')
+    # Plot Bootstrap Heatmap
+    boot_heatmap_path = my_visual_revise.boot_heatmap_plot()
 
     # algorithm selection process
     '''

@@ -54,6 +54,7 @@ class Visualization(object):
             adj_matrix = g.graph
         except:
             adj_matrix = g.G.graph
+        print('adj_matrix:', adj_matrix)
 
         variables = self.data.columns
         labels = {i: variables[i] for i in range(len(variables))}
@@ -107,14 +108,14 @@ class Visualization(object):
         }
         return edges_dict
 
-    def process_boot_mat(self, boot_prob_mat: np.array, full_graph: np.array):
-        # causal graph using the full dataset - Matrix[i,j] = 1 indicates j->i
-        boot_prob_mat = boot_prob_mat.T
-        np.fill_diagonal(boot_prob_mat, 0)
-        # Get the probability dictionary
-        boot_dict = {index: value for index, value in np.ndenumerate(boot_prob_mat)}
+    # def process_boot_mat(self, boot_prob_mat: np.array, full_graph: np.array):
+    #     # causal graph using the full dataset - Matrix[i,j] = 1 indicates j->i
+    #     boot_prob_mat = boot_prob_mat.T
+    #     np.fill_diagonal(boot_prob_mat, 0)
+    #     # Get the probability dictionary
+    #     boot_dict = {index: value for index, value in np.ndenumerate(boot_prob_mat)}
 
-        return boot_dict
+    #     return boot_dict
 
     def plot_pdag(self, g, save_path, pos=None, relation=False):
         algo = self.global_state.algorithm.selected_algorithm
@@ -170,16 +171,28 @@ class Visualization(object):
             return None
 
     def boot_heatmap_plot(self):
-        # Create a heatmap
-        plt.figure(figsize=(8, 6))
-        plt.rcParams['font.family'] = 'Times New Roman'
-        sns.heatmap(self.bootstrap_prob, annot=True, cmap='Reds', fmt=".2f", square=True, cbar_kws={"shrink": .8},
-                    xticklabels=self.data.columns,
-                    yticklabels=self.data.columns)
-        plt.title('Confidence Heatmap', fontsize=16, fontweight='bold')
-        # Save the plot
-        save_path_conf = os.path.join(self.save_dir, 'confidence_heatmap.jpg')
-        plt.savefig(fname=save_path_conf, dpi=1000)
+        
+        boot_prob_dict = {k: v for k, v in self.bootstrap_prob.items() if v is not None and sum(v.flatten())>0}
+        name_map = {'certain_edges': 'Directed Edge', #(->)
+                    'uncertain_edges': 'Undirected Edge', #(-)
+                    'bi_edges': 'Bi-Directed Edge', #(<->)
+                    'half_edges': 'Non-Ancestor Edge', #(o->)
+                    'non_edges': 'No D-Seperation Edge', #(o-o)
+                    'non_existence':'No Edge'}
+        
+        for key in boot_prob_dict.keys():
+            prob_mat = boot_prob_dict[key]
+            name = name_map[key]
+            # Create a heatmap
+            plt.figure(figsize=(8, 6))
+            plt.rcParams['font.family'] = 'Times New Roman'
+            sns.heatmap(prob_mat, annot=True, cmap='Reds', fmt=".2f", square=True, cbar_kws={"shrink": .8},
+                        xticklabels=self.data.columns,
+                        yticklabels=self.data.columns)            
+            plt.title(f'Confidence Heatmap for {name}', fontsize=14, fontweight='bold')
+            # Save the plot
+            save_path_conf = os.path.join(self.save_dir, f'{key}_confidence_heatmap.jpg')
+            plt.savefig(fname=save_path_conf, dpi=1000)
 
         return save_path_conf
 

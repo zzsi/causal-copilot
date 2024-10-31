@@ -3,6 +3,7 @@
 \usepackage{postprocess/context/arxiv}
 
 \usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage{amsmath}
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
 \usepackage{hyperref}       % hyperlinks
 \usepackage{url}            % simple URL typesetting
@@ -16,6 +17,7 @@
 % \usepackage{doi}
 \usepackage{float}
 \usepackage{subcaption}
+\usepackage{wrapfig}
 
 
 \title{[TITLE]}
@@ -53,7 +55,7 @@ pdfkeywords={Causal Discovery, Large Language Model, [ALGO], [DATASET]},
 \subsection{Possible Causal Relations among these Variables}
 
 \begin{minipage}[t]{0.7\linewidth}
-    [BACKGROUND_INFO2]
+[BACKGROUND_INFO2]
 \vfill
 \end{minipage}
 \hspace{0.05\textwidth}
@@ -165,15 +167,7 @@ The initial graph is the graph in the first attempt, and the revised graph is th
 
 \subsection{Graph Reliability Analysis}
 
-\begin{figure}[H]
-        \centering
-        \vspace{-0.5cm}
-        \includegraphics[width=0.8\linewidth]{[RESULT_GRAPH4]}
-        \caption{Reliability Graph}
-        \label{fig:sub3}
-\end{figure}
-
-Based on the confidence probability heatmap and background knowledge, we can analyze the reliability of our graph.
+[CONFIDENCE_GRAPH]
 
 [RELIABILITY_ANALYSIS]
 
