@@ -52,8 +52,10 @@ def process_query(user_query,args):
 
     chat_history.append({"role": "user", "content": user_query})
 
+    time.sleep(2)
+
     assistant_reply = "We are processing ..."
-    chat_history.append({"role": f"assistant", "content": assistant_reply})
+    chat_history.append({"role": "assistant", "content": assistant_reply})
     yield chat_history
 
     # Initialize Global States
@@ -66,6 +68,10 @@ def process_query(user_query,args):
     global_state.user_data.raw_data = pd.read_csv(os.path.join('./uploaded_data', uploaded_file_name))
 
     # Statistics Information Collection
+    # Mimic User Query
+    chat_history.append({"role": "user", "content": 'Please summarize statistical properties of the dataset.'})
+    yield chat_history
+
     global_state = stat_info_collection(global_state)
     global_state = knowledge_info(args, global_state)
 
@@ -73,22 +79,30 @@ def process_query(user_query,args):
     global_state.statistics.description = convert_stat_info_to_text(global_state.statistics)
 
     # Show intermediate results
-    chat_history.append({"role": f"assistant", "content": global_state.statistics.description})
+    chat_history.append({"role": "assistant", "content": global_state.statistics.description})
     yield chat_history
 
-    chat_history.append({"role": f"assistant", "content": str(global_state.user_data.knowledge_docs)})
+    # Mimic User Query
+    chat_history.append({"role": "user", "content": 'Please describe some background knowledge you have about this dataset.'})
+    yield chat_history
+
+    chat_history.append({"role": "assistant", "content": str(global_state.user_data.knowledge_docs)})
     yield chat_history
 
     ############ EDA ######################################
+    # Mimic User Query
+    chat_history.append(
+        {"role": "user", "content": 'Please show me some visualization results about your exploratory data analysis.'})
+    yield chat_history
 
     my_eda = EDA(global_state)
     my_eda.generate_eda()
 
 
-    chat_history.append({"role": f"assistant", "content": f'{global_state.user_data.output_graph_dir}/eda_corr.jpg'})
+    chat_history.append({"role": "assistant", "content": f'{global_state.user_data.output_graph_dir}/eda_corr.jpg'})
     yield chat_history
 
-    chat_history.append({"role": f"assistant", "content": f'{global_state.user_data.output_graph_dir}/eda_dist.jpg'})
+    chat_history.append({"role": "assistant", "content": f'{global_state.user_data.output_graph_dir}/eda_dist.jpg'})
     yield chat_history
 
     ############ Algorithm Selection ######################################
@@ -103,38 +117,48 @@ def process_query(user_query,args):
     sys.stdout = mystdout
 
     try:
+        chat_history.append(
+            {"role": "user", "content": 'Please show me how you select the algorithm for causal discovery.'})
+        yield chat_history
+
         reranker = Reranker(args)
         global_state = reranker.forward(global_state)
 
         programmer = Programming(args)
         global_state = programmer.forward(global_state)
-
-        judge = Judge(global_state, args)
-        global_state = judge.forward(global_state)
     finally:
         sys.stdout = old_stdout
 
     output = mystdout.getvalue()
-    chat_history.append({"role": f"assistant", "content": output})
+    chat_history.append({"role": "assistant", "content": output})
     yield chat_history
 
-
-    # #############Visualization for Initial Graph###################
-    print(os.getcwd())
-    my_visual_initial = Visualization(global_state)
-
-    assistant_reply = "We are processing ..."
-    chat_history.append({"role": f"assistant", "content": assistant_reply})
-    yield chat_history
+    judge = Judge(global_state, args)
+    global_state = judge.forward(global_state)
 
 
-    # #############Visualization for Revised Graph###################
-    my_visual_revise = Visualization(global_state)
+    # # #############Visualization for Initial Graph###################
+    #
+    # chat_history.append(
+    #     {"role": "user", "content": 'Please show me the causal graph and related results you get.'})
+    # yield chat_history
+    #
+    # chat_history.append({"role": "assistant", "content": "We are processing ..."})
+    # yield chat_history
+    #
+    # my_visual_initial = Visualization(global_state)
 
-    #############Report Generation###################
-    my_report = Report_generation(global_state, args)
-    report = my_report.generation()
-    my_report.save_report(report, save_path=global_state.user_data.output_report_dir)
+
+    # # #############Visualization for Revised Graph###################
+    # chat_history.append({"role": "assistant", "content": "We are generating the your report ..."})
+    # yield chat_history
+    #
+    # my_visual_revise = Visualization(global_state)
+    #
+    # #############Report Generation###################
+    # my_report = Report_generation(global_state, args)
+    # report = my_report.generation()
+    # my_report.save_report(report, save_path=global_state.user_data.output_report_dir)
 
 
 if __name__ == "__main__":
