@@ -148,8 +148,8 @@ class Reranker(object):
             selected_algo = ''
             print("Keys in algo2des_cond_hyper:", algo2des_cond_hyper.keys())
             while selected_algo not in algo2des_cond_hyper:
-                print("The used prompt for rerank is: -------------------------------------------------------------------------")
-                print(prompt)
+                #print("The used prompt for rerank is: -------------------------------------------------------------------------")
+                #print(prompt)
                 response = client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
@@ -201,7 +201,7 @@ class Reranker(object):
                 hp_prompt = hp_prompt + kci_prompt
 
             # Get hyperparameter suggestions from GPT-4
-            print("Hyperparameter Prompt: ", hp_prompt)
+            #print("Hyperparameter Prompt: ", hp_prompt)
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[

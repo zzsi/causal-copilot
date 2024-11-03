@@ -2,14 +2,13 @@ from openai import OpenAI
 import os
 import re
 import numpy as np 
-import shutil
-import argparse
 from plumbum.cmd import latexmk
 from plumbum import local
 import networkx as nx
-from pylatex import Document
 from postprocess.visualization import Visualization
 from postprocess.judge_functions import graph_effect_prompts
+import PyPDF2
+import ast
 
 def compile_tex_to_pdf_with_refs(tex_file, output_dir=None, clean=True):
     """
@@ -108,6 +107,7 @@ class Report_generation(object):
         prompt = f"""
         I want to conduct a causal discovery on a dataset and write a report. There are some background knowledge about this dataset.
         Please write a brief introduction paragraph. I only need the paragraph, don't include any title.
+        Do not include any Greek Letters
         
         Background about this dataset: {self.knowledge_docs}
         """
@@ -146,20 +146,26 @@ class Report_generation(object):
         )
         section1 = response_background.choices[0].message.content
 
+        col_names = '\t'.join(self.data.columns)
         prompt = f"""
-        I want to conduct a causal discovery on a dataset and write a report. There are some background knowledge about this dataset.
-        There are three sections:
-        ### 1. Detailed Explanation about the Variables
-        ### 2. Possible Causal Relations among These Variables
-        ### 3. Other Background Domain Knowledge that may be Helpful for Experts
-        Please give me text in the second section ### 2. Possible Causal Relations among These Variables
-        In this part, all relationships should be listed in this format: **A -> B**: explanation. 
-        For example: 
-        - **'Raf' -> 'Mek'**: Raf activates Mek through phosphorylation, initiating the MAPK signaling cascade.
-        I only need the text, do not include title
-        Background about this dataset: {self.knowledge_docs}
-        """
+I want to conduct a causal discovery on a dataset and write a report. There is some background knowledge about this dataset.
+There are three sections:
+### 1. Detailed Explanation about the Variables
+### 2. Possible Causal Relations among These Variables
+### 3. Other Background Domain Knowledge that may be Helpful for Experts
 
+Please give me text in the second section ### 2. Possible Causal Relations among These Variables:
+1. In this part, all relationships should be listed in this format: **A -> B**: explanation. 
+2. Only one variable can appear at each side of ->; for example, **A -> B** is ok but **A -> B/C** is wrong, and **A -> B and C** is also wrong.
+3. All variables should be among {col_names}, do not include relationships with other variables.
+4. Do not include any Greek Letters!
+
+For example: 
+- **'Raf' -> 'Mek'**: Raf activates Mek through phosphorylation, initiating the MAPK signaling cascade.
+
+I only need the text; do not include the title.
+Background about this dataset: {self.knowledge_docs}
+"""
         response_background = self.client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -177,7 +183,6 @@ class Report_generation(object):
         for match in matches:
             print('match: ', match)
             left_part = match[0]
-            #arrow = match[1]
             right_part = match[2]
 
             elements = [left_part]
@@ -189,8 +194,9 @@ class Report_generation(object):
                     elements.append(element)
             # Create pairs for the elements
             for i in range(len(elements) - 1):
-                if '/' in elements[i + 1]:
-                    targets = [t for t in elements[i + 1].split('/')]
+                # deal with case like 'Length and Diameter'->'Viscera Weight' or 'Length\Diameter'->'Viscera Weight'
+                if '/' in elements[i + 1] or 'and' in elements[i + 1]:
+                    targets = [t for t in elements[i + 1].split('/|and')]
                     for target in targets:
                         relations.append((elements[i], target))
                 else:
@@ -212,7 +218,49 @@ class Report_generation(object):
                 zero_matrix[ind2, ind1] = 1
         my_visual = Visualization(self.global_state)
         pos_potential = my_visual.plot_pdag(zero_matrix, 'potential_relation.pdf', relation=True)
-        return section1, section2, zero_matrix
+        relation_path = f'{self.visual_dir}/potential_relation.pdf'
+
+        def get_pdf_page_size(pdf_path):
+            with open(pdf_path, 'rb') as file:
+                reader = PyPDF2.PdfReader(file)
+                page = reader.pages[0]
+                width = page.mediabox.width
+                height = page.mediabox.height
+                return height>width
+            
+        if sum(zero_matrix.flatten())!=0:
+            figure_tall =  get_pdf_page_size(relation_path)
+            if figure_tall:
+                relation_prompt = f"""
+                \begin{{minipage}}[t]{{0.7\linewidth}}
+                {section2}
+                \vfill
+                \end{{minipage}}
+                \hspace{{0.05\textwidth}}
+                \begin{{minipage}}[t]{{0.3\linewidth}}
+                    \begin{{figure}}[H]
+                        \centering
+                        \resizebox{{\linewidth}}{{!}}{{\includegraphics[height=0.4\textheight]{relation_path}}}
+                        \caption{{\label{{fig:relation}}Possible Causal Relation Graph}}
+                    \end{{figure}}
+                \end{{minipage}}
+                """
+            else:
+                relation_prompt = f"""
+                {section2}
+
+                \begin{{figure}}[H]
+                \centering
+                \includegraphics[width=0.7\linewidth]{relation_path}
+                \caption{{\label{{fig:relation}}Possible Causal Relation Graph}}
+                \end{{figure}}
+                """
+        else:
+            relation_prompt = f"""
+                {section2}
+                """
+        
+        return section1, relation_prompt
 
     def data_prop_prompt(self):
         n, m = self.data.shape
@@ -349,7 +397,6 @@ class Report_generation(object):
     def procedure_prompt(self):
         algo_list = self.algo_selection_prompt()
         param_list = self.param_selection_prompt()
-        llm_direction_reason = self.llm_direction_prompts()
 
         repsonse = f"""
         In this section, we provide a detailed description of the causal discovery process implemented by Causal Copilot. 
@@ -374,18 +421,19 @@ class Report_generation(object):
 
         if self.args.data_mode == 'real':
             repsonse += f"""
-            \subsection{{Graph Tuning with LLM Suggestion}}
-            In the final step, we performed graph tuning with suggestions provided by the LLM.
-            We utilize LLM to help us determine the direction of undirected edges according to its knowledge repository.
-            By integrating insights from the LLM to refine the causal graph, we can achieve improvements in graph's accuracy and robustness.
-            {llm_direction_reason}
+            \subsection{{Graph Tuning with Bootstrap and LLM Suggestion}}
+            In the final step, we performed graph tuning with suggestions provided by the Bootstrap and LLM.
+            
+            Firstly, we use the Bootstrap technique to get how much confidence we have on each edge in the initial graph.
+            If the confidence probability of a certain edge is greater than 95% and it is not in the initial graph, we force it.
+            Otherwise, if the confidence probability is smaller than 5% and it exists in the initial graph, we change it to the edge type with the highest probability.
+            
+            After that, We utilize LLM to help us prune edges and determine the direction of undirected edges according to its knowledge repository.
+            In this step LLM can use background knowledge to add some edges that are neglected by Statistical Methods.
+            Voting techniques are used to enhance the robustness of results given by LLM, and the results given by LLM should not change results given by Bootstrap.
 
+            By integrating insights from both of Bootsratp and LLM to refine the causal graph, we can achieve improvements in graph's accuracy and robustness.
             """
-        
-        repsonse += """
-        This structured approach ensures a comprehensive and methodical analysis of the causal relationships within the dataset.
-        """
-
         return repsonse
     
     def graph_effect_prompts(self):
@@ -400,6 +448,7 @@ class Report_generation(object):
         2. Don't mention tuples in the paragraph
         3. If variable names have meanings, please integrate background knowledge of these variables in the causal relationship analysis.
         Please use variable names {variables[0]}, {variables[1]}, ... in your description.
+        4. Do not include any Greek Letters
         
         For example:
         The result graph shows the causal relationship among variables clearly. The {variables[1]} causes the {variables[0]}, ...
@@ -416,9 +465,75 @@ class Report_generation(object):
         response_doc = response.choices[0].message.content
         return response_doc
 
+    def graph_revise_prompts(self):
+        repsonse = f"""
+        By using the method mentioned in the Section 4.4, we provide a revise graph pruned with Bootstrap and LLM suggestion.
+        Pruning results are as follows.
+        """
+        if self.global_state.results.bootstrap_errors != []:
+                repsonse += f"""
+                The following are force and forbidden results given by Bootstrap:
+                
+                {', '.join(self.global_state.results.bootstrap_errors)}
+                """
+        else:
+            repsonse += f"""
+            Bootstrap doesn't force or forbid any edges.
+            """
+        llm_evaluation_json = self.global_state.results.llm_errors
+        force_record = llm_evaluation_json['force_record']
+        forbid_record = llm_evaluation_json['forbid_record']
+        if force_record != {}:
+            repsonse += f"""
+            The following are force results given by LLM:
+            
+            \begin{{itemize}}
+            """
+            for k in force_record.keys():
+                tuple = ast.literal_eval(k)
+                pair = f'{tuple[0]} \rightarrow {tuple[1]}'
+                repsonse += f"""
+                \item \textbf{pair}: {force_record[k]}
+                """
+            repsonse += f"""
+            \end{{itemize}}
+            """
+        if  forbid_record != {}:
+            repsonse += f"""
+            The following relationships are forbidden by LLM:
+            
+            \begin{{itemize}}
+            """
+            for k in forbid_record.keys():
+                tuple = ast.literal_eval(k)
+                pair = f'({tuple[0]}, {tuple[1]})'
+                repsonse += f"""
+                \item \textbf{k}: {forbid_record[k]}
+                """
+            repsonse += f"""
+            \end{{itemize}}
+            """           
+        if force_record=={} and forbid_record=={}:
+            repsonse += f"""
+            LLM doesn't force or forbid any edges.
+            """
+        llm_direction_reason = self.llm_direction_prompts()
+        if llm_direction_reason is not None:
+            repsonse += f"""
+            The following are directions of remaining undirected edges determined by the LLM:
+            {llm_direction_reason}
+            """
+        
+        repsonse += """
+        This structured approach ensures a comprehensive and methodical analysis of the causal relationships within the dataset.
+        """
+        return repsonse
+
     def llm_direction_prompts(self):
         import ast 
         reason_json = self.global_state.results.llm_directions
+        if len(reason_json) == 0:
+            return None
         prompts = '\begin{itemize}\n'
         for key in reason_json:
             tuple = ast.literal_eval(key)
@@ -446,14 +561,14 @@ class Report_generation(object):
 
         """
         bootstrap_dict = {k: v for k, v in self.bootstrap_probability.items() if v is not None and sum(v.flatten())>0}
-        length = round(1/len(bootstrap_dict), 2)-0.04
+        zero_graphs = [k for k, v in self.bootstrap_probability.items() if  v is not None and sum(v.flatten())==0]
+        length = round(1/len(bootstrap_dict), 2)-0.01
         for key in bootstrap_dict.keys():
             graph_path = f'{self.visual_dir}/{key}_confidence_heatmap.jpg'
             caption = f'{name_map[key]} Edge'
             graph_prompt += f"""
             \begin{{subfigure}}{{{length}\textwidth}}
                     \centering
-                    \vspace{{-0.5cm}}
                     \includegraphics[width=\linewidth]{graph_path}
                     \vfill
                     \caption{caption}
@@ -463,24 +578,36 @@ class Report_generation(object):
         \caption{Confidence Heatmap of Different Edges}
         \end{figure}        
         """
-
-        if self.algo in ['PC','GES','CDNOD']:
-            graph_text = """
-            The above heatmaps show the confidence probability we have on different kinds of edges, including directed edge ($->$),
-            undirected edge ($-$), edge with hidden confounders ($<->$), and probability of no edge.
+        text_map = {'certain_edges': 'directed edge ($->$)', #(->)
+                    'uncertain_edges': 'undirected edge ($-$)', #(-)
+                    'bi_edges': 'edge with hidden confounders ($<->$)', #(<->)
+                    'half_edges': 'edge of non-ancestor ($o->$)', #(o->)
+                    'non_edges': 'egde of no D-Seperation set', #(o-o)
+                    'non_existence':'No Edge'}
+        graph_text = "The above heatmaps show the confidence probability we have on different kinds of edges, including "
+        for k in bootstrap_dict.keys():
+            graph_text += f"{text_map[k]}, "
+        graph_text += 'and probability of no edge.'
+        for k_zero in zero_graphs:
+            k_zero= k_zero.replace("_", "-")
+            graph_text += f"The heatmap of {k_zero} is not shown because probabilities of all edges are 0. "
+        # if self.algo in ['PC','GES','CDNOD']:
+        #     graph_text = """
+        #     The above heatmaps show the confidence probability we have on different kinds of edges, including directed edge ($->$),
+        #     undirected edge ($-$), edge with hidden confounders ($<->$), and probability of no edge.
                             
-            """
-        elif self.algo == 'FCI':
-            graph_text = """
-            The above heatmaps show the confidence probability we have on different kinds of edges, including directed edge ($->$),
-            undirected edge ($-$), edge with hidden confounders ($<->$), edge of non-ancestor ($o->$), egde of no D-Seperation set ($o-o$), and probability of no edge.
+        #     """
+        # elif self.algo == 'FCI':
+        #     graph_text = """
+        #     The above heatmaps show the confidence probability we have on different kinds of edges, including directed edge ($->$),
+        #     undirected edge ($-$), edge with hidden confounders ($<->$), edge of non-ancestor ($o->$), egde of no D-Seperation set ($o-o$), and probability of no edge.
                             
-            """
-        else: 
-            graph_text = """
-            The above heatmaps show the confidence probability we have on directed edge ($->$), and and probability of no edge.
+        #     """
+        # else: 
+        #     graph_text = """
+        #     The above heatmaps show the confidence probability we have on directed edge ($->$), and and probability of no edge.
             
-            """
+        #     """
 
         graph_prompt += graph_text
         graph_prompt += """Based on the confidence probability heatmap and background knowledge, we can analyze the reliability of our graph."""
@@ -537,6 +664,7 @@ class Report_generation(object):
                      Help me to write a short abstract according to the given information. 
                      You should cover what data is analyzed (find it in title and introduction), what methodology we used, what result we got, and what is our contribution.
                      Only include your abstract text content in the response. Don't include any other things like title, etc.
+                     Do not include any Greek Letters. 
                      0. Title: {self.title}
                      1. Introduction: {self.intro_info}
                      2. Discovery Procedure: {self.discover_process},
@@ -591,6 +719,7 @@ class Report_generation(object):
         \item item3
         \end{{itemize}}'
         3. For bolding notation '**text**', convert it into \\textbf{{text}}.
+        4. Do not include any Greek Letters
         This is the text you need to convert: {text}
         Only response converted text, please do not include other things like 'Here is the converted text in LaTeX format:'
         """
@@ -604,15 +733,22 @@ class Report_generation(object):
         response_doc = response.choices[0].message.content
         return response_doc
 
-    def generation(self):
+    def generation(self, debug=False):
             '''
             generate and save the report
+            :param debug: bool, if True, use template directly without LLM
             :return: Str: A technique report explaining all the results for readers
             '''
+            if debug:
+                # Load appropriate template based on data mode and ground truth
+                prompt_template = self.load_context("postprocess/context/template_debug.tex")
+                return prompt_template
+
+            # Non-debug path continues with full report generation
+            print("Start to generate the report")
             # Data info
             data_preview = self.data.head().to_latex(index=False)
             if len(self.data.columns) >= 9:
-                print(1)
                 data_preview = f"""
                 \resizebox{{\textwidth}}{{!}}{{
                 {data_preview}
@@ -623,33 +759,24 @@ class Report_generation(object):
             self.title, dataset = self.get_title()
             self.intro_info = self.intro_prompt()
             # Background info
-            background_info1, background_info2, relation_mat = self.background_prompt()
+            background_info1, relation_prompt = self.background_prompt()
             self.background_info1 = self.latex_convert(background_info1)
-            self.background_info2 = self.latex_convert(background_info2)
+            self.background_info2 = self.latex_convert(relation_prompt)
             # EDA info
             dist_info, corr_info = self.eda_prompt()
             dist_info = self.latex_convert(dist_info)
             corr_info = self.latex_convert(corr_info)
-            # ALGO info
+            # Procedure info
             self.discover_process = self.procedure_prompt()
             # Graph effect info
             self.graph_prompt = self.latex_convert(self.graph_effect_prompts())
+            # Graph Revise info
+            self.revise_process = self.graph_revise_prompts()
             # Graph Reliability info
             self.reliability_prompt = self.confidence_analysis_prompts()
             self.abstract = self.abstract_prompt()
             self.keywords = self.keyword_prompt()
-            # EDA Graph paths
-            dist_graph_path = self.eda_result['plot_path_dist']
-            corr_graph_path = self.eda_result['plot_path_corr']
-            # Graph paths
-            graph_path0 = f'{self.visual_dir}/true_graph.pdf'
-            graph_path1 = f'{self.visual_dir}/initial_graph.pdf'
-            graph_path2 = f'{self.visual_dir}/revised_graph.pdf'
-            graph_path3 = f'{self.visual_dir}/metrics.jpg'
-            #graph_path4 = f'{self.visual_dir}/confidence_heatmap.jpg'
-            confidence_graph = self.confidence_graph_prompts()
-            graph_relation_path = f'{self.visual_dir}/potential_relation.pdf'
-            
+
             if self.data_mode == 'simulated':
                 if self.global_state.user_data.ground_truth is not None:
                     prompt_template = self.load_context("postprocess/context/template_simulated.tex")
@@ -660,6 +787,7 @@ class Report_generation(object):
                     prompt_template = self.load_context("postprocess/context/template_real.tex")
                 else:
                     prompt_template = self.load_context("postprocess/context/template_real_notruth.tex")
+
             replacements = {
                 "[TITLE]": self.title,
                 "[DATASET]": dataset,
@@ -667,22 +795,23 @@ class Report_generation(object):
                 "[INTRO_INFO]": self.intro_info,
                 "[BACKGROUND_INFO1]": self.background_info1,
                 "[BACKGROUND_INFO2]": self.background_info2,
-                "[POTENTIAL_GRAPH]": graph_relation_path,
+                "[POTENTIAL_GRAPH]": f'{self.visual_dir}/potential_relation.pdf',
                 "[DATA_PREVIEW]": data_preview,
                 "[DATA_PROP_TABLE]": data_prop_table,
                 "[DIST_INFO]": dist_info,
                 "[CORR_INFO]": corr_info,
-                "[DIST_GRAPH]": dist_graph_path,
-                "[CORR_GRAPH]": corr_graph_path,
+                "[DIST_GRAPH]": self.eda_result['plot_path_dist'],
+                "[CORR_GRAPH]": self.eda_result['plot_path_corr'],
                 "[RESULT_ANALYSIS]": self.graph_prompt,
                 "[ALGO]": self.algo,
                 "[DISCOVER_PROCESS]": self.discover_process,
+                "[REVISE_PROCESS]": self.revise_process,
                 "[RELIABILITY_ANALYSIS]": self.reliability_prompt,
-                "[RESULT_GRAPH0]": graph_path0,
-                "[RESULT_GRAPH1]": graph_path1,
-                "[RESULT_GRAPH2]": graph_path2,
-                "[RESULT_GRAPH3]": graph_path3,
-                "[CONFIDENCE_GRAPH]": confidence_graph,
+                "[RESULT_GRAPH0]": f'{self.visual_dir}/true_graph.pdf',
+                "[RESULT_GRAPH1]": f'{self.visual_dir}/initial_graph.pdf',
+                "[RESULT_GRAPH2]": f'{self.visual_dir}/revised_graph.pdf',
+                "[RESULT_GRAPH3]": f'{self.visual_dir}/metrics.jpg',
+                "[CONFIDENCE_GRAPH]": self.confidence_graph_prompts(),
                 "[RESULT_METRICS1]": str(self.original_metrics),
                 "[RESULT_METRICS2]": str(self.revised_metrics)
             }
@@ -690,9 +819,6 @@ class Report_generation(object):
             for placeholder, value in replacements.items():
                 prompt_template = prompt_template.replace(placeholder, value)
 
-            #return prompt_template
-
-            print("Start to generate the report")
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
@@ -705,14 +831,14 @@ class Report_generation(object):
                      4. If there is step number in \subsection{{Step 1 headings}}, please remove the step number and only reserve the heading text \subsection{heading}
                      5. Replace ↔ with $\leftrightarrow$, -> with $\\rightarrow$
                      6. All **text** should be replaced with \\textbf{text}
-                     7. Only include your latex content in the response which can be rendered to pdf directly. Don't include other things like '''latex '''
+                     7. Do not include any Greek Letters
+                     8. Only include your latex content in the response which can be rendered to pdf directly. Don't include other things like '''latex '''
                      """},
                     {"role": "user", "content": prompt_template}
                 ]
             )
 
             output = response.choices[0].message.content
-
             return output
 
     def save_report(self, report, save_path):

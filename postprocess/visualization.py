@@ -46,14 +46,17 @@ class Visualization(object):
         return edges_dict 
 
     def convert_to_edges(self, g):
-        if self.global_state.algorithm.selected_algorithm == 'FCI':
-            g = g[0]
-        elif self.global_state.algorithm.selected_algorithm == 'GES':
-            g = g['G']
-        try:
-            adj_matrix = g.graph
-        except:
-            adj_matrix = g.G.graph
+        if isinstance(g, np.ndarray):
+            adj_matrix = g
+        else:
+            if self.global_state.algorithm.selected_algorithm == 'FCI':
+                g = g[0]
+            elif self.global_state.algorithm.selected_algorithm == 'GES':
+                g = g['G']
+            try:
+                adj_matrix = g.graph
+            except:
+                adj_matrix = g.G.graph
         print('adj_matrix:', adj_matrix)
 
         variables = self.data.columns
@@ -190,6 +193,7 @@ class Visualization(object):
                         xticklabels=self.data.columns,
                         yticklabels=self.data.columns)            
             plt.title(f'Confidence Heatmap for {name}', fontsize=14, fontweight='bold')
+            plt.tight_layout()
             # Save the plot
             save_path_conf = os.path.join(self.save_dir, f'{key}_confidence_heatmap.jpg')
             plt.savefig(fname=save_path_conf, dpi=1000)

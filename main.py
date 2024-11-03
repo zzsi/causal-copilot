@@ -100,6 +100,13 @@ def parse_args():
         help='Parallel computing for bootstrapping.'
     )
 
+    parser.add_argument(
+        '--demo_mode',
+        type=bool,
+        default=False,
+        help='Demo mode'
+    )
+
     args = parser.parse_args()
     return args
 
