@@ -3,8 +3,6 @@ from scipy.special import expit as sigmoid
 import igraph as ig
 import random
 import pandas as pd
-import torch
-import torch.nn as nn
 from typing import Dict, List, Tuple, Callable, Union
 import os
 import json
