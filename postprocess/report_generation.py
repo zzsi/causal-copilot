@@ -2,12 +2,9 @@ from openai import OpenAI
 import os
 import re
 import numpy as np 
-import shutil
-import argparse
 from plumbum.cmd import latexmk
 from plumbum import local
 import networkx as nx
-from pylatex import Document
 from postprocess.visualization import Visualization
 from postprocess.judge_functions import graph_effect_prompts
 
