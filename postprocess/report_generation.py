@@ -2,12 +2,9 @@ from openai import OpenAI
 import os
 import re
 import numpy as np 
-import shutil
-import argparse
 from plumbum.cmd import latexmk
 from plumbum import local
 import networkx as nx
-from pylatex import Document
 from postprocess.visualization import Visualization
 from postprocess.judge_functions import graph_effect_prompts
 import PyPDF2
@@ -736,15 +733,22 @@ Background about this dataset: {self.knowledge_docs}
         response_doc = response.choices[0].message.content
         return response_doc
 
-    def generation(self):
+    def generation(self, debug=False):
             '''
             generate and save the report
+            :param debug: bool, if True, use template directly without LLM
             :return: Str: A technique report explaining all the results for readers
             '''
+            if debug:
+                # Load appropriate template based on data mode and ground truth
+                prompt_template = self.load_context("postprocess/context/template_debug.tex")
+                return prompt_template
+
+            # Non-debug path continues with full report generation
+            print("Start to generate the report")
             # Data info
             data_preview = self.data.head().to_latex(index=False)
             if len(self.data.columns) >= 9:
-                print(1)
                 data_preview = f"""
                 \resizebox{{\textwidth}}{{!}}{{
                 {data_preview}
@@ -772,18 +776,7 @@ Background about this dataset: {self.knowledge_docs}
             self.reliability_prompt = self.confidence_analysis_prompts()
             self.abstract = self.abstract_prompt()
             self.keywords = self.keyword_prompt()
-            # EDA Graph paths
-            dist_graph_path = self.eda_result['plot_path_dist']
-            corr_graph_path = self.eda_result['plot_path_corr']
-            # Graph paths
-            graph_path0 = f'{self.visual_dir}/true_graph.pdf'
-            graph_path1 = f'{self.visual_dir}/initial_graph.pdf'
-            graph_path2 = f'{self.visual_dir}/revised_graph.pdf'
-            graph_path3 = f'{self.visual_dir}/metrics.jpg'
-            #graph_path4 = f'{self.visual_dir}/confidence_heatmap.jpg'
-            confidence_graph = self.confidence_graph_prompts()
-            graph_relation_path = f'{self.visual_dir}/potential_relation.pdf'
-            
+
             if self.data_mode == 'simulated':
                 if self.global_state.user_data.ground_truth is not None:
                     prompt_template = self.load_context("postprocess/context/template_simulated.tex")
@@ -794,6 +787,7 @@ Background about this dataset: {self.knowledge_docs}
                     prompt_template = self.load_context("postprocess/context/template_real.tex")
                 else:
                     prompt_template = self.load_context("postprocess/context/template_real_notruth.tex")
+
             replacements = {
                 "[TITLE]": self.title,
                 "[DATASET]": dataset,
@@ -801,23 +795,23 @@ Background about this dataset: {self.knowledge_docs}
                 "[INTRO_INFO]": self.intro_info,
                 "[BACKGROUND_INFO1]": self.background_info1,
                 "[BACKGROUND_INFO2]": self.background_info2,
-                "[POTENTIAL_GRAPH]": graph_relation_path,
+                "[POTENTIAL_GRAPH]": f'{self.visual_dir}/potential_relation.pdf',
                 "[DATA_PREVIEW]": data_preview,
                 "[DATA_PROP_TABLE]": data_prop_table,
                 "[DIST_INFO]": dist_info,
                 "[CORR_INFO]": corr_info,
-                "[DIST_GRAPH]": dist_graph_path,
-                "[CORR_GRAPH]": corr_graph_path,
+                "[DIST_GRAPH]": self.eda_result['plot_path_dist'],
+                "[CORR_GRAPH]": self.eda_result['plot_path_corr'],
                 "[RESULT_ANALYSIS]": self.graph_prompt,
                 "[ALGO]": self.algo,
                 "[DISCOVER_PROCESS]": self.discover_process,
                 "[REVISE_PROCESS]": self.revise_process,
                 "[RELIABILITY_ANALYSIS]": self.reliability_prompt,
-                "[RESULT_GRAPH0]": graph_path0,
-                "[RESULT_GRAPH1]": graph_path1,
-                "[RESULT_GRAPH2]": graph_path2,
-                "[RESULT_GRAPH3]": graph_path3,
-                "[CONFIDENCE_GRAPH]": confidence_graph,
+                "[RESULT_GRAPH0]": f'{self.visual_dir}/true_graph.pdf',
+                "[RESULT_GRAPH1]": f'{self.visual_dir}/initial_graph.pdf',
+                "[RESULT_GRAPH2]": f'{self.visual_dir}/revised_graph.pdf',
+                "[RESULT_GRAPH3]": f'{self.visual_dir}/metrics.jpg',
+                "[CONFIDENCE_GRAPH]": self.confidence_graph_prompts(),
                 "[RESULT_METRICS1]": str(self.original_metrics),
                 "[RESULT_METRICS2]": str(self.revised_metrics)
             }
@@ -825,9 +819,6 @@ Background about this dataset: {self.knowledge_docs}
             for placeholder, value in replacements.items():
                 prompt_template = prompt_template.replace(placeholder, value)
 
-            #return prompt_template
-
-            print("Start to generate the report")
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
@@ -848,7 +839,6 @@ Background about this dataset: {self.knowledge_docs}
             )
 
             output = response.choices[0].message.content
-
             return output
 
     def save_report(self, report, save_path):

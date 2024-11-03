@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, 'causal-learn')
+
 from causallearn.graph.GeneralGraph import GeneralGraph
 from causallearn.graph.GraphNode import GraphNode
 from causallearn.graph.Edge import Edge

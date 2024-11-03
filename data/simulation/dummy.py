@@ -3,8 +3,6 @@ from scipy.special import expit as sigmoid
 import igraph as ig
 import random
 import pandas as pd
-import torch
-import torch.nn as nn
 from typing import Dict, List, Tuple, Callable, Union
 import os
 import json
@@ -313,16 +311,16 @@ class DataSimulator:
             print(f"When function_type is not linear, noise_type is set to gaussian")
         assert isinstance(noise_scale, float) and noise_scale > 0
 
-        C = np.random.uniform(0, 1, (self.graph.shape[0], self.n_domains))
+        C = np.random.uniform(1, 2, (self.graph.shape[0], self.n_domains))
         if function_type == 'linear':
             data = []
             W = simulate_parameter(self.graph)
             for i in range(self.n_domains):
-                data.extend(simulate_linear_sem(W, n_samples, noise_type, noise_scale) + C[:, i])
+                data.extend(simulate_linear_sem(W, n_samples, noise_type, noise_scale) * C[:, i])
         else:
             data = []
             for i in range(self.n_domains):
-                data.extend(simulate_nonlinear_sem(self.graph, n_samples, function_type, noise_scale) + C[:, i])
+                data.extend(simulate_nonlinear_sem(self.graph, n_samples, function_type, noise_scale) * C[:, i])
         
         data_df = pd.DataFrame(data, columns=self.variable_names)
         data_df['domain_index'] = np.repeat(range(self.n_domains), n_samples)
@@ -600,26 +598,30 @@ if __name__ == "__main__":
         return truth_cpdag
 
     def evaluate_algorithms():
-        results = {'PC': [], 'FCI': [], 'CDNOD': [], 'LiNGAM': []}
+        results = {'PC': [], 'CDNOD': []} #  'FCI': [], 'CDNOD': [], 'LiNGAM': []}
         
         for _ in range(1):
             base_simulator = DataSimulator()
             graph, data = base_simulator.generate_dataset(
                 function_type='linear',
-                n_nodes=25,
+                n_nodes=10,
                 n_samples=10000,
-                edge_probability=0.3,
+                edge_probability=0.15,
                 noise_type='gaussian',
-                n_domains=1
+                n_domains=2
             )
             # Convert data to DataFrame
             df = pd.DataFrame(data)
-            # df_wo_domain = df.drop(columns=['domain_index']).values
-            # c_indx = df['domain_index'].values.reshape(-1, 1)
+            df_wo_domain = df.drop(columns=['domain_index']).values
+            c_indx = df['domain_index'].values.reshape(-1, 1)
+            print('graph: ', graph)
             
             # # PC Algorithm
-            pc_graph = pc(df.values, alpha=0.01, depth=0)
+            pc_graph = pc(df_wo_domain)
             pc_shd = SHD(array2cpdag(graph), pc_graph.G).get_shd()
+            print('pc_graph: ', pc_graph.G.graph)
+
+
 
             adj = AdjacencyConfusion(array2cpdag(graph), pc_graph.G)
             pc_precision = adj.get_adj_precision()
@@ -628,17 +630,17 @@ if __name__ == "__main__":
             results['PC'].append((pc_shd, pc_precision, pc_recall, pc_f1))
             print(results['PC'])
 
-            # FCI Algorithm
-            fci_graph, _ = fci(df_wo_domain)
-            fci_shd = SHD(array2cpdag(graph), fci_graph).get_shd()
-            adj = AdjacencyConfusion(array2cpdag(graph), fci_graph)
-            fci_precision = adj.get_adj_precision()
-            fci_recall = adj.get_adj_recall()
-            fci_f1 = 2 * fci_precision * fci_recall / (fci_precision + fci_recall)
-            results['FCI'].append((fci_shd, fci_precision, fci_recall, fci_f1))
+            # # FCI Algorithm
+            # fci_graph, _ = fci(df_wo_domain)
+            # fci_shd = SHD(array2cpdag(graph), fci_graph).get_shd()
+            # adj = AdjacencyConfusion(array2cpdag(graph), fci_graph)
+            # fci_precision = adj.get_adj_precision()
+            # fci_recall = adj.get_adj_recall()
+            # fci_f1 = 2 * fci_precision * fci_recall / (fci_precision + fci_recall)
+            # results['FCI'].append((fci_shd, fci_precision, fci_recall, fci_f1))
             
             # CDNOD Algorithm
-            cdnod_graph = cdnod(df_wo_domain, c_indx)
+            cdnod_graph = cdnod(df_wo_domain, c_indx, alpha=0.01)
             print(cdnod_graph.G.graph)
             cdnod_graph.G.remove_node(GraphNode(f'X{len(cdnod_graph.G.nodes)}'))
             print(cdnod_graph.G.graph)
@@ -649,24 +651,24 @@ if __name__ == "__main__":
             cdnod_f1 = 2 * cdnod_precision * cdnod_recall / (cdnod_precision + cdnod_recall)
             results['CDNOD'].append((cdnod_shd, cdnod_precision, cdnod_recall, cdnod_f1))
             
-            # Drop the last node of the estimated graph
-            cdnod_graph_dropped = cdnod_graph.G
-            cdnod_shd_dropped = SHD(array2cpdag(graph), cdnod_graph_dropped).get_shd()
-            adj = AdjacencyConfusion(array2cpdag(graph), cdnod_graph_dropped)
-            cdnod_precision_dropped = adj.get_adj_precision()
-            cdnod_recall_dropped = adj.get_adj_recall()
-            cdnod_f1_dropped = 2 * cdnod_precision_dropped * cdnod_recall_dropped / (cdnod_precision_dropped + cdnod_recall_dropped)
-            results['CDNOD_dropped'] = results.get('CDNOD_dropped', []) + [(cdnod_shd_dropped, cdnod_precision_dropped, cdnod_recall_dropped, cdnod_f1_dropped)]
+            # # Drop the last node of the estimated graph
+            # cdnod_graph_dropped = cdnod_graph.G
+            # cdnod_shd_dropped = SHD(array2cpdag(graph), cdnod_graph_dropped).get_shd()
+            # adj = AdjacencyConfusion(array2cpdag(graph), cdnod_graph_dropped)
+            # cdnod_precision_dropped = adj.get_adj_precision()
+            # cdnod_recall_dropped = adj.get_adj_recall()
+            # cdnod_f1_dropped = 2 * cdnod_precision_dropped * cdnod_recall_dropped / (cdnod_precision_dropped + cdnod_recall_dropped)
+            # results['CDNOD_dropped'] = results.get('CDNOD_dropped', []) + [(cdnod_shd_dropped, cdnod_precision_dropped, cdnod_recall_dropped, cdnod_f1_dropped)]
             
-            # LiNGAM Algorithm
-            model = lingam.DirectLiNGAM()
-            model.fit(df_wo_domain)
-            inferred_flat_lingam = np.where(model.adjacency_matrix_ != 0, 1, 0)
-            lingam_shd = np.sum(graph.flatten() != inferred_flat_lingam.flatten())
-            lingam_precision = sklearn.metrics.precision_score(graph.flatten(), inferred_flat_lingam.flatten())
-            lingam_recall = sklearn.metrics.recall_score(graph.flatten(), inferred_flat_lingam.flatten())
-            lingam_f1 = sklearn.metrics.f1_score(graph.flatten(), inferred_flat_lingam.flatten())
-            results['LiNGAM'].append((lingam_shd, lingam_precision, lingam_recall, lingam_f1))
+            # # LiNGAM Algorithm
+            # model = lingam.DirectLiNGAM()
+            # model.fit(df_wo_domain)
+            # inferred_flat_lingam = np.where(model.adjacency_matrix_ != 0, 1, 0)
+            # lingam_shd = np.sum(graph.flatten() != inferred_flat_lingam.flatten())
+            # lingam_precision = sklearn.metrics.precision_score(graph.flatten(), inferred_flat_lingam.flatten())
+            # lingam_recall = sklearn.metrics.recall_score(graph.flatten(), inferred_flat_lingam.flatten())
+            # lingam_f1 = sklearn.metrics.f1_score(graph.flatten(), inferred_flat_lingam.flatten())
+            # results['LiNGAM'].append((lingam_shd, lingam_precision, lingam_recall, lingam_f1))
 
             # 1. evluation difference between cpdag and dag
             #    pc/ges/fci/cdnod: cpdag - cpdag
