@@ -55,20 +55,7 @@ pdfkeywords={Causal Discovery, Large Language Model, [ALGO], [DATASET]},
 
 \subsection{Possible Causal Relations among these Variables}
 
-\begin{minipage}[t]{0.7\linewidth}
-    [BACKGROUND_INFO2]
-\vfill
-\end{minipage}
-\hspace{0.05\textwidth}
-\begin{minipage}[t]{0.3\linewidth}
-    \begin{figure}[H]
-        \centering
-        \vspace{-0.5cm}
-        \resizebox{\linewidth}{!}{\includegraphics[height=0.4\textheight]{[POTENTIAL_GRAPH]}}
-        \caption{\label{fig:relation}Possible Causal Relation Graph}
-    \end{figure}
-\end{minipage}
-
+[BACKGROUND_INFO2]
 
 \section{Dataset Descriptions and EDA}
 The following is a preview of our original dataset.
@@ -129,33 +116,34 @@ and the black line represents the median. Variables are categorized into three t
 
 \section{Results Summary}
 
+\subsection{Initial Graph}
+
 \begin{figure}[H]
     \centering
-    \begin{subfigure}{0.45\textwidth}
-        \centering
-        \vspace{-0.5cm}
-        \includegraphics[width=\linewidth]{[RESULT_GRAPH1]}
-        \vfill
-        \caption{Initial Graph}
-        \label{fig:sub2}
-    \end{subfigure}
-    \hspace{0.04\textwidth}
-    \begin{subfigure}{0.45\textwidth}
+    \includegraphics[width=\linewidth]{[RESULT_GRAPH1]}
+    \caption{Initial Graph}
+\end{figure}
+
+The above is the initial result graph produced by our algorithm.
+
+[RESULT_ANALYSIS]
+
+\subsection{Revised Graph}
+
+\begin{minipage}[t]{0.6\linewidth}
+    [REVISE_PROCESS]
+\vfill
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.4\linewidth}
+    \begin{figure}[H]
         \centering
         \vspace{-0.5cm}
         \includegraphics[width=\linewidth]{[RESULT_GRAPH2]}
-        \vfill
-        \caption{Revised Graph}
-        \label{fig:sub3}
-    \end{subfigure}
-    \caption{Graphs Comparision of [ALGO]}
-    \label{fig:main}
-\end{figure}
+        \caption{\label{fig:corr}Revised Graph}
+    \end{figure}
+\end{minipage}
 
-The above are result graphs produced by our algorithm.
-The initial graph is the graph in the first attempt, and the revised graph is the one pruned with LLM suggestion.
-
-[RESULT_ANALYSIS]
 
 \subsection{Graph Reliability Analysis}
 

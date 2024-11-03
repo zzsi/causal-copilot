@@ -91,7 +91,15 @@ class Reranker(object):
         import algorithm.wrappers as wrappers
 
         data = global_state.user_data.processed_data
-        algo_candidates = global_state.algorithm.algorithm_candidates
+        if global_state.statistics.heterogeneous != True:
+            algo_candidates = [algo for algo in global_state.algorithm.algorithm_candidates if algo != 'CDNOD']
+            if global_state.algorithm.selected_algorithm == 'CDNOD':
+                print("Sorry! As the data is not heterogeneous, CDNOD algorithm should not be used! "
+                      "Causality-Copilot will continue to select the best-suited algorithm for you!")
+                global_state.algorithm.selected_algorithm = None
+        else:
+            algo_candidates = global_state.algorithm.algorithm_candidates
+
         statistics_desc = global_state.statistics.description
         knowledge_docs = global_state.user_data.knowledge_docs
 
@@ -130,7 +138,8 @@ class Reranker(object):
                     "%s\n\nBased on the above information, please select the best-suited algorithm from the following candidate:\n\n"
                     "%s\n\nNote that the user can wait for %f minutes for the algorithm execution, please ensure the time cost of the selected algorithm would not exceed it!\n"
                     "The estimated time costs of the following algorithms are:\n\n%s\n\n"
-                    "Tips:\n1.If the data is nonstationary or heterogeneous across domains/time, Use CDNOD as the first choice;"
+                    "Tips:\n1.If the data is nonstationary or heterogeneous across domains/time, Use CDNOD as the first choice. "
+                    "Note that if the data is not heterogeneous, Please DO NOT select CDNOD;"
                     "\n2.If the noise is non-Gaussian, Try DirectLiNGAM or ICALiNGAM first;"
                     "\n3.If the data is linear, Try GES first;"
                     "\n4.If the data is large (i.e., > 100 variables), Start with PC algorithm;"
