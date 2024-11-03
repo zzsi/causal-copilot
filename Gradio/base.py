@@ -59,8 +59,11 @@ class Interface(BaseModel):
             process_query,
             share=False,
     ):
-        def welcome(name):
-            return f"Welcome to Causal Copilot, {name}!"
+        initial_message = """Welcome to the Causal Discovery Assistant! To begin the analysis, please:
+1. Upload your dataset (CSV format)
+2. Describe what you want to analyze in your data (e.g., 'Find causal relationships between variables X and Y')
+
+What would you like to analyze?"""
 
         js = """
         function createGradioAnimation() {
@@ -98,7 +101,11 @@ class Interface(BaseModel):
 
         with self.gr.Blocks(js=js, theme = gr.themes.Soft() ) as demo:
             with self.gr.Row():
-                chatbot = self.gr.Chatbot(type="messages", bubble_full_width=False, height=500)
+                chatbot = self.gr.Chatbot(
+                    value=[[None, initial_message]], 
+                    bubble_full_width=False, 
+                    height=500
+                )
 
             with self.gr.Row():
                 msg = self.gr.Textbox(
