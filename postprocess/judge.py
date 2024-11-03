@@ -48,7 +48,7 @@ class Judge(object):
                  revised causal graph based on errors.
         '''
 
-        from postprocess.judge_functions import bootstrap, llm_evaluation
+        from postprocess.judge_functions import bootstrap, llm_evaluation, llm_direction, llm_evaluation_justification
 
         # Statistics Perspective: Bootstrapping to get probability of edges using the selected algorithm.
         edge_recom, boot_probability = bootstrap(data=data, full_graph=full_graph, algorithm=algorithm, hyperparameters=hyperparameters,
@@ -56,50 +56,98 @@ class Judge(object):
         print("Edge Recommendations from Bootstrap method: ", edge_recom)
         print("Bootstrap Probability: ", boot_probability)
 
-        # LLM perspective: errors based on domain knowledge from GPT-4
-        conversation, errors_llm = {}, {}
-        # if len(knowledge_docs) == 0 or "no knowledge" in knowledge_docs[0].lower():
-        #     conversation, errors_llm = {}, {}
-        #     print("No Errors are found by LLM, due to No Knowledge")
-        # else:
-        #     conversation, errors_llm = llm_evaluation(data=data, full_graph=full_graph, args=self.args, knowledge_docs=knowledge_docs)
-        #     print("Errors from LLMs: ", errors_llm)
+        ############Edge Pruning with Bootstrap############
+        revised_graph = full_graph.copy()
+        fixed_pairs = []
+        bootstrap_pruning_record = []
+        for k in edge_recom.keys():
+            (i, j) = tuple(map(int, k.split('-')))
+            edge = edge_recom[k].split('(')[0]
+            prob = float(edge_recom[k].split('(')[1].strip(')'))
+            # Change edges according to recommendation if bootstrap probability>0.95
+            if prob > 0.95:
+                fixed_pairs.append((i,j))
+                fixed_pairs.append((j,i))
+                text = f'{data.columns[j]} {edge} {data.columns[i]}'
+                bootstrap_pruning_record.append(text)
+                if edge == '->':
+                    revised_graph[i, j] = 1
+                    revised_graph[j, i] = -1
+                elif edge == '-':
+                    revised_graph[i, j] = revised_graph[j, i] = -1
+                elif edge == '<->':
+                    revised_graph[i, j] = revised_graph[j, i] = 1
+                elif edge == 'o->':
+                    revised_graph[i, j] = 1
+                    revised_graph[j, i] = 2
+                elif edge == 'o-o':
+                    revised_graph[i, j] = revised_graph[j, i] = 2
+                else:
+                    revised_graph[i, j] = revised_graph[j, i] = 0
+        print(bootstrap_pruning_record)
+        ########################
 
-        # Combine error obtained from both statistics and LLM perspectives
-        # errors = {}
-        #
-        # # Revise causal graph based on errors
-        # revised_graph = full_graph
-        #
-        # for key in errors.keys():
-        #     # i -> j
-        #     split_key = key.split("->")
-        #     i = data.columns.get_loc(split_key[0])
-        #     j = data.columns.get_loc(split_key[1])
-        #
-        #     if errors[key] == "Forced":
-        #         revised_graph[j, i] = 1
-        #
-        #     if errors[key] == "Forbidden":
-        #         revised_graph[j, i] = 0
-
-        ###### New Version Revision ######
-        from postprocess.judge_functions import llm_direction
+        ############ Edge Pruning with LLM ############
+        force_ind, forbid_ind = llm_evaluation(data, self.args, knowledge_docs, self.global_state.results.converted_graph)
+        llm_pruning_record = {}
+        force_variables = []
+        forbid_variables = []
+        for force_pair in force_ind:
+            i, j = force_pair[0], force_pair[1]
+            # force it if it doesn't exist in original graph and not fixed by bootstrap
+            if revised_graph[i, j]==0 and revised_graph[j, i]==0 and (i, j) not in fixed_pairs:
+                revised_graph[i, j] = 1
+                revised_graph[j, i] = -1
+                force_variables.append((data.columns[j],data.columns[i]))
+        json_forces = llm_evaluation_justification(self.args, knowledge_docs, force_variables, force=True)                                                               
+        for forbid_pair in forbid_ind:
+            i, j = forbid_pair[0], forbid_pair[1]
+            # forbid it if it exists in original graph and not fixed by bootstrap
+            if revised_graph[i, j]!=0 or revised_graph[j, i]!=0 and (i, j) not in fixed_pairs:
+                revised_graph[i, j] = revised_graph[j, i] = 0
+                forbid_variables.append((data.columns[j],data.columns[i]))
+        print('forbid_variables:', forbid_variables)
+        json_forbids = llm_evaluation_justification(self.args, knowledge_docs, forbid_variables, force=False) 
+        llm_pruning_record={
+            'force_record': json_forces,
+            'forbid_record': json_forbids
+        }
+        print(llm_pruning_record)
+        ########################
+        
+        ###### Edge Direction with LLM ######
         print('LLM Direction Decision')
-        llm_directions, revised_graph = llm_direction(self.global_state, self.args)
+        llm_directions_record, revised_graph = llm_direction(self.global_state, self.args, revised_graph)
 
-        return conversation, errors_llm, edge_recom, boot_probability, revised_graph, llm_directions
+        return {}, bootstrap_pruning_record, boot_probability, llm_pruning_record, llm_directions_record, revised_graph
 
 
     def forward(self, global_state):
+        
+        if self.global_state.algorithm.selected_algorithm in ['DirectLiNGAM', 'ICALiNGAM', 'NOTEARS']:
+            adj_matrix = global_state.results.raw_result
+        else:
+            if self.global_state.algorithm.selected_algorithm == 'FCI':
+                g = global_state.results.raw_result[0]
+            elif self.global_state.algorithm.selected_algorithm == 'GES':
+                g = global_state.results.raw_result['G']
+            else:
+                g = global_state.results.raw_result
+            try:
+                adj_matrix = g.graph
+            except:
+                adj_matrix = g.G.graph
+
+        
         (conversation,
-         global_state.results.llm_errors,
          global_state.results.bootstrap_errors,
          global_state.results.bootstrap_probability,
-         global_state.results.revised_graph,
-         global_state.results.llm_directions) = self.quality_judge(
+         global_state.results.llm_errors,
+         global_state.results.llm_directions,
+         global_state.results.revised_graph
+        )= self.quality_judge(
         data=global_state.user_data.processed_data,
-        full_graph=global_state.results,
+        full_graph=adj_matrix,
         algorithm=global_state.algorithm.selected_algorithm,
         hyperparameters=global_state.algorithm.algorithm_arguments,
         knowledge_docs=global_state.user_data.knowledge_docs,
