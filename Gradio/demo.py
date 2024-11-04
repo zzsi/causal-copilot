@@ -19,6 +19,13 @@ from postprocess.judge import Judge
 from postprocess.visualization import Visualization
 from postprocess.report_generation import Report_generation
 
+current_dir = os.getcwd()
+print("Current Directory:", current_dir)
+
+parent_dir = os.path.dirname(current_dir)
+os.chdir(parent_dir)
+print("Change Directory to:", os.getcwd())
+
 # Global variables
 UPLOAD_FOLDER = "./demo_data"
 chat_history = []
@@ -51,7 +58,19 @@ DEMO_DATASETS = {
         "name": "🌫️ Ozone",
         "path": "dataset/Ozone/Ozone.csv",
         "query": "use PC, Investigate causal factors affecting ozone levels"
+    },
+    "Linear_Gaussian": {
+        "name": "🟦 Simualted Data: Linear Gaussian",
+        "path": "dataset/Linear_Gaussian/Linear_Gaussian_data.csv",
+        "query": "use PC"
+    },
+    "Linear_Nongaussian": {
+        "name": "🟦 Simulated Data: Linear Non-Gaussian",
+        "path": "dataset/Linear_Nongaussian/Linear_Nongaussian_data.csv",
+        "query": "use PC"
     }
+
+
 }
 
 def upload_file(file):
@@ -66,6 +85,7 @@ def upload_file(file):
     shutil.copy(file.name, target_path)
     return target_path
 
+
 def handle_file_upload(file, chatbot, file_upload_btn, download_btn):
     chatbot = chatbot.copy()
     try:
@@ -79,7 +99,7 @@ def handle_file_upload(file, chatbot, file_upload_btn, download_btn):
             bot_message = "❌ Please upload a CSV file."
         chatbot.append((None, bot_message))
         return chatbot, file_upload_btn, download_btn
-    
+
     except Exception as e:
         error_message = f"❌ Error loading file: {str(e)}"
         chatbot.append((None, error_message))
@@ -92,6 +112,7 @@ def process_initial_query(message):
     if not REQUIRED_INFO['initial_query']:
         chat_history.append((None, "Please enter your initial query first before proceeding. It would be helpful to provide some information about the background/context/prior/statistical information about the dataset."))
 
+
 def process_message(message, chat_history, download_btn):
     global target_path, REQUIRED_INFO
     process_initial_query(message)
@@ -99,7 +120,7 @@ def process_message(message, chat_history, download_btn):
     if not REQUIRED_INFO['data_uploaded']:
         chat_history.append((message, "Please upload your dataset first before proceeding."))
         return chat_history, download_btn
-    
+
     if not REQUIRED_INFO['initial_query']:
         chat_history.append((message, "Please input your initial query."))
         return chat_history, download_btn
@@ -109,7 +130,7 @@ def process_message(message, chat_history, download_btn):
         config = get_demo_config()
         config.data_file = target_path
         config.initial_query = message
-        
+
         args = type('Args', (), {})()
         for key, value in config.__dict__.items():
             setattr(args, key, value)
@@ -126,17 +147,26 @@ def process_message(message, chat_history, download_btn):
         # chat_history.append((None, "✅ Data loaded successfully"))
         yield chat_history, download_btn
 
-        # Statistical Analysis
         chat_history.append(("📈 Run statistical analysis...", None))
         yield chat_history, download_btn
         global_state = stat_info_collection(global_state)
-        global_state = knowledge_info(args, global_state)
         global_state.statistics.description = convert_stat_info_to_text(global_state.statistics)
         chat_history.append((None, global_state.statistics.description))
         yield chat_history, download_btn
 
+        # Knowledge generation
+        chat_history.append(("🌍 Generate background knowledge based on the dataset you provided...", None))
+        yield chat_history, download_btn
+        global_state = knowledge_info(args, global_state)
+
+        knowledge_clean = str(global_state.user_data.knowledge_docs).replace("[", "").replace("]", "").replace('"',
+                                                                                                               "").replace(
+            "\\n\\n", "\n\n").replace("\\n", "\n")
+        chat_history.append((None, knowledge_clean))
+        yield chat_history, download_btn
+
         # EDA Generation
-        chat_history.append(("🔍 Generate exploratory data analysis...", None))
+        chat_history.append(("🔍 Run exploratory data analysis...", None))
         yield chat_history, download_btn
         my_eda = EDA(global_state)
         my_eda.generate_eda()
@@ -152,6 +182,17 @@ def process_message(message, chat_history, download_btn):
         reranker = Reranker(args)
         global_state = reranker.forward(global_state)
         chat_history.append((None, f"✅ Selected algorithm: {global_state.algorithm.selected_algorithm}"))
+        chat_history.append((None, f"🤔 Algorithm selection reasoning: {global_state.algorithm.selected_reason}"))
+
+        hyperparameter_text = ""
+        for param, details in global_state.algorithm.algorithm_arguments_json['hyperparameters'].items():
+            value = details['value']
+            explanation = details['explanation']
+            hyperparameter_text += f"  Parameter: {param}\n"
+            hyperparameter_text += f"  Value: {value}\n"
+            hyperparameter_text += f"  Explanation: {explanation}\n\n"
+        chat_history.append(
+            (None, f"📖 Hyperparameters for the selected algorithm: \n\n {hyperparameter_text}"))
         yield chat_history, download_btn
 
         # Causal Discovery
@@ -159,7 +200,7 @@ def process_message(message, chat_history, download_btn):
         yield chat_history, download_btn
         programmer = Programming(args)
         global_state = programmer.forward(global_state)
-        #Visualization for Initial Graph
+        # Visualization for Initial Graph
         chat_history.append(("📊 Generate causal graph visualization...", None))
         yield chat_history, download_btn
         my_visual_initial = Visualization(global_state)
@@ -178,7 +219,7 @@ def process_message(message, chat_history, download_btn):
             print('graph analysis', global_state.logging.graph_conversion['initial_graph_analysis'])
             chat_history.append((None, global_state.logging.graph_conversion['initial_graph_analysis']))
             yield chat_history, download_btn
-        #Evaluation for Initial Graph
+        # Evaluation for Initial Graph
         chat_history.append(("📝 Evaluate and Revise the initial result...", None))
         yield chat_history, download_btn
         judge = Judge(global_state, args)
@@ -194,12 +235,13 @@ def process_message(message, chat_history, download_btn):
             yield chat_history, download_btn
         # Plot Bootstrap Heatmap
         paths = my_visual_revise.boot_heatmap_plot()
-        chat_history.append((None, f"The following heatmaps show the confidence probability we have on different kinds of edges"))
+        chat_history.append(
+            (None, f"The following heatmaps show the confidence probability we have on different kinds of edges"))
         yield chat_history, download_btn
         for path in paths:
             chat_history.append((None, (path,)))
             yield chat_history, download_btn
-        
+
         chat_history.append((None, "✅ Causal discovery analysis completed"))
         yield chat_history, download_btn
 
@@ -209,13 +251,13 @@ def process_message(message, chat_history, download_btn):
         report_gen = Report_generation(global_state, args)
         report = report_gen.generation(debug=False)
         report_gen.save_report(report, save_path=global_state.user_data.output_report_dir)
-        
+
         # Final steps
         chat_history.append((None, "🎉 Analysis complete!"))
         chat_history.append((None, "📥 You can now download your detailed report using the download button below."))
 
         download_btn = gr.DownloadButton(
-            "📥 Download Exclusive Report", 
+            "📥 Download Exclusive Report",
             size="sm",
             elem_classes=["icon-button"],
             scale=1,
@@ -223,7 +265,7 @@ def process_message(message, chat_history, download_btn):
             interactive=True
         )
         yield chat_history, download_btn
-        
+
         chat_history.append((None, ""))
         return chat_history, download_btn
 
@@ -232,6 +274,7 @@ def process_message(message, chat_history, download_btn):
         print(str(e))
         yield chat_history, download_btn
         return chat_history, download_btn
+
 
 def clear_chat():
     global target_path, REQUIRED_INFO, output_dir, chat_history

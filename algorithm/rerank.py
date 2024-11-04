@@ -139,10 +139,12 @@ class Reranker(object):
                     "%s\n\nNote that the user can wait for %f minutes for the algorithm execution, please ensure the time cost of the selected algorithm would not exceed it!\n"
                     "The estimated time costs of the following algorithms are:\n\n%s\n\n"
                     "Tips:\n1.If the data is nonstationary or heterogeneous across domains/time, Use CDNOD as the first choice. "
-                    "Note that if the data is not heterogeneous, Please DO NOT select CDNOD;"
+                    "Note that if the data is not heterogeneous, DO NOT select CDNOD!!!"
                     "\n2.If the noise is non-Gaussian, Try DirectLiNGAM or ICALiNGAM first;"
+                    "Note that if the data is non-linear, DO NOT select DirectLiNGAM or ICALNGAM!!!"
                     "\n3.If the data is linear, Try GES first;"
                     "\n4.If the data is large (i.e., > 100 variables), Start with PC algorithm;"
+                    "\n5.If the data is non-linear, Start with PC or FCI algorithms, and NEVER use DirectLiNGAM or ICALNGAM;"
                     "\n\nPlease highlight the selected algorithm name using the following template <Algo>Name</Algo> in the ending of the output") %
                     (table_name, table_columns, knowledge_info, statistics_info, algo_info, wait_time, time_info))
             selected_algo = ''
