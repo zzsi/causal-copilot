@@ -19,6 +19,13 @@ from postprocess.judge import Judge
 from postprocess.visualization import Visualization
 from postprocess.report_generation import Report_generation
 
+# current_dir = os.getcwd()
+# print("Current Directory:", current_dir)
+#
+# parent_dir = os.path.dirname(current_dir)
+# os.chdir(parent_dir)
+# print("Change Directory to:", os.getcwd())
+
 # Global variables
 UPLOAD_FOLDER = "./demo_data"
 chat_history = []
@@ -51,7 +58,19 @@ DEMO_DATASETS = {
         "name": "🌫️ Ozone",
         "path": "dataset/Ozone/Ozone.csv",
         "query": "use PC, Investigate causal factors affecting ozone levels"
+    },
+    "Linear_Gaussian": {
+        "name": "🟦 Simualted Data: Linear Gaussian",
+        "path": "dataset/Linear_Gaussian/Linear_Gaussian_data.csv",
+        "query": "use PC"
+    },
+    "Linear_Nongaussian": {
+        "name": "🟦 Simulated Data: Linear Non-Gaussian",
+        "path": "dataset/Linear_Nongaussian/Linear_Nongaussian_data.csv",
+        "query": "use PC"
     }
+
+
 }
 
 def upload_file(file):
@@ -66,8 +85,7 @@ def upload_file(file):
     shutil.copy(file.name, target_path)
     return target_path
 
-def handle_file_upload(file, chatbot, file_upload_btn, download_btn):
-    chatbot = chatbot.copy()
+def handle_file_upload(file, chat_history, file_upload_btn, download_btn):
     try:
         global REQUIRED_INFO
         if file.name.endswith('.csv'):
@@ -77,13 +95,14 @@ def handle_file_upload(file, chatbot, file_upload_btn, download_btn):
             bot_message = f"✅ Successfully loaded CSV file with {len(df)} rows and {len(df.columns)} columns. What would you like to analyze?"
         else:
             bot_message = "❌ Please upload a CSV file."
-        chatbot.append((None, bot_message))
-        return chatbot, file_upload_btn, download_btn
-    
+            
+        chat_history.append((None, bot_message))
+
+        return chat_history, file_upload_btn, download_btn
     except Exception as e:
         error_message = f"❌ Error loading file: {str(e)}"
-        chatbot.append((None, error_message))
-        return chatbot, file_upload_btn, download_btn
+        chat_history.append((None, error_message))
+        return chat_history, file_upload_btn, download_btn
 
 def process_initial_query(message):
     global REQUIRED_INFO
@@ -99,7 +118,7 @@ def process_message(message, chat_history, download_btn):
     if not REQUIRED_INFO['data_uploaded']:
         chat_history.append((message, "Please upload your dataset first before proceeding."))
         return chat_history, download_btn
-    
+
     if not REQUIRED_INFO['initial_query']:
         chat_history.append((message, "Please input your initial query."))
         return chat_history, download_btn
@@ -126,17 +145,26 @@ def process_message(message, chat_history, download_btn):
         # chat_history.append((None, "✅ Data loaded successfully"))
         yield chat_history, download_btn
 
-        # Statistical Analysis
         chat_history.append(("📈 Run statistical analysis...", None))
         yield chat_history, download_btn
         global_state = stat_info_collection(global_state)
-        global_state = knowledge_info(args, global_state)
         global_state.statistics.description = convert_stat_info_to_text(global_state.statistics)
         chat_history.append((None, global_state.statistics.description))
         yield chat_history, download_btn
 
+        # Knowledge generation
+        chat_history.append(("🌍 Generate background knowledge based on the dataset you provided...", None))
+        yield chat_history, download_btn
+        global_state = knowledge_info(args, global_state)
+
+        knowledge_clean = str(global_state.user_data.knowledge_docs).replace("[", "").replace("]", "").replace('"',
+                                                                                                               "").replace(
+            "\\n\\n", "\n\n").replace("\\n", "\n")
+        chat_history.append((None, knowledge_clean))
+        yield chat_history, download_btn
+
         # EDA Generation
-        chat_history.append(("🔍 Generate exploratory data analysis...", None))
+        chat_history.append(("🔍 Run exploratory data analysis...", None))
         yield chat_history, download_btn
         my_eda = EDA(global_state)
         my_eda.generate_eda()
@@ -152,6 +180,17 @@ def process_message(message, chat_history, download_btn):
         reranker = Reranker(args)
         global_state = reranker.forward(global_state)
         chat_history.append((None, f"✅ Selected algorithm: {global_state.algorithm.selected_algorithm}"))
+        chat_history.append((None, f"🤔 Algorithm selection reasoning: {global_state.algorithm.selected_reason}"))
+
+        hyperparameter_text = ""
+        for param, details in global_state.algorithm.algorithm_arguments_json['hyperparameters'].items():
+            value = details['value']
+            explanation = details['explanation']
+            hyperparameter_text += f"  Parameter: {param}\n"
+            hyperparameter_text += f"  Value: {value}\n"
+            hyperparameter_text += f"  Explanation: {explanation}\n\n"
+        chat_history.append(
+            (None, f"📖 Hyperparameters for the selected algorithm: \n\n {hyperparameter_text}"))
         yield chat_history, download_btn
 
         # Causal Discovery
@@ -159,45 +198,18 @@ def process_message(message, chat_history, download_btn):
         yield chat_history, download_btn
         programmer = Programming(args)
         global_state = programmer.forward(global_state)
-        #Visualization for Initial Graph
-        chat_history.append(("📊 Generate causal graph visualization...", None))
-        yield chat_history, download_btn
-        my_visual_initial = Visualization(global_state)
-        if global_state.user_data.ground_truth is not None:
-            my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.jpg')
-            chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/true_graph.jpg',)))
-            yield chat_history, download_btn
-        if global_state.results.raw_result is not None:
-            my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.jpg')
-            chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/initial_graph.jpg',)))
-            yield chat_history, download_btn
-            my_report = Report_generation(global_state, args)
-            global_state.logging.graph_conversion['initial_graph_analysis'] = my_report.graph_effect_prompts()
-            print('graph analysis', global_state.logging.graph_conversion['initial_graph_analysis'])
-            chat_history.append((None, global_state.logging.graph_conversion['initial_graph_analysis']))
-            yield chat_history, download_btn
-        #Evaluation for Initial Graph
-        chat_history.append(("📝 Evaluate and Revise the initial result...", None))
-        yield chat_history, download_btn
         judge = Judge(global_state, args)
         global_state = judge.forward(global_state)
-        # Plot Revised Graph
-        my_visual_revise = Visualization(global_state)
-        if global_state.results.revised_graph is not None:
-            my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.jpg')
-            chat_history.append((None, f"This is the revised graph with Bootstrap and LLM techniques"))
-            yield chat_history, download_btn
-            chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/revised_graph.jpg',)))
-            yield chat_history, download_btn
-        # Plot Bootstrap Heatmap
-        paths = my_visual_revise.boot_heatmap_plot()
-        chat_history.append((None, f"The following heatmaps show the confidence probability we have on different kinds of edges"))
-        yield chat_history, download_btn
-        for path in paths:
-            chat_history.append((None, (path,)))
-            yield chat_history, download_btn
-        
         chat_history.append((None, "✅ Causal discovery analysis completed"))
+        yield chat_history, download_btn
+        
+        # Visualization
+        chat_history.append(("📊 Generate causal graph visualization...", None))
+        yield chat_history, download_btn
+        my_visual = Visualization(global_state)
+        if global_state.results.raw_result is not None:
+            my_visual.plot_pdag(global_state.results.raw_result, 'initial_graph.jpg')
+            chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/initial_graph.jpg',)))
         yield chat_history, download_btn
 
         # Report Generation
@@ -226,8 +238,6 @@ def process_message(message, chat_history, download_btn):
 
     except Exception as e:
         chat_history.append((None, f"❌ An error occurred during analysis: {str(e)}"))
-        print(str(e))
-        yield chat_history, download_btn
         return chat_history, download_btn
 
 def clear_chat():
