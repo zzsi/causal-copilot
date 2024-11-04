@@ -57,9 +57,10 @@ class Judge(object):
         edge_recom, boot_probability = bootstrap(data=data, full_graph=full_graph, algorithm=algorithm, hyperparameters=hyperparameters,
                                                   boot_num=boot_num, ts=False, parallel=self.args.parallel)
         print("Edge Recommendations from Bootstrap method: ", edge_recom)
-        print("Bootstrap Probability: ", boot_probability)
+        #print("Bootstrap Probability: ", boot_probability)
 
         ############Edge Pruning with Bootstrap############
+        print('Bootstrap Pruning Decisioning')
         revised_graph = full_graph.copy()
         fixed_pairs = []
         bootstrap_pruning_record = []
@@ -87,10 +88,11 @@ class Judge(object):
                     revised_graph[i, j] = revised_graph[j, i] = 2
                 else:
                     revised_graph[i, j] = revised_graph[j, i] = 0
-        print(bootstrap_pruning_record)
+        #print(bootstrap_pruning_record)
         ########################
 
         ############ Edge Pruning with LLM ############
+        print('LLM Pruning Decisioning')
         force_ind, forbid_ind = llm_evaluation(data, self.args, knowledge_docs, self.global_state.results.converted_graph)
         llm_pruning_record = {}
         force_variables = []
@@ -109,17 +111,17 @@ class Judge(object):
             if revised_graph[i, j]!=0 or revised_graph[j, i]!=0 and (i, j) not in fixed_pairs:
                 revised_graph[i, j] = revised_graph[j, i] = 0
                 forbid_variables.append((data.columns[j],data.columns[i]))
-        print('forbid_variables:', forbid_variables)
+        #print('forbid_variables:', forbid_variables)
         json_forbids = llm_evaluation_justification(self.args, knowledge_docs, forbid_variables, force=False) 
         llm_pruning_record={
             'force_record': json_forces,
             'forbid_record': json_forbids
         }
-        print(llm_pruning_record)
+        #print(llm_pruning_record)
         ########################
         
         ###### Edge Direction with LLM ######
-        print('LLM Direction Decision')
+        print('LLM Direction Decisioning')
         llm_directions_record, revised_graph = llm_direction(self.global_state, self.args, revised_graph)
 
         return {}, bootstrap_pruning_record, boot_probability, llm_pruning_record, llm_directions_record, revised_graph

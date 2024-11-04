@@ -100,7 +100,7 @@ def process_message(history, file_obj, message):
 
         # Add visualizations as separate messages
         image_paths = {
-            "Initial Causal Graph": os.path.join(, 'gradio_output/graph', 'initial_graph.png'),
+            "Initial Causal Graph": os.path.join(DEMO_DIR, 'gradio_output/graph', 'initial_graph.png'),
             "Revised Causal Graph": os.path.join(DEMO_DIR, 'gradio_output/graph', 'revised_graph.png'),
             "Performance Metrics": os.path.join(DEMO_DIR, 'gradio_output/graph', 'metrics_plot.png'),
             "Bootstrap Analysis": os.path.join(DEMO_DIR, 'gradio_output/graph', 'boot_heatmap.png')

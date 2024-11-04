@@ -161,6 +161,8 @@ def main(args):
         pos_true = my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.pdf')
     # Plot Initial Graph
     pos_raw = my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf')
+    my_report = Report_generation(global_state, args)
+    global_state.logging.graph_conversion['initial_graph_analysis'] = my_report.latex_convert(my_report.graph_effect_prompts())
 
     judge = Judge(global_state, args)
     if global_state.user_data.ground_truth is not None:
