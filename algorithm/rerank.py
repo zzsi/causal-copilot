@@ -92,7 +92,7 @@ class Reranker(object):
 
         data = global_state.user_data.processed_data
         if global_state.statistics.heterogeneous != True:
-            algo_candidates = [algo for algo in global_state.algorithm.algorithm_candidates if algo != 'CDNOD']
+            algo_candidates = {algo:global_state.algorithm.algorithm_candidates[algo] for algo in global_state.algorithm.algorithm_candidates if algo != 'CDNOD'}
             if global_state.algorithm.selected_algorithm == 'CDNOD':
                 print("Sorry! As the data is not heterogeneous, CDNOD algorithm should not be used! "
                       "Causality-Copilot will continue to select the best-suited algorithm for you!")
