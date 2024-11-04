@@ -57,7 +57,7 @@ class Visualization(object):
                 adj_matrix = g.graph
             except:
                 adj_matrix = g.G.graph
-        print('adj_matrix:', adj_matrix)
+        #print('adj_matrix:', adj_matrix)
 
         variables = self.data.columns
         labels = {i: variables[i] for i in range(len(variables))}
@@ -182,7 +182,7 @@ class Visualization(object):
                     'half_edges': 'Non-Ancestor Edge', #(o->)
                     'non_edges': 'No D-Seperation Edge', #(o-o)
                     'non_existence':'No Edge'}
-        
+        paths = []
         for key in boot_prob_dict.keys():
             prob_mat = boot_prob_dict[key]
             name = name_map[key]
@@ -197,8 +197,9 @@ class Visualization(object):
             # Save the plot
             save_path_conf = os.path.join(self.save_dir, f'{key}_confidence_heatmap.jpg')
             plt.savefig(fname=save_path_conf, dpi=1000)
+            paths.append(save_path_conf)
 
-        return save_path_conf
+        return paths
 
     def metrics_plot(self, original_metrics, revised_metrics):
         # Sample data

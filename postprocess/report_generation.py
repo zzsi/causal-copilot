@@ -414,7 +414,7 @@ Background about this dataset: {self.knowledge_docs}
 
         \subsection{{Hyperparameter Values Proposal assisted with LLM}}
         Once the algorithms were selected, the LLM aided in proposing hyperparameters 
-        for the [ALGO] algorithm, which are specified below:
+        for the chosen algorithm, which are specified below:
         {param_list}
 
         """
@@ -591,24 +591,7 @@ Background about this dataset: {self.knowledge_docs}
         for k_zero in zero_graphs:
             k_zero= k_zero.replace("_", "-")
             graph_text += f"The heatmap of {k_zero} is not shown because probabilities of all edges are 0. "
-        # if self.algo in ['PC','GES','CDNOD']:
-        #     graph_text = """
-        #     The above heatmaps show the confidence probability we have on different kinds of edges, including directed edge ($->$),
-        #     undirected edge ($-$), edge with hidden confounders ($<->$), and probability of no edge.
-                            
-        #     """
-        # elif self.algo == 'FCI':
-        #     graph_text = """
-        #     The above heatmaps show the confidence probability we have on different kinds of edges, including directed edge ($->$),
-        #     undirected edge ($-$), edge with hidden confounders ($<->$), edge of non-ancestor ($o->$), egde of no D-Seperation set ($o-o$), and probability of no edge.
-                            
-        #     """
-        # else: 
-        #     graph_text = """
-        #     The above heatmaps show the confidence probability we have on directed edge ($->$), and and probability of no edge.
-            
-        #     """
-
+    
         graph_prompt += graph_text
         graph_prompt += """Based on the confidence probability heatmap and background knowledge, we can analyze the reliability of our graph."""
         
@@ -754,8 +737,10 @@ Background about this dataset: {self.knowledge_docs}
                 {data_preview}
                 }}
                 """
+            print('get data prop')
             data_prop_table = self.data_prop_prompt()
             # Intro info
+            print('get title')
             self.title, dataset = self.get_title()
             self.intro_info = self.intro_prompt()
             # Background info
@@ -769,7 +754,8 @@ Background about this dataset: {self.knowledge_docs}
             # Procedure info
             self.discover_process = self.procedure_prompt()
             # Graph effect info
-            self.graph_prompt = self.latex_convert(self.graph_effect_prompts())
+            #self.graph_prompt = self.latex_convert(self.graph_effect_prompts())
+            self.graph_prompt = self.global_state.logging.graph_conversion['initial_graph_analysis']
             # Graph Revise info
             self.revise_process = self.graph_revise_prompts()
             # Graph Reliability info

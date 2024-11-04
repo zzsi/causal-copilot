@@ -316,8 +316,8 @@ def llm_evaluation(data, args, knowledge_docs, ini_graph, voting=10, threshold=0
     forbid_mat = np.zeros((len(data.columns), len(data.columns)))
     for i in range(voting):
         json_prunings = get_json(args, prompt_pruning)
-        print('llm pruning json')
-        print(json_prunings)
+        #print('llm pruning json')
+        #print(json_prunings)
         for k, v in json_prunings.items():
             k = ast.literal_eval(k)
             if all(item in variables for item in k):
@@ -330,9 +330,9 @@ def llm_evaluation(data, args, knowledge_docs, ini_graph, voting=10, threshold=0
                     forbid_mat[j, i] += 1
     
     force_mat /= voting
-    print('force_mat:', force_mat)
+    #print('force_mat:', force_mat)
     forbid_mat /= voting
-    print('forbid_mat:', forbid_mat)
+    #print('forbid_mat:', forbid_mat)
     force_indice = np.where(force_mat>threshold)
     forbid_indice = np.where(forbid_mat>threshold)
     force_ind = []
@@ -369,8 +369,8 @@ def llm_evaluation_justification(args, knowledge_docs, variables_list, force):
                                 }}
                                 """
         json_forces = get_json(args, force_prompt)
-        print('llm forcing justification json')
-        print(json_forces)
+        #print('llm forcing justification json')
+        #print(json_forces)
         return json_forces
 
     else:
@@ -393,8 +393,8 @@ def llm_evaluation_justification(args, knowledge_docs, variables_list, force):
                                 }}
                                 """
         json_forbid = get_json(args, forbid_prompt)
-        print('llm forbiding justification json')
-        print(json_forbid)
+        #print('llm forbiding justification json')
+        #print(json_forbid)
     return json_forbid
 
 
@@ -472,8 +472,8 @@ def llm_direction(global_state, args, revised_graph, voting=10, threshold=0.7):
     prob_mat = np.zeros((global_state.statistics.feature_number, global_state.statistics.feature_number))
     for i in range(voting):
         json_directions = get_json(args, prompt_direction)
-        print('direction json')
-        print(json_directions)
+        #print('direction json')
+        #print(json_directions)
         for key in json_directions.keys():
             tuple = ast.literal_eval(key)
             direction = json_directions[key]
@@ -489,14 +489,14 @@ def llm_direction(global_state, args, revised_graph, voting=10, threshold=0.7):
                 continue
     
     prob_mat /= voting
-    print(prob_mat)
+    #print(prob_mat)
     revise_indice = np.where(prob_mat>threshold)
     edges_list = []
     for i, j in zip(revise_indice[0], revise_indice[1]):
         revised_graph[i, j] = 1
         revised_graph[j, i] = -1
         edges_list.append((variables[j], variables[i]))
-    print('edges list:', edges_list)
+    #print('edges list:', edges_list)
     prompt_justification = f"""
     I have a list of tuples where each tuple represents a pair of entities that have a relationship with each other. 
     For example, ('Raf', 'Mek') means 'Raf' causes 'Mek'.
@@ -517,8 +517,8 @@ def llm_direction(global_state, args, revised_graph, voting=10, threshold=0.7):
                             """
     
     json_justification = get_json(args, prompt_justification)
-    print('justification json')
-    print(json_justification)
+    #print('justification json')
+    #print(json_justification)
     json_justification = {str(k): json_justification[str(k)] for k in edges_list}
     
     return json_justification, revised_graph
