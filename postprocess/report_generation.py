@@ -186,9 +186,9 @@ Background about this dataset: {self.knowledge_docs}
         relations = []
         # Find all matches
         matches = re.findall(pattern, section2)
-        print(matches)
+        #print(matches)
         for match in matches:
-            print('match: ', match)
+            #print('match: ', match)
             left_part = match[0]
             right_part = match[2]
 
@@ -247,7 +247,7 @@ Background about this dataset: {self.knowledge_docs}
                 \begin{{minipage}}[t]{{0.3\linewidth}}
                     \begin{{figure}}[H]
                         \centering
-                        \resizebox{{\linewidth}}{{!}}{{\includegraphics[height=0.4\textheight]{relation_path}}}
+                        \resizebox{{\linewidth}}{{!}}{{\includegraphics[height=0.3\textheight]{relation_path}}}
                         \caption{{\label{{fig:relation}}Possible Causal Relation Graph}}
                     \end{{figure}}
                 \end{{minipage}}

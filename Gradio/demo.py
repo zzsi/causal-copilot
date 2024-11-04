@@ -22,9 +22,9 @@ from postprocess.report_generation import Report_generation
 current_dir = os.getcwd()
 print("Current Directory:", current_dir)
 
-parent_dir = os.path.dirname(current_dir)
-os.chdir(parent_dir)
-print("Change Directory to:", os.getcwd())
+# parent_dir = os.path.dirname(current_dir)
+# os.chdir(parent_dir)
+# print("Change Directory to:", os.getcwd())
 
 # Global variables
 UPLOAD_FOLDER = "./demo_data"
@@ -246,7 +246,7 @@ def process_message(message, chat_history, download_btn):
         yield chat_history, download_btn
 
         # Report Generation
-        chat_history.append(("📝 Generate comprehensive report...", None))
+        chat_history.append(("📝 Generate comprehensive report and it may take a few minutes...", None))
         yield chat_history, download_btn
         report_gen = Report_generation(global_state, args)
         report = report_gen.generation(debug=False)
