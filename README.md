@@ -1,5 +1,5 @@
 <h1 align="center">
-<img src="logo.webp" width="100" alt="JiuZhang" />
+<img src="logo.webp" width="300" alt="JiuZhang" />
 <br>
 Causality Copilot: Towards Autonomous Causal Discovery Agent
 </h1>
