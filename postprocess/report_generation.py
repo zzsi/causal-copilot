@@ -91,16 +91,23 @@ class Report_generation(object):
         self.visual_dir = global_state.user_data.output_graph_dir
 
     def get_title(self):
-        for file in os.listdir(self.data_file):
-            if file.endswith(".csv"):
-                data_path = file
-                filename = os.path.splitext(os.path.basename(data_path))[0]
-                filename = filename.capitalize()
-                filename = filename.capitalize().replace("_", r"\_")
-                title = f'Causal Discovery Report on {filename}'
-                break
-            else:
-                title = 'Causal Discovery Report on Given Dataset'
+        if os.path.isdir(self.data_file):
+            for file in os.listdir(self.data_file):
+                if file.endswith(".csv"):
+                    data_path = file
+                    filename = os.path.splitext(os.path.basename(data_path))[0]
+                    filename = filename.capitalize()
+                    filename = filename.capitalize().replace("_", r"\_")
+                    title = f'Causal Discovery Report on {filename}'
+                    break
+        elif self.data_file.endswith(".csv"):
+            data_path = self.data_file
+            filename = os.path.splitext(os.path.basename(data_path))[0]
+            filename = filename.capitalize()
+            filename = filename.capitalize().replace("_", r"\_")
+            title = f'Causal Discovery Report on {filename}'
+        else:
+            title = 'Causal Discovery Report on Given Dataset'
         return title, filename
     
     def intro_prompt(self):
@@ -737,23 +744,28 @@ Background about this dataset: {self.knowledge_docs}
                 {data_preview}
                 }}
                 """
-            print('get data prop')
+            #print('get data prop')
             data_prop_table = self.data_prop_prompt()
             # Intro info
-            print('get title')
+            #print('get title')
             self.title, dataset = self.get_title()
+            #print('get intro')
             self.intro_info = self.intro_prompt()
             # Background info
+            #print('get background')
             background_info1, relation_prompt = self.background_prompt()
             self.background_info1 = self.latex_convert(background_info1)
             self.background_info2 = self.latex_convert(relation_prompt)
             # EDA info
+            #print('get eda')
             dist_info, corr_info = self.eda_prompt()
             dist_info = self.latex_convert(dist_info)
             corr_info = self.latex_convert(corr_info)
             # Procedure info
+            #print('get procedure')
             self.discover_process = self.procedure_prompt()
             # Graph effect info
+            #print('get graph analysis')
             #self.graph_prompt = self.latex_convert(self.graph_effect_prompts())
             self.graph_prompt = self.global_state.logging.graph_conversion['initial_graph_analysis']
             # Graph Revise info
