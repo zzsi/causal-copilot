@@ -22,9 +22,9 @@ from postprocess.report_generation import Report_generation
 current_dir = os.getcwd()
 print("Current Directory:", current_dir)
 
-parent_dir = os.path.dirname(current_dir)
-os.chdir(parent_dir)
-print("Change Directory to:", os.getcwd())
+# parent_dir = os.path.dirname(current_dir)
+# os.chdir(parent_dir)
+# print("Change Directory to:", os.getcwd())
 
 # Global variables
 UPLOAD_FOLDER = "./demo_data"
@@ -206,10 +206,12 @@ def process_message(message, chat_history, download_btn):
         my_visual_initial = Visualization(global_state)
         if global_state.user_data.ground_truth is not None:
             my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.jpg')
+            my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.pdf')
             chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/true_graph.jpg',)))
             yield chat_history, download_btn
         if global_state.results.raw_result is not None:
             my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.jpg')
+            my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf')
             chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/initial_graph.jpg',)))
             yield chat_history, download_btn
             my_report = Report_generation(global_state, args)
@@ -225,6 +227,7 @@ def process_message(message, chat_history, download_btn):
         # Plot Revised Graph
         my_visual_revise = Visualization(global_state)
         if global_state.results.revised_graph is not None:
+            my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf')
             my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.jpg')
             chat_history.append((None, f"This is the revised graph with Bootstrap and LLM techniques"))
             yield chat_history, download_btn
@@ -243,7 +246,7 @@ def process_message(message, chat_history, download_btn):
         yield chat_history, download_btn
 
         # Report Generation
-        chat_history.append(("📝 Generate comprehensive report...", None))
+        chat_history.append(("📝 Generate comprehensive report and it may take a few minutes...", None))
         yield chat_history, download_btn
         report_gen = Report_generation(global_state, args)
         report = report_gen.generation(debug=False)
@@ -267,7 +270,7 @@ def process_message(message, chat_history, download_btn):
         return chat_history, download_btn
 
     except Exception as e:
-        chat_history.append((None, f"❌ An error occurred during analysis: {str(e)}"))
+        chat_history.append((None, f"❌ An error occurred during analysis: {str(e)}, please try again"))
         print(str(e))
         yield chat_history, download_btn
         return chat_history, download_btn

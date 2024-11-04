@@ -275,7 +275,7 @@ def get_json(args, prompt):
             jsons_cleaned = get_json(prompt)
         return jsons_cleaned
 
-def llm_evaluation(data, args, knowledge_docs, ini_graph, voting=10, threshold=0.7):
+def llm_evaluation(data, args, knowledge_docs, ini_graph, voting_num=10, threshold=0.7):
 
     import itertools
     import networkx as nx
@@ -312,9 +312,10 @@ def llm_evaluation(data, args, knowledge_docs, ini_graph, voting=10, threshold=0
             result = 0.5
         return result
     
+    #TODO:fix veriable name
     force_mat = np.zeros((len(data.columns), len(data.columns)))
     forbid_mat = np.zeros((len(data.columns), len(data.columns)))
-    for i in range(voting):
+    for voting_idx in range(voting_num):
         json_prunings = get_json(args, prompt_pruning)
         #print('llm pruning json')
         #print(json_prunings)
@@ -329,9 +330,9 @@ def llm_evaluation(data, args, knowledge_docs, ini_graph, voting=10, threshold=0
                 elif v == 'C':
                     forbid_mat[j, i] += 1
     
-    force_mat /= voting
+    force_mat /= voting_num
     #print('force_mat:', force_mat)
-    forbid_mat /= voting
+    forbid_mat /= voting_num
     #print('forbid_mat:', forbid_mat)
     force_indice = np.where(force_mat>threshold)
     forbid_indice = np.where(forbid_mat>threshold)
@@ -423,7 +424,7 @@ def graph_effect_prompts (data, graph, boot_probability):
 
     return graph_prompt
 
-def llm_direction(global_state, args, revised_graph, voting=10, threshold=0.7):
+def llm_direction(global_state, args, revised_graph, voting_num=10, threshold=0.7):
     '''
     :param data: Given Tabular Data in Pandas DataFrame format
     :param full_graph: An adjacent matrix in Numpy Ndarray format -
@@ -470,14 +471,14 @@ def llm_direction(global_state, args, revised_graph, voting=10, threshold=0.7):
     }}
     """
     prob_mat = np.zeros((global_state.statistics.feature_number, global_state.statistics.feature_number))
-    for i in range(voting):
+    for i in range(voting_num):
         json_directions = get_json(args, prompt_direction)
         #print('direction json')
         #print(json_directions)
         for key in json_directions.keys():
-            tuple = ast.literal_eval(key)
-            direction = json_directions[key]
             try:
+                tuple = ast.literal_eval(key)
+                direction = json_directions[key]
                 i = variables.get_loc(tuple[0])
                 j = variables.get_loc(tuple[1])
                 if direction == 'A':
@@ -485,10 +486,10 @@ def llm_direction(global_state, args, revised_graph, voting=10, threshold=0.7):
                 elif direction == 'B':
                     prob_mat[i, j] += 1
             except:
-                print(tuple)
+                print('parse tuple error:',tuple)
                 continue
     
-    prob_mat /= voting
+    prob_mat /= voting_num
     #print(prob_mat)
     revise_indice = np.where(prob_mat>threshold)
     edges_list = []
