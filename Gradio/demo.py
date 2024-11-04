@@ -19,6 +19,13 @@ from postprocess.judge import Judge
 from postprocess.visualization import Visualization
 from postprocess.report_generation import Report_generation
 
+# current_dir = os.getcwd()
+# print("Current Directory:", current_dir)
+#
+# parent_dir = os.path.dirname(current_dir)
+# os.chdir(parent_dir)
+# print("Change Directory to:", os.getcwd())
+
 # Global variables
 UPLOAD_FOLDER = "./demo_data"
 chat_history = []
@@ -51,7 +58,19 @@ DEMO_DATASETS = {
         "name": "🌫️ Ozone",
         "path": "dataset/Ozone/Ozone.csv",
         "query": "use PC, Investigate causal factors affecting ozone levels"
+    },
+    "Linear_Gaussian": {
+        "name": "🟦 Simualted Data: Linear Gaussian",
+        "path": "dataset/Linear_Gaussian/Linear_Gaussian_data.csv",
+        "query": "use PC"
+    },
+    "Linear_Nongaussian": {
+        "name": "🟦 Simulated Data: Linear Non-Gaussian",
+        "path": "dataset/Linear_Nongaussian/Linear_Nongaussian_data.csv",
+        "query": "use PC"
     }
+
+
 }
 
 def upload_file(file):
@@ -94,12 +113,14 @@ def process_initial_query(message):
 
 def process_message(message, chat_history, download_btn):
     global target_path, REQUIRED_INFO
+    process_initial_query(message)
 
     if not REQUIRED_INFO['data_uploaded']:
         chat_history.append((message, "Please upload your dataset first before proceeding."))
         return chat_history, download_btn
-    
+
     if not REQUIRED_INFO['initial_query']:
+        chat_history.append((message, "Please input your initial query."))
         return chat_history, download_btn
 
     try:
@@ -124,17 +145,26 @@ def process_message(message, chat_history, download_btn):
         # chat_history.append((None, "✅ Data loaded successfully"))
         yield chat_history, download_btn
 
-        # Statistical Analysis
         chat_history.append(("📈 Run statistical analysis...", None))
         yield chat_history, download_btn
         global_state = stat_info_collection(global_state)
-        global_state = knowledge_info(args, global_state)
         global_state.statistics.description = convert_stat_info_to_text(global_state.statistics)
         chat_history.append((None, global_state.statistics.description))
         yield chat_history, download_btn
 
+        # Knowledge generation
+        chat_history.append(("🌍 Generate background knowledge based on the dataset you provided...", None))
+        yield chat_history, download_btn
+        global_state = knowledge_info(args, global_state)
+
+        knowledge_clean = str(global_state.user_data.knowledge_docs).replace("[", "").replace("]", "").replace('"',
+                                                                                                               "").replace(
+            "\\n\\n", "\n\n").replace("\\n", "\n")
+        chat_history.append((None, knowledge_clean))
+        yield chat_history, download_btn
+
         # EDA Generation
-        chat_history.append(("🔍 Generate exploratory data analysis...", None))
+        chat_history.append(("🔍 Run exploratory data analysis...", None))
         yield chat_history, download_btn
         my_eda = EDA(global_state)
         my_eda.generate_eda()
@@ -150,6 +180,17 @@ def process_message(message, chat_history, download_btn):
         reranker = Reranker(args)
         global_state = reranker.forward(global_state)
         chat_history.append((None, f"✅ Selected algorithm: {global_state.algorithm.selected_algorithm}"))
+        chat_history.append((None, f"🤔 Algorithm selection reasoning: {global_state.algorithm.selected_reason}"))
+
+        hyperparameter_text = ""
+        for param, details in global_state.algorithm.algorithm_arguments_json['hyperparameters'].items():
+            value = details['value']
+            explanation = details['explanation']
+            hyperparameter_text += f"  Parameter: {param}\n"
+            hyperparameter_text += f"  Value: {value}\n"
+            hyperparameter_text += f"  Explanation: {explanation}\n\n"
+        chat_history.append(
+            (None, f"📖 Hyperparameters for the selected algorithm: \n\n {hyperparameter_text}"))
         yield chat_history, download_btn
 
         # Causal Discovery
@@ -175,7 +216,7 @@ def process_message(message, chat_history, download_btn):
         chat_history.append(("📝 Generate comprehensive report...", None))
         yield chat_history, download_btn
         report_gen = Report_generation(global_state, args)
-        report = report_gen.generation(debug=True)
+        report = report_gen.generation(debug=False)
         report_gen.save_report(report, save_path=global_state.user_data.output_report_dir)
         
         # Final steps
