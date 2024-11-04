@@ -138,6 +138,5 @@ simulated_data
 gradio_output/
 output/
 test.py
-demo.py
 .vscode
 .history/
