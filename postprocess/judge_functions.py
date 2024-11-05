@@ -275,7 +275,7 @@ def get_json(args, prompt):
             jsons_cleaned = get_json(prompt)
         return jsons_cleaned
 
-def llm_evaluation(data, args, knowledge_docs, ini_graph, voting=10, threshold=0.7):
+def llm_evaluation(data, args, knowledge_docs, ini_graph, voting_num=10, threshold=0.7):
 
     import itertools
     import networkx as nx
@@ -312,14 +312,18 @@ def llm_evaluation(data, args, knowledge_docs, ini_graph, voting=10, threshold=0
             result = 0.5
         return result
     
+    #TODO:fix veriable name
     force_mat = np.zeros((len(data.columns), len(data.columns)))
     forbid_mat = np.zeros((len(data.columns), len(data.columns)))
-    for i in range(voting):
+    for voting_idx in range(voting_num):
         json_prunings = get_json(args, prompt_pruning)
         #print('llm pruning json')
         #print(json_prunings)
         for k, v in json_prunings.items():
-            k = ast.literal_eval(k)
+            try:
+                k = ast.literal_eval(k)
+            except:
+                continue
             if all(item in variables for item in k):
                 i, j = variables.get_loc(k[0]), variables.get_loc(k[1])
                 if v == 'A':                   
@@ -329,9 +333,9 @@ def llm_evaluation(data, args, knowledge_docs, ini_graph, voting=10, threshold=0
                 elif v == 'C':
                     forbid_mat[j, i] += 1
     
-    force_mat /= voting
+    force_mat /= voting_num
     #print('force_mat:', force_mat)
-    forbid_mat /= voting
+    forbid_mat /= voting_num
     #print('forbid_mat:', forbid_mat)
     force_indice = np.where(force_mat>threshold)
     forbid_indice = np.where(forbid_mat>threshold)
@@ -423,7 +427,7 @@ def graph_effect_prompts (data, graph, boot_probability):
 
     return graph_prompt
 
-def llm_direction(global_state, args, revised_graph, voting=10, threshold=0.7):
+def llm_direction(global_state, args, revised_graph, voting_num=10, threshold=0.7):
     '''
     :param data: Given Tabular Data in Pandas DataFrame format
     :param full_graph: An adjacent matrix in Numpy Ndarray format -
@@ -448,7 +452,7 @@ def llm_direction(global_state, args, revised_graph, voting=10, threshold=0.7):
     # half_edges = edges_dict['half_edges']
     # none_edges = edges_dict['none_edges']
     # Let GPT determine direction of uncertain edges
-    print(uncertain_edges)
+    #print(uncertain_edges)
     if len(uncertain_edges) == 0:
         print('Empty uncertain_edges')
         return {}, revised_graph
@@ -470,14 +474,12 @@ def llm_direction(global_state, args, revised_graph, voting=10, threshold=0.7):
     }}
     """
     prob_mat = np.zeros((global_state.statistics.feature_number, global_state.statistics.feature_number))
-    for i in range(voting):
+    for i in range(voting_num):
         json_directions = get_json(args, prompt_direction)
-        #print('direction json')
-        #print(json_directions)
         for key in json_directions.keys():
-            tuple = ast.literal_eval(key)
-            direction = json_directions[key]
             try:
+                tuple = ast.literal_eval(key)
+                direction = json_directions[key]
                 i = variables.get_loc(tuple[0])
                 j = variables.get_loc(tuple[1])
                 if direction == 'A':
@@ -485,10 +487,10 @@ def llm_direction(global_state, args, revised_graph, voting=10, threshold=0.7):
                 elif direction == 'B':
                     prob_mat[i, j] += 1
             except:
-                print(tuple)
+                print('parse tuple error:', key)
                 continue
     
-    prob_mat /= voting
+    prob_mat /= voting_num
     #print(prob_mat)
     revise_indice = np.where(prob_mat>threshold)
     edges_list = []
@@ -496,7 +498,7 @@ def llm_direction(global_state, args, revised_graph, voting=10, threshold=0.7):
         revised_graph[i, j] = 1
         revised_graph[j, i] = -1
         edges_list.append((variables[j], variables[i]))
-    #print('edges list:', edges_list)
+    print('edges list:', edges_list)
     prompt_justification = f"""
     I have a list of tuples where each tuple represents a pair of entities that have a relationship with each other. 
     For example, ('Raf', 'Mek') means 'Raf' causes 'Mek'.
@@ -517,11 +519,14 @@ def llm_direction(global_state, args, revised_graph, voting=10, threshold=0.7):
                             """
     
     json_justification = get_json(args, prompt_justification)
-    #print('justification json')
-    #print(json_justification)
-    json_justification = {str(k): json_justification[str(k)] for k in edges_list}
+    json_justification_filtered = {}
+    for pair in edges_list:
+        try:
+            json_justification_filtered[str(pair)] = json_justification[str(pair)]
+        except:
+            json_justification_filtered[str(pair)] = 'There is no justification for it.'
     
-    return json_justification, revised_graph
+    return json_justification_filtered, revised_graph
         
 
 
@@ -529,7 +534,10 @@ def llm_direction_evaluation(global_state):
     from postprocess.visualization import Visualization
     
     true_graph = global_state.user_data.ground_truth
-    full_graph = global_state.results.raw_result
+    if global_state.algorithm.selected_algorithm in ['DirectLiNGAM', 'ICALiNGAM', 'NOTEARS']:
+        full_graph = global_state.results.converted_graph
+    else:
+        full_graph =  global_state.results.raw_result
     revised_graph = global_state.results.revised_graph
     my_visual = Visualization(global_state)
     edges_dict = my_visual.convert_to_edges(full_graph)

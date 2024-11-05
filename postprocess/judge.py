@@ -130,7 +130,7 @@ class Judge(object):
     def forward(self, global_state):
         
         if self.global_state.algorithm.selected_algorithm in ['DirectLiNGAM', 'ICALiNGAM', 'NOTEARS']:
-            adj_matrix = global_state.results.raw_result
+            adj_matrix = global_state.results.converted_graph
         else:
             if self.global_state.algorithm.selected_algorithm == 'FCI':
                 g = global_state.results.raw_result[0]

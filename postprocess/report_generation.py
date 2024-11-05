@@ -91,16 +91,23 @@ class Report_generation(object):
         self.visual_dir = global_state.user_data.output_graph_dir
 
     def get_title(self):
-        for file in os.listdir(self.data_file):
-            if file.endswith(".csv"):
-                data_path = file
-                filename = os.path.splitext(os.path.basename(data_path))[0]
-                filename = filename.capitalize()
-                filename = filename.capitalize().replace("_", r"\_")
-                title = f'Causal Discovery Report on {filename}'
-                break
-            else:
-                title = 'Causal Discovery Report on Given Dataset'
+        if os.path.isdir(self.data_file):
+            for file in os.listdir(self.data_file):
+                if file.endswith(".csv"):
+                    data_path = file
+                    filename = os.path.splitext(os.path.basename(data_path))[0]
+                    filename = filename.capitalize()
+                    filename = filename.capitalize().replace("_", r"\_")
+                    title = f'Causal Discovery Report on {filename}'
+                    break
+        elif self.data_file.endswith(".csv"):
+            data_path = self.data_file
+            filename = os.path.splitext(os.path.basename(data_path))[0]
+            filename = filename.capitalize()
+            filename = filename.capitalize().replace("_", r"\_")
+            title = f'Causal Discovery Report on {filename}'
+        else:
+            title = 'Causal Discovery Report on Given Dataset'
         return title, filename
     
     def intro_prompt(self):
@@ -157,7 +164,7 @@ There are three sections:
 Please give me text in the second section ### 2. Possible Causal Relations among These Variables:
 1. In this part, all relationships should be listed in this format: **A -> B**: explanation. 
 2. Only one variable can appear at each side of ->; for example, **A -> B** is ok but **A -> B/C** is wrong, and **A -> B and C** is also wrong.
-3. All variables should be among {col_names}, do not include relationships with other variables.
+3. All variables should be among {col_names}, please delete contents that include any other variables!
 4. Do not include any Greek Letters!
 
 For example: 
@@ -179,9 +186,7 @@ Background about this dataset: {self.knowledge_docs}
         relations = []
         # Find all matches
         matches = re.findall(pattern, section2)
-        print(matches)
         for match in matches:
-            print('match: ', match)
             left_part = match[0]
             right_part = match[2]
 
@@ -240,7 +245,7 @@ Background about this dataset: {self.knowledge_docs}
                 \begin{{minipage}}[t]{{0.3\linewidth}}
                     \begin{{figure}}[H]
                         \centering
-                        \resizebox{{\linewidth}}{{!}}{{\includegraphics[height=0.4\textheight]{relation_path}}}
+                        \resizebox{{\linewidth}}{{!}}{{\includegraphics[height=0.3\textheight]{relation_path}}}
                         \caption{{\label{{fig:relation}}Possible Causal Relation Graph}}
                     \end{{figure}}
                 \end{{minipage}}
@@ -251,7 +256,7 @@ Background about this dataset: {self.knowledge_docs}
 
                 \begin{{figure}}[H]
                 \centering
-                \includegraphics[width=0.7\linewidth]{relation_path}
+                \includegraphics[width=0.5\linewidth]{relation_path}
                 \caption{{\label{{fig:relation}}Possible Causal Relation Graph}}
                 \end{{figure}}
                 """
@@ -565,7 +570,7 @@ Background about this dataset: {self.knowledge_docs}
         length = round(1/len(bootstrap_dict), 2)-0.01
         for key in bootstrap_dict.keys():
             graph_path = f'{self.visual_dir}/{key}_confidence_heatmap.jpg'
-            caption = f'{name_map[key]} Edge'
+            caption = f'{name_map[key]}'
             graph_prompt += f"""
             \begin{{subfigure}}{{{length}\textwidth}}
                     \centering
@@ -737,23 +742,28 @@ Background about this dataset: {self.knowledge_docs}
                 {data_preview}
                 }}
                 """
-            print('get data prop')
+            #print('get data prop')
             data_prop_table = self.data_prop_prompt()
             # Intro info
-            print('get title')
+            #print('get title')
             self.title, dataset = self.get_title()
+            #print('get intro')
             self.intro_info = self.intro_prompt()
             # Background info
+            #print('get background')
             background_info1, relation_prompt = self.background_prompt()
             self.background_info1 = self.latex_convert(background_info1)
             self.background_info2 = self.latex_convert(relation_prompt)
             # EDA info
+            #print('get eda')
             dist_info, corr_info = self.eda_prompt()
             dist_info = self.latex_convert(dist_info)
             corr_info = self.latex_convert(corr_info)
             # Procedure info
+            #print('get procedure')
             self.discover_process = self.procedure_prompt()
             # Graph effect info
+            #print('get graph analysis')
             #self.graph_prompt = self.latex_convert(self.graph_effect_prompts())
             self.graph_prompt = self.global_state.logging.graph_conversion['initial_graph_analysis']
             # Graph Revise info
@@ -818,7 +828,8 @@ Background about this dataset: {self.knowledge_docs}
                      5. Replace ↔ with $\leftrightarrow$, -> with $\\rightarrow$
                      6. All **text** should be replaced with \\textbf{text}
                      7. Do not include any Greek Letters
-                     8. Only include your latex content in the response which can be rendered to pdf directly. Don't include other things like '''latex '''
+                     8. Do not change any parameters in figure settings
+                     9. Only include your latex content in the response which can be rendered to pdf directly. Don't include other things like '''latex '''
                      """},
                     {"role": "user", "content": prompt_template}
                 ]
