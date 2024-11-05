@@ -13,7 +13,7 @@ Causal-Copilot: Towards Autonomous Causal Discovery Agent
 
 ## Introduction
 
-Causal-Copilot is a LLM-oriented toolkit for **automatic causal discovery**, aiming to help researchers and data scientists identify causal relationships within real-world datasets. Given the data, Causal-Copilot autonomously selects the best-suited causal discovery algorithm, sets up proper hyper-parameters, synthesizes the code for execution, and finally generates the easy-to-read PDF report to users.
+Causal-Copilot is a LLM-oriented toolkit for **automatic causal analysis**, aiming to help researchers and data scientists identify causal relationships within real-world datasets. Given the data, Causal-Copilot autonomously selects the best-suited causal discovery algorithm, sets up proper hyper-parameters, synthesizes the code for execution, and finally generates the easy-to-read PDF report to users.
 
 ---
 
@@ -44,7 +44,7 @@ Just try the online Causal-Copilot in [This Link](https://921b68852c4d574f0e.gra
 
 ## Features
 
-- **Automated Causal Discovery**: Carefully designed prompts guide LLMs to use causal discovery algorithms and identify causal relationships, without human involvement and extensive parameter tuning.
+- **Automated Causal Discovery**: Carefully designed prompts guide LLMs to select best-suited causal discovery algorithms and identify causal relationships, without the requirements in expertise of causality background and extensive parameter tuning.
 - **User-friendly Visualization**: Clearly visualize data statistics information, causal graphs and dependency probabilities between variables via easy-to-read figures.
 - **Detailed Analysis Report**: Provide well-formulated PDF report for the whole causal discovery process, containing detailed explanation for every step.
 - **Extensibility**: Leave interfaces for integrating new causal discovery algorithms and other causality-related libraries.
