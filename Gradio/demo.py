@@ -65,7 +65,7 @@ DEMO_DATASETS = {
         "query": "NO. Use PC"
     },
     "Linear_Nongaussian": {
-        "name": "🟦 Simulated Data: Linear Non-Gaussian",
+        "name": "🟩 Simulated Data: Linear Non-Gaussian",
         "path": "dataset/Linear_Nongaussian/Linear_Nongaussian_data.csv",
         "query": "NO. Use DirectLiNGAM"
     }
@@ -328,7 +328,8 @@ def clear_chat():
     REQUIRED_INFO['initial_query'] = False
     
     # Return initial welcome message
-    return [(None, "👋 Hello! I'm your causal discovery assistant. Want to discover some causal relationships today?")]
+    return [(None, "👋 Hello! I'm your causal discovery assistant. Want to discover some causal relationships today? \n"
+                      "⏫ Please first upload your dataset.")]
 
 def load_demo_dataset(dataset_name, chatbot, demo_btn, download_btn):
     global target_path, REQUIRED_INFO, output_dir
