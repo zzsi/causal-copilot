@@ -1,5 +1,5 @@
 <h1 align="center">
-<img src="asset/logo.png" width="100" alt="Causality" />
+<img src="asset/logo.png" width="200" alt="Causality" />
 <br>
 Causal-Copilot: Towards Autonomous Causal Discovery Agent
 </h1>
@@ -53,9 +53,11 @@ Just try the online Causal-Copilot in [This Link](https://921b68852c4d574f0e.gra
 
 - Our Causal-Copilot consists of three components, namely preprocessing, decision making and visualization parts, which are all supported by SOTA LLMs (e.g., GPT-4o).
 
+<h1 align="center">
 <div style="text-align: center;">
     <img src="asset/architecture.png" width="600" alt="Causality" />
 </div>
+</h1>
 
 ### Evaluation on Simulated Data
 
