@@ -320,7 +320,10 @@ def llm_evaluation(data, args, knowledge_docs, ini_graph, voting_num=10, thresho
         #print('llm pruning json')
         #print(json_prunings)
         for k, v in json_prunings.items():
-            k = ast.literal_eval(k)
+            try:
+                k = ast.literal_eval(k)
+            except:
+                continue
             if all(item in variables for item in k):
                 i, j = variables.get_loc(k[0]), variables.get_loc(k[1])
                 if v == 'A':                   
@@ -449,7 +452,7 @@ def llm_direction(global_state, args, revised_graph, voting_num=10, threshold=0.
     # half_edges = edges_dict['half_edges']
     # none_edges = edges_dict['none_edges']
     # Let GPT determine direction of uncertain edges
-    print(uncertain_edges)
+    #print(uncertain_edges)
     if len(uncertain_edges) == 0:
         print('Empty uncertain_edges')
         return {}, revised_graph
@@ -473,8 +476,6 @@ def llm_direction(global_state, args, revised_graph, voting_num=10, threshold=0.
     prob_mat = np.zeros((global_state.statistics.feature_number, global_state.statistics.feature_number))
     for i in range(voting_num):
         json_directions = get_json(args, prompt_direction)
-        #print('direction json')
-        #print(json_directions)
         for key in json_directions.keys():
             try:
                 tuple = ast.literal_eval(key)
@@ -486,7 +487,7 @@ def llm_direction(global_state, args, revised_graph, voting_num=10, threshold=0.
                 elif direction == 'B':
                     prob_mat[i, j] += 1
             except:
-                print('parse tuple error:',tuple)
+                print('parse tuple error:', key)
                 continue
     
     prob_mat /= voting_num
@@ -497,7 +498,7 @@ def llm_direction(global_state, args, revised_graph, voting_num=10, threshold=0.
         revised_graph[i, j] = 1
         revised_graph[j, i] = -1
         edges_list.append((variables[j], variables[i]))
-    #print('edges list:', edges_list)
+    print('edges list:', edges_list)
     prompt_justification = f"""
     I have a list of tuples where each tuple represents a pair of entities that have a relationship with each other. 
     For example, ('Raf', 'Mek') means 'Raf' causes 'Mek'.
