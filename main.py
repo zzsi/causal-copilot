@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="dataset/CCS_Data",
+        default="dataset/20241024_145159_Linear-Non-gaussian_id_0_nodes10_samples1000",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument(
         '--output-report-dir',
         type=str,
-        default='dataset/CCS_Data/output_report',
+        default='dataset/20241024_145159_Linear-Non-gaussian_id_0_nodes10_samples1000/output_report',
         help='Directory to save the output report'
     )
 
@@ -39,7 +39,7 @@ def parse_args():
     parser.add_argument(
         '--output-graph-dir',
         type=str,
-        default='dataset/CCS_Data/output_graph',
+        default='dataset/20241024_145159_Linear-Non-gaussian_id_0_nodes10_samples1000/output_graph',
         help='Directory to save the output graph'
     )
 
@@ -75,7 +75,7 @@ def parse_args():
     parser.add_argument(
         '--data_mode',
         type=str,
-        default="real",
+        default="simulated",
         help='Data mode: real or simulated'
     )
 
