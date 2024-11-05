@@ -19,9 +19,9 @@ from postprocess.judge import Judge
 from postprocess.visualization import Visualization
 from postprocess.report_generation import Report_generation
 
-current_dir = os.getcwd()
-print("Current Directory:", current_dir)
-
+# current_dir = os.getcwd()
+# print("Current Directory:", current_dir)
+#
 # parent_dir = os.path.dirname(current_dir)
 # os.chdir(parent_dir)
 # print("Change Directory to:", os.getcwd())
@@ -42,32 +42,32 @@ DEMO_DATASETS = {
     "Abalone": {
         "name": "🐚 Abalone",
         "path": "dataset/Abalone/Abalone.csv",
-        "query": "use PC, Find causal relationships between physical measurements and age of abalone",
+        "query": "YES. Use PC and find causal relationships between physical measurements and age of abalone",
     },
     "Sachs": {
         "name": "🧬 Sachs",
         "path": "dataset/sachs/sachs.csv", 
-        "query": "use PC, Discover causal relationships between protein signaling molecules"
+        "query": "YES. Use PC to discover causal relationships between protein signaling molecules"
     },
     "CCS Data": {
         "name": "📊 CCS Data",
         "path": "dataset/CCS_Data/CCS_Data.csv",
-        "query": "use PC, Analyze causal relationships in CCS dataset variables"
+        "query": "YES. Use PC, Analyze causal relationships in CCS dataset variables"
     },
     "Ozone": {
         "name": "🌫️ Ozone",
         "path": "dataset/Ozone/Ozone.csv",
-        "query": "This is a Time-Series dataset, Investigate causal factors affecting ozone levels"
+        "query": "YES. This is a Time-Series dataset, investigate causal factors affecting ozone levels"
     },
     "Linear_Gaussian": {
         "name": "🟦 Simualted Data: Linear Gaussian",
         "path": "dataset/Linear_Gaussian/Linear_Gaussian_data.csv",
-        "query": "use PC"
+        "query": "NO. Use PC"
     },
     "Linear_Nongaussian": {
         "name": "🟦 Simulated Data: Linear Non-Gaussian",
         "path": "dataset/Linear_Nongaussian/Linear_Nongaussian_data.csv",
-        "query": "use DirectLiNGAM"
+        "query": "NO. Use DirectLiNGAM"
     }
 }
 
@@ -92,7 +92,9 @@ def handle_file_upload(file, chatbot, file_upload_btn, download_btn):
             df = pd.read_csv(file.name)
             upload_file(file)
             REQUIRED_INFO['data_uploaded'] = True
-            bot_message = f"✅ Successfully loaded CSV file with {len(df)} rows and {len(df.columns)} columns. What would you like to analyze?"
+            bot_message = (f"✅ Successfully loaded CSV file with {len(df)} rows and {len(df.columns)} columns! \n"
+                            "🤔 Please indicate if your dataset has meaningful feature names and answer it using 'YES' or 'NO'. \n"
+                            "✨ Some initial queries about the analysis, e.g., background/context/prior/statistical information, would help us better assistant you!")
         else:
             bot_message = "❌ Please upload a CSV file."
         chatbot.append((None, bot_message))
@@ -123,6 +125,7 @@ def process_message(message, chat_history, download_btn):
         chat_history.append((message, "Please input your initial query."))
         return chat_history, download_btn
 
+
     try:
         # Initialize config and global state
         config = get_demo_config()
@@ -132,6 +135,14 @@ def process_message(message, chat_history, download_btn):
         args = type('Args', (), {})()
         for key, value in config.__dict__.items():
             setattr(args, key, value)
+
+        if 'YES' in message:
+            args.data_mode = 'real'
+        elif 'NO' in message:
+            args.data_mode = 'simulated'
+        else:
+            chat_history.append((message, "Please indicate if your dataset has meaningful feature names using 'YES' or 'NO', which would help us generate appropriate report for you."))
+            return chat_history, download_btn
 
         # Add user message
         # chat_history.append((message, None))
@@ -153,15 +164,18 @@ def process_message(message, chat_history, download_btn):
         yield chat_history, download_btn
 
         # Knowledge generation
-        chat_history.append(("🌍 Generate background knowledge based on the dataset you provided...", None))
-        yield chat_history, download_btn
-        global_state = knowledge_info(args, global_state)
+        if args.data_mode == 'real':
+            chat_history.append(("🌍 Generate background knowledge based on the dataset you provided...", None))
+            yield chat_history, download_btn
+            global_state = knowledge_info(args, global_state)
 
-        knowledge_clean = str(global_state.user_data.knowledge_docs).replace("[", "").replace("]", "").replace('"',
-                                                                                                               "").replace(
-            "\\n\\n", "\n\n").replace("\\n", "\n")
-        chat_history.append((None, knowledge_clean))
-        yield chat_history, download_btn
+            knowledge_clean = str(global_state.user_data.knowledge_docs).replace("[", "").replace("]", "").replace('"',
+                                                                                                                   "").replace(
+                "\\n\\n", "\n\n").replace("\\n", "\n")
+            chat_history.append((None, knowledge_clean))
+            yield chat_history, download_btn
+        elif args.data_mode == 'simulated':
+            global_state = knowledge_info(args, global_state)
 
         # EDA Generation
         chat_history.append(("🔍 Run exploratory data analysis...", None))
@@ -173,14 +187,24 @@ def process_message(message, chat_history, download_btn):
         yield chat_history, download_btn
 
         # Algorithm Selection
-        chat_history.append(("🤖 Select optimal causal discovery algorithm...", None))
-        yield chat_history, download_btn
-        filter = Filter(args)
-        global_state = filter.forward(global_state)
-        reranker = Reranker(args)
-        global_state = reranker.forward(global_state)
-        chat_history.append((None, f"✅ Selected algorithm: {global_state.algorithm.selected_algorithm}"))
-        chat_history.append((None, f"🤔 Algorithm selection reasoning: {global_state.algorithm.selected_reason}"))
+        if global_state.algorithm.selected_algorithm is None:
+            chat_history.append(("🤖 Select optimal causal discovery algorithm and its hyperparameter...", None))
+            yield chat_history, download_btn
+            filter = Filter(args)
+            global_state = filter.forward(global_state)
+            reranker = Reranker(args)
+            global_state = reranker.forward(global_state)
+            chat_history.append((None, f"✅ Selected algorithm: {global_state.algorithm.selected_algorithm}"))
+            chat_history.append((None, f"🤔 Algorithm selection reasoning: {global_state.algorithm.selected_reason}"))
+        else:
+            chat_history.append(("🤖 Select optimal hyperparameter for your selected causal discovery algorithm...", None))
+            yield chat_history, download_btn
+
+            filter = Filter(args)
+            global_state = filter.forward(global_state)
+            reranker = Reranker(args)
+            global_state = reranker.forward(global_state)
+            chat_history.append((None, f"✅ Selected algorithm: {global_state.algorithm.selected_algorithm}"))
 
         hyperparameter_text = ""
         for param, details in global_state.algorithm.algorithm_arguments_json['hyperparameters'].items():
@@ -192,6 +216,9 @@ def process_message(message, chat_history, download_btn):
         chat_history.append(
             (None, f"📖 Hyperparameters for the selected algorithm: \n\n {hyperparameter_text}"))
         yield chat_history, download_btn
+
+
+
 
         # Causal Discovery
         chat_history.append(("🔄 Run causal discovery analysis...", None))
@@ -252,11 +279,12 @@ def process_message(message, chat_history, download_btn):
         chat_history.append(("📝 Generate comprehensive report and it may take a few minutes...", None))
         yield chat_history, download_btn
         report_gen = Report_generation(global_state, args)
-        report = report_gen.generation(debug=False)
+        report = report_gen.generation(debug=True)
         report_gen.save_report(report, save_path=global_state.user_data.output_report_dir)
         report_path = os.path.join(output_dir, 'output_report', 'report.pdf')
         while not os.path.isfile(report_path):
-            chat_history.append((None, "❌ An error occurred during the Report Generation, we are trying again and please wait for a few minutes."))
+            chat_history.append((None,
+                                 "❌ An error occurred during the Report Generation, we are trying again and please wait for a few minutes."))
             yield chat_history, download_btn
             report_gen = Report_generation(global_state, args)
             report = report_gen.generation(debug=False)
@@ -294,7 +322,7 @@ def clear_chat():
     target_path = None
     output_dir = None
     chat_history = []
-    
+
     # Reset required info flags
     REQUIRED_INFO['data_uploaded'] = False
     REQUIRED_INFO['initial_query'] = False
@@ -422,7 +450,8 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
     }
 """) as demo:
     chatbot = gr.Chatbot(
-        value=[(None, "👋 Hello! I'm your causal discovery assistant. Want to discover some causal relationships today? Please upload your dataset, and provide your initial query")],
+        value=[(None, "👋 Hello! I'm your causal discovery assistant. Want to discover some causal relationships today? \n"
+                      "⏫ Please first upload your dataset.")],
         height=700,
         show_label=False,
         show_share_button=False,
