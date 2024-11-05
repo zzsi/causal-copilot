@@ -203,18 +203,18 @@ def main(args):
         flag, algorithm_setup = judge(preprocessed_data, code, results, statistics_dict, algorithm_setup, knowledge_docs)
     '''
 
-    # #############Report Generation###################
-    # import os 
-    # my_report = Report_generation(global_state, args)
-    # report = my_report.generation()
-    # my_report.save_report(report, save_path=global_state.user_data.output_report_dir)
-    # report_path = os.path.join(global_state.user_data.output_report_dir, 'report.pdf')
-    # while not os.path.isfile(report_path):
-    #     print('Error occur during the Report Generation, try again')
-    #     report_gen = Report_generation(global_state, args)
-    #     report = report_gen.generation(debug=False)
-    #     report_gen.save_report(report, save_path=global_state.user_data.output_report_dir)
-    # ################################
+    #############Report Generation###################
+    import os 
+    my_report = Report_generation(global_state, args)
+    report = my_report.generation()
+    my_report.save_report(report, save_path=global_state.user_data.output_report_dir)
+    report_path = os.path.join(global_state.user_data.output_report_dir, 'report.pdf')
+    while not os.path.isfile(report_path):
+        print('Error occur during the Report Generation, try again')
+        report_gen = Report_generation(global_state, args)
+        report = report_gen.generation(debug=False)
+        report_gen.save_report(report, save_path=global_state.user_data.output_report_dir)
+    ################################
 
     return report, global_state
 
