@@ -385,7 +385,7 @@ Background about this dataset: {self.knowledge_docs}
  
         for param in params:
             sub_block = f"""
-                        \item \textbf{param}:
+                        \item \textbf{params[param]['full_name']}:
                         \begin{{itemize}}
                             \item \textbf{{Value}}: {params[param]['value']}
                             \item \textbf{{Explanation}}: {params[param]['explanation']}

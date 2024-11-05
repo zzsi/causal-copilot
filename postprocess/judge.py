@@ -196,6 +196,7 @@ class Judge(object):
             recall = adj.get_adj_recall()
         else:
             if global_state.statistics.domain_index is not None:
+                # TODO: handle the weird case where the domain index is not the last column
                 global_state.results.converted_graph = global_state.results.converted_graph[:-1, :-1]
             ground_truth_flat = global_state.user_data.ground_truth.flatten() 
             if revise:

@@ -156,11 +156,13 @@ def main(args):
     global_state = programmer.forward(global_state)
     #############Visualization for Initial Graph###################
     my_visual_initial = Visualization(global_state)
+    # Get the position of the nodes
+    pos_est = my_visual_initial.get_pos(global_state.results.raw_result)
     # Plot True Graph
     if global_state.user_data.ground_truth is not None:
-        pos_true = my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.pdf')
+        _ = my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.pdf', pos=pos_est)
     # Plot Initial Graph
-    pos_raw = my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf')
+    _ = my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf', pos=pos_est)
     my_report = Report_generation(global_state, args)
     global_state.logging.graph_conversion['initial_graph_analysis'] = my_report.latex_convert(my_report.graph_effect_prompts())
 
@@ -185,9 +187,11 @@ def main(args):
     #############Visualization for Revised Graph###################
     # Plot Revised Graph
     my_visual_revise = Visualization(global_state)
-    pos_new = my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf')
+    pos_new = my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf', pos=pos_est)
     # Plot Bootstrap Heatmap
     boot_heatmap_path = my_visual_revise.boot_heatmap_plot()
+
+    
 
     # algorithm selection process
     '''
@@ -199,18 +203,18 @@ def main(args):
         flag, algorithm_setup = judge(preprocessed_data, code, results, statistics_dict, algorithm_setup, knowledge_docs)
     '''
 
-    #############Report Generation###################
-    import os 
-    my_report = Report_generation(global_state, args)
-    report = my_report.generation()
-    my_report.save_report(report, save_path=global_state.user_data.output_report_dir)
-    report_path = os.path.join(global_state.user_data.output_report_dir, 'report.pdf')
-    while not os.path.isfile(report_path):
-        print('Error occur during the Report Generation, try again')
-        report_gen = Report_generation(global_state, args)
-        report = report_gen.generation(debug=False)
-        report_gen.save_report(report, save_path=global_state.user_data.output_report_dir)
-    ################################
+    # #############Report Generation###################
+    # import os 
+    # my_report = Report_generation(global_state, args)
+    # report = my_report.generation()
+    # my_report.save_report(report, save_path=global_state.user_data.output_report_dir)
+    # report_path = os.path.join(global_state.user_data.output_report_dir, 'report.pdf')
+    # while not os.path.isfile(report_path):
+    #     print('Error occur during the Report Generation, try again')
+    #     report_gen = Report_generation(global_state, args)
+    #     report = report_gen.generation(debug=False)
+    #     report_gen.save_report(report, save_path=global_state.user_data.output_report_dir)
+    # ################################
 
     return report, global_state
 

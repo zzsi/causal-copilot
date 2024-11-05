@@ -5,8 +5,11 @@ import seaborn as sns
 import os
 
 from pywhy_graphs import PAG
-from pywhy_graphs.viz import draw
+# from pywhy_graphs.viz import draw
+import sys
+sys.path.append('causal-learn')
 from causallearn.search.FCMBased.lingam.utils import make_dot
+from .draw import draw
 
 class Visualization(object):
     def __init__(self, global_state, threshold: float=0.95):
@@ -20,6 +23,30 @@ class Visualization(object):
         self.bootstrap_prob = global_state.results.bootstrap_probability
         self.save_dir = global_state.user_data.output_graph_dir
         self.threshold = threshold
+
+    def get_pos(self, g):
+        if self.global_state.algorithm.selected_algorithm == 'FCI':
+            adj_matrix = g[0].graph
+        elif self.global_state.algorithm.selected_algorithm == 'PC' or self.global_state.algorithm.selected_algorithm == 'CDNOD':
+            adj_matrix = g.G.graph
+        elif self.global_state.algorithm.selected_algorithm == 'GES':
+            adj_matrix = g['G'].graph
+        elif self.global_state.algorithm.selected_algorithm == 'NOTEARS':
+            variables = self.data.columns
+            adj_matrix = np.zeros((len(variables), len(variables)))
+            for parent, child in g.edges():
+                i = variables.get_loc(parent)
+                j = variables.get_loc(child) 
+                adj_matrix[j, i] = g.get_edge_data(parent, child)['weight']
+        elif self.global_state.algorithm.selected_algorithm in ['ICALiNGAM', 'DirectLiNGAM']:
+            adj_matrix = g.adjacency_matrix_
+
+        g = nx.from_numpy_array(adj_matrix, create_using=nx.DiGraph)
+        # Relabel nodes with variable names from data columns
+        mapping = {i: self.data.columns[i] for i in range(len(self.data.columns))}
+        g = nx.relabel_nodes(g, mapping)
+        pos = nx.spring_layout(g)
+        return pos
 
     def convert_to_edges_truth(self, mat):
         variables = self.data.columns
@@ -42,8 +69,7 @@ class Visualization(object):
             'half_edges': [],
             'none_edges': []
         }
-        
-        return edges_dict 
+        return edges_dict
 
     def convert_to_edges(self, g):
         if isinstance(g, np.ndarray):
@@ -120,12 +146,14 @@ class Visualization(object):
 
     #     return boot_dict
 
+
     def plot_pdag(self, g, save_path, pos=None, relation=False):
         algo = self.global_state.algorithm.selected_algorithm
         path = os.path.join(self.save_dir, save_path)
 
         if algo in ['PC', 'FCI', 'CDNOD', 'GES'] or relation:
             if isinstance(g, np.ndarray):
+                # ugly assume the truth graph is always called first
                 edges_dict = self.convert_to_edges_truth(g)
             else:
                 edges_dict = self.convert_to_edges(g)
@@ -143,12 +171,11 @@ class Visualization(object):
                 pag.add_edge(edge[0], edge[1], pag.circle_edge_name)
                 pag.add_edge(edge[1], edge[0], pag.circle_edge_name)
 
-            if pos is None:
-                pos_G = nx.spring_layout(pag)
-                
-                dot_graph = draw(pag, pos=pos_G, shape='circle')                
+            if pos is not None:
+                dot_graph = draw(pag, full_node_names=list(pos.keys()), pos=pos, shape='circle')  
+                pos_G = pos              
             else:
-                dot_graph = draw(pag, pos=pos, shape='circle')
+                dot_graph = draw(pag, shape='circle')
                 pos_G = None
             dot_graph.render(outfile=path, cleanup=True)
             
@@ -168,7 +195,7 @@ class Visualization(object):
                         mat[j, i] = g.get_edge_data(parent, child)['weight']
                 else:
                     mat = g.adjacency_matrix_
-            pyd = make_dot(mat, labels=labels)  
+            pyd = make_dot(mat, labels=labels, pos=pos)  
             #pyd = make_dot_highlight(mat, labels=labels, cmap="cool", vmargin=2, hmargin=2)         
             pyd.render(outfile=path, cleanup=True)
             return None
@@ -262,3 +289,40 @@ class Visualization(object):
         plt.savefig(fname=save_path, dpi=1000)
 
         return save_path
+    
+
+def test_fixed_pos():
+    # Create a fully connected graph
+    n_nodes = 5
+    fully_connected = np.ones((n_nodes, n_nodes))
+    np.fill_diagonal(fully_connected, 0)
+
+    # Create a 50% connected graph by randomly setting half the edges to 0
+    fifty_percent = fully_connected.copy()
+    n_edges = (n_nodes * (n_nodes-1)) // 2  # Number of edges in upper triangle
+    edges_to_remove = n_edges // 2  # Remove half the edges
+    
+    # Get indices of upper triangle (excluding diagonal)
+    upper_indices = np.triu_indices(n_nodes, k=1)
+    
+    # Randomly select edges to remove
+    remove_idx = np.random.choice(n_edges, edges_to_remove, replace=False)
+    for idx in remove_idx:
+        i, j = upper_indices[0][idx], upper_indices[1][idx]
+        fifty_percent[i,j] = fifty_percent[j,i] = 0
+
+    # Use spring layout to get positions
+    import networkx as nx
+    G_full = nx.from_numpy_array(fully_connected, create_using=nx.DiGraph)
+    G_half = nx.from_numpy_array(fifty_percent, create_using=nx.DiGraph)
+    
+    pos_full = nx.spring_layout(G_full, seed=42)
+
+
+    # Plot using the visualization functions
+    draw(G_full, pos=pos_full, full_node_names=list(pos_full.keys()), shape='circle').render(outfile='fully_connected.pdf', cleanup=True)
+    draw(G_half, pos=pos_full, full_node_names=list(pos_full.keys()), shape='circle').render(outfile='fifty_percent.pdf', cleanup=True)
+    
+
+if __name__ == '__main__':
+    test_fixed_pos()
