@@ -214,14 +214,11 @@ def process_message(message, chat_history, download_btn):
             hyperparameter_text += f"  Value: {value}\n"
             hyperparameter_text += f"  Explanation: {explanation}\n\n"
         chat_history.append(
-            (None, f"📖 Hyperparameters for the selected algorithm: \n\n {hyperparameter_text}"))
+            (None, f"📖 Hyperparameters for the selected algorithm {global_state.algorithm.selected_algorithm}: \n\n {hyperparameter_text}"))
         yield chat_history, download_btn
 
-
-
-
         # Causal Discovery
-        chat_history.append(("🔄 Run causal discovery analysis...", None))
+        chat_history.append(("🔄 Run causal discovery algorithm...", None))
         yield chat_history, download_btn
         programmer = Programming(args)
         global_state = programmer.forward(global_state)
@@ -229,14 +226,15 @@ def process_message(message, chat_history, download_btn):
         chat_history.append(("📊 Generate causal graph visualization...", None))
         yield chat_history, download_btn
         my_visual_initial = Visualization(global_state)
+        pos = my_visual_initial.get_pos(global_state.results.raw_result)
         if global_state.user_data.ground_truth is not None:
-            my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.jpg')
-            my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.pdf')
+            my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.jpg', pos)
+            my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.pdf', pos)
             chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/true_graph.jpg',)))
             yield chat_history, download_btn
         if global_state.results.raw_result is not None:
-            my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.jpg')
-            my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf')
+            my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.jpg', pos)
+            my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf', pos)
             chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/initial_graph.jpg',)))
             yield chat_history, download_btn
             my_report = Report_generation(global_state, args)
@@ -257,8 +255,8 @@ def process_message(message, chat_history, download_btn):
         # Plot Revised Graph
         my_visual_revise = Visualization(global_state)
         if global_state.results.revised_graph is not None:
-            my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf')
-            my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.jpg')
+            my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf', pos)
+            my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.jpg', pos)
             chat_history.append((None, f"This is the revised graph with Bootstrap and LLM techniques"))
             yield chat_history, download_btn
             chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/revised_graph.jpg',)))
@@ -438,8 +436,9 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
     .message {
         padding: 12px 16px !important;
         border-radius: 12px !important;
-        max-width: 80% !important;
+        max-width: 100% !important;
         box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+        object-fit: contain !important;
     }
     .bot-message {
         background: #e3f2fd !important;
