@@ -519,11 +519,14 @@ def llm_direction(global_state, args, revised_graph, voting_num=10, threshold=0.
                             """
     
     json_justification = get_json(args, prompt_justification)
-    #print('justification json')
-    #print(json_justification)
-    json_justification = {str(k): json_justification[str(k)] for k in edges_list}
+    json_justification_filtered = {}
+    for pair in edges_list:
+        try:
+            json_justification_filtered[str(pair)] = json_justification[str(pair)]
+        except:
+            json_justification_filtered[str(pair)] = 'There is no justification for it.'
     
-    return json_justification, revised_graph
+    return json_justification_filtered, revised_graph
         
 
 
@@ -531,7 +534,10 @@ def llm_direction_evaluation(global_state):
     from postprocess.visualization import Visualization
     
     true_graph = global_state.user_data.ground_truth
-    full_graph = global_state.results.raw_result
+    if global_state.algorithm.selected_algorithm in ['DirectLiNGAM', 'ICALiNGAM', 'NOTEARS']:
+        full_graph = global_state.results.converted_graph
+    else:
+        full_graph =  global_state.results.raw_result
     revised_graph = global_state.results.revised_graph
     my_visual = Visualization(global_state)
     edges_dict = my_visual.convert_to_edges(full_graph)
