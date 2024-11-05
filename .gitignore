@@ -136,6 +136,7 @@ dmypy.json
 data/simulation/simulated_data
 simulated_data
 gradio_output/
+demo_data/
 output/
 test.py
 .vscode
