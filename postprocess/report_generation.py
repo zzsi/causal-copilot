@@ -6,7 +6,7 @@ from plumbum.cmd import latexmk
 from plumbum import local
 import networkx as nx
 from postprocess.visualization import Visualization
-from postprocess.judge_functions import graph_effect_prompts
+#from postprocess.judge_functions import graph_effect_prompts
 import PyPDF2
 import ast
 
@@ -604,7 +604,7 @@ Background about this dataset: {self.knowledge_docs}
         
 
     def confidence_analysis_prompts(self):
-        relation_prob = graph_effect_prompts(self.data,
+        relation_prob = self.graph_effect_prompts(self.data,
                                              self.graph,
                                              self.bootstrap_probability['certain_edges'])
 

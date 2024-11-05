@@ -118,13 +118,14 @@ def process_message(message, chat_history, download_btn):
     process_initial_query(message)
 
     if not REQUIRED_INFO['data_uploaded']:
+        print('not uploaded')
         chat_history.append((message, "Please upload your dataset first before proceeding."))
         return chat_history, download_btn
 
     if not REQUIRED_INFO['initial_query']:
+        print('not query')
         chat_history.append((message, "Please input your initial query."))
         return chat_history, download_btn
-
 
     try:
         # Initialize config and global state
@@ -141,8 +142,9 @@ def process_message(message, chat_history, download_btn):
         elif 'NO' in message:
             args.data_mode = 'simulated'
         else:
+            print('not feature indicator')
             chat_history.append((message, "Please indicate if your dataset has meaningful feature names using 'YES' or 'NO', which would help us generate appropriate report for you."))
-            return chat_history, download_btn
+            yield chat_history, download_btn
 
         # Add user message
         # chat_history.append((message, None))
