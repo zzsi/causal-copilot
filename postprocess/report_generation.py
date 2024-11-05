@@ -164,7 +164,7 @@ There are three sections:
 Please give me text in the second section ### 2. Possible Causal Relations among These Variables:
 1. In this part, all relationships should be listed in this format: **A -> B**: explanation. 
 2. Only one variable can appear at each side of ->; for example, **A -> B** is ok but **A -> B/C** is wrong, and **A -> B and C** is also wrong.
-3. All variables should be among {col_names}, do not include relationships with other variables.
+3. All variables should be among {col_names}, please delete contents that include any other variables!
 4. Do not include any Greek Letters!
 
 For example: 
@@ -186,9 +186,7 @@ Background about this dataset: {self.knowledge_docs}
         relations = []
         # Find all matches
         matches = re.findall(pattern, section2)
-        #print(matches)
         for match in matches:
-            #print('match: ', match)
             left_part = match[0]
             right_part = match[2]
 
@@ -258,7 +256,7 @@ Background about this dataset: {self.knowledge_docs}
 
                 \begin{{figure}}[H]
                 \centering
-                \includegraphics[width=0.7\linewidth]{relation_path}
+                \includegraphics[width=0.5\linewidth]{relation_path}
                 \caption{{\label{{fig:relation}}Possible Causal Relation Graph}}
                 \end{{figure}}
                 """
@@ -572,7 +570,7 @@ Background about this dataset: {self.knowledge_docs}
         length = round(1/len(bootstrap_dict), 2)-0.01
         for key in bootstrap_dict.keys():
             graph_path = f'{self.visual_dir}/{key}_confidence_heatmap.jpg'
-            caption = f'{name_map[key]} Edge'
+            caption = f'{name_map[key]}'
             graph_prompt += f"""
             \begin{{subfigure}}{{{length}\textwidth}}
                     \centering
@@ -830,7 +828,8 @@ Background about this dataset: {self.knowledge_docs}
                      5. Replace ↔ with $\leftrightarrow$, -> with $\\rightarrow$
                      6. All **text** should be replaced with \\textbf{text}
                      7. Do not include any Greek Letters
-                     8. Only include your latex content in the response which can be rendered to pdf directly. Don't include other things like '''latex '''
+                     8. Do not change any parameters in figure settings
+                     9. Only include your latex content in the response which can be rendered to pdf directly. Don't include other things like '''latex '''
                      """},
                     {"role": "user", "content": prompt_template}
                 ]
