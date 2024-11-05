@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="postprocess/test_data/sachs",
+        default="dataset/CCS_Data",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument(
         '--output-report-dir',
         type=str,
-        default='dataset/sachs/output_report',
+        default='dataset/CCS_Data/output_report',
         help='Directory to save the output report'
     )
 
@@ -39,7 +39,7 @@ def parse_args():
     parser.add_argument(
         '--output-graph-dir',
         type=str,
-        default='dataset/sachs/output_graph',
+        default='dataset/CCS_Data/output_graph',
         help='Directory to save the output graph'
     )
 
@@ -89,7 +89,7 @@ def parse_args():
     parser.add_argument(
         '--initial_query',
         type=str,
-        default="selected_algorithm: PC",
+        default="",
         help='Initial query for the algorithm'
     )
 
@@ -200,9 +200,16 @@ def main(args):
     '''
 
     #############Report Generation###################
+    import os 
     my_report = Report_generation(global_state, args)
     report = my_report.generation()
     my_report.save_report(report, save_path=global_state.user_data.output_report_dir)
+    report_path = os.path.join(global_state.user_data.output_report_dir, 'report.pdf')
+    while not os.path.isfile(report_path):
+        print('Error occur during the Report Generation, try again')
+        report_gen = Report_generation(global_state, args)
+        report = report_gen.generation(debug=False)
+        report_gen.save_report(report, save_path=global_state.user_data.output_report_dir)
     ################################
 
     return report, global_state

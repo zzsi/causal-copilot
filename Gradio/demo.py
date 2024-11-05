@@ -57,7 +57,7 @@ DEMO_DATASETS = {
     "Ozone": {
         "name": "🌫️ Ozone",
         "path": "dataset/Ozone/Ozone.csv",
-        "query": "use PC, Investigate causal factors affecting ozone levels"
+        "query": "This is a Time-Series dataset, Investigate causal factors affecting ozone levels"
     },
     "Linear_Gaussian": {
         "name": "🟦 Simualted Data: Linear Gaussian",
@@ -67,10 +67,8 @@ DEMO_DATASETS = {
     "Linear_Nongaussian": {
         "name": "🟦 Simulated Data: Linear Non-Gaussian",
         "path": "dataset/Linear_Nongaussian/Linear_Nongaussian_data.csv",
-        "query": "use PC"
+        "query": "use DirectLiNGAM"
     }
-
-
 }
 
 def upload_file(file):
@@ -222,8 +220,13 @@ def process_message(message, chat_history, download_btn):
         # Evaluation for Initial Graph
         chat_history.append(("📝 Evaluate and Revise the initial result...", None))
         yield chat_history, download_btn
-        judge = Judge(global_state, args)
-        global_state = judge.forward(global_state)
+        try:
+            judge = Judge(global_state, args)
+            global_state = judge.forward(global_state)
+        except Exception as e:
+            print('error during judging:', e)
+            judge = Judge(global_state, args)
+            global_state = judge.forward(global_state)
         # Plot Revised Graph
         my_visual_revise = Visualization(global_state)
         if global_state.results.revised_graph is not None:
@@ -251,6 +254,13 @@ def process_message(message, chat_history, download_btn):
         report_gen = Report_generation(global_state, args)
         report = report_gen.generation(debug=False)
         report_gen.save_report(report, save_path=global_state.user_data.output_report_dir)
+        report_path = os.path.join(output_dir, 'output_report', 'report.pdf')
+        while not os.path.isfile(report_path):
+            chat_history.append((None, "❌ An error occurred during the Report Generation, we are trying again and please wait for a few minutes."))
+            yield chat_history, download_btn
+            report_gen = Report_generation(global_state, args)
+            report = report_gen.generation(debug=False)
+            report_gen.save_report(report, save_path=global_state.user_data.output_report_dir)
 
         # Final steps
         chat_history.append((None, "🎉 Analysis complete!"))
@@ -272,6 +282,8 @@ def process_message(message, chat_history, download_btn):
     except Exception as e:
         chat_history.append((None, f"❌ An error occurred during analysis: {str(e)}, please try again"))
         print(str(e))
+        import traceback
+        traceback.print_exc()
         yield chat_history, download_btn
         return chat_history, download_btn
 
@@ -410,7 +422,7 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
     }
 """) as demo:
     chatbot = gr.Chatbot(
-        value=[(None, "👋 Hello! I'm your causal discovery assistant. Want to discover some causal relationships today?")],
+        value=[(None, "👋 Hello! I'm your causal discovery assistant. Want to discover some causal relationships today? Please upload your dataset, and provide your initial query")],
         height=700,
         show_label=False,
         show_share_button=False,
