@@ -36,6 +36,7 @@ REQUIRED_INFO = {
     'initial_query': False,
 }
 MAX_CONCURRENT_REQUESTS = 5
+MAX_QUEUE_SIZE = 10
 
 # Demo dataset configs
 DEMO_DATASETS = {
@@ -70,18 +71,6 @@ DEMO_DATASETS = {
         "query": "NO. Use DirectLiNGAM"
     }
 }
-
-def enable_inputs():
-    return [
-        gr.update(interactive=True),
-        gr.update(interactive=True),
-        gr.update(interactive=True),
-        gr.update(interactive=True),
-        gr.update(interactive=True),
-        gr.update(interactive=True),
-        gr.update(interactive=True),
-        gr.update(interactive=True)
-    ]
 
 def upload_file(file):
     # TODO: add more complicated file unique ID handling
@@ -172,7 +161,7 @@ def process_message(message, chat_history, download_btn):
         # chat_history.append((None, "✅ Data loaded successfully"))
         yield chat_history, download_btn
 
-        chat_history.append((f"📈 Run statistical analysis on Dataset {target_path}...", None))
+        chat_history.append((f"📈 Run statistical analysis on Dataset {target_path.split('/')[-1].replace('.csv', '')}...", None))
         yield chat_history, download_btn
         global_state = stat_info_collection(global_state)
         global_state.statistics.description = convert_stat_info_to_text(global_state.statistics)
@@ -290,7 +279,7 @@ def process_message(message, chat_history, download_btn):
         yield chat_history, download_btn
 
         # Report Generation
-        chat_history.append(("📝 Generate comprehensive report and it may take a few minutes...", None))
+        chat_history.append(("📝 Generate comprehensive report and it may take a few minutes, stay tuned...", None))
         yield chat_history, download_btn
         report_gen = Report_generation(global_state, args)
         report = report_gen.generation(debug=False)
@@ -363,6 +352,7 @@ def load_demo_dataset(dataset_name, chatbot, demo_btn, download_btn):
     REQUIRED_INFO['initial_query'] = True
     
     df = pd.read_csv(target_path)
+    chatbot.append((f"{dataset['query']}", None))
     bot_message = f"✅ Loaded demo dataset '{dataset_name}' with {len(df)} rows and {len(df.columns)} columns."
     chatbot = chatbot.copy()
     chatbot.append((None, bot_message))
@@ -478,6 +468,33 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
         elem_classes=["message-wrap"],
         render_markdown=True
     )
+    def disable_all_inputs(dataset_name, chatbot, clicked_btn, download_btn, msg, all_demo_buttons):
+        """Disable all interactive elements"""
+        updates = []
+        for _ in range(int(all_demo_buttons)):
+            updates.append(gr.update(interactive=False))
+        updates.extend([
+            gr.update(interactive=False),  # For download button
+            gr.update(interactive=False),  # For message input
+            gr.update(interactive=False),  # For file upload
+            gr.update(interactive=False),  # For reset button
+            gr.update(value="", interactive=False)  # For textbox
+        ])
+        return updates
+
+    def enable_all_inputs(all_demo_buttons):
+        """Re-enable all interactive elements"""
+        updates = [
+            gr.update(interactive=True) for _ in range(int(all_demo_buttons))  # For all demo buttons
+        ]
+        updates.extend([
+            gr.update(interactive=True),  # For download button
+            gr.update(interactive=True),  # For message input
+            gr.update(interactive=True),  # For file upload
+            gr.update(interactive=True),  # For reset button
+            gr.update(value="", interactive=True)  # For textbox
+        ])
+        return updates
 
     with gr.Row():
         with gr.Column(scale=24):
@@ -488,7 +505,7 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
                     show_label=False, 
                     container=False,
                     scale=12
-                )
+                )  
                 file_upload = gr.UploadButton(
                     "📎 Upload Your Data (.csv)",
                     file_types=[".csv"],
@@ -505,14 +522,32 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
                     interactive=False
                 )
                 reset_btn = gr.Button("🔄 Reset", scale=1, elem_classes=["icon-button"], size="sm")
-    
+
     # Demo dataset buttons
+    demo_btns = {}
     with gr.Row():
         for dataset_name in DEMO_DATASETS:
             demo_btn = gr.Button(f"{DEMO_DATASETS[dataset_name]['name']} Demo")
+            demo_btns[dataset_name] = demo_btn
+
+        for name, demo_btn in demo_btns.items():
+            # Set up the event chain for each demo button
+            print(name, demo_btn)
             demo_btn.click(
+                fn=disable_all_inputs,  # First disable all inputs
+                inputs=[
+                    gr.Textbox(value=name, visible=False),
+                    chatbot,
+                    demo_btn,
+                    download_btn,
+                    msg,
+                    gr.Textbox(value=str(len(DEMO_DATASETS)), visible=False)  # Pass number of buttons instead
+                ],
+                outputs=[*list(demo_btns.values()), download_btn, msg, file_upload, reset_btn],
+                queue=True
+            ).then(
                 fn=load_demo_dataset,
-                inputs=[gr.Textbox(value=dataset_name, visible=False), chatbot, demo_btn, download_btn],
+                inputs=[gr.Textbox(value=name, visible=False), chatbot, demo_btn, download_btn],
                 outputs=[chatbot, demo_btn, download_btn, msg],
                 queue=True,
                 concurrency_limit=MAX_CONCURRENT_REQUESTS
@@ -523,16 +558,38 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
                 queue=True,
                 concurrency_limit=MAX_CONCURRENT_REQUESTS
             ).then(
+                fn=enable_all_inputs,
+                inputs=[gr.Textbox(value=str(len(DEMO_DATASETS)), visible=False)],
+                outputs=[*list(demo_btns.values()), download_btn, msg, file_upload, reset_btn],
+                queue=True
+            ).then(
                 fn=lambda: "",
                 outputs=[msg]
             )
 
     # Event handlers with queue enabled
     msg.submit(
+        fn=disable_all_inputs,  # First disable all inputs
+        inputs=[
+            gr.Textbox(value="", visible=False),
+            chatbot,
+            gr.Button(visible=False),
+            download_btn,
+            msg,
+            gr.Textbox(value=str(len(DEMO_DATASETS)), visible=False)  # Pass number of buttons instead
+        ],
+        outputs=[*list(demo_btns.values()), download_btn, msg, file_upload, reset_btn],
+        queue=True
+    ).then(
         fn=process_message,
         inputs=[msg, chatbot, download_btn],
         outputs=[chatbot, download_btn],
         concurrency_limit=MAX_CONCURRENT_REQUESTS,
+        queue=True
+    ).then(
+        fn=enable_all_inputs,
+        inputs=[gr.Textbox(value=str(len(DEMO_DATASETS)), visible=False)],
+        outputs=[*list(demo_btns.values()), download_btn, msg, file_upload, reset_btn],
         queue=True
     ).then(
         fn=lambda: "",
@@ -546,10 +603,27 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
     )
     
     file_upload.upload(
+        fn=disable_all_inputs,  # First disable all inputs
+        inputs=[
+            gr.Textbox(value="", visible=False),
+            chatbot,
+            gr.Button(visible=False),
+            download_btn,
+            msg,
+            gr.Textbox(value=str(len(DEMO_DATASETS)), visible=False)  # Pass number of buttons instead
+        ],
+        outputs=[*list(demo_btns.values()), download_btn, msg, file_upload, reset_btn],
+        queue=True
+    ).then(
         fn=handle_file_upload,
         inputs=[file_upload, chatbot, file_upload, download_btn],
         outputs=[chatbot, file_upload, download_btn],
         concurrency_limit=MAX_CONCURRENT_REQUESTS,
+        queue=True
+    ).then(
+        fn=enable_all_inputs,
+        inputs=[gr.Textbox(value=str(len(DEMO_DATASETS)), visible=False)],
+        outputs=[*list(demo_btns.values()), download_btn, msg, file_upload, reset_btn],
         queue=True
     )
     
@@ -557,5 +631,5 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
     download_btn.click()
 
 if __name__ == "__main__":
-    demo.queue() # Enable queuing at the app level
+    demo.queue(default_concurrency_limit=MAX_CONCURRENT_REQUESTS, max_size=MAX_QUEUE_SIZE) # Enable queuing at the app level
     demo.launch(share=True)
