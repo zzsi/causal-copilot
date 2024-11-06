@@ -24,7 +24,7 @@ Causal-Copilot is a LLM-oriented toolkit for **automatic causal analysis** that 
 
 ## Demo
 
-https://github.com/user-attachments/assets/af2ff25c-48e8-4727-9c46-9ea77fbd0359
+https://github.com/user-attachments/assets/88ca824f-135e-421c-9aa4-f30a37469a14
 
 We provide some examples of our system automatically generated reports for open-source datasets generated as follows:
 
