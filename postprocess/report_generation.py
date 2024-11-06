@@ -221,8 +221,14 @@ Background about this dataset: {self.knowledge_docs}
                 ind1 = variables.str.lower().get_loc(tuple[0].lower())
                 ind2 = variables.str.lower().get_loc(tuple[1].lower())
                 zero_matrix[ind2, ind1] = 1
+
         my_visual = Visualization(self.global_state)
-        pos_potential = my_visual.plot_pdag(zero_matrix, 'potential_relation.pdf', relation=True)
+        g = nx.from_numpy_array(zero_matrix, create_using=nx.DiGraph)
+        # Relabel nodes with variable names from data columns
+        mapping = {i: self.data.columns[i] for i in range(len(self.data.columns))}
+        g = nx.relabel_nodes(g, mapping)
+        pos = nx.spring_layout(g)
+        _ = my_visual.plot_pdag(zero_matrix, 'potential_relation.pdf', pos=pos, relation=True)
         relation_path = f'{self.visual_dir}/potential_relation.pdf'
 
         def get_pdf_page_size(pdf_path):
@@ -604,9 +610,7 @@ Background about this dataset: {self.knowledge_docs}
         
 
     def confidence_analysis_prompts(self):
-        relation_prob = self.graph_effect_prompts(self.data,
-                                             self.graph,
-                                             self.bootstrap_probability['certain_edges'])
+        relation_prob = self.graph_effect_prompts()
 
         variables = '\t'.join(self.data.columns)
         prompt = f"""

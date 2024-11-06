@@ -272,7 +272,7 @@ def get_json(args, prompt):
             jsons_cleaned = json.loads(jsons_cleaned)
         except:
             print('The returned LLM JSON file is wrong, try again')
-            jsons_cleaned = get_json(prompt)
+            jsons_cleaned = get_json(args,prompt)
         return jsons_cleaned
 
 def llm_evaluation(data, args, knowledge_docs, ini_graph, voting_num=10, threshold=0.7):

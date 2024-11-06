@@ -33,29 +33,29 @@ target_path = None
 output_dir = None
 REQUIRED_INFO = {
     'data_uploaded': False,
-    'initial_query': False
+    'initial_query': False,
 }
 MAX_CONCURRENT_REQUESTS = 5
 
 # Demo dataset configs
 DEMO_DATASETS = {
     "Abalone": {
-        "name": "🐚 Abalone",
+        "name": "🐚 Real Dataset:Abalone",
         "path": "dataset/Abalone/Abalone.csv",
         "query": "YES. Use PC and find causal relationships between physical measurements and age of abalone",
     },
     "Sachs": {
-        "name": "🧬 Sachs",
+        "name": "🧬 Real Dataset: Sachs",
         "path": "dataset/sachs/sachs.csv", 
         "query": "YES. Use PC to discover causal relationships between protein signaling molecules"
     },
     "CCS Data": {
-        "name": "📊 CCS Data",
+        "name": "📊 Real Dataset: CCS Data",
         "path": "dataset/CCS_Data/CCS_Data.csv",
         "query": "YES. Use PC, Analyze causal relationships in CCS dataset variables"
     },
     "Ozone": {
-        "name": "🌫️ Ozone",
+        "name": "🌫️ Real Dataset: Ozone",
         "path": "dataset/Ozone/Ozone.csv",
         "query": "YES. This is a Time-Series dataset, investigate causal factors affecting ozone levels"
     },
@@ -70,6 +70,18 @@ DEMO_DATASETS = {
         "query": "NO. Use DirectLiNGAM"
     }
 }
+
+def enable_inputs():
+    return [
+        gr.update(interactive=True),
+        gr.update(interactive=True),
+        gr.update(interactive=True),
+        gr.update(interactive=True),
+        gr.update(interactive=True),
+        gr.update(interactive=True),
+        gr.update(interactive=True),
+        gr.update(interactive=True)
+    ]
 
 def upload_file(file):
     # TODO: add more complicated file unique ID handling
@@ -115,6 +127,8 @@ def process_initial_query(message):
 
 def process_message(message, chat_history, download_btn):
     global target_path, REQUIRED_INFO
+
+    REQUIRED_INFO['processing'] = True
     process_initial_query(message)
 
     if not REQUIRED_INFO['data_uploaded']:
@@ -158,7 +172,7 @@ def process_message(message, chat_history, download_btn):
         # chat_history.append((None, "✅ Data loaded successfully"))
         yield chat_history, download_btn
 
-        chat_history.append(("📈 Run statistical analysis...", None))
+        chat_history.append((f"📈 Run statistical analysis on Dataset {target_path}...", None))
         yield chat_history, download_btn
         global_state = stat_info_collection(global_state)
         global_state.statistics.description = convert_stat_info_to_text(global_state.statistics)
@@ -279,7 +293,7 @@ def process_message(message, chat_history, download_btn):
         chat_history.append(("📝 Generate comprehensive report and it may take a few minutes...", None))
         yield chat_history, download_btn
         report_gen = Report_generation(global_state, args)
-        report = report_gen.generation(debug=True)
+        report = report_gen.generation(debug=False)
         report_gen.save_report(report, save_path=global_state.user_data.output_report_dir)
         report_path = os.path.join(output_dir, 'output_report', 'report.pdf')
         while not os.path.isfile(report_path):
@@ -293,6 +307,8 @@ def process_message(message, chat_history, download_btn):
         # Final steps
         chat_history.append((None, "🎉 Analysis complete!"))
         chat_history.append((None, "📥 You can now download your detailed report using the download button below."))
+
+        REQUIRED_INFO['processing'] = False  
 
         download_btn = gr.DownloadButton(
             "📥 Download Exclusive Report",
