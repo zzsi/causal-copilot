@@ -68,8 +68,8 @@ We provide some examples of our system automatically generated reports for open-
 
 ### Evaluation on Simulated Data
 
-- We evaluate the automatic causal discovery ability of our Causal-Copilot on a total of 180 simulated datasets including different types of functional forms, graph sparsity, noise types and heterogeneity, compared with a robust baseline, PC algorithm with the default setting.
-- The results show that our Causal-Copilot can achieve much better performance, indicating the effectiveness of its automatic algorithm selection and hyper-parameter setting strategy in an autonomous manner.
+- We evaluate the automatic causal discovery ability of our Causal-Copilot on in total 180 simulated datasets including different types of functional forms, graph sparsity, noise types and heterogeneity, compared with a robust baseline, PC algorithm with the default setting.
+- The results show that our Causal-Copilot can achieve much better performance, indicating the effectiveness of its automatic algorithm selection and hyper-parameter setting strategy, in a autonomous manner.
 
 | Metric    | Baseline | Causal-Copilot |
 |-----------|----------|----------------|

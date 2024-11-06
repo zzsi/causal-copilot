@@ -140,4 +140,5 @@ demo_data/
 output/
 test.py
 .vscode
+sftp.json
 .history/
