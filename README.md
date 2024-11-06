@@ -1,7 +1,7 @@
 <h1 align="center">
 <img src="asset/logo.png" width="200" alt="Causality" />
 <br>
-Causal-Copilot: Towards Autonomous Causal Discovery Agent
+Causal-Copilot: Towards Autonomous Causal Analysis Agent
 </h1>
 <p align="center">
   <a href="https://921b68852c4d574f0e.gradio.live/"><b>[Demo]</b></a> •
@@ -13,7 +13,7 @@ Causal-Copilot: Towards Autonomous Causal Discovery Agent
 
 ## Introduction
 
-Causal-Copilot is a LLM-oriented toolkit for **automatic causal analysis**, aiming to help researchers and data scientists identify causal relationships within real-world datasets. Given the data, Causal-Copilot autonomously selects the best-suited causal discovery algorithm, sets up proper hyper-parameters, synthesizes the code for execution, and finally generates the easy-to-read PDF report to users.
+Causal-Copilot is a LLM-oriented toolkit for **automatic causal analysis**, aiming to help researchers and data scientists identify, analyze, and understand causal relationships within real-world datasets. Given the data, Causal-Copilot autonomously selects the best-suited causal analysis algorithm, sets up proper hyper-parameters, synthesizes the code for execution, and finally generates the easy-to-read PDF report to users.
 
 ---
 
@@ -44,10 +44,10 @@ Just try the online Causal-Copilot in [This Link](https://921b68852c4d574f0e.gra
 
 ## Features
 
-- **Automated Causal Discovery**: Carefully designed prompts guide LLMs to select best-suited causal discovery algorithms and identify causal relationships, without the requirements in expertise of causality background and extensive parameter tuning.
+- **Automated Causal Analysis**: Carefully designed prompts guide LLMs to select best-suited causal analysis algorithms and identify causal relationships, without the requirements in expertise about causality and extensive parameter tuning.
 - **User-friendly Visualization**: Clearly visualize data statistics information, causal graphs and dependency probabilities between variables via easy-to-read figures.
-- **Detailed Analysis Report**: Provide well-formulated PDF report for the whole causal discovery process, containing detailed explanation for every step.
-- **Extensibility**: Leave interfaces for integrating new causal discovery algorithms and other causality-related libraries.
+- **Detailed Analysis Report**: Provide well-formulated PDF report for the whole causal analysis process, containing detailed explanation for every step.
+- **Extensibility**: Leave interfaces for integrating new causal analysis algorithms and other causality-related libraries.
 
 ### Architecture Details
 
@@ -55,7 +55,7 @@ Just try the online Causal-Copilot in [This Link](https://921b68852c4d574f0e.gra
 
 <h1 align="center">
 <div style="text-align: center;">
-    <img src="asset/architecture.png" width="600" alt="Causality" />
+    <img src="asset/architecture.png" width="700" alt="Causality" />
 </div>
 </h1>
 
@@ -104,7 +104,11 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 
+## Contributor
+
+- [Xinyue Wang*](https://github.com/CharonWangg), [Kun Zhou*](https://github.com/Lancelot39)(Equal Contribution), [Wenyi Wu](https://github.com/WenyiWU0111), [Fang Nan](https://github.com/Fangn06), Shivam Singh, [Biwei Huang](https://biweihuang.com/)
+
 ## Contact
 
-For additional information, questions, or feedback, please contact our team at **support@causalcopilot.com**. We welcome contributions!
+For additional information, questions, or feedback, please contact ours at **xiw159@ucsd.edu**, **franciskunzhou@gmail.com**, **wew058@ucsd.edu**, fnan@ucsd.edu and bih007@ucsd.edu. We welcome contributions! Come and join us now!
 
