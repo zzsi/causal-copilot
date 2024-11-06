@@ -55,7 +55,7 @@ Just try the online Causal-Copilot in [This Link](https://921b68852c4d574f0e.gra
 
 <h1 align="center">
 <div style="text-align: center;">
-    <img src="asset/architecture.png" width="600" alt="Causality" />
+    <img src="asset/architecture.png" width="700" alt="Causality" />
 </div>
 </h1>
 
