@@ -47,21 +47,21 @@ def parse_args():
     parser.add_argument(
         '--organization',
         type=str,
-        default="org-5NION61XDUXh0ib0JZpcppqS",
+        default="",
         help='Organization ID'
     )
 
     parser.add_argument(
         '--project',
         type=str,
-        default="proj_Ry1rvoznXAMj8R2bujIIkhQN",
+        default="",
         help='Project ID'
     )
 
     parser.add_argument(
         '--apikey',
         type=str,
-        default="sk-l4ETwy_5kOgNvt5OzHf_YtBevR1pxQyNrlW8NRNPw2T3BlbkFJdKpqpbcDG0IhInYcsS3CXdz_EMHkJO7s1Bo3e4BBcA",
+        default="",
         help='API Key'
     )
 
