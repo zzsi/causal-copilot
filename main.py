@@ -15,6 +15,7 @@ import json
 import argparse
 import pandas as pd
 
+import os
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Causal Learning Tool for Data Analysis')
@@ -103,16 +104,35 @@ def parse_args():
     args = parser.parse_args()
     return args
 
+def load_real_world_data(file_path):
+    # Checking file format and loading accordingly, right now it's for CSV only
+    if file_path.endswith('.csv'):
+        data = pd.read_csv(file_path)
+    elif file_path.endswith('.json'):
+        with open(file_path, 'r') as f:
+            data = pd.DataFrame(json.load(f))
+    else:
+        raise ValueError(f"Unsupported file format for {file_path}")
+    
+    print("Real-world data loaded successfully.")
+    return data
+
+
 
 def main(args):
     global_state = global_state_initialization(args)
     global_state = load_data(global_state, args)
+
+    if args.data_mode == 'real':
+        global_state.user_data.raw_data = load_real_world_data(args.data_file)
 
     # Show the exacted global state
     print(global_state)
 
     # background info collection
     #print("Original Data: ", global_state.user_data.raw_data)
+
+    
 
     if args.debug:
         # Fake statistics for debugging
