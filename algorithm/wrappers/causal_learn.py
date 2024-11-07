@@ -393,7 +393,7 @@ class GES(CausalDiscoveryAlgorithm):
         data_values = data.values
 
         # Combine primary and secondary parameters
-        all_params = {**self.get_primary_params(), **self.get_secondary_params()}
+        all_params = {**self.get_primary_params(), **self.get_secondary_params(), 'node_names': node_names}
 
         # Run GES algorithm
         record = cl_ges(data_values, **all_params)

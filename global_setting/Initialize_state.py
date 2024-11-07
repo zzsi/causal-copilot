@@ -18,7 +18,11 @@ def load_data(global_state: GlobalState, args: argparse.Namespace):
         config, data, graph = simulation_manager.generate_dataset()
     elif args.simulation_mode == "offline":
         if args.data_mode in ["simulated", "real"]:
-            config, data, graph = load_local_data(args.data_file)
+            if os.path.isdir(args.data_file):
+                config, data, graph = load_local_data(args.data_file)
+            else: 
+                data = pd.read_csv(args.data_file)
+                config, graph = None, None
         # elif args.data_mode == "real":
         #     data = pd.read_csv(args.data_file)
         #     graph = None
@@ -153,9 +157,14 @@ def global_state_initialization(args: argparse.Namespace = None) -> GlobalState:
     info_extracted = json.loads(info_extracted)
 
     # data management
-    date_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    global_state.user_data.output_report_dir = f'output/{args.data_file.split("/")[-1]}/{date_time}/output_report'
-    global_state.user_data.output_graph_dir = f'output/{args.data_file.split("/")[-1]}/{date_time}/output_graph'
+    if args.demo_mode:
+        run_dir = '/'.join(args.data_file.split('/')[:-1])
+        global_state.user_data.output_report_dir = f'{run_dir}/output_report'
+        global_state.user_data.output_graph_dir = f'{run_dir}/output_graph'
+    else:
+        date_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+        global_state.user_data.output_report_dir = f'output/{args.data_file.split("/")[-1]}/{date_time}/output_report'
+        global_state.user_data.output_graph_dir = f'output/{args.data_file.split("/")[-1]}/{date_time}/output_graph'
 
     # Assign extracted information from user queries to global_stat
     global_state.statistics.linearity = info_extracted["linearity"]

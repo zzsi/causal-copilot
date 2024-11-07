@@ -7,7 +7,7 @@ from algorithm.program import Programming
 from algorithm.rerank import Reranker
 from postprocess.judge import Judge
 from postprocess.visualization import Visualization
-from postprocess.eda_generation import EDA
+from preprocess.eda_generation import EDA
 from postprocess.report_generation import Report_generation
 from global_setting.Initialize_state import global_state_initialization, load_data
 
@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="postprocess/test_data/sachs",
+        default="dataset/20241024_145159_Linear-Non-gaussian_id_0_nodes10_samples1000",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument(
         '--output-report-dir',
         type=str,
-        default='dataset/sachs/output_report',
+        default='dataset/20241024_145159_Linear-Non-gaussian_id_0_nodes10_samples1000/output_report',
         help='Directory to save the output report'
     )
 
@@ -40,7 +40,7 @@ def parse_args():
     parser.add_argument(
         '--output-graph-dir',
         type=str,
-        default='dataset/sachs/output_graph',
+        default='dataset/20241024_145159_Linear-Non-gaussian_id_0_nodes10_samples1000/output_graph',
         help='Directory to save the output graph'
     )
 
@@ -48,21 +48,21 @@ def parse_args():
     parser.add_argument(
         '--organization',
         type=str,
-        default="org-5NION61XDUXh0ib0JZpcppqS",
+        default="",
         help='Organization ID'
     )
 
     parser.add_argument(
         '--project',
         type=str,
-        default="proj_Ry1rvoznXAMj8R2bujIIkhQN",
+        default="",
         help='Project ID'
     )
 
     parser.add_argument(
         '--apikey',
         type=str,
-        default="sk-l4ETwy_5kOgNvt5OzHf_YtBevR1pxQyNrlW8NRNPw2T3BlbkFJdKpqpbcDG0IhInYcsS3CXdz_EMHkJO7s1Bo3e4BBcA",
+        default="",
         help='API Key'
     )
 
@@ -76,7 +76,7 @@ def parse_args():
     parser.add_argument(
         '--data_mode',
         type=str,
-        default="real",
+        default="simulated",
         help='Data mode: real or simulated'
     )
 
@@ -90,7 +90,7 @@ def parse_args():
     parser.add_argument(
         '--initial_query',
         type=str,
-        default="selected_algorithm: PC",
+        default="",
         help='Initial query for the algorithm'
     )
 
@@ -99,6 +99,13 @@ def parse_args():
         type=bool,
         default=False,
         help='Parallel computing for bootstrapping.'
+    )
+
+    parser.add_argument(
+        '--demo_mode',
+        type=bool,
+        default=False,
+        help='Demo mode'
     )
 
     args = parser.parse_args()
@@ -154,6 +161,10 @@ def main(args):
     print("Statistics Info: ", global_state.statistics.description)
     print("Knowledge Info: ", global_state.user_data.knowledge_docs)
 
+    #############EDA###################
+    my_eda = EDA(global_state)
+    my_eda.generate_eda()
+
     # Algorithm selection and deliberation
     filter = Filter(args)
     global_state = filter.forward(global_state)
@@ -163,6 +174,17 @@ def main(args):
 
     programmer = Programming(args)
     global_state = programmer.forward(global_state)
+    #############Visualization for Initial Graph###################
+    my_visual_initial = Visualization(global_state)
+    # Get the position of the nodes
+    pos_est = my_visual_initial.get_pos(global_state.results.raw_result)
+    # Plot True Graph
+    if global_state.user_data.ground_truth is not None:
+        _ = my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.pdf', pos=pos_est)
+    # Plot Initial Graph
+    _ = my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf', pos=pos_est)
+    my_report = Report_generation(global_state, args)
+    global_state.logging.graph_conversion['initial_graph_analysis'] = my_report.latex_convert(my_report.graph_effect_prompts())
 
     judge = Judge(global_state, args)
     if global_state.user_data.ground_truth is not None:
@@ -181,23 +203,15 @@ def main(args):
         print("Mat Ground Truth: ", global_state.user_data.ground_truth)
         global_state.results.revised_metrics = judge.evaluation(global_state)
         print(global_state.results.revised_metrics)
-
-    #############EDA###################
-    my_eda = EDA(global_state)
-    my_eda.generate_eda()
-    #############Visualization###################
-    my_visual = Visualization(global_state)
-    # Plot True Graph
-    if global_state.user_data.ground_truth is not None:
-        pos_true = my_visual.plot_pdag(global_state.user_data.ground_truth, 'true_graph.pdf')
-    # Plot Initial Graph
-    pos_raw = my_visual.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf')
-    # Plot Revised Graph
-    pos_new = my_visual.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf')
-    # Plot Bootstrap Heatmap
-    boot_heatmap_path = my_visual.boot_heatmap_plot()
-
     ################################
+    #############Visualization for Revised Graph###################
+    # Plot Revised Graph
+    my_visual_revise = Visualization(global_state)
+    pos_new = my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf', pos=pos_est)
+    # Plot Bootstrap Heatmap
+    boot_heatmap_path = my_visual_revise.boot_heatmap_plot()
+
+    
 
     # algorithm selection process
     '''
@@ -210,9 +224,16 @@ def main(args):
     '''
 
     #############Report Generation###################
+    import os 
     my_report = Report_generation(global_state, args)
     report = my_report.generation()
     my_report.save_report(report, save_path=global_state.user_data.output_report_dir)
+    report_path = os.path.join(global_state.user_data.output_report_dir, 'report.pdf')
+    while not os.path.isfile(report_path):
+        print('Error occur during the Report Generation, try again')
+        report_gen = Report_generation(global_state, args)
+        report = report_gen.generation(debug=False)
+        report_gen.save_report(report, save_path=global_state.user_data.output_report_dir)
     ################################
 
     return report, global_state

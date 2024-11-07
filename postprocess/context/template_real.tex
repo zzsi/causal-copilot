@@ -3,6 +3,7 @@
 \usepackage{postprocess/context/arxiv}
 
 \usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage{amsmath}
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
 \usepackage{hyperref}       % hyperlinks
 \usepackage{url}            % simple URL typesetting
@@ -16,12 +17,13 @@
 % \usepackage{doi}
 \usepackage{float}
 \usepackage{subcaption}
+% \usepackage{wrapfig}
 
 
 \title{[TITLE]}
 
 
-\author{ \href{https://orcid.org/0000-0000-0000-0000}{\includegraphics[scale=0.06]{postprocess/context/orcid.pdf}\hspace{1mm}Causal Copilot}}
+\author{ \href{https://orcid.org/0000-0000-0000-0000}{\includegraphics[scale=0.06]{asset/logo.png}}
 	
 
 \renewcommand{\headeright}{Technical Report}
@@ -52,19 +54,7 @@ pdfkeywords={Causal Discovery, Large Language Model, [ALGO], [DATASET]},
 
 \subsection{Possible Causal Relations among these Variables}
 
-\begin{minipage}[t]{0.7\linewidth}
-    [BACKGROUND_INFO2]
-\vfill
-\end{minipage}
-\hspace{0.05\textwidth}
-\begin{minipage}[t]{0.3\linewidth}
-    \begin{figure}[H]
-        \centering
-        \vspace{-0.5cm}
-        \resizebox{\linewidth}{!}{\includegraphics[height=0.4\textheight]{[POTENTIAL_GRAPH]}}
-        \caption{\label{fig:relation}Possible Causal Relation Graph}
-    \end{figure}
-\end{minipage}
+[BACKGROUND_INFO2]
 
 
 \section{Dataset Descriptions and EDA}
@@ -126,9 +116,11 @@ and the black line represents the median. Variables are categorized into three t
 
 \section{Results Summary}
 
+\subsection{Initial Graph}
+
 \begin{figure}[H]
     \centering
-    \begin{subfigure}{0.3\textwidth}
+    \begin{subfigure}{0.45\textwidth}
         \centering
         \vspace{-0.5cm}
         \includegraphics[width=\linewidth]{[RESULT_GRAPH0]}
@@ -137,43 +129,42 @@ and the black line represents the median. Variables are categorized into three t
         \label{fig:sub1}
     \end{subfigure}
     \hspace{0.04\textwidth}
-    \begin{subfigure}{0.3\textwidth}
+    \begin{subfigure}{0.45\textwidth}
         \centering
         \vspace{-0.5cm}
-        \includegraphics[width=\linewidth]{[RESULT_GRAPH1]}
+        \includegraphics[width=height=0.3\textheight]{[RESULT_GRAPH1]}
         \vfill
         \caption{Initial Graph}
         \label{fig:sub2}
     \end{subfigure}
-    \hspace{0.04\textwidth}
-    \begin{subfigure}{0.3\textwidth}
-        \centering
-        \vspace{-0.5cm}
-        \includegraphics[width=\linewidth]{[RESULT_GRAPH2]}
-        \vfill
-        \caption{Revised Graph}
-        \label{fig:sub3}
-    \end{subfigure}
-    \caption{Graphs Comparision of [ALGO]}
     \label{fig:main}
+    \caption{Graphs Comparision of [ALGO]}
 \end{figure}
 
-The above are result graphs produced by our algorithm.
-The initial graph is the graph in the first attempt, and the revised graph is the one pruned with LLM suggestion.
+The above is the initial result graph produced by our algorithm.
 
 [RESULT_ANALYSIS]
 
-\subsection{Graph Reliability Analysis}
+\subsection{Revised Graph}
 
-\begin{figure}[H]
+\begin{minipage}[t]{0.6\linewidth}
+    [REVISE_PROCESS]
+\vfill
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.4\linewidth}
+    \begin{figure}[H]
         \centering
         \vspace{-0.5cm}
-        \includegraphics[width=0.8\linewidth]{[RESULT_GRAPH4]}
-        \caption{Reliability Graph}
-        \label{fig:sub3}
-\end{figure}
+        \includegraphics[height=0.3\textheight]{[RESULT_GRAPH2]}
+        \caption{\label{fig:corr}Revised Graph}
+    \end{figure}
+\end{minipage}
 
-Based on the confidence probability heatmap and background knowledge, we can analyze the reliability of our graph.
+
+\subsection{Graph Reliability Analysis}
+
+[CONFIDENCE_GRAPH]
 
 [RELIABILITY_ANALYSIS]
 

@@ -14,9 +14,10 @@ Now, we need to set up the primary hyperparameters for this algorithm. Please co
 [PRIMARY_HYPERPARAMETERS]
 
 For each primary hyperparameter, provide:
-1. The suggested value
-2. A brief explanation of why this value is appropriate given the dataset characteristics and algorithm requirements
-3. Each primary hyperparameter is provided with a default value, which should be adjusted based on the dataset characteristics and algorithm requirements
+1. The full name of the hyperparameter that is aligned with your understanding ('independence test', 'max depth', 'score function', etc.)
+2. The suggested value
+3. A brief explanation of why this value is appropriate given the dataset characteristics and algorithm requirements
+4. Each primary hyperparameter is provided with a default value, which should be adjusted based on the dataset characteristics and algorithm requirements
 
 Use the following information about each hyperparameter to inform your decisions:
 
@@ -28,10 +29,12 @@ Please provide your suggestions in a structured JSON format. Your response shoul
   "algorithm": "[ALGORITHM_NAME]",
   "hyperparameters": {
     "[HYPERPARAMETER_1_NAME]": {
+      "full_name": "[HYPERPARAMETER_1_FULL_NAME]",
       "value": [SUGGESTED_VALUE],
       "explanation": "[BRIEF_EXPLANATION]"
     },
     "[HYPERPARAMETER_2_NAME]": {
+      "full_name": "[HYPERPARAMETER_2_FULL_NAME]",
       "value": [SUGGESTED_VALUE],
       "explanation": "[BRIEF_EXPLANATION]"
     },
