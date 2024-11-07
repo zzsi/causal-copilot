@@ -114,7 +114,7 @@ class Report_generation(object):
         prompt = f"""
         I want to conduct a causal discovery on a dataset and write a report. There are some background knowledge about this dataset.
         Please write a brief introduction paragraph. I only need the paragraph, don't include any title.
-        Do not include any Greek Letters
+        Do not include any Greek Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
         
         Background about this dataset: {self.knowledge_docs}
         """
@@ -165,7 +165,7 @@ Please give me text in the second section ### 2. Possible Causal Relations among
 1. In this part, all relationships should be listed in this format: **A -> B**: explanation. 
 2. Only one variable can appear at each side of ->; for example, **A -> B** is ok but **A -> B/C** is wrong, and **A -> B and C** is also wrong.
 3. All variables should be among {col_names}, please delete contents that include any other variables!
-4. Do not include any Greek Letters!
+4. Do not include any Greek Letters! Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
 
 For example: 
 - **'Raf' -> 'Mek'**: Raf activates Mek through phosphorylation, initiating the MAPK signaling cascade.
@@ -459,7 +459,7 @@ Background about this dataset: {self.knowledge_docs}
         2. Don't mention tuples in the paragraph
         3. If variable names have meanings, please integrate background knowledge of these variables in the causal relationship analysis.
         Please use variable names {variables[0]}, {variables[1]}, ... in your description.
-        4. Do not include any Greek Letters
+        4. Do not include any Greek Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
         
         For example:
         The result graph shows the causal relationship among variables clearly. The {variables[1]} causes the {variables[0]}, ...
@@ -656,7 +656,7 @@ Background about this dataset: {self.knowledge_docs}
                      Help me to write a short abstract according to the given information. 
                      You should cover what data is analyzed (find it in title and introduction), what methodology we used, what result we got, and what is our contribution.
                      Only include your abstract text content in the response. Don't include any other things like title, etc.
-                     Do not include any Greek Letters. 
+                     Do not include any Greek Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
                      0. Title: {self.title}
                      1. Introduction: {self.intro_info}
                      2. Discovery Procedure: {self.discover_process},
@@ -711,7 +711,7 @@ Background about this dataset: {self.knowledge_docs}
         \item item3
         \end{{itemize}}'
         3. For bolding notation '**text**', convert it into \\textbf{{text}}.
-        4. Do not include any Greek Letters
+        4. Do not include any Greek Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
         This is the text you need to convert: {text}
         Only response converted text, please do not include other things like 'Here is the converted text in LaTeX format:'
         """
@@ -739,7 +739,12 @@ Background about this dataset: {self.knowledge_docs}
             # Non-debug path continues with full report generation
             print("Start to generate the report")
             # Data info
-            data_preview = self.data.head().to_latex(index=False)
+            df = self.data.copy()
+            if self.data.shape[1] > 20:  
+                # choose 10 columns randomly
+                random_columns = np.random.choice(df.columns, size=10, replace=False)
+                df = df[random_columns]
+            data_preview = df.head().to_latex(index=False)
             if len(self.data.columns) >= 9:
                 data_preview = f"""
                 \resizebox{{\textwidth}}{{!}}{{
@@ -831,7 +836,7 @@ Background about this dataset: {self.knowledge_docs}
                      4. If there is step number in \subsection{{Step 1 headings}}, please remove the step number and only reserve the heading text \subsection{heading}
                      5. Replace ↔ with $\leftrightarrow$, -> with $\\rightarrow$
                      6. All **text** should be replaced with \\textbf{text}
-                     7. Do not include any Greek Letters
+                     7. Do not include any Greek Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
                      8. Do not change any parameters in figure settings
                      9. Only include your latex content in the response which can be rendered to pdf directly. Don't include other things like '''latex '''
                      """},
@@ -841,8 +846,40 @@ Background about this dataset: {self.knowledge_docs}
 
             output = response.choices[0].message.content
             return output
+    
+    def latex_bug_checking(self, tex_path, num_error_corrections=5):
+        save_path = self.global_state.user_data.output_report_dir
 
-    def save_report(self, report, save_path):
+        # Iteratively fix any LaTeX bugs
+        for i in range(num_error_corrections):
+            # Filter trivial bugs in chktex
+            check_output = os.popen(f"lacheck {tex_path} -q -n2 -n24 -n13 -n1").read()
+            with open(tex_path, 'r', encoding='utf-8') as file:
+                tex_content = file.read()
+            if check_output:
+                response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system",
+                     "content": f"""
+                     You are a helpful debugging assistant, help me to fix bugs in the latex report I will give you. 
+                     1. Please fix the LaTeX errors guided by the output of `chktek`:
+                        {check_output}.
+                     2. Make the minimal fix required and do not remove or change any packages.
+                     3. If some text is wrong you can delete the sentence
+                     4. Only include your latex content in the response which can be rendered to pdf directly. Don't include other things like '''latex '''
+                     """},
+                    {"role": "user", "content": tex_content}
+                ]
+                )
+                output = response.choices[0].message.content
+                with open(f'{save_path}/report.tex', 'w', encoding='utf-8') as file:
+                    file.write(output)
+            else:
+                break
+
+    def save_report(self, report):
+        save_path = self.global_state.user_data.output_report_dir
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         with open(f'{save_path}/report.txt', 'w', encoding='utf-8') as file:
@@ -850,6 +887,7 @@ Background about this dataset: {self.knowledge_docs}
             file.write(report)
         with open(f'{save_path}/report.tex', 'w', encoding='utf-8') as file:
             file.write(report)
-
+        # fix latex bugs before rendering
+        self.latex_bug_checking(f'{save_path}/report.tex')
         # Compile the .tex file to PDF using pdflatex
         compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)

@@ -14,6 +14,12 @@ class EDA(object):
         self.save_dir = global_state.user_data.output_graph_dir
         # Identify categorical features
         self.categorical_features = global_state.user_data.raw_data.select_dtypes(include=['object', 'category']).columns
+        # limit the number of features contained
+        if self.data.shape[1] > 10:
+            df = self.data.copy()
+            # choose 10 columns randomly
+            random_columns = np.random.choice(df.columns, size=10, replace=False)
+            self.data = df[random_columns]
 
     def plot_dist(self):
         df = self.data.copy()

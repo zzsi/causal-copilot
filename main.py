@@ -225,15 +225,19 @@ def main(args):
 
     #############Report Generation###################
     import os 
+    try_num = 1
     my_report = Report_generation(global_state, args)
     report = my_report.generation()
-    my_report.save_report(report, save_path=global_state.user_data.output_report_dir)
+    my_report.save_report(report)
     report_path = os.path.join(global_state.user_data.output_report_dir, 'report.pdf')
-    while not os.path.isfile(report_path):
+    while not os.path.isfile(report_path) and try_num<=3:
+        try_num = +1
         print('Error occur during the Report Generation, try again')
         report_gen = Report_generation(global_state, args)
         report = report_gen.generation(debug=False)
-        report_gen.save_report(report, save_path=global_state.user_data.output_report_dir)
+        report_gen.save_report(report)
+        if not os.path.isfile(report_path) and try_num==3:
+            print('Error occur during the Report Generation three times, we stop.')
     ################################
 
     return report, global_state

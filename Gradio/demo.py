@@ -283,7 +283,7 @@ def process_message(message, chat_history, download_btn):
         yield chat_history, download_btn
         report_gen = Report_generation(global_state, args)
         report = report_gen.generation(debug=False)
-        report_gen.save_report(report, save_path=global_state.user_data.output_report_dir)
+        report_gen.save_report(report)
         report_path = os.path.join(output_dir, 'output_report', 'report.pdf')
         while not os.path.isfile(report_path):
             chat_history.append((None,
@@ -291,7 +291,7 @@ def process_message(message, chat_history, download_btn):
             yield chat_history, download_btn
             report_gen = Report_generation(global_state, args)
             report = report_gen.generation(debug=False)
-            report_gen.save_report(report, save_path=global_state.user_data.output_report_dir)
+            report_gen.save_report(report)
 
         # Final steps
         chat_history.append((None, "🎉 Analysis complete!"))
