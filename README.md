@@ -51,14 +51,15 @@ We provide some examples of our system automatically generated reports for open-
 
 ## Features
 
-- **Automated Causal Analysis**: Harnesses the power of large language models combined with domain expertise to select optimal causal analysis algorithms and hyperparameters. Incorporates proven methodological insights from causal discovery researchers to ensure the analytical reliability, without the requirements in expertise about causality and extensive parameter tuning.
+- **Automated Causal Analysis**: Harnesses the power of large language models combined with domain expertise to select optimal causal analysis algorithms and hyperparameters. Incorporates proven methodological insights from causal discovery researchers to ensure the analytical reliability, without the requirements in expertise about causality and extensive parameter tuning. 
+- **Statistical-LLM Hybrid Post Processing**: Present the edge uncertainty examination (bootstrap), as well as graph pruning and direction revision driven by LLM's prior knowledge.
 - **Chat-based User-friendly Interface**: Navigate complex causal analysis through natural dialogue, and visualize data statistics and causal graphs through clear, intuitive figures, without wrestling with technical details. 
 - **Comprehensive Analysis Report**: Provide well-formulated scientific report for the whole causal analysis process, containing detailed explanation documenting the complete analytical process, intuitive visualization and in-depth interpretation of the findings.
 - **Extensibility**: Maintain open interfaces for integrating new causal analysis algorithms and support seamless incorporation of emerging causality-related libraries and methodologies
 
 ### Architecture Details
 
-- Our Causal-Copilot consists of three components, namely preprocessing, decision making and visualization parts, which are all supported by SOTA LLMs (e.g., GPT-4o).
+- Our Causal-Copilot consists of four components, namely preprocessing, decision making, post processing and intepretation parts, which are all supported by SOTA LLMs (e.g., GPT-4o, GPT-4o-mini).
 
 <h1 align="center">
 <div style="text-align: center;">
