@@ -754,29 +754,28 @@ Background about this dataset: {self.knowledge_docs}
             #print('get data prop')
             data_prop_table = self.data_prop_prompt()
             # Intro info
-            #print('get title')
             self.title, dataset = self.get_title()
-            #print('get intro')
             self.intro_info = self.intro_prompt()
             # Background info
-            #print('get background')
-            background_info1, relation_prompt = self.background_prompt()
-            self.background_info1 = self.latex_convert(background_info1)
-            self.background_info2 = self.latex_convert(relation_prompt)
+            if self.data_mode == 'real':
+                background_info1, relation_prompt = self.background_prompt()
+                self.background_info1 = self.latex_convert(background_info1)
+                self.background_info2 = self.latex_convert(relation_prompt)
+            else:
+                self.background_info1, self.background_info2 = None, None
             # EDA info
-            #print('get eda')
             dist_info, corr_info = self.eda_prompt()
             dist_info = self.latex_convert(dist_info)
             corr_info = self.latex_convert(corr_info)
             # Procedure info
-            #print('get procedure')
             self.discover_process = self.procedure_prompt()
             # Graph effect info
-            #print('get graph analysis')
-            #self.graph_prompt = self.latex_convert(self.graph_effect_prompts())
             self.graph_prompt = self.global_state.logging.graph_conversion['initial_graph_analysis']
             # Graph Revise info
-            self.revise_process = self.graph_revise_prompts()
+            if self.data_mode == 'real':
+                self.revise_process = self.graph_revise_prompts()
+            else:
+                self.revise_process = None 
             # Graph Reliability info
             self.reliability_prompt = self.confidence_analysis_prompts()
             self.abstract = self.abstract_prompt()
