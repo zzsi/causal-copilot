@@ -1,5 +1,8 @@
+from distutils.command.clean import clean
+
 import numpy as np
 import pandas as pd
+import os
 import random
 import json
 from sklearn.impute import SimpleImputer
@@ -14,10 +17,7 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.stats.stattools import jarque_bera
 from statsmodels.tsa.stattools import adfuller
 from scipy import stats
-
-#Linear Non-Gaussian
-# path = '/Users/fangnan/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/ML Research/Causality-Copilot/data/simulation/simulated_data/20241019_202628_base_nodes7_samples1000/base_data.csv'
-# data = pd.read_csv(path)
+import matplotlib.pyplot as plt
 
 
 def data_preprocess (df: pd.DataFrame, ratio: float = 0.5, ts: bool = False):
@@ -56,8 +56,10 @@ def data_preprocess (df: pd.DataFrame, ratio: float = 0.5, ts: bool = False):
 
         if pd.api.types.is_numeric_dtype(dtype) and dtype != 'bool':
             column_type[column] = 'Continuous'
-        elif isinstance(dtype, pd.CategoricalDtype) or pd.api.types.is_object_dtype(dtype) or dtype == 'bool' or dtype == 'int64':
+        else:
             column_type[column] = 'Category'
+        # elif isinstance(dtype, pd.CategoricalDtype) or pd.api.types.is_object_dtype(dtype) or dtype == 'bool' or dtype == 'int64':
+        #     column_type[column] = 'Category'
 
     all_type = list(column_type.values())
     unique_type = list(set(all_type))
@@ -83,8 +85,8 @@ def data_preprocess (df: pd.DataFrame, ratio: float = 0.5, ts: bool = False):
 
     return clean_df, miss_res, column_type, overall_type
 
-# clean_data, miss_res, each_type, dataset_type = data_preprocess(df = data, ratio = 0.5, ts = False)
-
+# clean_data, miss_res, each_type, dataset_type = data_preprocess(df = df, ratio = 0.5, ts = False)
+# print(clean_data)
 
 def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
     '''
@@ -121,8 +123,7 @@ def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
 # imputed_data = imputation(df = clean_data, column_type = each_type, ts = False)
 
 
-
-def linearity_check (df: pd.DataFrame, num_test: int = 100, alpha: float = 0.1):
+def linearity_check (df: pd.DataFrame, num_test: int = 100, alpha: float = 0.1, path = None):
     '''
     :param df: imputed data in Pandas DataFrame format.
     :param num_test: maximum number of tests.
@@ -131,7 +132,7 @@ def linearity_check (df: pd.DataFrame, num_test: int = 100, alpha: float = 0.1):
     '''
 
     pval = []
-
+    models = []
     m = df.shape[1]
 
     tot_pairs = m * (m - 1) / 2
@@ -147,8 +148,7 @@ def linearity_check (df: pd.DataFrame, num_test: int = 100, alpha: float = 0.1):
 
         model = sm.OLS(y, x)
         results = model.fit()
-
-        # OLS_model.append(results)
+        models.append((results, test_pairs[i]))
 
         # Ramsey’s RESET - H0: linearity is satisfied
         reset_test = linear_reset(results, power=2)
@@ -161,13 +161,48 @@ def linearity_check (df: pd.DataFrame, num_test: int = 100, alpha: float = 0.1):
     # Once there is one pair of test has been rejected, we conclude non-linearity
     if corrected_result.sum() == 0:
         check_result = {"Linearity": True}
+        selected_models = models[:4]
     else:
         check_result = {"Linearity": False}
+        # Select one of the non-linear pairs to plot residuals
+        non_linear_indices = [i for i, result in enumerate(corrected_result) if result]
+        linear_indices = [i for i, result in enumerate(corrected_result) if not result]
+        num_nonlinear_pair = len(non_linear_indices)
+
+        if num_nonlinear_pair >= 4:
+            selected_models = [models[i] for i in non_linear_indices[:4]]
+        else:
+            selected_models = [models[i] for i in non_linear_indices[:num_nonlinear_pair]]
+            selected_models.extend([models[i] for i in linear_indices[:(4 - num_nonlinear_pair)]])
+
+    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+    fig.suptitle('Residual Plots for Selected Pair of Variables', fontsize=16)
+
+    axs = axs.flatten()
+    for idx, (selected_model, selected_pair) in enumerate(selected_models):
+        predictions = selected_model.predict()
+        residuals = selected_model.resid
+
+        col_x_name = df.columns[selected_pair[0]]
+        col_y_name = df.columns[selected_pair[1]]
+
+        axs[idx].scatter(predictions, residuals)
+        axs[idx].axhline(y=0, color='r', linestyle='--')
+        axs[idx].set_xlabel('Predicted Values')
+        axs[idx].set_ylabel('Residuals')
+        axs[idx].set_title(f'{col_x_name} vs {col_y_name}')
+
+    # Hide any unused subplots if less than 4 pairs were tested
+    for idx in range(len(selected_models), 4):
+        fig.delaxes(axs[idx])
+
+    if not os.path.exists(path):
+        os.makedirs(path)
+    fig.savefig(os.path.join(path, 'residuals_plot.jpg'))
 
     return check_result
 
-
-# linearity_res = linearity_check(df = imputed_data)
+# linearity_res = linearity_check(df = imputed_data, path = '/Users/fangnan/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/ML Research/Causal Copilot/preprocess/stat_figures')
 # print(linearity_res)
 
 
@@ -175,7 +210,7 @@ def linearity_check (df: pd.DataFrame, num_test: int = 100, alpha: float = 0.1):
  #
  # Input: cleaned and transformed data & Linearity testing results
  # Output: testing results
-def gaussian_check(df: pd.DataFrame, linearity, num_test: int = 100, alpha: float = 0.1):
+def gaussian_check(df: pd.DataFrame, linearity, num_test: int = 100, alpha: float = 0.1, path=None):
     '''
     :param df: imputed data in Pandas DataFrame format.
     :param linearity: indicator of linearity.
@@ -185,6 +220,7 @@ def gaussian_check(df: pd.DataFrame, linearity, num_test: int = 100, alpha: floa
     '''
 
     pval = []
+    collect_result = []
 
     m = df.shape[1]
     tot_pairs = m * (m - 1) / 2
@@ -202,6 +238,8 @@ def gaussian_check(df: pd.DataFrame, linearity, num_test: int = 100, alpha: floa
             model = sm.OLS(y, x)
             results = model.fit()
             residuals = results.resid
+            collect_result.append((residuals, test_pairs[i]))
+
         elif not linearity:
             x = df.iloc[:, test_pairs[i][0]].to_numpy()
             y = df.iloc[:, test_pairs[i][1]].to_numpy()
@@ -213,6 +251,8 @@ def gaussian_check(df: pd.DataFrame, linearity, num_test: int = 100, alpha: floa
             smoothed_values = np.interp(x, smoothed_x, smoothed_y)
             residuals = y - smoothed_values
 
+            collect_result.append((residuals, test_pairs[i]))
+
         # Shapiro-Wilk test - H0: Gaussian errors
         test = stats.shapiro(residuals)
         pval.append(test.pvalue)
@@ -222,13 +262,42 @@ def gaussian_check(df: pd.DataFrame, linearity, num_test: int = 100, alpha: floa
 
         if corrected_result.sum() == 0:
             check_result = {"Gaussian Error": True}
-            continue
+            selected_results = collect_result[:4]
         else:
             check_result = {"Gaussian Error": False}
+            non_gaussain_indices = [i for i, result in enumerate(corrected_result) if result]
+            gaussian_indices = [i for i, result in enumerate(corrected_result) if not result]
+            num_nongaussian_pair = len(non_gaussain_indices)
+
+            if num_nongaussian_pair >= 4:
+                selected_results = [collect_result[i] for i in non_gaussain_indices[:4]]
+            else:
+                selected_results = [collect_result[i] for i in non_gaussain_indices[:num_nongaussian_pair]]
+                selected_results.extend([collect_result[i] for i in gaussian_indices[:(4 - num_nongaussian_pair)]])
+
+    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+    fig.suptitle('Q-Q Plots for Selected Pair of Variables', fontsize=16)
+    axs = axs.flatten()
+    for idx, (selected_results, selected_pair) in enumerate(selected_results):
+        res = selected_results
+
+        col_x_name = df.columns[selected_pair[0]]
+        col_y_name = df.columns[selected_pair[1]]
+
+        sm.qqplot(res, line='45', ax=axs[idx])
+        axs[idx].set_title(f'{col_x_name} vs {col_y_name}')
+
+    # Hide any unused subplots if less than 4 pairs were tested
+    for idx in range(len(selected_results), 4):
+        fig.delaxes(axs[idx])
+
+    if not os.path.exists(path):
+        os.makedirs(path)
+    fig.savefig(os.path.join(path, 'qq_plot.jpg'))
 
     return check_result
 
-# gaussian_res = gaussian_check(df = imputed_data, linearity = linearity_res)
+# gaussian_res = gaussian_check(df = imputed_data, linearity = linearity_res, path='/Users/fangnan/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/ML Research/Causal Copilot/preprocess/stat_figures')
 #
 # print(gaussian_res)
 
@@ -328,13 +397,15 @@ def stat_info_collection(global_state):
     if global_state.statistics.data_type == "Continuous":
         if global_state.statistics.linearity is None:
             # Linearity assumption checking
-            linearity_res = linearity_check(df=imputed_data, num_test=global_state.statistics.num_test, alpha=global_state.statistics.alpha)
+            linearity_res = linearity_check(df=imputed_data, num_test=global_state.statistics.num_test, alpha=global_state.statistics.alpha,
+                                            path=global_state.user_data.output_graph_dir)
             # Update global state
             global_state.statistics.linearity = linearity_res["Linearity"]
 
         if global_state.statistics.gaussian_error is None:
             # Gaussian error checking
-            gaussian_res = gaussian_check(df=imputed_data, linearity=global_state.statistics.linearity, num_test=global_state.statistics.num_test, alpha=global_state.statistics.alpha)
+            gaussian_res = gaussian_check(df=imputed_data, linearity=global_state.statistics.linearity, num_test=global_state.statistics.num_test, alpha=global_state.statistics.alpha,
+                                          path=global_state.user_data.output_graph_dir)
             # Update global state
             global_state.statistics.gaussian_error = gaussian_res["Gaussian Error"]
 

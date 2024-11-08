@@ -19,12 +19,12 @@ from postprocess.judge import Judge
 from postprocess.visualization import Visualization
 from postprocess.report_generation import Report_generation
 
-# current_dir = os.getcwd()
-# print("Current Directory:", current_dir)
-#
-# parent_dir = os.path.dirname(current_dir)
-# os.chdir(parent_dir)
-# print("Change Directory to:", os.getcwd())
+current_dir = os.getcwd()
+print("Current Directory:", current_dir)
+
+parent_dir = os.path.dirname(current_dir)
+os.chdir(parent_dir)
+print("Change Directory to:", os.getcwd())
 
 # Global variables
 UPLOAD_FOLDER = "./demo_data"
@@ -163,8 +163,24 @@ def process_message(message, chat_history, download_btn):
 
         chat_history.append((f"📈 Run statistical analysis on Dataset {target_path.split('/')[-1].replace('.csv', '')}...", None))
         yield chat_history, download_btn
+
+        user_linear = global_state.statistics.linearity
+        user_gaussian = global_state.statistics.gaussian_error
+
         global_state = stat_info_collection(global_state)
         global_state.statistics.description = convert_stat_info_to_text(global_state.statistics)
+
+        data_type_cont = global_state.statistics.data_type == "Continuous"
+        if data_type_cont:
+            if user_linear is None:
+                chat_history.append(("✍️ Generate residuals plots ...", None))
+                yield chat_history, download_btn
+                chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/residuals_plot.jpg',)))
+            if user_gaussian is None:
+                chat_history.append(("✍️ Generate Q-Q plots ...", None))
+                yield chat_history, download_btn
+                chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/qq_plot.jpg',)))
+
         chat_history.append((None, global_state.statistics.description))
         yield chat_history, download_btn
 
