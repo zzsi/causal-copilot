@@ -19,12 +19,6 @@ from postprocess.judge import Judge
 from postprocess.visualization import Visualization
 from postprocess.report_generation import Report_generation
 
-# current_dir = os.getcwd()
-# print("Current Directory:", current_dir)
-#
-# parent_dir = os.path.dirname(current_dir)
-# os.chdir(parent_dir)
-# print("Change Directory to:", os.getcwd())
 
 # Global variables
 UPLOAD_FOLDER = "./demo_data"
@@ -459,7 +453,9 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
 """) as demo:
     chatbot = gr.Chatbot(
         value=[(None, "👋 Hello! I'm your causal discovery assistant. Want to discover some causal relationships today? \n"
-                      "⏫ Please first upload your dataset.")],
+                      "⏫ Please first upload your dataset that satisfies the following requirements: \n"
+                      """\t • The dataset should be tabular or time-series, with each column representing a variable. \n \t • Ensure that the features are in numerical format or appropriately encoded if categorical. \n \t • The dataset should be in csv format.
+                    """)],
         height=700,
         show_label=False,
         show_share_button=False,
