@@ -274,6 +274,7 @@ def process_message(message, chat_history, download_btn):
             chat_history.append((None, global_state.logging.graph_conversion['initial_graph_analysis']))
             yield chat_history, download_btn
         # Evaluation for Initial Graph
+        
         chat_history.append(("📝 Evaluate and Revise the initial result...", None))
         yield chat_history, download_btn
         try:
@@ -283,15 +284,16 @@ def process_message(message, chat_history, download_btn):
             print('error during judging:', e)
             judge = Judge(global_state, args)
             global_state = judge.forward(global_state)
-        # Plot Revised Graph
         my_visual_revise = Visualization(global_state)
-        if global_state.results.revised_graph is not None:
-            my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf', pos)
-            my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.jpg', pos)
-            chat_history.append((None, f"This is the revised graph with Bootstrap and LLM techniques"))
-            yield chat_history, download_btn
-            chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/revised_graph.jpg',)))
-            yield chat_history, download_btn
+        if args.data_mode=='real':
+            # Plot Revised Graph
+            if global_state.results.revised_graph is not None:
+                my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf', pos)
+                my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.jpg', pos)
+                chat_history.append((None, f"This is the revised graph with Bootstrap and LLM techniques"))
+                yield chat_history, download_btn
+                chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/revised_graph.jpg',)))
+                yield chat_history, download_btn
         # Plot Bootstrap Heatmap
         paths = my_visual_revise.boot_heatmap_plot()
         chat_history.append(
