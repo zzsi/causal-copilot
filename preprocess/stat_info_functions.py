@@ -459,19 +459,3 @@ def convert_stat_info_to_text(statistics):
         
     return text
 
-
-# class ParaStatCollect:
-#     def __init__(self):
-#         self.ts = False
-#         self.ratio = 0.5
-#         self.alpha = 0.1
-#         self.num_test = 100
-#         self.domain_index = None
-#
-# args = ParaStatCollect()
-#
-#
-# stat_info_combine, imputed_data = stat_info_collection(args = args, data = data)
-#
-# print(stat_info_combine)
-#
