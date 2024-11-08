@@ -762,7 +762,7 @@ Background about this dataset: {self.knowledge_docs}
                 self.background_info1 = self.latex_convert(background_info1)
                 self.background_info2 = self.latex_convert(relation_prompt)
             else:
-                self.background_info1, self.background_info2 = None, None
+                self.background_info1, self.background_info2 = '', ''
             # EDA info
             dist_info, corr_info = self.eda_prompt()
             dist_info = self.latex_convert(dist_info)
@@ -775,7 +775,7 @@ Background about this dataset: {self.knowledge_docs}
             if self.data_mode == 'real':
                 self.revise_process = self.graph_revise_prompts()
             else:
-                self.revise_process = None 
+                self.revise_process = '' 
             # Graph Reliability info
             self.reliability_prompt = self.confidence_analysis_prompts()
             self.abstract = self.abstract_prompt()
