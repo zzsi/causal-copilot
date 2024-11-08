@@ -20,12 +20,12 @@ from postprocess.judge import Judge
 from postprocess.visualization import Visualization
 from postprocess.report_generation import Report_generation
 
-current_dir = os.getcwd()
-print("Current Directory:", current_dir)
-
-parent_dir = os.path.dirname(current_dir)
-os.chdir(parent_dir)
-print("Change Directory to:", os.getcwd())
+# current_dir = os.getcwd()
+# print("Current Directory:", current_dir)
+#
+# parent_dir = os.path.dirname(current_dir)
+# os.chdir(parent_dir)
+# print("Change Directory to:", os.getcwd())
 
 # Global variables
 UPLOAD_FOLDER = "./demo_data"
