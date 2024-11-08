@@ -97,8 +97,8 @@ def handle_file_upload(file, chatbot, file_upload_btn, download_btn):
             upload_file(file)
             REQUIRED_INFO['data_uploaded'] = True
             bot_message = (f"✅ Successfully loaded CSV file with {len(df)} rows and {len(df.columns)} columns! \n"
-                           "🤔 Please indicate if your dataset has meaningful feature names and answer it using 'YES' or 'NO'. \n"
-                           "✨ Some initial queries about the analysis, e.g., background/context/prior/statistical information, would help us better assistant you!")
+                           "🤔 Please follow the guidances above for your initial query. \n"
+                           "✨ It would be super helpful if you can include more relevant information, e.g., background/context/prior/statistical information!")
         else:
             bot_message = "❌ Please upload a CSV file."
         chatbot.append((None, bot_message))
@@ -360,9 +360,12 @@ def clear_chat():
 
     # Return initial welcome message
     return [(None, "👋 Hello! I'm your causal discovery assistant. Want to discover some causal relationships today? \n"
-                   "⏫ Please first upload your dataset\n"
-                   """\t • The dataset should be tabular or time-series, with each column representing a variable. \n \t • Ensure that the features are in numerical format or appropriately encoded if categorical. \n \t • The dataset should be in csv format.
-                 """)]
+                   "⏫ Some guidances before uploading your dataset: \n"
+                   "1️⃣ The dataset should be tabular in .csv format, with each column representing a variable. \n "
+                   "2️⃣ Ensure that the features are in numerical format or appropriately encoded if categorical. \n"
+                   "3️⃣ For initial query, your dataset has meaningful feature names, please indicate it using 'YES' or 'NO'. \n"
+                   "4️⃣ Please mention heterogeneity and its indicator's column name in your initial query if there is any. \n"
+                   "💡 Example initial query: 'YES. Use PC algorithm to analyze causal relationships between variables. The dataset has heterogeneity with domain column named 'country'.' \n")],
 
 
 def load_demo_dataset(dataset_name, chatbot, demo_btn, download_btn):
@@ -492,7 +495,12 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
     chatbot = gr.Chatbot(
         value=[
             (None, "👋 Hello! I'm your causal discovery assistant. Want to discover some causal relationships today? \n"
-                   "⏫ Please first upload your dataset.")],
+                   "⏫ Some guidances before uploading your dataset: \n"
+                   "1️⃣ The dataset should be tabular in .csv format, with each column representing a variable. \n "
+                   "2️⃣ Ensure that the features are in numerical format or appropriately encoded if categorical. \n"
+                   "3️⃣ For initial query, your dataset has meaningful feature names, please indicate it using 'YES' or 'NO'. \n"
+                   "4️⃣ Please mention heterogeneity and its indicator's column name in your initial query if there is any. \n"
+                   "💡 Example initial query: 'YES. Use PC algorithm to analyze causal relationships between variables. The dataset has heterogeneity with domain column named 'country'.' \n")],
         height=700,
         show_label=False,
         show_share_button=False,
