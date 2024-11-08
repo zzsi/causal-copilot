@@ -6,6 +6,7 @@ import shutil
 from datetime import datetime
 import sys
 from queue import Queue
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Gradio.demo_config import get_demo_config
 from global_setting.Initialize_state import global_state_initialization
@@ -47,7 +48,7 @@ DEMO_DATASETS = {
     },
     "Sachs": {
         "name": "🧬 Real Dataset: Sachs",
-        "path": "dataset/sachs/sachs.csv", 
+        "path": "dataset/sachs/sachs.csv",
         "query": "YES. Use PC to discover causal relationships between protein signaling molecules"
     },
     "CCS Data": {
@@ -72,14 +73,16 @@ DEMO_DATASETS = {
     }
 }
 
+
 def upload_file(file):
     # TODO: add more complicated file unique ID handling
     global target_path, output_dir
-    
+
     date_time = datetime.now().strftime("%Y%m%d_%H%M%S")
     os.makedirs(os.path.join(UPLOAD_FOLDER, date_time, os.path.basename(file.name).replace('.csv', '')), exist_ok=True)
 
-    target_path = os.path.join(UPLOAD_FOLDER, date_time, os.path.basename(file.name).replace('.csv', ''), os.path.basename(file.name))
+    target_path = os.path.join(UPLOAD_FOLDER, date_time, os.path.basename(file.name).replace('.csv', ''),
+                               os.path.basename(file.name))
     output_dir = os.path.join(UPLOAD_FOLDER, date_time, os.path.basename(file.name).replace('.csv', ''))
     shutil.copy(file.name, target_path)
     return target_path
@@ -94,8 +97,8 @@ def handle_file_upload(file, chatbot, file_upload_btn, download_btn):
             upload_file(file)
             REQUIRED_INFO['data_uploaded'] = True
             bot_message = (f"✅ Successfully loaded CSV file with {len(df)} rows and {len(df.columns)} columns! \n"
-                            "🤔 Please indicate if your dataset has meaningful feature names and answer it using 'YES' or 'NO'. \n"
-                            "✨ Some initial queries about the analysis, e.g., background/context/prior/statistical information, would help us better assistant you!")
+                           "🤔 Please indicate if your dataset has meaningful feature names and answer it using 'YES' or 'NO'. \n"
+                           "✨ Some initial queries about the analysis, e.g., background/context/prior/statistical information, would help us better assistant you!")
         else:
             bot_message = "❌ Please upload a CSV file."
         chatbot.append((None, bot_message))
@@ -106,12 +109,14 @@ def handle_file_upload(file, chatbot, file_upload_btn, download_btn):
         chatbot.append((None, error_message))
         return chatbot, file_upload_btn, download_btn
 
+
 def process_initial_query(message):
     global REQUIRED_INFO
     # TODO: check if the initial query is valid or satisfies the requirements
     REQUIRED_INFO['initial_query'] = True
     if not REQUIRED_INFO['initial_query']:
-        chat_history.append((None, "Please enter your initial query first before proceeding. It would be helpful to provide some information about the background/context/prior/statistical information about the dataset."))
+        chat_history.append((None,
+                             "Please enter your initial query first before proceeding. It would be helpful to provide some information about the background/context/prior/statistical information about the dataset."))
 
 
 def process_message(message, chat_history, download_btn):
@@ -146,7 +151,8 @@ def process_message(message, chat_history, download_btn):
             args.data_mode = 'simulated'
         else:
             print('not feature indicator')
-            chat_history.append((message, "Please indicate if your dataset has meaningful feature names using 'YES' or 'NO', which would help us generate appropriate report for you."))
+            chat_history.append((message,
+                                 "Please indicate if your dataset has meaningful feature names using 'YES' or 'NO', which would help us generate appropriate report for you."))
             yield chat_history, download_btn
 
         # Add user message
@@ -161,7 +167,8 @@ def process_message(message, chat_history, download_btn):
         # chat_history.append((None, "✅ Data loaded successfully"))
         yield chat_history, download_btn
 
-        chat_history.append((f"📈 Run statistical analysis on Dataset {target_path.split('/')[-1].replace('.csv', '')}...", None))
+        chat_history.append(
+            (f"📈 Run statistical analysis on Dataset {target_path.split('/')[-1].replace('.csv', '')}...", None))
         yield chat_history, download_btn
 
         user_linear = global_state.statistics.linearity
@@ -219,7 +226,8 @@ def process_message(message, chat_history, download_btn):
             chat_history.append((None, f"✅ Selected algorithm: {global_state.algorithm.selected_algorithm}"))
             chat_history.append((None, f"🤔 Algorithm selection reasoning: {global_state.algorithm.selected_reason}"))
         else:
-            chat_history.append(("🤖 Select optimal hyperparameter for your selected causal discovery algorithm...", None))
+            chat_history.append(
+                ("🤖 Select optimal hyperparameter for your selected causal discovery algorithm...", None))
             yield chat_history, download_btn
 
             filter = Filter(args)
@@ -236,7 +244,8 @@ def process_message(message, chat_history, download_btn):
             hyperparameter_text += f"  Value: {value}\n"
             hyperparameter_text += f"  Explanation: {explanation}\n\n"
         chat_history.append(
-            (None, f"📖 Hyperparameters for the selected algorithm {global_state.algorithm.selected_algorithm}: \n\n {hyperparameter_text}"))
+            (None,
+             f"📖 Hyperparameters for the selected algorithm {global_state.algorithm.selected_algorithm}: \n\n {hyperparameter_text}"))
         yield chat_history, download_btn
 
         # Causal Discovery
@@ -314,7 +323,7 @@ def process_message(message, chat_history, download_btn):
         chat_history.append((None, "🎉 Analysis complete!"))
         chat_history.append((None, "📥 You can now download your detailed report using the download button below."))
 
-        REQUIRED_INFO['processing'] = False  
+        REQUIRED_INFO['processing'] = False
 
         download_btn = gr.DownloadButton(
             "📥 Download Exclusive Report",
@@ -348,32 +357,38 @@ def clear_chat():
     # Reset required info flags
     REQUIRED_INFO['data_uploaded'] = False
     REQUIRED_INFO['initial_query'] = False
-    
+
     # Return initial welcome message
     return [(None, "👋 Hello! I'm your causal discovery assistant. Want to discover some causal relationships today? \n"
-                      "⏫ Please first upload your dataset.")]
+                   "⏫ Please first upload your dataset\n"
+                   """\t • The dataset should be tabular or time-series, with each column representing a variable. \n \t • Ensure that the features are in numerical format or appropriately encoded if categorical. \n \t • The dataset should be in csv format.
+                 """)]
+
 
 def load_demo_dataset(dataset_name, chatbot, demo_btn, download_btn):
     global target_path, REQUIRED_INFO, output_dir
     dataset = DEMO_DATASETS[dataset_name]
     source_path = dataset["path"]
-    
-    date_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    os.makedirs(os.path.join(UPLOAD_FOLDER, date_time, os.path.basename(source_path).replace('.csv', '')), exist_ok=True)
 
-    target_path = os.path.join(UPLOAD_FOLDER, date_time, os.path.basename(source_path).replace('.csv', ''), os.path.basename(source_path))
+    date_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+    os.makedirs(os.path.join(UPLOAD_FOLDER, date_time, os.path.basename(source_path).replace('.csv', '')),
+                exist_ok=True)
+
+    target_path = os.path.join(UPLOAD_FOLDER, date_time, os.path.basename(source_path).replace('.csv', ''),
+                               os.path.basename(source_path))
     output_dir = os.path.join(UPLOAD_FOLDER, date_time, os.path.basename(source_path).replace('.csv', ''))
     shutil.copy(source_path, target_path)
 
     REQUIRED_INFO['data_uploaded'] = True
     REQUIRED_INFO['initial_query'] = True
-    
+
     df = pd.read_csv(target_path)
     chatbot.append((f"{dataset['query']}", None))
     bot_message = f"✅ Loaded demo dataset '{dataset_name}' with {len(df)} rows and {len(df.columns)} columns."
     chatbot = chatbot.copy()
     chatbot.append((None, bot_message))
     return chatbot, demo_btn, download_btn, dataset['query']
+
 
 js = """
 function createGradioAnimation() {
@@ -475,16 +490,20 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
     }
 """) as demo:
     chatbot = gr.Chatbot(
-        value=[(None, "👋 Hello! I'm your causal discovery assistant. Want to discover some causal relationships today? \n"
-                      "⏫ Please first upload your dataset.")],
+        value=[
+            (None, "👋 Hello! I'm your causal discovery assistant. Want to discover some causal relationships today? \n"
+                   "⏫ Please first upload your dataset.")],
         height=700,
         show_label=False,
         show_share_button=False,
-        avatar_images=["https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f600.png", "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f916.png"],
+        avatar_images=["https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f600.png",
+                       "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f916.png"],
         bubble_full_width=False,
         elem_classes=["message-wrap"],
         render_markdown=True
     )
+
+
     def disable_all_inputs(dataset_name, chatbot, clicked_btn, download_btn, msg, all_demo_buttons):
         """Disable all interactive elements"""
         updates = []
@@ -498,6 +517,7 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
             gr.update(value="", interactive=False)  # For textbox
         ])
         return updates
+
 
     def enable_all_inputs(all_demo_buttons):
         """Re-enable all interactive elements"""
@@ -513,16 +533,17 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
         ])
         return updates
 
+
     with gr.Row():
         with gr.Column(scale=24):
             with gr.Row():
                 msg = gr.Textbox(
-                    placeholder="Enter text here", 
-                    elem_classes="input-box", 
-                    show_label=False, 
+                    placeholder="Enter text here",
+                    elem_classes="input-box",
+                    show_label=False,
                     container=False,
                     scale=12
-                )  
+                )
                 file_upload = gr.UploadButton(
                     "📎 Upload Your Data (.csv)",
                     file_types=[".csv"],
@@ -532,7 +553,7 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
                     file_count="single"
                 )
                 download_btn = gr.DownloadButton(
-                    "📥 Download Exclusive Report", 
+                    "📥 Download Exclusive Report",
                     size="sm",
                     elem_classes=["icon-button"],
                     scale=6,
@@ -612,13 +633,13 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
         fn=lambda: "",
         outputs=[msg]
     )
-    
+
     reset_btn.click(
         fn=clear_chat,
         outputs=[chatbot],
         queue=False  # No need for queue on reset
     )
-    
+
     file_upload.upload(
         fn=disable_all_inputs,  # First disable all inputs
         inputs=[
@@ -643,10 +664,11 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
         outputs=[*list(demo_btns.values()), download_btn, msg, file_upload, reset_btn],
         queue=True
     )
-    
+
     # Download report handler with updated visibility
     download_btn.click()
 
 if __name__ == "__main__":
-    demo.queue(default_concurrency_limit=MAX_CONCURRENT_REQUESTS, max_size=MAX_QUEUE_SIZE) # Enable queuing at the app level
+    demo.queue(default_concurrency_limit=MAX_CONCURRENT_REQUESTS,
+               max_size=MAX_QUEUE_SIZE)  # Enable queuing at the app level
     demo.launch(share=True)
