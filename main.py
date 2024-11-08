@@ -112,6 +112,7 @@ def parse_args():
     return args
 
 def load_real_world_data(file_path):
+    #Baseline code
     # Checking file format and loading accordingly, right now it's for CSV only
     if file_path.endswith('.csv'):
         data = pd.read_csv(file_path)
@@ -124,7 +125,23 @@ def load_real_world_data(file_path):
     print("Real-world data loaded successfully.")
     return data
 
+def process_user_query(query, data):
+    #Baseline code
+    query_dict = {}
+    for part in query.split(';'):
+        key, value = part.strip().split(':')
+        query_dict[key.strip()] = value.strip()
 
+    if 'filter' in query_dict and query_dict['filter'] == 'continuous':
+        # Filtering continuous columns, just for target practice right now
+        data = data.select_dtypes(include=['float64', 'int64'])
+    
+    if 'selected_algorithm' in query_dict:
+        selected_algorithm = query_dict['selected_algorithm']
+        print(f"Algorithm selected: {selected_algorithm}")
+
+    print("User query processed.")
+    return data
 
 def main(args):
     global_state = global_state_initialization(args)
@@ -132,6 +149,8 @@ def main(args):
 
     if args.data_mode == 'real':
         global_state.user_data.raw_data = load_real_world_data(args.data_file)
+    
+    global_state.user_data.processed_data = process_user_query(args.initial_query, global_state.user_data.raw_data)
 
     # Show the exacted global state
     print(global_state)
