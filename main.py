@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="dataset/20241024_145159_Linear-Non-gaussian_id_0_nodes10_samples1000",
+        default="data/simulation/simulated_data.csv",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument(
         '--output-report-dir',
         type=str,
-        default='dataset/20241024_145159_Linear-Non-gaussian_id_0_nodes10_samples1000/output_report',
+        default='dataset/test/output_report',
         help='Directory to save the output report'
     )
 
@@ -40,7 +40,7 @@ def parse_args():
     parser.add_argument(
         '--output-graph-dir',
         type=str,
-        default='dataset/20241024_145159_Linear-Non-gaussian_id_0_nodes10_samples1000/output_graph',
+        default='dataset/test/output_graph',
         help='Directory to save the output graph'
     )
 
@@ -48,14 +48,14 @@ def parse_args():
     parser.add_argument(
         '--organization',
         type=str,
-        default="",
+        default="org-5NION61XDUXh0ib0JZpcppqS",
         help='Organization ID'
     )
 
     parser.add_argument(
         '--project',
         type=str,
-        default="",
+        default="proj_Ry1rvoznXAMj8R2bujIIkhQN",
         help='Project ID'
     )
 
@@ -214,15 +214,15 @@ def main(args):
 
     global_state = judge.forward(global_state)
 
-    ##############################
-    from postprocess.judge_functions import llm_direction_evaluation
-    llm_direction_evaluation(global_state)
-    if global_state.user_data.ground_truth is not None:
-        print("Revised Graph: ", global_state.results.revised_graph)
-        print("Mat Ground Truth: ", global_state.user_data.ground_truth)
-        global_state.results.revised_metrics = judge.evaluation(global_state)
-        print(global_state.results.revised_metrics)
-    ################################
+    # ##############################
+    # from postprocess.judge_functions import llm_direction_evaluation
+    # llm_direction_evaluation(global_state)
+    # if global_state.user_data.ground_truth is not None:
+    #     print("Revised Graph: ", global_state.results.revised_graph)
+    #     print("Mat Ground Truth: ", global_state.user_data.ground_truth)
+    #     global_state.results.revised_metrics = judge.evaluation(global_state)
+    #     print(global_state.results.revised_metrics)
+    # ################################
     #############Visualization for Revised Graph###################
     # Plot Revised Graph
     my_visual_revise = Visualization(global_state)
@@ -244,15 +244,19 @@ def main(args):
 
     #############Report Generation###################
     import os 
+    try_num = 1
     my_report = Report_generation(global_state, args)
     report = my_report.generation()
-    my_report.save_report(report, save_path=global_state.user_data.output_report_dir)
+    my_report.save_report(report)
     report_path = os.path.join(global_state.user_data.output_report_dir, 'report.pdf')
-    while not os.path.isfile(report_path):
+    while not os.path.isfile(report_path) and try_num<=3:
+        try_num = +1
         print('Error occur during the Report Generation, try again')
         report_gen = Report_generation(global_state, args)
         report = report_gen.generation(debug=False)
-        report_gen.save_report(report, save_path=global_state.user_data.output_report_dir)
+        report_gen.save_report(report)
+        if not os.path.isfile(report_path) and try_num==3:
+            print('Error occur during the Report Generation three times, we stop.')
     ################################
 
     return report, global_state
