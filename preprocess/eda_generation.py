@@ -11,15 +11,16 @@ class EDA(object):
         """
         self.global_state = global_state
         self.data = global_state.user_data.raw_data
+        self.processed_data = global_state.user_data.processed_data
         self.save_dir = global_state.user_data.output_graph_dir
-        # Identify categorical features
-        self.categorical_features = global_state.user_data.raw_data.select_dtypes(include=['object', 'category']).columns
         # limit the number of features contained
         if self.data.shape[1] > 10:
             df = self.data.copy()
             # choose 10 columns randomly
             random_columns = np.random.choice(df.columns, size=10, replace=False)
             self.data = df[random_columns]
+        # Identify categorical features
+        self.categorical_features = self.data.select_dtypes(include=['object', 'category']).columns
 
     def plot_dist(self):
         df = self.data.copy()
@@ -47,12 +48,12 @@ class EDA(object):
             sns.set(style="whitegrid")
             sns.histplot(df[feature], ax=axes[i], bins=10, color=sns.color_palette("muted")[0], kde=True)
             # Calculate mean and median
-            mean = df[feature].mean()
-            median = df[feature].median()
-            
-            # Add vertical lines for mean and median
-            axes[i].axvline(mean, color='chocolate', linestyle='--', label='Mean')
-            axes[i].axvline(median, color='midnightblue', linestyle='-', label='Median')
+            if feature not in self.categorical_features:
+                mean = df[feature].mean()
+                median = df[feature].median()
+                # Add vertical lines for mean and median
+                axes[i].axvline(mean, color='chocolate', linestyle='--', label='Mean')
+                axes[i].axvline(median, color='midnightblue', linestyle='-', label='Median')
 
             axes[i].set_title(feature, fontsize=16, fontweight='bold')
             axes[i].set_xlabel('Value', fontsize=14, fontweight='bold')
