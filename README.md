@@ -4,7 +4,7 @@
 Causal-Copilot: An Autonomous Causal Analysis Agent
 </h1>
 <p align="center">
-  <a href="https://2feffbc3022fa90033.gradio.live"><b>[Demo]</b></a> •
+  <a href="https://e34647a9f485e5744e.gradio.live"><b>[Demo]</b></a> •
   <a href="https://github.com/Lancelot39/Causal-Copilot"><b>[Code]</b></a>
 </p>
 
@@ -17,7 +17,7 @@ Understanding causal relationships is fundamental to scientific discovery, enabl
 Causal-Copilot is a LLM-oriented toolkit for **automatic causal analysis** that uniquely integrates domain knowledge from large language models with established expertise from causal discovery researchers. Designed for scientific researchers and data scientists, it facilitates the identification, analysis, and interpretation of causal relationships within real-world datasets through natural dialogue. The system autonomously orchestrates the entire analytical pipeline-analyzing statistics, selecting optimal causal analysis algorithms, configuring appropriate hyperparameters, synthesizing executable code, conducting uncertainty quantification, and generating comprehensive PDF reports—while requiring minimal expertise in causal methods. This seamless integration of conversational interaction and rigorous methodology culminates enables researchers across disciplines to focus on domain-specific insights rather than technical implementation details.
 
 <p align="center">
-  🔍 Try out our interactive demo: <a href="https://2feffbc3022fa90033.gradio.live"><b>Causal-Copilot Live Demo</b></a>
+  🔍 Try out our interactive demo: <a href="https://e34647a9f485e5744e.gradio.live"><b>Causal-Copilot Live Demo</b></a>
 </p>
 
 ---
@@ -85,7 +85,7 @@ We provide some examples of our system automatically generated reports for open-
 ### Online Demo
 
 <p align="center">
-  🔍 Try out our interactive demo: <a href="https://2feffbc3022fa90033.gradio.live"><b>Causal-Copilot Live Demo</b></a>
+  🔍 Try out our interactive demo: <a href="https://e34647a9f485e5744e.gradio.live"><b>Causal-Copilot Live Demo</b></a>
 </p>
 
 
