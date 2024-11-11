@@ -213,27 +213,27 @@ def process_message(message, chat_history, download_btn):
             chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_dist.jpg',)))
             yield chat_history, download_btn
 
-        # Algorithm Selection
-        if global_state.algorithm.selected_algorithm is None:
-            chat_history.append(("🤖 Select optimal causal discovery algorithm and its hyperparameter...", None))
-            yield chat_history, download_btn
-            filter = Filter(args)
-            global_state = filter.forward(global_state)
-            reranker = Reranker(args)
-            global_state = reranker.forward(global_state)
-            chat_history.append((None, f"✅ Selected algorithm: {global_state.algorithm.selected_algorithm}"))
-            
-            alg_reason = global_state.algorithm.algorithm_candidates[global_state.algorithm.selected_algorithm]
-            global_state.algorithm.selected_reason = \
-                (
-                f"\n\n{alg_reason['description']}\n\n"
-                f"\n{alg_reason['justification']}"
-            )
-            chat_history.append((None, f"🤔 Algorithm selection reasoning: {global_state.algorithm.selected_reason}"))
-        else:
-            chat_history.append(
-                ("🤖 Select optimal hyperparameter for your selected causal discovery algorithm...", None))
-            yield chat_history, download_btn
+            # Algorithm Selection
+            if global_state.algorithm.selected_algorithm is None:
+                chat_history.append(("🤖 Select optimal causal discovery algorithm and its hyperparameter...", None))
+                yield chat_history, download_btn
+                filter = Filter(args)
+                global_state = filter.forward(global_state)
+                reranker = Reranker(args)
+                global_state = reranker.forward(global_state)
+                chat_history.append((None, f"✅ Selected algorithm: {global_state.algorithm.selected_algorithm}"))
+                
+                alg_reason = global_state.algorithm.algorithm_candidates[global_state.algorithm.selected_algorithm]
+                global_state.algorithm.selected_reason = \
+                    (
+                    f"\n\n{alg_reason['description']}\n\n"
+                    f"\n{alg_reason['justification']}"
+                )
+                chat_history.append((None, f"🤔 Algorithm selection reasoning: {global_state.algorithm.selected_reason}"))
+            else:
+                chat_history.append(
+                    ("🤖 Select optimal hyperparameter for your selected causal discovery algorithm...", None))
+                yield chat_history, download_btn
 
                 filter = Filter(args)
                 global_state = filter.forward(global_state)
