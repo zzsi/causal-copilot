@@ -112,13 +112,30 @@ python main.py --data_file your_data --apikey your_openai_apikey --initial_query
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
+## Resource 
+
+- Our used codes for causal discovery are from the [causal-learn](https://causal-learn.readthedocs.io/en/latest/index.html) and [CausalNex](https://causalnex.readthedocs.io/en/latest/) projects, currently including [PC](https://link.springer.com/book/10.1007/978-1-4612-2748-9), [FCI](https://arxiv.org/abs/1302.4983), [CDNOD](https://arxiv.org/abs/1903.01672), [GES](https://www.jmlr.org/papers/volume3/chickering02b/chickering02b.pdf), [NOTEARS](https://arxiv.org/abs/1803.01422), [DirectLiNGAM](https://jmlr.org/papers/volume12/shimizu11a/shimizu11a.pdf), [ICALiNGAM](https://jmlr.org/papers/volume7/shimizu06a/shimizu06a.pdf)
+- Our used PDF template is based on this [overleaf project](https://www.overleaf.com/latex/templates/style-and-template-for-preprints-arxiv-bio-arxiv/fxsnsrzpnvwc)
+- Our used example datasets are from Bioinformatics-Abalone, Architecture-CCS, Bioinformatics-Sachs
+- Our used codes for deployment are from [Gradio](https://www.gradio.app/)
+
 ---
 
 ## Contributor
 
 - [Xinyue Wang*](https://github.com/CharonWangg), [Kun Zhou*](https://github.com/Lancelot39)(Equal Contribution), [Wenyi Wu](https://github.com/WenyiWU0111), [Fang Nan](https://github.com/Fangn06), Shivam Singh, [Biwei Huang](https://biweihuang.com/)
 
+
 ## Contact
 
 For additional information, questions, or feedback, please contact ours at **xiw159@ucsd.edu**, **franciskunzhou@gmail.com**, **wew058@ucsd.edu**, fnan@ucsd.edu and bih007@ucsd.edu. We welcome contributions! Come and join us now!
 
+If you use Causal-Copilot in your research, please cite it as follows:
+
+```
+@inproceedings{causalcopilot,
+  title={Causal-Copilot: An Autonomous Causal Analysis Agent},
+  author={Wang, Xinyue and Zhou, Kun and Wu, Wenyi and Nan, Fang and Huang, Biwei},
+  year={2024}
+}
+```
