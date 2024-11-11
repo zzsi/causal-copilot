@@ -198,6 +198,7 @@ def linearity_check (df: pd.DataFrame, num_test: int = 100, alpha: float = 0.1, 
 
     if not os.path.exists(path):
         os.makedirs(path)
+    print(f"Saving residuals plot to {os.path.join(path, 'residuals_plot.jpg')}")
     fig.savefig(os.path.join(path, 'residuals_plot.jpg'))
 
     return check_result

@@ -20,13 +20,6 @@ from postprocess.judge import Judge
 from postprocess.visualization import Visualization
 from postprocess.report_generation import Report_generation
 
-# current_dir = os.getcwd()
-# print("Current Directory:", current_dir)
-#
-# parent_dir = os.path.dirname(current_dir)
-# os.chdir(parent_dir)
-# print("Change Directory to:", os.getcwd())
-
 # Global variables
 UPLOAD_FOLDER = "./demo_data"
 chat_history = []
@@ -44,32 +37,32 @@ DEMO_DATASETS = {
     "Abalone": {
         "name": "🐚 Real Dataset:Abalone",
         "path": "dataset/Abalone/Abalone.csv",
-        "query": "YES. Use PC and find causal relationships between physical measurements and age of abalone",
+        "query": "YES. Find causal relationships between physical measurements and age of abalone. The dataset contains numerical measurements of physical characteristics.",
     },
     "Sachs": {
         "name": "🧬 Real Dataset: Sachs",
-        "path": "dataset/sachs/sachs.csv",
-        "query": "YES. Use PC to discover causal relationships between protein signaling molecules"
+        "path": "dataset/sachs/sachs.csv", 
+        "query": "YES. Discover causal relationships between protein signaling molecules. The data contains flow cytometry measurements of proteins and phospholipids."
     },
     "CCS Data": {
         "name": "📊 Real Dataset: CCS Data",
         "path": "dataset/CCS_Data/CCS_Data.csv",
-        "query": "YES. Use PC, Analyze causal relationships in CCS dataset variables"
+        "query": "YES. Analyze causal relationships between variables in the CCS dataset. The data contains multiple continuous variables."
     },
     "Ozone": {
-        "name": "🌫️ Real Dataset: Ozone",
+        "name": "🌫️ Real Dataset: Ozone", 
         "path": "dataset/Ozone/Ozone.csv",
-        "query": "YES. This is a Time-Series dataset, investigate causal factors affecting ozone levels"
+        "query": "YES. This is a Time-Series dataset, investigate causal factors affecting ozone levels. The data contains atmospheric and weather measurements over time."
     },
     "Linear_Gaussian": {
         "name": "🟦 Simualted Data: Linear Gaussian",
         "path": "dataset/Linear_Gaussian/Linear_Gaussian_data.csv",
-        "query": "NO. Use PC"
+        "query": "NO. The data follows linear relationships with Gaussian noise. Please discover the causal structure."
     },
     "Linear_Nongaussian": {
         "name": "🟩 Simulated Data: Linear Non-Gaussian",
-        "path": "dataset/Linear_Nongaussian/Linear_Nongaussian_data.csv",
-        "query": "NO. Use DirectLiNGAM"
+        "path": "dataset/Linear_Nongaussian/Linear_Nongaussian_data.csv", 
+        "query": "NO. The data follows linear relationships with non-Gaussian noise. Please discover the causal structure."
     }
 }
 
@@ -220,20 +213,27 @@ def process_message(message, chat_history, download_btn):
             chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_dist.jpg',)))
             yield chat_history, download_btn
 
-            # Algorithm Selection
-            if global_state.algorithm.selected_algorithm is None:
-                chat_history.append(("🤖 Select optimal causal discovery algorithm and its hyperparameter...", None))
-                yield chat_history, download_btn
-                filter = Filter(args)
-                global_state = filter.forward(global_state)
-                reranker = Reranker(args)
-                global_state = reranker.forward(global_state)
-                chat_history.append((None, f"✅ Selected algorithm: {global_state.algorithm.selected_algorithm}"))
-                chat_history.append((None, f"🤔 Algorithm selection reasoning: {global_state.algorithm.selected_reason}"))
-            else:
-                chat_history.append(
-                    ("🤖 Select optimal hyperparameter for your selected causal discovery algorithm...", None))
-                yield chat_history, download_btn
+        # Algorithm Selection
+        if global_state.algorithm.selected_algorithm is None:
+            chat_history.append(("🤖 Select optimal causal discovery algorithm and its hyperparameter...", None))
+            yield chat_history, download_btn
+            filter = Filter(args)
+            global_state = filter.forward(global_state)
+            reranker = Reranker(args)
+            global_state = reranker.forward(global_state)
+            chat_history.append((None, f"✅ Selected algorithm: {global_state.algorithm.selected_algorithm}"))
+            
+            alg_reason = global_state.algorithm.algorithm_candidates[global_state.algorithm.selected_algorithm]
+            global_state.algorithm.selected_reason = \
+                (
+                f"\n\n{alg_reason['description']}\n\n"
+                f"\n{alg_reason['justification']}"
+            )
+            chat_history.append((None, f"🤔 Algorithm selection reasoning: {global_state.algorithm.selected_reason}"))
+        else:
+            chat_history.append(
+                ("🤖 Select optimal hyperparameter for your selected causal discovery algorithm...", None))
+            yield chat_history, download_btn
 
                 filter = Filter(args)
                 global_state = filter.forward(global_state)
@@ -528,10 +528,9 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
             updates.append(gr.update(interactive=False))
         updates.extend([
             gr.update(interactive=False),  # For download button
-            gr.update(interactive=False),  # For message input
+            gr.update(value="", interactive=False),  # For textbox
             gr.update(interactive=False),  # For file upload
             gr.update(interactive=False),  # For reset button
-            gr.update(value="", interactive=False)  # For textbox
         ])
         return updates
 
@@ -543,10 +542,9 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
         ]
         updates.extend([
             gr.update(interactive=True),  # For download button
-            gr.update(interactive=True),  # For message input
+            gr.update(value="", interactive=True),  # For textbox
             gr.update(interactive=True),  # For file upload
             gr.update(interactive=True),  # For reset button
-            gr.update(value="", interactive=True)  # For textbox
         ])
         return updates
 

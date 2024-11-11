@@ -14,7 +14,7 @@ class DemoConfig:
     organization: str = "org-5NION61XDUXh0ib0JZpcppqS"
     project: str = "proj_Ry1rvoznXAMj8R2bujIIkhQN"
     apikey: str = None
-
+    
     # Analysis Settings
     simulation_mode: str = "offline"
     data_mode: str = "real"
