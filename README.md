@@ -116,7 +116,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 - Our codes for causal discovery are from the [causal-learn](https://causal-learn.readthedocs.io/en/latest/index.html) and [CausalNex](https://causalnex.readthedocs.io/en/latest/) projects, currently including [PC](https://link.springer.com/book/10.1007/978-1-4612-2748-9), [FCI](https://arxiv.org/abs/1302.4983), [CDNOD](https://arxiv.org/abs/1903.01672), [GES](https://www.jmlr.org/papers/volume3/chickering02b/chickering02b.pdf), [NOTEARS](https://arxiv.org/abs/1803.01422), [DirectLiNGAM](https://jmlr.org/papers/volume12/shimizu11a/shimizu11a.pdf), [ICALiNGAM](https://jmlr.org/papers/volume7/shimizu06a/shimizu06a.pdf)
 - Our PDF template is based on this [overleaf project](https://www.overleaf.com/latex/templates/style-and-template-for-preprints-arxiv-bio-arxiv/fxsnsrzpnvwc)
-- Our example datasets are from Bioinformatics-Abalone, Architecture-CCS, Bioinformatics-Sachs
+- Our example datasets are from [Bioinformatics-Abalone](https://archive.ics.uci.edu/dataset/1/abalone), [Architecture-CCS](https://netl.doe.gov/carbon-management/carbon-storage/worldwide-ccs-database), [Bioinformatics-Sachs](https://www.science.org/doi/10.1126/science.1105809)
 - Our codes for deployment are from [Gradio](https://www.gradio.app/)
 
 ---
