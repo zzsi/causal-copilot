@@ -237,18 +237,18 @@ Background about this dataset: {self.knowledge_docs}
                 page = reader.pages[0]
                 width = page.mediabox.width
                 height = page.mediabox.height
-                return height>width
+                return height>(0.7*width)
             
         if sum(zero_matrix.flatten())!=0:
             figure_tall =  get_pdf_page_size(relation_path)
             if figure_tall:
                 relation_prompt = f"""
-                \begin{{minipage}}[t]{{0.7\linewidth}}
+                \begin{{minipage}}[t]{{0.6\linewidth}}
                 {section2}
                 \vfill
                 \end{{minipage}}
-                \hspace{{0.05\textwidth}}
-                \begin{{minipage}}[t]{{0.3\linewidth}}
+                %\hspace{{0.05\textwidth}}
+                \begin{{minipage}}[t]{{0.4\linewidth}}
                     \begin{{figure}}[H]
                         \centering
                         \resizebox{{\linewidth}}{{!}}{{\includegraphics[height=0.3\textheight]{relation_path}}}
@@ -423,6 +423,8 @@ Background about this dataset: {self.knowledge_docs}
         The top three chosen algorithms, listed in order of suitability, are as follows:   
         {algo_list}
 
+        Considering data properties, algorithm capability and LLM's suggestion, the final algorithm we choose is [ALGO].
+
         \subsection{{Hyperparameter Values Proposal assisted with LLM}}
         Once the algorithms were selected, the LLM aided in proposing hyperparameters 
         for the chosen algorithm, which are specified below:
@@ -494,7 +496,7 @@ Background about this dataset: {self.knowledge_docs}
         llm_evaluation_json = self.global_state.results.llm_errors
         force_record = llm_evaluation_json['force_record']
         forbid_record = llm_evaluation_json['forbid_record']
-        if force_record != {}:
+        if force_record != {} and force_record is not None:
             repsonse += f"""
             The following are force results given by LLM:
             
@@ -509,7 +511,7 @@ Background about this dataset: {self.knowledge_docs}
             repsonse += f"""
             \end{{itemize}}
             """
-        if  forbid_record != {}:
+        if  forbid_record != {} and forbid_record is not None:
             repsonse += f"""
             The following relationships are forbidden by LLM:
             
@@ -778,8 +780,10 @@ Background about this dataset: {self.knowledge_docs}
                 self.revise_process = '' 
             # Graph Reliability info
             self.reliability_prompt = self.confidence_analysis_prompts()
+            self.confidence_graph_prompt = self.confidence_graph_prompts()
             self.abstract = self.abstract_prompt()
             self.keywords = self.keyword_prompt()
+            
 
             if self.data_mode == 'simulated':
                 if self.global_state.user_data.ground_truth is not None:
@@ -792,35 +796,39 @@ Background about this dataset: {self.knowledge_docs}
                 else:
                     prompt_template = self.load_context("postprocess/context/template_real_notruth.tex")
 
-            replacements = {
-                "[TITLE]": self.title,
-                "[DATASET]": dataset,
+            replacement1 = {
                 "[ABSTRACT]": self.abstract,
                 "[INTRO_INFO]": self.intro_info,
                 "[BACKGROUND_INFO1]": self.background_info1,
                 "[BACKGROUND_INFO2]": self.background_info2,
-                "[POTENTIAL_GRAPH]": f'{self.visual_dir}/potential_relation.pdf',
                 "[DATA_PREVIEW]": data_preview,
                 "[DATA_PROP_TABLE]": data_prop_table,
                 "[DIST_INFO]": dist_info,
                 "[CORR_INFO]": corr_info,
-                "[DIST_GRAPH]": self.eda_result['plot_path_dist'],
-                "[CORR_GRAPH]": self.eda_result['plot_path_corr'],
                 "[RESULT_ANALYSIS]": self.graph_prompt,
-                "[ALGO]": self.algo,
                 "[DISCOVER_PROCESS]": self.discover_process,
                 "[REVISE_PROCESS]": self.revise_process,
                 "[RELIABILITY_ANALYSIS]": self.reliability_prompt,
+                "[CONFIDENCE_GRAPH]": self.confidence_graph_prompt
+            }
+            replacement2 = {
+                "[TITLE]": self.title,
+                "[DATASET]": dataset,
+                "[POTENTIAL_GRAPH]": f'{self.visual_dir}/potential_relation.pdf',
+                "[DIST_GRAPH]": self.eda_result['plot_path_dist'],
+                "[CORR_GRAPH]": self.eda_result['plot_path_corr'], 
+                "[ALGO]": self.algo,
+                "[RESIDUAL_GRAPH]": f'{self.visual_dir}/residuals_plot.jpg',
+                "[QQ_GRAPH]": f'{self.visual_dir}/qq_plot.jpg',
                 "[RESULT_GRAPH0]": f'{self.visual_dir}/true_graph.pdf',
                 "[RESULT_GRAPH1]": f'{self.visual_dir}/initial_graph.pdf',
                 "[RESULT_GRAPH2]": f'{self.visual_dir}/revised_graph.pdf',
                 "[RESULT_GRAPH3]": f'{self.visual_dir}/metrics.jpg',
-                "[CONFIDENCE_GRAPH]": self.confidence_graph_prompts(),
-                "[RESULT_METRICS1]": str(self.original_metrics),
-                "[RESULT_METRICS2]": str(self.revised_metrics)
             }
 
-            for placeholder, value in replacements.items():
+            for placeholder, value in replacement1.items():
+                prompt_template = prompt_template.replace(placeholder, value)
+            for placeholder, value in replacement2.items():
                 prompt_template = prompt_template.replace(placeholder, value)
 
             response = self.client.chat.completions.create(

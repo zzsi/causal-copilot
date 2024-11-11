@@ -88,7 +88,6 @@ class Judge(object):
                     revised_graph[i, j] = revised_graph[j, i] = 2
                 else:
                     revised_graph[i, j] = revised_graph[j, i] = 0
-        #print(bootstrap_pruning_record)
         ########################
 
         ############ Edge Pruning with LLM ############
@@ -97,27 +96,27 @@ class Judge(object):
         llm_pruning_record = {}
         force_variables = []
         forbid_variables = []
-        for force_pair in force_ind:
-            i, j = force_pair[0], force_pair[1]
-            # force it if it doesn't exist in original graph and not fixed by bootstrap
-            if revised_graph[i, j]==0 and revised_graph[j, i]==0 and (i, j) not in fixed_pairs:
-                revised_graph[i, j] = 1
-                revised_graph[j, i] = -1
-                force_variables.append((data.columns[j],data.columns[i]))
-        json_forces = llm_evaluation_justification(self.args, knowledge_docs, force_variables, force=True)                                                               
+        # for force_pair in force_ind:
+        #     i, j = force_pair[0], force_pair[1]
+        #     # force it if it doesn't exist in original graph and not fixed by bootstrap
+        #     if revised_graph[i, j]==0 and revised_graph[j, i]==0 and (i, j) not in fixed_pairs:
+        #         revised_graph[i, j] = 1
+        #         revised_graph[j, i] = -1
+        #         force_variables.append((data.columns[j],data.columns[i]))
+        # json_forces = llm_evaluation_justification(self.args, knowledge_docs, force_variables, force=True) 
+        json_forces = {}                                                           
         for forbid_pair in forbid_ind:
             i, j = forbid_pair[0], forbid_pair[1]
             # forbid it if it exists in original graph and not fixed by bootstrap
             if revised_graph[i, j]!=0 or revised_graph[j, i]!=0 and (i, j) not in fixed_pairs:
                 revised_graph[i, j] = revised_graph[j, i] = 0
                 forbid_variables.append((data.columns[j],data.columns[i]))
-        #print('forbid_variables:', forbid_variables)
         json_forbids = llm_evaluation_justification(self.args, knowledge_docs, forbid_variables, force=False) 
         llm_pruning_record={
             'force_record': json_forces,
             'forbid_record': json_forbids
         }
-        #print(llm_pruning_record)
+        print(llm_pruning_record)
         ########################
         
         ###### Edge Direction with LLM ######
