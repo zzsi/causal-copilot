@@ -771,6 +771,30 @@ Background about this dataset: {self.knowledge_docs}
             corr_info = self.latex_convert(corr_info)
             # Procedure info
             self.discover_process = self.procedure_prompt()
+            if os.path.isfile(f'{self.visual_dir}/residuals_plot.jpg'):
+                preprocess_plot = f"""
+The following are Residual Plots and Q-Q Plots for seleted pair of vairables.
+
+\begin{{figure}}[H]
+    \centering
+    \begin{{subfigure}}{{0.45\textwidth}}
+        \centering
+        \includegraphics[width=\linewidth]{{{self.visual_dir}/residuals_plot.jpg}}
+        \vfill
+        \caption{{Residual Plot}}
+    \end{{subfigure}}
+    \begin{{subfigure}}{{0.45\textwidth}}
+        \centering
+        \includegraphics[width=\linewidth]{{{self.visual_dir}/qq_plot.jpg}}
+        \vfill
+        \caption{{Q-Q Plot}}
+    \end{{subfigure}}
+\caption{{Plots for Data Properties Checking}}
+\end{{figure}}   
+
+"""
+            else:
+                preprocess_plot = ""
             # Graph effect info
             self.graph_prompt = self.global_state.logging.graph_conversion['initial_graph_analysis']
             # Graph Revise info
@@ -782,7 +806,7 @@ Background about this dataset: {self.knowledge_docs}
             self.reliability_prompt = self.confidence_analysis_prompts()
             self.confidence_graph_prompt = self.confidence_graph_prompts()
             self.abstract = self.abstract_prompt()
-            self.keywords = self.keyword_prompt()
+            #self.keywords = self.keyword_prompt()
             
 
             if self.data_mode == 'simulated':
@@ -797,29 +821,28 @@ Background about this dataset: {self.knowledge_docs}
                     prompt_template = self.load_context("postprocess/context/template_real_notruth.tex")
 
             replacement1 = {
-                "[ABSTRACT]": self.abstract,
-                "[INTRO_INFO]": self.intro_info,
-                "[BACKGROUND_INFO1]": self.background_info1,
-                "[BACKGROUND_INFO2]": self.background_info2,
-                "[DATA_PREVIEW]": data_preview,
-                "[DATA_PROP_TABLE]": data_prop_table,
-                "[DIST_INFO]": dist_info,
-                "[CORR_INFO]": corr_info,
-                "[RESULT_ANALYSIS]": self.graph_prompt,
-                "[DISCOVER_PROCESS]": self.discover_process,
-                "[REVISE_PROCESS]": self.revise_process,
-                "[RELIABILITY_ANALYSIS]": self.reliability_prompt,
-                "[CONFIDENCE_GRAPH]": self.confidence_graph_prompt
+                "[ABSTRACT]": self.abstract or "",
+                "[INTRO_INFO]": self.intro_info or "",
+                "[BACKGROUND_INFO1]": self.background_info1 or "",
+                "[BACKGROUND_INFO2]": self.background_info2 or "",
+                "[DATA_PREVIEW]": data_preview or "",
+                "[DATA_PROP_TABLE]": data_prop_table or "",
+                "[DIST_INFO]": dist_info or "",
+                "[CORR_INFO]": corr_info or "",
+                "[RESULT_ANALYSIS]": self.graph_prompt or "",
+                "[DISCOVER_PROCESS]": self.discover_process or "",
+                "[PREPROCESS_GRAPH]": preprocess_plot or "",
+                "[REVISE_PROCESS]": self.revise_process or "",
+                "[RELIABILITY_ANALYSIS]": self.reliability_prompt or "",
+                "[CONFIDENCE_GRAPH]": self.confidence_graph_prompt or ""
             }
             replacement2 = {
-                "[TITLE]": self.title,
-                "[DATASET]": dataset,
+                "[TITLE]": self.title or "",
+                "[DATASET]": dataset or "",
                 "[POTENTIAL_GRAPH]": f'{self.visual_dir}/potential_relation.pdf',
-                "[DIST_GRAPH]": self.eda_result['plot_path_dist'],
-                "[CORR_GRAPH]": self.eda_result['plot_path_corr'], 
-                "[ALGO]": self.algo,
-                "[RESIDUAL_GRAPH]": f'{self.visual_dir}/residuals_plot.jpg',
-                "[QQ_GRAPH]": f'{self.visual_dir}/qq_plot.jpg',
+                "[DIST_GRAPH]": self.eda_result['plot_path_dist'] or "",
+                "[CORR_GRAPH]": self.eda_result['plot_path_corr'] or "", 
+                "[ALGO]": self.algo or "",
                 "[RESULT_GRAPH0]": f'{self.visual_dir}/true_graph.pdf',
                 "[RESULT_GRAPH1]": f'{self.visual_dir}/initial_graph.pdf',
                 "[RESULT_GRAPH2]": f'{self.visual_dir}/revised_graph.pdf',
@@ -846,6 +869,7 @@ Background about this dataset: {self.knowledge_docs}
                      7. Do not include any Greek Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
                      8. Do not change any parameters in figure settings
                      9. Only include your latex content in the response which can be rendered to pdf directly. Don't include other things like '''latex '''
+                     10. ALL _ should be replaced by \_
                      """},
                     {"role": "user", "content": prompt_template}
                 ]

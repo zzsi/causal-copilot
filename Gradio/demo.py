@@ -106,6 +106,7 @@ def handle_file_upload(file, chatbot, file_upload_btn, download_btn):
 def process_initial_query(message, chat_history, args):
     global REQUIRED_INFO
     # TODO: check if the initial query is valid or satisfies the requirements
+    print('initial query:', message)
     if 'YES' in message:
         args.data_mode = 'real'
         REQUIRED_INFO['initial_query'] = True
@@ -128,10 +129,11 @@ def process_initial_query(message, chat_history, args):
 
 def process_message(message, chat_history, download_btn):
     global target_path, REQUIRED_INFO
-
     REQUIRED_INFO['processing'] = True
-    #process_initial_query(message)
-
+    # Add user message
+    # chat_history.append((message, None))
+    # yield chat_history, download_btn
+    
     print('check data upload')
     if not REQUIRED_INFO['data_uploaded']:
         chat_history.append((message, "Please upload your dataset first before proceeding."))
@@ -155,6 +157,7 @@ def process_message(message, chat_history, download_btn):
             print('strart analysis')
             # Add user message
             # chat_history.append((message, None))
+            # yield chat_history, download_btn
             # chat_history.append(("🔄 Initializing analysis pipeline...", None))
             global_state = global_state_initialization(args)
 
@@ -198,7 +201,7 @@ def process_message(message, chat_history, download_btn):
 
                 knowledge_clean = str(global_state.user_data.knowledge_docs).replace("[", "").replace("]", "").replace('"',
                                                                                                                     "").replace(
-                    "\\n\\n", "\n\n").replace("\\n", "\n")
+                    "\\n\\n", "\n\n").replace("\\n", "\n").replace("'", "")
                 chat_history.append((None, knowledge_clean))
                 yield chat_history, download_btn
             elif args.data_mode == 'simulated':
@@ -331,6 +334,8 @@ def process_message(message, chat_history, download_btn):
             chat_history.append((None, "📥 You can now download your detailed report using the download button below."))
 
             REQUIRED_INFO['processing'] = False
+            REQUIRED_INFO['data_uploaded'] = False
+            REQUIRED_INFO['initial_query'] = False
 
             download_btn = gr.DownloadButton(
                 "📥 Download Exclusive Report",
@@ -395,7 +400,7 @@ def load_demo_dataset(dataset_name, chatbot, demo_btn, download_btn):
     REQUIRED_INFO['initial_query'] = True
 
     df = pd.read_csv(target_path)
-    chatbot.append((f"{dataset['query']}", None))
+    #chatbot.append((f"{dataset['query']}", None))
     bot_message = f"✅ Loaded demo dataset '{dataset_name}' with {len(df)} rows and {len(df.columns)} columns."
     chatbot = chatbot.copy()
     chatbot.append((None, bot_message))
@@ -528,7 +533,8 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
             updates.append(gr.update(interactive=False))
         updates.extend([
             gr.update(interactive=False),  # For download button
-            gr.update(value="", interactive=False),  # For textbox
+            #gr.update(value="", interactive=False),  # For textbox
+            msg,
             gr.update(interactive=False),  # For file upload
             gr.update(interactive=False),  # For reset button
         ])

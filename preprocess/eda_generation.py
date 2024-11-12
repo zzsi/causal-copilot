@@ -36,7 +36,7 @@ class EDA(object):
         num_rows = (num_features + plots_per_row - 1) // plots_per_row  # Calculate number of rows needed
 
         # Create a grid of subplots
-        plt.rcParams['font.family'] = 'Times New Roman'
+        #plt.rcParams['font.family'] = 'Times New Roman'
         fig, axes = plt.subplots(nrows=num_rows, ncols=plots_per_row, figsize=(plots_per_row * 5, num_rows * 4))
 
         # Flatten the axes array for easy indexing
@@ -44,7 +44,7 @@ class EDA(object):
 
         # Plot histogram for each feature
         for i, feature in enumerate(df.columns):
-            plt.rcParams['font.family'] = 'Times New Roman'
+            #plt.rcParams['font.family'] = 'Times New Roman'
             sns.set(style="whitegrid")
             sns.histplot(df[feature], ax=axes[i], bins=10, color=sns.color_palette("muted")[0], kde=True)
             # Calculate mean and median
@@ -117,7 +117,7 @@ class EDA(object):
         correlation_matrix = df.corr()
         # Create a heatmap
         plt.figure(figsize=(8, 6))
-        plt.rcParams['font.family'] = 'Times New Roman'
+        #plt.rcParams['font.family'] = 'Times New Roman'
         sns.heatmap(correlation_matrix, annot=True, cmap='PuBu', fmt=".2f", square=True, cbar_kws={"shrink": .8})
         plt.title('Correlation Heatmap', fontsize=16, fontweight='bold')
         # Save the plot

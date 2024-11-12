@@ -195,8 +195,7 @@ class Visualization(object):
                         mat[j, i] = g.get_edge_data(parent, child)['weight']
                 else:
                     mat = g.adjacency_matrix_
-            pyd = make_dot(mat, labels=labels, pos=pos)  
-            #pyd = make_dot_highlight(mat, labels=labels, cmap="cool", vmargin=2, hmargin=2)         
+            pyd = make_dot(mat, labels=labels, pos=pos)         
             pyd.render(outfile=path, cleanup=True)
             return None
 
@@ -215,7 +214,7 @@ class Visualization(object):
             name = name_map[key]
             # Create a heatmap
             plt.figure(figsize=(8, 6))
-            plt.rcParams['font.family'] = 'Times New Roman'
+            #plt.rcParams['font.family'] = 'Times New Roman'
             sns.heatmap(prob_mat, annot=True, cmap='Reds', fmt=".2f", square=True, cbar_kws={"shrink": .8},
                         xticklabels=self.data.columns,
                         yticklabels=self.data.columns)            
