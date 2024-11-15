@@ -257,6 +257,7 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, parall
 
     return boot_recommend, boot_edges_prob
 
+
 def get_json(args, prompt):
         client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
         response = client.chat.completions.create(
@@ -275,157 +276,132 @@ def get_json(args, prompt):
             jsons_cleaned = get_json(args,prompt)
         return jsons_cleaned
 
-def llm_evaluation(data, args, knowledge_docs, ini_graph, voting_num=10, threshold=0.7):
-
-    import itertools
-    import networkx as nx
-
-    variables = data.columns
-    variable_pairs = list(itertools.combinations(variables.tolist(), 2))
-    G = nx.from_numpy_array(ini_graph.T, parallel_edges=False, create_using=nx.DiGraph)
-    relations = [(variables[index[0]],variables[index[1]]) for index in G.edges]
-
-    prompt_pruning = f"""
-    I have a list of tuples where each tuple represents a pair of entities that may have a relationship with each other. 
-    For each tuple, please determine the causal relationship between the two entities, indicating whether there is a causal relationship, and which entity causes the other. 
-    You can reference this background knowledge: {knowledge_docs}
-    This is the initial relationship of these entities {relations}
-    For example, if the tuple is (X1, X0), it means that {variables[1]} causes {variables[0]}, that is {variables[1]} -> {variables[0]}.
-    I will use relationships provided from you to prune the initial relationship.
-    1. Use each tuple as the key of JSON, for example, if the tuple is ('Raf', 'Mek'), then use ('Raf', 'Mek') as a key
-    2. If the first entity causes the second, the "result" is 'A'. If the second entity causes the first, the "result" should be 'B'. 
-    If you are really sure there is no relationship, the "result" is 'C'. Otherwise the "result" is 'D'. The order is very important
-    3. The direction can only be 'A' or 'B' or 'C' or 'D'. do not reply other things
-    Here is the list of tuples: {variable_pairs}
-    Return me a json following the template below. Do not include anything else.
-    JSON format:
-    {{
-        "tuple1": "A" or "B" or "C" or "D",   
-        "tuple2": "A" or "B" or "C" or "D",   
-        ......   
-    }}
-    """
-    def percentage_convert(percentage_str):
+def call_llm(args, prompt):
+        client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+        response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are an expert in Causal Discovery."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+        contents = response.choices[0].message.content
         try:
-            result = float(percentage_str.strip('%')) / 100
+            result, explanation = contents.split(':')[0].strip().upper(), contents.split(':')[1].strip()
         except:
-            result = 0.5
-        return result
-    
-    #TODO:fix veriable name
-    force_mat = np.zeros((len(data.columns), len(data.columns)))
-    forbid_mat = np.zeros((len(data.columns), len(data.columns)))
-    for voting_idx in range(voting_num):
-        json_prunings = get_json(args, prompt_pruning)
-        #print('llm pruning json')
-        #print(json_prunings)
-        for k, v in json_prunings.items():
-            try:
-                k = ast.literal_eval(k)
-            except:
-                continue
-            if all(item in variables for item in k):
-                i, j = variables.get_loc(k[0]), variables.get_loc(k[1])
-                if v == 'A':                   
-                    force_mat[i, j] += 1
-                elif v == 'B':
-                    force_mat[j, i] += 1
-                elif v == 'C':
-                    forbid_mat[j, i] += 1
-    
-    force_mat /= voting_num
-    #print('force_mat:', force_mat)
-    forbid_mat /= voting_num
-    #print('forbid_mat:', forbid_mat)
-    force_indice = np.where(force_mat>threshold)
-    forbid_indice = np.where(forbid_mat>threshold)
-    force_ind = []
-    forbid_ind = []
-    for i, j in zip(force_indice[0], force_indice[1]):
-        force_ind.append((j, i))
-    for i, j in zip(forbid_indice[0], forbid_indice[1]):
-        forbid_ind.append((j, i))
- 
-    return force_ind, forbid_ind
+            print('The returned LLM evaluation response is wrong, try again')
+            result, explanation = call_llm(args,prompt)
+        return result, explanation
 
-def llm_evaluation_justification(args, knowledge_docs, variables_list, force):
-    if len(variables_list)==0:
-        return {}
-    # Generate Justifications
-    if force:
-        force_prompt = f"""
-        I have a list of tuples where each tuple represents a pair of entities that have a relationship with each other. 
-        For example, ('Raf', 'Mek') means 'Raf' causes 'Mek'.
-        1. Provide a brief justification for each tuple's causal relationship based on the following background knowledge {knowledge_docs}.
-        2. Only include variable pairs here as key: {variables_list}, do not include any other variable pairs
-        2. Follow this JSON format, you should impute justifications for each tuple as the value
-        3. Only Return me a json that can be loaded directly. Do not include anything else.
-        JSON format:
-        {{
-        
+def llm_evaluation(data, args, edges_dict, boot_edges_prob):
+    """
+    Here we let LLM double check the result of initial graph, and make edition (determine direction & delete edge)
+    Provided Info:
+    1. Structure of whole graph
+    (ancestor decendant ... relationship?)
+    2. Bootstrap Probability
+    3. Pair relationship in the original graph
+    Return: Result with domain knowledge and explanation
+    """
+    direct_dict = {}
+    forbid_dict = {}
+    #print('boot_edges_prob',boot_edges_prob)
+    relation_text_dict, relation_text = edges_to_relationship(data, edges_dict, boot_edges_prob)
+    #print('relation_text_dict:',relation_text_dict)
+    #print('edges_dict: ', edges_dict)
+
+    for type in relation_text_dict.keys():
+        pair_idx = 0
+        for pair_relation in relation_text_dict[type]:
+            var_j = edges_dict[type][pair_idx][0]
+            var_i = edges_dict[type][pair_idx][1]
+            idx_j = data.columns.get_loc(var_j)
+            idx_i = data.columns.get_loc(var_i)
+            prompt_pruning = f"""
+        We want to carry out causal discovery analysis, considering these variables: {data.columns.tolist()}. 
+        First, we have conducted the statistical causal discovery algorithm to find the following causal relationships from a statistical perspective:
+        {relation_text}
+        According to the results shown above, it has been determined that {pair_relation}, but it may not be correct. 
+        Then, your task is to double check this result from a domain knowledge perspective and determine whether this statistically suggested hypothesis is plausible in the context of the domain.  
+
+        Firstly, determine the relationship between {var_j} and {var_i}
+        If {var_j} causes {var_i}, the "result" is 'A'. If {var_i} causes {var_j}, the "result" should be 'B'. If you are really sure there is no relationship, the "result" is 'C'. 
+        Secondly, please provide an explanation of your result, leveraging your expert knowledge on the causal relationship between {var_j} and {var_i}, please use only one to two sentences. 
+        Your response should consider the relevant factors and provide a reasoned explanation based on your understanding of the domain.
+
+        Response me following the template below. Do not include anything else. explanations should only include one to two sentences
+        A or B or C: explanations 
+
+        Here are some response Examples
+        A: Larger abalones, which are indicated by greater shell lengths, generally possess heavier shells. Therefore, there is a direct positive relationship between length and shell weight as a larger size typically results in greater overall mass of the shell.
         """
-        for item in variables_list:
-            force_prompt += f"""
-                                    "{item}": justification here,
+            #print('prompt_pruning:', prompt_pruning)
+            pair_idx += 1
+            result, explanation = call_llm(args,prompt_pruning)
+            #print((var_j, var_i), result)
+            if result == 'A':
+                if (var_j, var_i) not in edges_dict['certain_edges']:
+                    direct_dict[(idx_j, idx_i)] = ((var_j, var_i), explanation)
+            elif result == 'B':
+                if (var_i, var_j) not in edges_dict['certain_edges']:
+                    direct_dict[(idx_i, idx_j)] = ((var_i, var_j), explanation)
+            elif result == 'C':
+                forbid_dict[(idx_j, idx_i)] = ((var_j, var_i), explanation)
+    return direct_dict, forbid_dict
 
-                                    """
-        force_prompt += f"""
-                                }}
-                                """
-        json_forces = get_json(args, force_prompt)
-        #print('llm forcing justification json')
-        #print(json_forces)
-        return json_forces
-
-    else:
-        forbid_prompt = f"""
-        I have a list of tuples where each tuple represents a pair of entities that do not have any relationship with each other. 
-        For example, ('Raf', 'Mek') means 'Raf' does not have any relationship 'Mek'.
-        1. Provide a brief justification for why each tuple does not have any causal relationship with each other based on the following background knowledge {knowledge_docs}.
-        2. Follow this JSON format, you should impute justifications for each tuple as the value
-        3. Only Return me a json that can be loaded directly. Do not include anything else.
-        JSON format:
-        {{
-        
-        """
-        for item in variables_list:
-            forbid_prompt += f"""
-                                    "{item}": justification here,
-
-                                    """
-        forbid_prompt += f"""
-                                }}
-                                """
-        json_forbid = get_json(args, forbid_prompt)
-        #print('llm forbiding justification json')
-        #print(json_forbid)
-    return json_forbid
-
-
-def graph_effect_prompts (data, graph, boot_probability):
+def edges_to_relationship(data, edges_dict, boot_edges_prob=None):
     '''
     :param data: Pandas DataFrame format.
     :param graph: An adjacent matrix in Numpy Ndarray format - Matrix[i,j] = 1 indicates j->i
     :param boot_probability: A matrix in Numpy Ndarray format
                              recording bootstrap probability of directed edges,
                              e.g., Matrix[i,j] records probability of existence of edge i -> j.
-    :return: A prompt describing relationships in the causal graph and corresponding bootstrap probability.
+    :param edges_dict: A dict containing lists of all types of relationships
+    :param boot_prob: A dict containing probability matrix of all types of edges
+    :return: A dictionary of lists describing different edge types' relationships for each node pairs and corresponding bootstrap probability.
     '''
+    relation_dict = {
+            'certain_edges': 'causes',
+            'uncertain_edges': 'has undirected relationship with',
+            'bi_edges': 'has hidden confounder with',
+            'half_edges': 'is not a descendant of',
+            'none_edges': 'has no D-seperation set with'
+        }
+    result_dict = {
+            'certain_edges': [],
+            'uncertain_edges': [],
+            'bi_edges': [],
+            'half_edges': [],
+            'none_edges': []
+        }
+    summary_dict = {
+            'certain_edges': 'These variable pairs have certain directed edge between them: \n',
+            'uncertain_edges': 'These variable pairs have undirected relationship between them: \n',
+            'bi_edges': 'These variable pairs have hidden confounders between them: \n',
+            'half_edges': 'These variable pairs have non-descendant relationship between them: \n',
+            'none_edges': 'These variable pairs have no D-seperation between them: \n'
+        }
+    for edge_type in relation_dict.keys():
+        edges_list = edges_dict[edge_type]
+        for edges in edges_list:
+            if boot_edges_prob is not None:
+                idx_j = data.columns.get_loc(edges[0])
+                idx_i = data.columns.get_loc(edges[1])
+                prob = boot_edges_prob[edge_type][idx_i, idx_j]
+                result_dict[edge_type].append(f'{edges[0]} {relation_dict[edge_type]} {edges[1]} with bootstrap probability {prob}')
+            else:
+                result_dict[edge_type].append(f'{edges[0]} {relation_dict[edge_type]} {edges[1]}')
+    
+    filtered_result_dict = {key: value for key, value in result_dict.items() if value}
 
-    m = data.shape[1]
-    column_names = data.columns
-
-    effect_prompt = []
-
-    for i in range(m):
-        for j in range(m):
-            if graph[j, i] == 1:
-                effect_prompt.append(str(column_names[i]) + "->" + str(column_names[j]) +
-                                     " (the bootstrap probability of such edge is " + str(boot_probability[i, j]) + ")")
-
-    graph_prompt = "All of the edges suggested by the causal discovery are below:\n" + "\n".join(effect_prompt)
-
-    return graph_prompt
+    relation_text = ""
+    for key in filtered_result_dict:
+        relation_text += f"{summary_dict[key]}"
+        for pair_relation in filtered_result_dict[key]:
+            relation_text += f'{pair_relation}, '
+        relation_text += '\n'
+    
+    return filtered_result_dict, relation_text
 
 def llm_direction(global_state, args, revised_graph, voting_num=10, threshold=0.7):
     '''

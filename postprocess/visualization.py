@@ -74,6 +74,8 @@ class Visualization(object):
     def convert_to_edges(self, g):
         if isinstance(g, np.ndarray):
             adj_matrix = g
+        elif self.global_state.algorithm.selected_algorithm == 'DirectLiNGAM':
+            adj_matrix = g.adjacency_matrix_
         else:
             if self.global_state.algorithm.selected_algorithm == 'FCI':
                 g = g[0]

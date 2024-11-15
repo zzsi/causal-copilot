@@ -51,7 +51,7 @@ class Judge(object):
                  revised causal graph based on errors.
         '''
 
-        from postprocess.judge_functions import bootstrap, llm_evaluation, llm_direction, llm_evaluation_justification
+        from postprocess.judge_functions import bootstrap, llm_evaluation
 
         # Statistics Perspective: Bootstrapping to get probability of edges using the selected algorithm.
         edge_recom, boot_probability = bootstrap(data=data, full_graph=full_graph, algorithm=algorithm, hyperparameters=hyperparameters,
@@ -92,38 +92,23 @@ class Judge(object):
 
         ############ Edge Pruning with LLM ############
         print('LLM Pruning Decisioning')
-        force_ind, forbid_ind = llm_evaluation(data, self.args, knowledge_docs, self.global_state.results.converted_graph)
-        llm_pruning_record = {}
-        force_variables = []
-        forbid_variables = []
-        # for force_pair in force_ind:
-        #     i, j = force_pair[0], force_pair[1]
-        #     # force it if it doesn't exist in original graph and not fixed by bootstrap
-        #     if revised_graph[i, j]==0 and revised_graph[j, i]==0 and (i, j) not in fixed_pairs:
-        #         revised_graph[i, j] = 1
-        #         revised_graph[j, i] = -1
-        #         force_variables.append((data.columns[j],data.columns[i]))
-        # json_forces = llm_evaluation_justification(self.args, knowledge_docs, force_variables, force=True) 
-        json_forces = {}                                                           
-        for forbid_pair in forbid_ind:
-            i, j = forbid_pair[0], forbid_pair[1]
-            # forbid it if it exists in original graph and not fixed by bootstrap
-            if revised_graph[i, j]!=0 or revised_graph[j, i]!=0 and (i, j) not in fixed_pairs:
-                revised_graph[i, j] = revised_graph[j, i] = 0
-                forbid_variables.append((data.columns[j],data.columns[i]))
-        json_forbids = llm_evaluation_justification(self.args, knowledge_docs, forbid_variables, force=False) 
+        direct_dict, forbid_dict = llm_evaluation(data, self.args, self.global_state.results.raw_edges, self.global_state.results.bootstrap_probability)
         llm_pruning_record={
-            'force_record': json_forces,
-            'forbid_record': json_forbids
+            'direct_record': direct_dict,
+            'forbid_record': forbid_dict
         }
         print(llm_pruning_record)
+        for direct_pair in direct_dict:
+            j, i = direct_pair[0], direct_pair[1]
+            revised_graph[i, j] = 1
+            revised_graph[j, i] = -1
+        for forbid_pair in forbid_dict:
+            j, i = forbid_pair[0], forbid_pair[1]
+            if (revised_graph[i, j]!=0 or revised_graph[j, i]!=0) and (i, j) not in fixed_pairs:
+                revised_graph[i, j] = revised_graph[j, i] = 0
         ########################
-        
-        ###### Edge Direction with LLM ######
-        print('LLM Direction Decisioning')
-        llm_directions_record, revised_graph = llm_direction(self.global_state, self.args, revised_graph)
 
-        return {}, bootstrap_pruning_record, boot_probability, llm_pruning_record, llm_directions_record, revised_graph
+        return {}, bootstrap_pruning_record, boot_probability, llm_pruning_record, revised_graph
 
 
     def forward(self, global_state):
@@ -144,10 +129,9 @@ class Judge(object):
 
         
         (conversation,
-         global_state.results.bootstrap_errors,
+         global_state.results.bootstrap_errors, # bootstrap_pruning_record
          global_state.results.bootstrap_probability,
-         global_state.results.llm_errors,
-         global_state.results.llm_directions,
+         global_state.results.llm_errors, # llm_pruning_record
          global_state.results.revised_graph
         )= self.quality_judge(
         data=global_state.user_data.processed_data,

@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="data/simulation/simulated_data.csv",
+        default="dataset/Abalone/Abalone.csv",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument(
         '--output-report-dir',
         type=str,
-        default='dataset/test/output_report',
+        default='dataset/Abalone/output_report',
         help='Directory to save the output report'
     )
 
@@ -40,7 +40,7 @@ def parse_args():
     parser.add_argument(
         '--output-graph-dir',
         type=str,
-        default='dataset/test/output_graph',
+        default='dataset/Abalone/output_graph',
         help='Directory to save the output graph'
     )
 
@@ -76,7 +76,7 @@ def parse_args():
     parser.add_argument(
         '--data_mode',
         type=str,
-        default="simulated",
+        default="real",
         help='Data mode: real or simulated'
     )
 
@@ -90,7 +90,7 @@ def parse_args():
     parser.add_argument(
         '--initial_query',
         type=str,
-        default="",
+        default="selected algorithm: PC",
         help='Initial query for the algorithm'
     )
 
@@ -183,7 +183,7 @@ def main(args):
     #############EDA###################
     my_eda = EDA(global_state)
     my_eda.generate_eda()
-
+    
     # Algorithm selection and deliberation
     filter = Filter(args)
     global_state = filter.forward(global_state)
@@ -193,6 +193,7 @@ def main(args):
 
     programmer = Programming(args)
     global_state = programmer.forward(global_state)
+
     #############Visualization for Initial Graph###################
     my_visual_initial = Visualization(global_state)
     # Get the position of the nodes
@@ -203,7 +204,8 @@ def main(args):
     # Plot Initial Graph
     _ = my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf', pos=pos_est)
     my_report = Report_generation(global_state, args)
-    global_state.logging.graph_conversion['initial_graph_analysis'] = my_report.latex_convert(my_report.graph_effect_prompts())
+    global_state.results.raw_edges = my_visual_initial.convert_to_edges(global_state.results.raw_result)
+    global_state.logging.graph_conversion['initial_graph_analysis'] = my_report.graph_effect_prompts()
 
     judge = Judge(global_state, args)
     if global_state.user_data.ground_truth is not None:
@@ -227,6 +229,7 @@ def main(args):
     # Plot Revised Graph
     my_visual_revise = Visualization(global_state)
     pos_new = my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf', pos=pos_est)
+    global_state.results.revised_edges = my_visual_revise.convert_to_edges(global_state.results.revised_graph)
     # Plot Bootstrap Heatmap
     boot_heatmap_path = my_visual_revise.boot_heatmap_plot()
 

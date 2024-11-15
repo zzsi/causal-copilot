@@ -81,28 +81,36 @@ class EDA(object):
 
         # Analyze categorical features
         categorical_analysis = {feature: df[feature].value_counts() for feature in self.categorical_features}
-        analysis_input = "Numerical Features:\n"
+        numerical_analysis = {}
+        #analysis_input = "Numerical Features:\n"
 
         for feature in df.select_dtypes(include='number').columns:
-            mean = numerical_stats.loc['mean', feature]
-            median = numerical_stats.loc['50%', feature]
-            std_dev = numerical_stats.loc['std', feature]
-            min_val = numerical_stats.loc['min', feature]
-            max_val = numerical_stats.loc['max', feature]
+            numerical_analysis[feature] = {
+                'mean': numerical_stats.loc['mean', feature],
+                'median': numerical_stats.loc['50%', feature],
+                'std_dev': numerical_stats.loc['std', feature],
+                'min_val': numerical_stats.loc['min', feature],
+                'max_val': numerical_stats.loc['max', feature]
+            }
+        #     mean = numerical_stats.loc['mean', feature]
+        #     median = numerical_stats.loc['50%', feature]
+        #     std_dev = numerical_stats.loc['std', feature]
+        #     min_val = numerical_stats.loc['min', feature]
+        #     max_val = numerical_stats.loc['max', feature]
 
-            analysis_input += (
-                f"Feature: {feature}\n"
-                f"Mean: {mean:.2f}, Median: {median:.2f}, Standard Deviation: {std_dev:.2f}\n"
-                f"Min: {min_val}, Max: {max_val}\n\n"
-            )
+        #     analysis_input += (
+        #         f"Feature: {feature}\n"
+        #         f"Mean: {mean:.2f}, Median: {median:.2f}, Standard Deviation: {std_dev:.2f}\n"
+        #         f"Min: {min_val}, Max: {max_val}\n\n"
+        #     )
 
-        analysis_input += "\nCategorical Features:\n"
+        # analysis_input += "\nCategorical Features:\n"
 
-        for feature in self.categorical_features:
-            counts = df[feature].value_counts()
-            analysis_input += f"Feature: {feature}\n{counts}\n\n"
+        # for feature in self.categorical_features:
+        #     counts = df[feature].value_counts()
+        #     analysis_input += f"Feature: {feature}\n{counts}\n\n"
 
-        return analysis_input
+        return numerical_analysis, categorical_analysis
 
     def plot_corr(self):
         df = self.data.copy()
@@ -126,34 +134,37 @@ class EDA(object):
 
         return correlation_matrix, save_path_corr
 
-    def desc_corr(self, correlation_matrix, threshold=0.5):
+    def desc_corr(self, correlation_matrix, threshold=0.1):
         """
         :param correlation_matrix: correlation matrix of the original dataset
         :param threshold: correlation below the threshold will not be included in the summary
         :return: string of correlation_summary
         """
         # Prepare a summary of significant correlations
-        correlation_summary = ""
+        correlation_summary = {}
 
         for i in range(len(correlation_matrix.columns)):
             for j in range(i):
                 if abs(correlation_matrix.iloc[i, j]) > threshold:
-                    correlation_summary += (
-                        f"Correlation between {correlation_matrix.columns[i]} and {correlation_matrix.columns[j]}: "
-                        f"{correlation_matrix.iloc[i, j]:.2f}\n"
-                    )
+                    var_i, var_j = correlation_matrix.columns[i], correlation_matrix.columns[j]
+                    correlation_summary[(var_i, var_j)] = correlation_matrix.iloc[i, j]
+                    # correlation_summary += (
+                    #     f"Correlation between {correlation_matrix.columns[i]} and {correlation_matrix.columns[j]}: "
+                    #     f"{correlation_matrix.iloc[i, j]:.2f}\n"
+                    # )
         return correlation_summary
 
     def generate_eda(self):
         plot_path_dist = self.plot_dist()
         corr_mat, plot_path_corr = self.plot_corr()
 
-        dist_analysis = self.desc_dist()
+        numerical_analysis, categorical_analysis = self.desc_dist()
         corr_analysis = self.desc_corr(corr_mat)
 
         eda_result = {'plot_path_dist': plot_path_dist,
                       'plot_path_corr': plot_path_corr,
-                      'dist_analysis': dist_analysis,
+                      'dist_analysis_num': numerical_analysis,
+                      'dist_analysis_cat': categorical_analysis,
                       'corr_analysis': corr_analysis}
 
         self.global_state.results.eda = eda_result

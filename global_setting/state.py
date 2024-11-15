@@ -55,10 +55,12 @@ class Algorithm:
 @dataclass
 class Results:
     raw_result: Optional[object] = None
+    raw_edges: Optional[Dict] = None
     raw_info: Optional[Dict] = None
     converted_graph: Optional[str] = None
     metrics: Optional[Dict] = None
     revised_graph: Optional[np.ndarray] = None
+    revised_edges: Optional[Dict] = None
     revised_metrics: Optional[Dict] = None
     bootstrap_probability: Optional[np.ndarray] = None
     llm_errors: List[Dict] = field(default_factory=list)

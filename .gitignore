@@ -134,6 +134,7 @@ dmypy.json
 
 # data/simulation/dummy
 data/simulation/simulated_data
+preprocess/result
 simulated_data
 gradio_output/
 demo_data/

@@ -277,6 +277,7 @@ def process_message(message, chat_history, download_btn):
                 chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/initial_graph.jpg',)))
                 yield chat_history, download_btn
                 my_report = Report_generation(global_state, args)
+                global_state.results.raw_edges = my_visual_initial.convert_to_edges(global_state.results.raw_result)
                 global_state.logging.graph_conversion['initial_graph_analysis'] = my_report.graph_effect_prompts()
                 print('graph analysis', global_state.logging.graph_conversion['initial_graph_analysis'])
                 chat_history.append((None, global_state.logging.graph_conversion['initial_graph_analysis']))
@@ -293,6 +294,7 @@ def process_message(message, chat_history, download_btn):
                 judge = Judge(global_state, args)
                 global_state = judge.forward(global_state)
             my_visual_revise = Visualization(global_state)
+            global_state.results.revised_edges = my_visual_revise.convert_to_edges(global_state.results.revised_graph)
             if args.data_mode=='real':
                 # Plot Revised Graph
                 if global_state.results.revised_graph is not None:

@@ -6,6 +6,7 @@ from plumbum.cmd import latexmk
 from plumbum import local
 import networkx as nx
 from postprocess.visualization import Visualization
+from postprocess.judge_functions import edges_to_relationship
 #from postprocess.judge_functions import graph_effect_prompts
 import PyPDF2
 import ast
@@ -77,6 +78,7 @@ class Report_generation(object):
         # EDA info
         self.eda_result = global_state.results.eda
         # Result graph matrix
+        self.raw_graph = global_state.results.raw_result
         self.graph = global_state.results.converted_graph
         self.bootstrap_probability = global_state.results.bootstrap_probability
         self.original_metrics = global_state.results.metrics
@@ -113,8 +115,8 @@ class Report_generation(object):
     def intro_prompt(self):
         prompt = f"""
         I want to conduct a causal discovery on a dataset and write a report. There are some background knowledge about this dataset.
-        Please write a brief introduction paragraph. I only need the paragraph, don't include any title.
-        Do not include any Greek Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
+        1. Please write a brief introduction paragraph. I only need the paragraph, don't include any title.
+        2. Do not include any Greek Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
         
         Background about this dataset: {self.knowledge_docs}
         """
@@ -152,6 +154,7 @@ class Report_generation(object):
             ]
         )
         section1 = response_background.choices[0].message.content
+        section1 = re.sub(r'.*\*\*(.*?)\*\*', r'\\textbf{\1}', section1)
 
         col_names = '\t'.join(self.data.columns)
         prompt = f"""
@@ -181,6 +184,8 @@ Background about this dataset: {self.knowledge_docs}
             ]
         )
         section2 = response_background.choices[0].message.content
+        section2 = re.sub(r'.*\*\*(.*?)\*\*', r'\\textbf{\1}', section2)
+
         variables = self.data.columns
         pattern = r'\*\*(.*?)\s*(→|↔|->|<->)\s*(.*?)\*\*'
         relations = []
@@ -214,7 +219,7 @@ Background about this dataset: {self.knowledge_docs}
             for l in left:
                 for r in right:
                     result.append((l.strip(), r.strip()))
-
+        # Potential Relationship Visualization
         zero_matrix = np.zeros((len(variables), len(variables)))
         for tuple in result:
             if tuple[0].lower() in variables.str.lower() and tuple[1].lower() in variables.str.lower():
@@ -243,15 +248,15 @@ Background about this dataset: {self.knowledge_docs}
             figure_tall =  get_pdf_page_size(relation_path)
             if figure_tall:
                 relation_prompt = f"""
-                \begin{{minipage}}[t]{{0.6\linewidth}}
+                \\begin{{minipage}}[t]{{0.6\linewidth}}
                 {section2}
-                \vfill
+                \\vfill
                 \end{{minipage}}
-                %\hspace{{0.05\textwidth}}
-                \begin{{minipage}}[t]{{0.4\linewidth}}
-                    \begin{{figure}}[H]
+                %\hspace{{0.05\\textwidth}}
+                \\begin{{minipage}}[t]{{0.4\linewidth}}
+                    \\begin{{figure}}[H]
                         \centering
-                        \resizebox{{\linewidth}}{{!}}{{\includegraphics[height=0.3\textheight]{relation_path}}}
+                        \\resizebox{{\linewidth}}{{!}}{{\includegraphics[height=0.3\\textheight]{relation_path}}}
                         \caption{{\label{{fig:relation}}Possible Causal Relation Graph}}
                     \end{{figure}}
                 \end{{minipage}}
@@ -260,7 +265,7 @@ Background about this dataset: {self.knowledge_docs}
                 relation_prompt = f"""
                 {section2}
 
-                \begin{{figure}}[H]
+                \\begin{{figure}}[H]
                 \centering
                 \includegraphics[width=0.5\linewidth]{relation_path}
                 \caption{{\label{{fig:relation}}Possible Causal Relation Graph}}
@@ -270,7 +275,6 @@ Background about this dataset: {self.knowledge_docs}
             relation_prompt = f"""
                 {section2}
                 """
-        
         return section1, relation_prompt
 
     def data_prop_prompt(self):
@@ -284,94 +288,161 @@ Background about this dataset: {self.knowledge_docs}
         heterogeneous = 'True' if self.statistics.heterogeneous else 'False'
 
         prop_table = f"""
-        \begin{{tabular}}{{rrrrrrr}}
-            \toprule
+        \\begin{{tabular}}{{rrrrrrr}}
+            \\toprule
             Shape ($n$ x $d$) & Data Type & Missing Value & Linearity & Gaussian Errors & Time-Series & Heterogeneity \\
             \midrule
             {shape}   & {data_type} & {missingness} & {linearity} & {gaussian_error} & {stationary} & {heterogeneous} \\
-            \bottomrule
+            \\bottomrule
         \end{{tabular}}
         """
         return prop_table
-        
+    
+    def preprocess_plot_prompt(self):
+        if os.path.isfile(f'{self.visual_dir}/residuals_plot.jpg'):
+            preprocess_plot = f"""
+            The following are Residual Plots and Q-Q Plots for seleted pair of vairables.
+
+            \\begin{{figure}}[H]
+                \centering
+                \\begin{{subfigure}}{{0.45\\textwidth}}
+                    \centering
+                    \includegraphics[width=\linewidth]{{{self.visual_dir}/residuals_plot.jpg}}
+                    \\vfill
+                    \caption{{Residual Plot}}
+                \end{{subfigure}}
+                \\begin{{subfigure}}{{0.45\\textwidth}}
+                    \centering
+                    \includegraphics[width=\linewidth]{{{self.visual_dir}/qq_plot.jpg}}
+                    \\vfill
+                    \caption{{Q-Q Plot}}
+                \end{{subfigure}}
+            \caption{{Plots for Data Properties Checking}}
+            \end{{figure}}   
+            """
+        else:
+            preprocess_plot = ""
+        return preprocess_plot
+
     def eda_prompt(self):
-        dist_input = self.eda_result['dist_analysis']
+        dist_input_num = self.eda_result['dist_analysis_num']
+        dist_input_cat = self.eda_result['dist_analysis_cat']
         corr_input = self.eda_result['corr_analysis']
-        prompt_dist = f"""
-            Given the following statistics about features in a dataset:\n\n
-            {dist_input}\n
-            1. Please categorize variables according to their distribution features, do not list out all Distribution values.
-            2. Please list variables in one category in one line like:
-                \item Slight left skew distributed variables: Length, Shell Weight, Diameter, Whole Weight
-            3. If a category has no variable, please fill with None, like:
-                \item Symmetric distributed variables: None
-            4. Only give me a latex format item list.
-            5. Please follow this templete, don't add any other things like subtitle, analysis, etc.
-            
-            Templete:
-            '\begin{{itemize}}
-            \item Slight left skew distributed variables: Length, Shell Weight, Diameter, Whole Weight
-            \item Slight right skew distributed variables: Whole Weight, Age
-            \item Symmetric distributed variables: Color
-            \end{{itemize}}'
-            
-            """
-
-        prompt_corr = f"""
-            Given the following correlation statistics about features in a dataset:\n\n
-            {corr_input}\n
-            1. Please categorize variable pairs according to their correlation, do not list out all correlation values.
-            2. Please list variable pairs in one category in one line like:
-                \item Slight left skew distributed variables: Shell weight and Length, Age and Height
-            3. If a category has no variable, please fill with None, like:
-                \item Symmetric distributed variables: None
-            4. Please follow this templete, don't add any other things like subtitle, analysis, etc.
-
-            Templete:
-            In this analysis, we will categorize the correlation statistics of features in the dataset into three distinct categories: Strong correlations ($r>0.8$), Moderate correlations ($0.5<r<0.8$), and Weak correlations ($r<0.5>$).
-            
-            \begin{{itemize}}
-            \item Strong Correlated Variables: Shell weight and Length, Age and Height
-            \item Moderate Correlated Variables: Length and Age
-            \item Weak Correlated Variables: Age and Weight, Weight and Sex
-            \end{{itemize}}         
-            """
-
-
-        print("Start to find EDA Description")
-        response_dist = self.client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
-                {"role": "user", "content": prompt_dist}
-            ]
-        )
-        response_dist_doc = response_dist.choices[0].message.content
-
-        response_corr = self.client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
-                {"role": "user", "content": prompt_corr}
-            ]
-        )
-        response_corr_doc = response_corr.choices[0].message.content
-
+        
+        # Description of distribution
+        response_dist_doc = ""
+        if dist_input_num != {}:
+            response_dist_doc += "Numerical Variables \n \\begin{itemize} \n"
+            left_skew_list = []
+            right_skew_list = []
+            symmetric_list = []
+            for feature in dist_input_num.keys():
+                if dist_input_num[feature]['mean']<dist_input_num[feature]['median']:
+                    left_skew_list.append(feature)
+                elif dist_input_num[feature]['mean']>dist_input_num[feature]['median']:
+                    right_skew_list.append(feature)
+                else:
+                    symmetric_list.append(feature)
+            response_dist_doc += f"\item Slight left skew distributed variables: {', '.join(left_skew_list) if left_skew_list != [] else 'None'} \n"
+            response_dist_doc += f"\item Slight right skew distributed variables: {', '.join(right_skew_list) if right_skew_list != [] else 'None'} \n"
+            response_dist_doc += f"\item Symmetric distributed variables: {', '.join(symmetric_list) if symmetric_list != [] else 'None'} \n"
+            response_dist_doc += "\end{itemize} \n"
+        if dist_input_cat != {}:
+            response_dist_doc += "Categorical Variables \n"
+            response_dist_doc += "\\begin{itemize} \n"
+            for feature in dist_input_cat.keys():
+                response_dist_doc += f"\item {feature}: {dist_input_cat[feature]} \n"
+            response_dist_doc += "\end{itemize} \n"
+        #print('response_dist_doc: ', response_dist_doc)
+        # Description of Correlation
+        response_corr_doc = "\\begin{itemize} \n"
+        high_corr_list  = [f'{key[0]} and {key[1]}' for key, value in corr_input.items() if value > 0.8]
+        if len(high_corr_list)>10:
+            response_corr_doc += f"\item Strong Correlated Variables: {', '.join(high_corr_list)}"
+            response_corr_doc += ", etc. \n"
+        else:
+            response_corr_doc += f"\item Strong Correlated Variables: {', '.join(high_corr_list) if high_corr_list != [] else 'None'} \n"
+        med_corr_list = [f'{key[0]} and {key[1]}' for key, value in corr_input.items() if (value <= 0.8 and value > 0.5)]
+        response_corr_doc += f"\item Moderate Correlated Variables: {', '.join(med_corr_list) if med_corr_list != [] else 'None'} \n"
+        low_corr_list = [f'{key[0]} and {key[1]}' for key, value in corr_input.items() if value <= 0.5]
+        response_corr_doc += f"\item Weak Correlated Variables: {', '.join(med_corr_list) if low_corr_list != [] else 'None'} \n"
+        response_corr_doc += "\end{itemize} \n"
+        #print('response_corr_doc: ',response_corr_doc)
         return response_dist_doc, response_corr_doc
+        # prompt_dist = f"""
+        #     Given the following statistics about features in a dataset:\n\n
+        #     {dist_input}\n
+        #     1. Please categorize variables according to their distribution features, do not list out all Distribution values.
+        #     2. Please list variables in one category in one line like:
+        #         \item Slight left skew distributed variables: Length, Shell Weight, Diameter, Whole Weight
+        #     3. If a category has no variable, please fill with None, like:
+        #         \item Symmetric distributed variables: None
+        #     4. Only give me a latex format item list.
+        #     5. Please follow this templete, don't add any other things like subtitle, analysis, etc.
+            
+        #     Templete:
+        #     '\\begin{{itemize}}
+        #     \item Slight left skew distributed variables: Length, Shell Weight, Diameter, Whole Weight
+        #     \item Slight right skew distributed variables: Whole Weight, Age
+        #     \item Symmetric distributed variables: Color
+        #     \end{{itemize}}'
+            
+        #     """
+
+        # prompt_corr = f"""
+        #     Given the following correlation statistics about features in a dataset:\n\n
+        #     {corr_input}\n
+        #     1. Please categorize variable pairs according to their correlation, do not list out all correlation values.
+        #     2. Please list variable pairs in one category in one line like:
+        #         \item Slight left skew distributed variables: Shell weight and Length, Age and Height
+        #     3. If a category has no variable, please fill with None, like:
+        #         \item Symmetric distributed variables: None
+        #     4. Please follow this templete, don't add any other things like subtitle, analysis, etc.
+
+        #     Templete:
+        #     In this analysis, we will categorize the correlation statistics of features in the dataset into three distinct categories: Strong correlations ($r>0.8$), Moderate correlations ($0.5<r<0.8$), and Weak correlations ($r<0.5>$).
+            
+        #     \\begin{{itemize}}
+        #     \item Strong Correlated Variables: Shell weight and Length, Age and Height
+        #     \item Moderate Correlated Variables: Length and Age
+        #     \item Weak Correlated Variables: Age and Weight, Weight and Sex
+        #     \end{{itemize}}         
+        #     """
+
+        # print("Start to find EDA Description")
+        # response_dist = self.client.chat.completions.create(
+        #     model="gpt-4o-mini",
+        #     messages=[
+        #         {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
+        #         {"role": "user", "content": prompt_dist}
+        #     ]
+        # )
+        # response_dist_doc = response_dist.choices[0].message.content
+        # 
+        # response_corr = self.client.chat.completions.create(
+        #     model="gpt-4o-mini",
+        #     messages=[
+        #         {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
+        #         {"role": "user", "content": prompt_corr}
+        #     ]
+        # )
+        # response_corr_doc = response_corr.choices[0].message.content
+        
+        
 
     def algo_selection_prompt(self):
         algo_candidates = self.algo_can
         response = """
-        \begin{itemize}
+        \\begin{itemize}
 
         """
  
         for algo in algo_candidates:
             sub_block = f"""
-                        \item \textbf{algo}:
-                        \begin{{itemize}}
-                            \item \textbf{{Description}}: {algo_candidates[algo]['description']}
-                            \item \textbf{{Justification}}: {algo_candidates[algo]['justification']}
+                        \item \\textbf{algo}:
+                        \\begin{{itemize}}
+                            \item \\textbf{{Description}}: {algo_candidates[algo]['description']}
+                            \item \\textbf{{Justification}}: {algo_candidates[algo]['justification']}
                         \end{{itemize}}
 
                          """
@@ -385,16 +456,17 @@ Background about this dataset: {self.knowledge_docs}
     def param_selection_prompt(self):
         params = self.algo_param['hyperparameters']
         response = """
-        \begin{itemize}
+        \\begin{itemize}
 
         """
  
         for param in params:
             sub_block = f"""
-                        \item \textbf{params[param]['full_name']}:
-                        \begin{{itemize}}
-                            \item \textbf{{Value}}: {params[param]['value']}
-                            \item \textbf{{Explanation}}: {params[param]['explanation']}
+                        \item 
+                        \\textbf{params[param]['full_name']}:
+                        \\begin{{itemize}}
+                            \item \\textbf{{Value}}: {params[param]['value']}
+                            \item \\textbf{{Explanation}}: {params[param]['explanation']}
                         \end{{itemize}}
 
                          """
@@ -450,23 +522,31 @@ Background about this dataset: {self.knowledge_docs}
         return repsonse
     
     def graph_effect_prompts(self):
+        """
+        Prompts for Initial Graph Analysis integrated with background knowledge
+        Provide following infos:
+        1. Relationship of the initial graph that has been converted into natural language
+        2. Variable names
+        3. Don't include Bootstrap infos here
+        """
         variables = self.data.columns
-        G = nx.from_numpy_array(self.graph.T, parallel_edges=False, create_using=nx.DiGraph)
-        relations = [(variables[index[0]],variables[index[1]]) for index in G.edges]
+
+        my_visual = Visualization(self.global_state)
+        edges_dict = my_visual.convert_to_edges(self.raw_graph)
+        relation_text_dict, relation_text = edges_to_relationship(self.data, edges_dict)
 
         prompt = f"""
-        This list of tuples reflects the causal relationship among variables {relations}.
-        For example, if the tuple is (X1, X0), it means that {variables[1]} causes {variables[0]}, that is {variables[1]} -> {variables[0]}.
+        The following text describes the causal relationship among variables:
+        {relation_text}
+        You are an expert in the causal discovery field and are familiar with background knowledge of these variables: {variables.tolist()}
         1. Please write one paragraph to describe the causal relationship, do not include any lists, subtitles, etc.
-        2. Don't mention tuples in the paragraph
-        3. If variable names have meanings, please integrate background knowledge of these variables in the causal relationship analysis.
+        2. If variable names have meanings, please integrate background knowledge of these variables in the causal relationship analysis.
         Please use variable names {variables[0]}, {variables[1]}, ... in your description.
         4. Do not include any Greek Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
         
         For example:
         The result graph shows the causal relationship among variables clearly. The {variables[1]} causes the {variables[0]}, ...
         """
-
         print("Start to find graph effect")
         response = self.client.chat.completions.create(
             model="gpt-4o-mini",
@@ -476,8 +556,28 @@ Background about this dataset: {self.knowledge_docs}
             ]
         )
         response_doc = response.choices[0].message.content
+        #print('graph effect: ',response_doc)
         return response_doc
 
+    def llm_direction_prompts(self):
+        import ast 
+        reason_json = self.global_state.results.llm_directions
+        if len(reason_json) == 0:
+            return None
+        prompts = '\\begin{itemize}\n'
+        for key in reason_json:
+            tuple = ast.literal_eval(key)
+            reason = reason_json[key]
+            pair = f'{tuple[0]} \\rightarrow {tuple[1]}'
+            
+            block = f"""
+            \item \\textbf{pair}: {reason}
+
+            """
+            prompts += block
+    
+        return prompts + '\end{itemize}'
+    
     def graph_revise_prompts(self):
         repsonse = f"""
         By using the method mentioned in the Section 4.4, we provide a revise graph pruned with Bootstrap and LLM suggestion.
@@ -494,72 +594,50 @@ Background about this dataset: {self.knowledge_docs}
             Bootstrap doesn't force or forbid any edges.
             """
         llm_evaluation_json = self.global_state.results.llm_errors
-        force_record = llm_evaluation_json['force_record']
+        direct_record = llm_evaluation_json['direct_record']
         forbid_record = llm_evaluation_json['forbid_record']
-        if force_record != {} and force_record is not None:
-            repsonse += f"""
-            The following are force results given by LLM:
-            
-            \begin{{itemize}}
-            """
-            for k in force_record.keys():
-                tuple = ast.literal_eval(k)
-                pair = f'{tuple[0]} \rightarrow {tuple[1]}'
-                repsonse += f"""
-                \item \textbf{pair}: {force_record[k]}
-                """
-            repsonse += f"""
-            \end{{itemize}}
-            """
+        
         if  forbid_record != {} and forbid_record is not None:
             repsonse += f"""
             The following relationships are forbidden by LLM:
             
-            \begin{{itemize}}
+            \\begin{{itemize}}
             """
-            for k in forbid_record.keys():
-                tuple = ast.literal_eval(k)
-                pair = f'({tuple[0]}, {tuple[1]})'
+            for item in forbid_record.values():
                 repsonse += f"""
-                \item \textbf{k}: {forbid_record[k]}
+                \item \\textbf{{{item[0][0]} \\rightarrow {item[0][1]}}}: {item[1]}
                 """
             repsonse += f"""
             \end{{itemize}}
-            """           
-        if force_record=={} and forbid_record=={}:
+            """     
+        else:
             repsonse += f"""
-            LLM doesn't force or forbid any edges.
+            LLM doesn't forbid any edges.
             """
-        llm_direction_reason = self.llm_direction_prompts()
-        if llm_direction_reason is not None:
+            
+        llm_direction_reason = direct_record  
+        if llm_direction_reason!={} and llm_direction_reason is not None:
             repsonse += f"""
-            The following are directions of remaining undirected edges determined by the LLM:
-            {llm_direction_reason}
+                The following are directions determined by the LLM:
+                \\begin{{itemize}}
+                """
+            for item in llm_direction_reason.values():
+                repsonse += f"""
+                \item \\textbf{{{item[0][0]} \\rightarrow {item[0][1]}}}: {item[1]}
+                """
+            repsonse += f"""
+            \end{{itemize}}
+            """ 
+        else:
+            repsonse += f"""
+            LLM doesn't decide any direction of edges.
             """
         
         repsonse += """
         This structured approach ensures a comprehensive and methodical analysis of the causal relationships within the dataset.
         """
+        #print('graph revise prompt: ', repsonse)
         return repsonse
-
-    def llm_direction_prompts(self):
-        import ast 
-        reason_json = self.global_state.results.llm_directions
-        if len(reason_json) == 0:
-            return None
-        prompts = '\begin{itemize}\n'
-        for key in reason_json:
-            tuple = ast.literal_eval(key)
-            reason = reason_json[key]
-            pair = f'{tuple[0]} \rightarrow {tuple[1]}'
-            
-            block = f"""
-            \item \textbf{pair}: {reason}
-
-            """
-            prompts += block
-    
-        return prompts + '\end{itemize}'
     
     def confidence_graph_prompts(self):
         name_map = {'certain_edges': 'Directed Edge', #(->)
@@ -569,7 +647,7 @@ Background about this dataset: {self.knowledge_docs}
                     'non_edges': 'No D-Seperation Edge', #(o-o)
                     'non_existence':'No Edge'}
         graph_prompt = """
-        \begin{figure}[H]
+        \\begin{figure}[H]
             \centering
 
         """
@@ -580,10 +658,10 @@ Background about this dataset: {self.knowledge_docs}
             graph_path = f'{self.visual_dir}/{key}_confidence_heatmap.jpg'
             caption = f'{name_map[key]}'
             graph_prompt += f"""
-            \begin{{subfigure}}{{{length}\textwidth}}
+            \\begin{{subfigure}}{{{length}\\textwidth}}
                     \centering
                     \includegraphics[width=\linewidth]{graph_path}
-                    \vfill
+                    \\vfill
                     \caption{caption}
                 \end{{subfigure}}"""
         
@@ -612,14 +690,18 @@ Background about this dataset: {self.knowledge_docs}
         
 
     def confidence_analysis_prompts(self):
-        relation_prob = self.graph_effect_prompts()
+        edges_dict = self.global_state.results.revised_edges
+        relation_text_dict, relation_text = edges_to_relationship(self.data, edges_dict, self.bootstrap_probability)
+        #relation_prob = self.graph_effect_prompts()
 
         variables = '\t'.join(self.data.columns)
         prompt = f"""
-        Now we have a causal relationship about these variables:{variables}, and we want to analize the reliability of it.
-        The following describes how much confidence we have on each relationship edge: {relation_prob}.
-        For example, if it says X1 -> X0 (the bootstrap probability of such edge is 0.99), it means that we have 99% confidence to believe that X1 causes X0.
-        The following is the background knowledge about these variables: {self.knowledge_docs}
+        The following text describes the causal relationship among variables from a statisical perspective:
+        {relation_text}
+        We use traditional causal discovery algorithm to find this relationship, and the probability is calculated with bootstrapping.
+        This result is solely from statistical perspective, so it is not reliable enough.
+        You are an expert in the causal discovery field and are familiar with background knowledge of these variables: {variables}
+
         Based on this statistical confidence result, and background knowledge about these variables,
         Please write a paragraph to analyze the reliability of this causal relationship graph. 
         
@@ -632,7 +714,7 @@ Background about this dataset: {self.knowledge_docs}
         
         Therefore, the result of this causal graph is reliable/not reliable.
         """
-
+        #print('confidence_analysis_prompts:',prompt)
         print("Start to analyze graph reliability")
         response = self.client.chat.completions.create(
             model="gpt-4o-mini",
@@ -642,6 +724,7 @@ Background about this dataset: {self.knowledge_docs}
             ]
         )
         response_doc = response.choices[0].message.content
+        #print('reliability analysis:',response_doc)
         return response_doc
 
     def abstract_prompt(self):
@@ -707,7 +790,7 @@ Background about this dataset: {self.knowledge_docs}
         For example, 
         1. for subheadings '## heading', convert it into '\subsection{{heading}}; for subsubheadings '### heading', convert it into '\subsubsection{{heading}}'
         2. for list of items '-item1 -item2 -item3', convert them into 
-        '\begin{{itemize}}
+        '\\begin{{itemize}}
         \item item1
         \item item2
         \item item3
@@ -749,52 +832,26 @@ Background about this dataset: {self.knowledge_docs}
             data_preview = df.head().to_latex(index=False)
             if len(self.data.columns) >= 9:
                 data_preview = f"""
-                \resizebox{{\textwidth}}{{!}}{{
+                \\resizebox{{\\textwidth}}{{!}}{{
                 {data_preview}
                 }}
                 """
-            #print('get data prop')
             data_prop_table = self.data_prop_prompt()
             # Intro info
             self.title, dataset = self.get_title()
             self.intro_info = self.intro_prompt()
             # Background info
             if self.data_mode == 'real':
-                background_info1, relation_prompt = self.background_prompt()
-                self.background_info1 = self.latex_convert(background_info1)
-                self.background_info2 = self.latex_convert(relation_prompt)
+                self.background_info1, self.background_info2 = self.background_prompt()
             else:
                 self.background_info1, self.background_info2 = '', ''
             # EDA info
             dist_info, corr_info = self.eda_prompt()
-            dist_info = self.latex_convert(dist_info)
-            corr_info = self.latex_convert(corr_info)
+            #dist_info = self.latex_convert(dist_info)
+            #corr_info = self.latex_convert(corr_info)
             # Procedure info
             self.discover_process = self.procedure_prompt()
-            if os.path.isfile(f'{self.visual_dir}/residuals_plot.jpg'):
-                preprocess_plot = f"""
-The following are Residual Plots and Q-Q Plots for seleted pair of vairables.
-
-\begin{{figure}}[H]
-    \centering
-    \begin{{subfigure}}{{0.45\textwidth}}
-        \centering
-        \includegraphics[width=\linewidth]{{{self.visual_dir}/residuals_plot.jpg}}
-        \vfill
-        \caption{{Residual Plot}}
-    \end{{subfigure}}
-    \begin{{subfigure}}{{0.45\textwidth}}
-        \centering
-        \includegraphics[width=\linewidth]{{{self.visual_dir}/qq_plot.jpg}}
-        \vfill
-        \caption{{Q-Q Plot}}
-    \end{{subfigure}}
-\caption{{Plots for Data Properties Checking}}
-\end{{figure}}   
-
-"""
-            else:
-                preprocess_plot = ""
+            self.preprocess_plot = self.preprocess_plot_prompt()
             # Graph effect info
             self.graph_prompt = self.global_state.logging.graph_conversion['initial_graph_analysis']
             # Graph Revise info
@@ -806,7 +863,6 @@ The following are Residual Plots and Q-Q Plots for seleted pair of vairables.
             self.reliability_prompt = self.confidence_analysis_prompts()
             self.confidence_graph_prompt = self.confidence_graph_prompts()
             self.abstract = self.abstract_prompt()
-            #self.keywords = self.keyword_prompt()
             
 
             if self.data_mode == 'simulated':
@@ -831,7 +887,7 @@ The following are Residual Plots and Q-Q Plots for seleted pair of vairables.
                 "[CORR_INFO]": corr_info or "",
                 "[RESULT_ANALYSIS]": self.graph_prompt or "",
                 "[DISCOVER_PROCESS]": self.discover_process or "",
-                "[PREPROCESS_GRAPH]": preprocess_plot or "",
+                "[PREPROCESS_GRAPH]": self.preprocess_plot or "",
                 "[REVISE_PROCESS]": self.revise_process or "",
                 "[RELIABILITY_ANALYSIS]": self.reliability_prompt or "",
                 "[CONFIDENCE_GRAPH]": self.confidence_graph_prompt or ""
@@ -854,6 +910,7 @@ The following are Residual Plots and Q-Q Plots for seleted pair of vairables.
             for placeholder, value in replacement2.items():
                 prompt_template = prompt_template.replace(placeholder, value)
 
+            return prompt_template
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
@@ -919,6 +976,8 @@ The following are Residual Plots and Q-Q Plots for seleted pair of vairables.
         with open(f'{save_path}/report.tex', 'w', encoding='utf-8') as file:
             file.write(report)
         # fix latex bugs before rendering
+        print('check latex bug')
         self.latex_bug_checking(f'{save_path}/report.tex')
         # Compile the .tex file to PDF using pdflatex
+        print('start compilation')
         compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
