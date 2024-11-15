@@ -439,7 +439,7 @@ Background about this dataset: {self.knowledge_docs}
  
         for algo in algo_candidates:
             sub_block = f"""
-                        \item \\textbf{algo}:
+                        \item \\textbf{{{algo}}}:
                         \\begin{{itemize}}
                             \item \\textbf{{Description}}: {algo_candidates[algo]['description']}
                             \item \\textbf{{Justification}}: {algo_candidates[algo]['justification']}
@@ -568,7 +568,7 @@ Background about this dataset: {self.knowledge_docs}
         for key in reason_json:
             tuple = ast.literal_eval(key)
             reason = reason_json[key]
-            pair = f'{tuple[0]} \\rightarrow {tuple[1]}'
+            pair = f'{tuple[0]} $\\rightarrow$ {tuple[1]}'
             
             block = f"""
             \item \\textbf{pair}: {reason}
@@ -605,7 +605,7 @@ Background about this dataset: {self.knowledge_docs}
             """
             for item in forbid_record.values():
                 repsonse += f"""
-                \item \\textbf{{{item[0][0]} \\rightarrow {item[0][1]}}}: {item[1]}
+                \item \\textbf{{{item[0][0]} $\\rightarrow$ {item[0][1]}}}: {item[1]}
                 """
             repsonse += f"""
             \end{{itemize}}
@@ -623,7 +623,7 @@ Background about this dataset: {self.knowledge_docs}
                 """
             for item in llm_direction_reason.values():
                 repsonse += f"""
-                \item \\textbf{{{item[0][0]} \\rightarrow {item[0][1]}}}: {item[1]}
+                \item \\textbf{{{item[0][0]} $\rightarrow$ {item[0][1]}}}: {item[1]}
                 """
             repsonse += f"""
             \end{{itemize}}
@@ -837,6 +837,7 @@ Background about this dataset: {self.knowledge_docs}
                 }}
                 """
             data_prop_table = self.data_prop_prompt()
+            print('data_prop_table',data_prop_table)
             # Intro info
             self.title, dataset = self.get_title()
             self.intro_info = self.intro_prompt()
@@ -935,7 +936,7 @@ Background about this dataset: {self.knowledge_docs}
             output = response.choices[0].message.content
             return output
     
-    def latex_bug_checking(self, tex_path, num_error_corrections=5):
+    def latex_bug_checking(self, tex_path, num_error_corrections=2):
         save_path = self.global_state.user_data.output_report_dir
 
         # Iteratively fix any LaTeX bugs
