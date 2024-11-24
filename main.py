@@ -6,7 +6,7 @@ from algorithm.filter import Filter
 from algorithm.program import Programming
 from algorithm.rerank import Reranker
 from postprocess.judge import Judge
-from postprocess.visualization import Visualization
+from postprocess.visualization import Visualization, convert_to_edges
 from preprocess.eda_generation import EDA
 from postprocess.report_generation import Report_generation
 from global_setting.Initialize_state import global_state_initialization, load_data
@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="dataset/Abalone/Abalone.csv",
+        default="dataset/sachs/sachs.csv",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument(
         '--output-report-dir',
         type=str,
-        default='dataset/Abalone/output_report',
+        default='dataset/sachs/output_report',
         help='Directory to save the output report'
     )
 
@@ -40,7 +40,7 @@ def parse_args():
     parser.add_argument(
         '--output-graph-dir',
         type=str,
-        default='dataset/Abalone/output_graph',
+        default='dataset/sachs/output_graph',
         help='Directory to save the output graph'
     )
 
@@ -158,8 +158,6 @@ def main(args):
     # background info collection
     #print("Original Data: ", global_state.user_data.raw_data)
 
-    
-
     if args.debug:
         # Fake statistics for debugging
         global_state.statistics.missingness = False
@@ -204,7 +202,7 @@ def main(args):
     # Plot Initial Graph
     _ = my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf', pos=pos_est)
     my_report = Report_generation(global_state, args)
-    global_state.results.raw_edges = my_visual_initial.convert_to_edges(global_state.results.raw_result)
+    global_state.results.raw_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.raw_data.columns, global_state.results.raw_result)
     global_state.logging.graph_conversion['initial_graph_analysis'] = my_report.graph_effect_prompts()
 
     judge = Judge(global_state, args)
@@ -217,8 +215,6 @@ def main(args):
     global_state = judge.forward(global_state)
 
     # ##############################
-    # from postprocess.judge_functions import llm_direction_evaluation
-    # llm_direction_evaluation(global_state)
     # if global_state.user_data.ground_truth is not None:
     #     print("Revised Graph: ", global_state.results.revised_graph)
     #     print("Mat Ground Truth: ", global_state.user_data.ground_truth)
@@ -229,7 +225,7 @@ def main(args):
     # Plot Revised Graph
     my_visual_revise = Visualization(global_state)
     pos_new = my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf', pos=pos_est)
-    global_state.results.revised_edges = my_visual_revise.convert_to_edges(global_state.results.revised_graph)
+    global_state.results.revised_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.raw_data.columns, global_state.results.revised_graph)
     # Plot Bootstrap Heatmap
     boot_heatmap_path = my_visual_revise.boot_heatmap_plot()
 
@@ -262,6 +258,20 @@ def main(args):
             print('Error occur during the Report Generation three times, we stop.')
     ################################
 
+    # ##### Save infos of Post-Processing ######
+    # import numpy as np
+    # import shutil
+    # save_path = 'postprocess/test_result/sachs/base/10_voting/'
+    # if not os.path.exists(save_path):
+    #     os.makedirs(save_path)
+    # print("Original Graph: ", global_state.results.raw_result.G.graph)
+    # np.save(save_path+'origin_graph', global_state.results.raw_result.G.graph)
+    # print("Revised Graph: ", global_state.results.revised_graph)
+    # np.save(save_path+'revised_graph', global_state.results.revised_graph)
+
+    # destination_path = os.path.join(save_path, os.path.basename(report_path))
+    # shutil.copy(report_path, destination_path)
+    
     return report, global_state
 
 

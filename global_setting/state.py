@@ -16,6 +16,7 @@ class UserData:
     knowledge_docs: Optional[str] = None
     output_report_dir: Optional[str] = None
     output_graph_dir: Optional[str] = None
+    selected_variables: Optional[object] = None
 
 @dataclass
 class Statistics:
@@ -67,6 +68,7 @@ class Results:
     bootstrap_errors: List[Dict] = field(default_factory=list)
     eda_result: Optional[Dict] = None
     llm_directions: Optional[object] = None
+    prior_knowledge: Optional[object] = None
 
 @dataclass
 class GlobalState:

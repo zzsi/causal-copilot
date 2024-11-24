@@ -5,7 +5,7 @@ import numpy as np
 from plumbum.cmd import latexmk
 from plumbum import local
 import networkx as nx
-from postprocess.visualization import Visualization
+from postprocess.visualization import Visualization, convert_to_edges
 from postprocess.judge_functions import edges_to_relationship
 #from postprocess.judge_functions import graph_effect_prompts
 import PyPDF2
@@ -155,6 +155,7 @@ class Report_generation(object):
         )
         section1 = response_background.choices[0].message.content
         section1 = re.sub(r'.*\*\*(.*?)\*\*', r'\\textbf{\1}', section1)
+        section1 = section1.replace(r'\textbf', r'\\newline \\textbf')
 
         col_names = '\t'.join(self.data.columns)
         prompt = f"""
@@ -185,6 +186,7 @@ Background about this dataset: {self.knowledge_docs}
         )
         section2 = response_background.choices[0].message.content
         section2 = re.sub(r'.*\*\*(.*?)\*\*', r'\\textbf{\1}', section2)
+        section2 = section2.replace(r'\textbf', r'\\newline \\textbf')
 
         variables = self.data.columns
         pattern = r'\*\*(.*?)\s*(→|↔|->|<->)\s*(.*?)\*\*'
@@ -235,6 +237,9 @@ Background about this dataset: {self.knowledge_docs}
         pos = nx.spring_layout(g)
         _ = my_visual.plot_pdag(zero_matrix, 'potential_relation.pdf', pos=pos, relation=True)
         relation_path = f'{self.visual_dir}/potential_relation.pdf'
+        #TODO: fix graph bug here
+        # section2 = re.sub(r'.*\*\*(.*?)\*\*', r'\\textbf{\1}', section2)
+        # section2 = section2.replace(r'\textbf', r'\\newline \\textbf')
 
         def get_pdf_page_size(pdf_path):
             with open(pdf_path, 'rb') as file:
@@ -356,79 +361,28 @@ Background about this dataset: {self.knowledge_docs}
         #print('response_dist_doc: ', response_dist_doc)
         # Description of Correlation
         response_corr_doc = "\\begin{itemize} \n"
-        high_corr_list  = [f'{key[0]} and {key[1]}' for key, value in corr_input.items() if value > 0.8]
+        high_corr_list  = [f'{key[0]} and {key[1]}' for key, value in corr_input.items() if abs(value) > 0.8]
         if len(high_corr_list)>10:
             response_corr_doc += f"\item Strong Correlated Variables: {', '.join(high_corr_list)}"
             response_corr_doc += ", etc. \n"
         else:
             response_corr_doc += f"\item Strong Correlated Variables: {', '.join(high_corr_list) if high_corr_list != [] else 'None'} \n"
-        med_corr_list = [f'{key[0]} and {key[1]}' for key, value in corr_input.items() if (value <= 0.8 and value > 0.5)]
-        response_corr_doc += f"\item Moderate Correlated Variables: {', '.join(med_corr_list) if med_corr_list != [] else 'None'} \n"
-        low_corr_list = [f'{key[0]} and {key[1]}' for key, value in corr_input.items() if value <= 0.5]
-        response_corr_doc += f"\item Weak Correlated Variables: {', '.join(med_corr_list) if low_corr_list != [] else 'None'} \n"
+        med_corr_list = [f'{key[0]} and {key[1]}' for key, value in corr_input.items() if (abs(value) <= 0.8 and abs(value) > 0.5)]
+        if len(med_corr_list)>10:
+            response_corr_doc += f"\item Moderate Correlated Variables: {', '.join(med_corr_list)}"
+            response_corr_doc += ", etc. \n"
+        else:
+            response_corr_doc += f"\item Moderate Correlated Variables: {', '.join(med_corr_list) if med_corr_list != [] else 'None'} \n"
+        low_corr_list = [f'{key[0]} and {key[1]}' for key, value in corr_input.items() if abs(value) <= 0.5]
+        if len(low_corr_list)>10:
+            response_corr_doc += f"\item Weak Correlated Variables: {', '.join(low_corr_list)}"
+            response_corr_doc += ", etc. \n"
+        else:
+            response_corr_doc += f"\item Weak Correlated Variables: {', '.join(low_corr_list) if low_corr_list != [] else 'None'} \n"
         response_corr_doc += "\end{itemize} \n"
-        #print('response_corr_doc: ',response_corr_doc)
+        print('response_corr_doc: ',response_corr_doc)
         return response_dist_doc, response_corr_doc
-        # prompt_dist = f"""
-        #     Given the following statistics about features in a dataset:\n\n
-        #     {dist_input}\n
-        #     1. Please categorize variables according to their distribution features, do not list out all Distribution values.
-        #     2. Please list variables in one category in one line like:
-        #         \item Slight left skew distributed variables: Length, Shell Weight, Diameter, Whole Weight
-        #     3. If a category has no variable, please fill with None, like:
-        #         \item Symmetric distributed variables: None
-        #     4. Only give me a latex format item list.
-        #     5. Please follow this templete, don't add any other things like subtitle, analysis, etc.
-            
-        #     Templete:
-        #     '\\begin{{itemize}}
-        #     \item Slight left skew distributed variables: Length, Shell Weight, Diameter, Whole Weight
-        #     \item Slight right skew distributed variables: Whole Weight, Age
-        #     \item Symmetric distributed variables: Color
-        #     \end{{itemize}}'
-            
-        #     """
-
-        # prompt_corr = f"""
-        #     Given the following correlation statistics about features in a dataset:\n\n
-        #     {corr_input}\n
-        #     1. Please categorize variable pairs according to their correlation, do not list out all correlation values.
-        #     2. Please list variable pairs in one category in one line like:
-        #         \item Slight left skew distributed variables: Shell weight and Length, Age and Height
-        #     3. If a category has no variable, please fill with None, like:
-        #         \item Symmetric distributed variables: None
-        #     4. Please follow this templete, don't add any other things like subtitle, analysis, etc.
-
-        #     Templete:
-        #     In this analysis, we will categorize the correlation statistics of features in the dataset into three distinct categories: Strong correlations ($r>0.8$), Moderate correlations ($0.5<r<0.8$), and Weak correlations ($r<0.5>$).
-            
-        #     \\begin{{itemize}}
-        #     \item Strong Correlated Variables: Shell weight and Length, Age and Height
-        #     \item Moderate Correlated Variables: Length and Age
-        #     \item Weak Correlated Variables: Age and Weight, Weight and Sex
-        #     \end{{itemize}}         
-        #     """
-
-        # print("Start to find EDA Description")
-        # response_dist = self.client.chat.completions.create(
-        #     model="gpt-4o-mini",
-        #     messages=[
-        #         {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
-        #         {"role": "user", "content": prompt_dist}
-        #     ]
-        # )
-        # response_dist_doc = response_dist.choices[0].message.content
-        # 
-        # response_corr = self.client.chat.completions.create(
-        #     model="gpt-4o-mini",
-        #     messages=[
-        #         {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
-        #         {"role": "user", "content": prompt_corr}
-        #     ]
-        # )
-        # response_corr_doc = response_corr.choices[0].message.content
-        
-        
+             
 
     def algo_selection_prompt(self):
         algo_candidates = self.algo_can
@@ -531,8 +485,7 @@ Background about this dataset: {self.knowledge_docs}
         """
         variables = self.data.columns
 
-        my_visual = Visualization(self.global_state)
-        edges_dict = my_visual.convert_to_edges(self.raw_graph)
+        edges_dict = convert_to_edges(self.algo, variables, self.raw_graph)
         relation_text_dict, relation_text = edges_to_relationship(self.data, edges_dict)
 
         prompt = f"""
@@ -623,7 +576,7 @@ Background about this dataset: {self.knowledge_docs}
                 """
             for item in llm_direction_reason.values():
                 repsonse += f"""
-                \item \\textbf{{{item[0][0]} $\rightarrow$ {item[0][1]}}}: {item[1]}
+                \item \\textbf{{{item[0][0]} $\\rightarrow$ {item[0][1]}}}: {item[1]}
                 """
             repsonse += f"""
             \end{{itemize}}
@@ -810,6 +763,39 @@ Background about this dataset: {self.knowledge_docs}
         response_doc = response.choices[0].message.content
         return response_doc
 
+
+    # Function to replace Greek letters in text
+    def replace_greek_with_latex(self, text):
+        greek_to_latex = {
+            "α": r"$\alpha$",
+            "β": r"$\beta$",
+            "γ": r"$\gamma$",
+            "δ": r"$\delta$",
+            "ε": r"$\epsilon$",
+            "ζ": r"$\zeta$",
+            "η": r"$\eta$",
+            "θ": r"$\theta$",
+            "ι": r"$\iota$",
+            "κ": r"$\kappa$",
+            "λ": r"$\lambda$",
+            "μ": r"$\mu$",
+            "ν": r"$\nu$",
+            "ξ": r"$\xi$",
+            "ο": r"$o$",
+            "π": r"$\pi$",
+            "ρ": r"$\rho$",
+            "σ": r"$\sigma$",
+            "τ": r"$\tau$",
+            "υ": r"$\upsilon$",
+            "φ": r"$\phi$",
+            "χ": r"$\chi$",
+            "ψ": r"$\psi$",
+            "ω": r"$\omega$",
+        }
+        # Use regular expressions to find and replace Greek letters
+        pattern = "|".join(map(re.escape, greek_to_latex.keys()))
+        return re.sub(pattern, lambda match: greek_to_latex[match.group()], text)
+
     def generation(self, debug=False):
             '''
             generate and save the report
@@ -837,7 +823,6 @@ Background about this dataset: {self.knowledge_docs}
                 }}
                 """
             data_prop_table = self.data_prop_prompt()
-            print('data_prop_table',data_prop_table)
             # Intro info
             self.title, dataset = self.get_title()
             self.intro_info = self.intro_prompt()
@@ -878,19 +863,19 @@ Background about this dataset: {self.knowledge_docs}
                     prompt_template = self.load_context("postprocess/context/template_real_notruth.tex")
 
             replacement1 = {
-                "[ABSTRACT]": self.abstract or "",
-                "[INTRO_INFO]": self.intro_info or "",
-                "[BACKGROUND_INFO1]": self.background_info1 or "",
-                "[BACKGROUND_INFO2]": self.background_info2 or "",
+                "[ABSTRACT]": self.abstract.replace("&", r"\&") or "",
+                "[INTRO_INFO]": self.intro_info.replace("&", r"\&") or "",
+                "[BACKGROUND_INFO1]": self.background_info1.replace("&", r"\&") or "",
+                "[BACKGROUND_INFO2]": self.background_info2.replace("&", r"\&") or "",
                 "[DATA_PREVIEW]": data_preview or "",
                 "[DATA_PROP_TABLE]": data_prop_table or "",
                 "[DIST_INFO]": dist_info or "",
                 "[CORR_INFO]": corr_info or "",
-                "[RESULT_ANALYSIS]": self.graph_prompt or "",
-                "[DISCOVER_PROCESS]": self.discover_process or "",
+                "[RESULT_ANALYSIS]": self.graph_prompt.replace("&", r"\&") or "",
+                "[DISCOVER_PROCESS]": self.discover_process.replace("&", r"\&") or "",
                 "[PREPROCESS_GRAPH]": self.preprocess_plot or "",
-                "[REVISE_PROCESS]": self.revise_process or "",
-                "[RELIABILITY_ANALYSIS]": self.reliability_prompt or "",
+                "[REVISE_PROCESS]": self.revise_process.replace("&", r"\&") or "",
+                "[RELIABILITY_ANALYSIS]": self.reliability_prompt.replace("&", r"\&") or "",
                 "[CONFIDENCE_GRAPH]": self.confidence_graph_prompt or ""
             }
             replacement2 = {
@@ -910,7 +895,8 @@ Background about this dataset: {self.knowledge_docs}
                 prompt_template = prompt_template.replace(placeholder, value)
             for placeholder, value in replacement2.items():
                 prompt_template = prompt_template.replace(placeholder, value)
-
+            prompt_template = self.replace_greek_with_latex(prompt_template)
+            #print(prompt_template)
             return prompt_template
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",

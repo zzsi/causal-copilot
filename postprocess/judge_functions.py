@@ -4,6 +4,7 @@ import ast
 import json 
 from openai import OpenAI
 from postprocess.visualization import Visualization
+from collections import Counter
 
 
 def bootstrap_iteration(data, ts, algorithm, hyperparameters):
@@ -257,6 +258,50 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, parall
 
     return boot_recommend, boot_edges_prob
 
+def bootstrap_recommend(raw_graph, boot_edges_prob):
+    direct_prob_mat =  boot_edges_prob['certain_edges']
+    high_prob_idx = np.where(direct_prob_mat >= 0.9)
+    high_prob_edges = list(zip(high_prob_idx[0], high_prob_idx[1]))
+    low_prob_idx = np.where(direct_prob_mat <= 0.1)
+    low_prob_edges = list(zip(low_prob_idx[0], low_prob_idx[1]))
+    middle_prob_idx = np.where((direct_prob_mat < 0.9) & (direct_prob_mat > 0.1))
+    middle_prob_edges = list(zip(middle_prob_idx[0], middle_prob_idx[1]))
+
+    undirect_prob_mat =  boot_edges_prob['uncertain_edges']
+    high_prob_idx = np.where(undirect_prob_mat >= 0.9)
+    high_prob_edges_undirect = list(zip(high_prob_idx[0], high_prob_idx[1]))
+    middle_prob_edges = list(set(middle_prob_edges+high_prob_edges_undirect))
+    middle_prob_idx = np.where((direct_prob_mat < 0.9) & (direct_prob_mat > 0.1))
+    middle_prob_edges_undirect = list(zip(middle_prob_idx[0], middle_prob_idx[1]))
+    middle_prob_edges = list(set(middle_prob_edges+middle_prob_edges_undirect))
+    print('middle_prob_edges',middle_prob_edges)
+
+    bootstrap_check_dict = {
+        'high_prob_edges':{
+            'exist':[], # cannot be deleted
+            'non-exist': [] # Add it and use it as a constraint in the next iteration
+        },
+        'low_prob_edges':{
+            'exist':[], # delete it
+            'non-exist': [] # correct and do not edit
+        },
+        'middle_prob_edges':{
+            'exist':[], # Double-check by LLM, delete if it should not exist
+            'non-exist': [] # Double-check by LLM, orientate if it should exist
+        }
+    }
+    def exist_check(prob_edges, dict_key):
+        for pair in prob_edges:
+            if raw_graph[pair[0],pair[1]]==1 and raw_graph[pair[1],pair[0]]==-1:
+                bootstrap_check_dict[dict_key]['exist'].append(pair)
+            else:
+                bootstrap_check_dict[dict_key]['non-exist'].append(pair)
+    exist_check(high_prob_edges, 'high_prob_edges')
+    exist_check(low_prob_edges, 'low_prob_edges')
+    exist_check(middle_prob_edges, 'middle_prob_edges')
+
+    return bootstrap_check_dict
+
 
 def get_json(args, prompt):
         client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
@@ -293,6 +338,65 @@ def call_llm(args, prompt):
             result, explanation = call_llm(args,prompt)
         return result, explanation
 
+def call_llm_new(args, prompt, prompt_type):
+        cot_context = """
+                    Here is the Question and Answer templete, you should learn and reference it when answering my following questions
+                    Question: For a causal graph used to model relationship of various factors and outcomes related to cancer with the following nodes: ['Pollution', 'Cancer', 'Smoker', 'Xray', 'Dyspnoea'], 
+                    your task is to double check these relationships about node 'Cancer' from a domain knowledge perspective and determine whether this statistically suggested hypothesis is plausible in the context of the domain.  
+                    Firstly, determine the relationship between
+                    'smoker' and 'cancer'
+                    'xray' and 'cancer'
+                    'pollution' and 'cancer'
+                    For each node pair, if the left node causes the right node, the "result" is 'A'. If the right node causes the left node, the "result" should be 'B'. If there is no relationship, the "result" is 'C'. If you are not sure, the result is 'D'
+                    Please note that Correlation doesn't mean Causation! For example ice cream sales increase in summer alongside higher rates of drowning, where both are influenced by warmer weather rather than one causing the other.
+                    Please note hidden confounders, for example a study finds a correlation between coffee consumption and heart disease, but fails to account for smoking, which influences both coffee habits and heart disease risk.
+                    Secondly, please provide an explanation of your result, leveraging your expert knowledge on the causal relationship between the left node and the right node, please use only one to two sentences. 
+                    Your response should consider the relevant factors and provide a reasoned explanation based on your understanding of the domain.
+
+                    Response me following the template below. Do not include anything else. explanations should only include one to two sentences.
+                    ('smoker', 'cancer'): A or B or C or D: explanations ;
+                    ('xray' and 'cancer'): A or B or C or D: explanations ;
+                    ('pollution' and 'cancer') : A or B or C or D: explanations ;
+                    Answer: 
+                    ('smoker', 'cancer'): A: Smoking introduces harmful substances into the respiratory system, leading to cellular damage and mutation, which significantly raises the likelihood of cancer development in the lungs or respiratory tract, subsequently impacting the occurrence of respiratory problems like shortness of breath.
+                    ('xray', 'cancer'): B: The causal effect of cancer on X-ray is that X-rays are often used to diagnose or detect cancer in different parts of the body, such as the bones, lungs, breasts, or kidneys123. Therefore, having cancer may increase the likelihood of getting an X-ray as part of the diagnostic process or follow-up care.
+                    ('pollution', 'cancer') : A: The causal effect of pollution on cancer is that air pollution contains carcinogens (cancercausing substances) that may be absorbed into the body when inhaled and damage the DNA of cells. Therefore air pollution may cause cancer.
+                    """
+        # initiate a client
+        client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+        response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are an expert in Causal Discovery."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+        if 'chain_of_thought' in prompt_type:
+                    client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[
+                            {"role": "system", "content": cot_context}])    
+        # get response          
+        response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "user", "content": prompt}])
+        contents = response.choices[0].message.content
+        # parse response
+        llm_answer = {}
+        contents = contents.replace('\n', ';')
+        lines = [line.strip() for line in contents.split(';') if line.strip()]
+        for line in lines:
+            try:
+                pair, result, explanation = line.split(':')[0].strip(), line.split(':')[1].strip().upper(), line.split(':')[2].strip()
+                llm_answer[pair] = {'result': result,
+                                    'explanation': explanation}
+            except:
+                print('The returned LLM evaluation response is wrong, try again')
+                print(lines)
+                llm_answer = call_llm_new(args, prompt, prompt_type)
+        return llm_answer
+
 def llm_evaluation(data, args, edges_dict, boot_edges_prob):
     """
     Here we let LLM double check the result of initial graph, and make edition (determine direction & delete edge)
@@ -301,7 +405,7 @@ def llm_evaluation(data, args, edges_dict, boot_edges_prob):
     (ancestor decendant ... relationship?)
     2. Bootstrap Probability
     3. Pair relationship in the original graph
-    Return: Result with domain knowledge and explanation
+    Return: Result dicts with domain knowledge and explanation
     """
     direct_dict = {}
     forbid_dict = {}
@@ -325,12 +429,12 @@ def llm_evaluation(data, args, edges_dict, boot_edges_prob):
         Then, your task is to double check this result from a domain knowledge perspective and determine whether this statistically suggested hypothesis is plausible in the context of the domain.  
 
         Firstly, determine the relationship between {var_j} and {var_i}
-        If {var_j} causes {var_i}, the "result" is 'A'. If {var_i} causes {var_j}, the "result" should be 'B'. If you are really sure there is no relationship, the "result" is 'C'. 
+        If {var_j} causes {var_i}, the "result" is 'A'. If {var_i} causes {var_j}, the "result" should be 'B'. If you are really sure there is no relationship, the "result" is 'C'. Otherwise the "result" is 'D'.
         Secondly, please provide an explanation of your result, leveraging your expert knowledge on the causal relationship between {var_j} and {var_i}, please use only one to two sentences. 
         Your response should consider the relevant factors and provide a reasoned explanation based on your understanding of the domain.
 
         Response me following the template below. Do not include anything else. explanations should only include one to two sentences
-        A or B or C: explanations 
+        A or B or C or D: explanations 
 
         Here are some response Examples
         A: Larger abalones, which are indicated by greater shell lengths, generally possess heavier shells. Therefore, there is a direct positive relationship between length and shell weight as a larger size typically results in greater overall mass of the shell.
@@ -338,7 +442,7 @@ def llm_evaluation(data, args, edges_dict, boot_edges_prob):
             #print('prompt_pruning:', prompt_pruning)
             pair_idx += 1
             result, explanation = call_llm(args,prompt_pruning)
-            #print((var_j, var_i), result)
+            print((var_j, var_i), result)
             if result == 'A':
                 if (var_j, var_i) not in edges_dict['certain_edges']:
                     direct_dict[(idx_j, idx_i)] = ((var_j, var_i), explanation)
@@ -347,6 +451,184 @@ def llm_evaluation(data, args, edges_dict, boot_edges_prob):
                     direct_dict[(idx_i, idx_j)] = ((var_i, var_j), explanation)
             elif result == 'C':
                 forbid_dict[(idx_j, idx_i)] = ((var_j, var_i), explanation)
+    return direct_dict, forbid_dict
+
+def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_dict, prompt_type, vote_num=3):
+    """
+    Here we let LLM double check the result of initial graph, and make edition (determine direction & delete edge)
+    Provided Info:
+    1. Structure of whole graph
+    (ancestor decendant ... relationship?)
+    2. Bootstrap Probability
+    3. Pair relationship in the original graph
+    Return: Result dicts with domain knowledge and explanation
+    """
+
+    ### conbine uncertain edges
+    uncertain_edges_exist = bootstrap_check_dict['middle_prob_edges']['exist']
+    uncertain_edges_nonexist = bootstrap_check_dict['middle_prob_edges']['non-exist']
+    combined_uncertain_edges = uncertain_edges_exist + uncertain_edges_nonexist
+    # Remove duplicate tuples
+    combined_uncertain_edges = list(set(tuple(sorted((i, j))) for (i, j) in combined_uncertain_edges))
+
+    # Convert edges into node group
+    # Initialize an empty dictionary
+    grouped_dict = {}
+    # Iterate over the list of tuples
+    for idx_i, idx_j in combined_uncertain_edges:
+        # Convert the first element to a string for the key
+        key = data.columns[idx_i]
+        # Append the tuple to the corresponding key in the dictionary
+        if key not in grouped_dict:
+            grouped_dict[key] = []  # Create a new list if the key doesn't exist
+        grouped_dict[key].append((data.columns[idx_i], data.columns[idx_j]))
+    print('grouped_dict',grouped_dict)
+
+    direct_dict = {}
+    forbid_dict = {}
+    ##############iteration##################
+    def check_node_relationship(main_node):
+        # Relationships for main node
+        relation_text_dict, relation_text = edges_to_relationship(data, edges_dict, boot_edges_prob)
+        directed_exist_texts_mainnode = ', '.join([text for text in relation_text_dict['certain_edges'] if main_node in text])
+        undirected_exist_texts_mainnode = ', '.join([text for text in relation_text_dict['uncertain_edges'] if main_node in text])
+        # print('directed_exist_texts_mainnode',directed_exist_texts_mainnode)
+        # print('undirected_exist_texts_mainnode',undirected_exist_texts_mainnode)
+        
+        related_pairs = grouped_dict[main_node]
+        # Basic Prompt: No infos and ask relationships directly
+        prompt_pruning = f"""
+        We want to carry out causal discovery analysis, considering these variables: {data.columns.tolist()}. 
+        """
+        # All Pairwise Relationships
+        if 'all_relations' in prompt_type:
+            prompt_pruning += f"""
+            This is a context for your reference: 
+            We have conducted the statistical causal discovery algorithm to find the following causal relationships from a statistical perspective:
+            {relation_text}
+            According to the results shown above, it has been determined that {directed_exist_texts_mainnode} and {undirected_exist_texts_mainnode}, but it may not be correct. 
+            """
+        # Markov Blanket Context
+        if 'markov_blanket' in prompt_type:
+            prompt_pruning += f"""
+            This is a context for your reference, and your answer cannot add cycles and colliders to these relationships
+            We have conducted the statistical causal discovery algorithm to find the following causal relationships from a statistical perspective:
+            Edges of node {main_node}:
+            {directed_exist_texts_mainnode} and {undirected_exist_texts_mainnode}
+            """
+            # Relationships for related node
+            # Extract tuples containing main node
+            tuples_with_mainnode = [t for t in edges_dict['uncertain_edges']+edges_dict['certain_edges'] if main_node in t]
+            related_nodes = [item for t in tuples_with_mainnode for item in t if item != main_node]
+            for node in related_nodes:
+                directed_exist_texts_related = ', '.join([text for text in relation_text_dict['certain_edges'] if node in text])
+                undirected_exist_texts_related = ', '.join([text for text in relation_text_dict['uncertain_edges'] if node in text])
+                # print('directed_exist_texts_related',directed_exist_texts_related)
+                # print('undirected_exist_texts_related',undirected_exist_texts_related)
+                prompt_pruning += f"""
+                Edges of node {node}:
+                {directed_exist_texts_related} and {undirected_exist_texts_related}
+                """
+
+        prompt_pruning += f"""
+        Then, your task is to double check these relationships about node {main_node} from a domain knowledge perspective and determine whether this statistically suggested hypothesis is plausible in the context of the domain.  
+
+        Firstly, determine the relationship between
+        """
+        for node_i, node_j in related_pairs:
+            prompt_pruning += f" {node_i} and {node_j},"
+        prompt_pruning += f"""\n
+        For each node pair, if the left node causes the right node, the "result" is 'A'. If the right node causes the left node, the "result" should be 'B'. If you are pretty sure there is no relationship, the "result" is 'C'. If you do not know established evidence, the "result" is 'D'.
+        Please note that Correlation doesn't mean Causation! For example ice cream sales increase in summer alongside higher rates of drowning, where both are influenced by warmer weather rather than one causing the other.
+        Please note hidden confounders, for example a study finds a correlation between coffee consumption and heart disease, but fails to account for smoking, which influences both coffee habits and heart disease risk.
+        Secondly, please provide an explanation of your result, leveraging your expert knowledge on the causal relationship between the left node and the right node, please use only one to two sentences. 
+        Your response should consider the relevant factors and provide a reasoned explanation based on your understanding of the domain.
+
+        Response me following the template below. Do not include anything else. explanations should only include one to two sentences. \n
+        Please seperate your answers for each pair with semicolon ;
+        """
+        for node_i, node_j in related_pairs:
+            prompt_pruning += f"""
+            ({node_i}, {node_j}): A or B or C or D: explanations ; \n
+            """
+        prompt_pruning += f"""   
+        Here is a response Example
+        (Length, Shell Weight): A: Larger abalones, which are indicated by greater shell lengths, generally possess heavier shells.;
+        (Length, Shucked Weight): A: Increased length will cause a higher shucked weight, indicating more edible mass;
+
+        """
+        #print('prompt_pruning: ',prompt_pruning)
+        
+        ### Ask with Voting ###
+        if vote_num == 1:
+            # client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+            # client.chat.completions.create(
+            #         model="gpt-4o-mini",
+            #         messages=[
+            #             {"role": "system", "content": "You are an expert in Causal Discovery."}])
+            # if 'chain_of_thought' in prompt_type:
+            #         client.chat.completions.create(
+            #             model="gpt-4o-mini",
+            #             messages=[
+            #                 {"role": "system", "content": cot_context}])  
+            llm_answer = call_llm_new(args, prompt_pruning, prompt_type)
+        else:
+            llm_answer_merge = []
+            llm_answer = {}
+            for i_vote in range(vote_num):
+                # client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+                # client.chat.completions.create(
+                #         model="gpt-4o-mini",
+                #         messages=[
+                #             {"role": "system", "content": "You are an expert in Causal Discovery."}])
+                # if 'chain_of_thought' in prompt_type:
+                #     client.chat.completions.create(
+                #         model="gpt-4o-mini",
+                #         messages=[
+                #             {"role": "system", "content": cot_context}])    
+                llm_answer_i = call_llm_new(args, prompt_pruning, prompt_type)
+                llm_answer_merge.append(llm_answer_i)
+            merged_dict ={}
+            for d in llm_answer_merge:
+                for key, value in d.items():
+                    merged_dict.setdefault(key,[]).append(value)
+            for pair_i in merged_dict.keys():
+                result_list = [single_vote['result'] for single_vote in merged_dict[pair_i]]
+                print('result_list',result_list)
+                explanation_list = [single_vote['explanation'] for single_vote in merged_dict[pair_i]]
+                majority_result = Counter(result_list).most_common(1)[0][0]
+                majority_explanation = explanation_list[result_list.index(majority_result)]
+                llm_answer[pair_i]={'result': majority_result,
+                                    'explanation': majority_explanation}
+        ########### end of voting #################### 
+        print('response: ',llm_answer)
+        # Update revised graph and edge dict
+        for pair in llm_answer.keys():
+            var_j, var_i = tuple(item.strip() for item in pair.strip('()').split(','))
+            idx_j, idx_i = data.columns.get_loc(var_j), data.columns.get_loc(var_i)
+            if llm_answer[pair]['result'] == 'A':
+                #if (var_j, var_i) not in edges_dict['certain_edges']:
+                if True:
+                    direct_dict[(idx_j, idx_i)] = ((var_j, var_i), llm_answer[pair]['explanation'])
+                    edges_dict['certain_edges'].append((var_j, var_i))
+            elif llm_answer[pair]['result'] == 'B':
+                #if (var_i, var_j) not in edges_dict['certain_edges']:
+                if True:
+                    direct_dict[(idx_i, idx_j)] = ((var_i, var_j), llm_answer[pair]['explanation'])
+                    edges_dict['certain_edges'].append((var_i, var_j))
+            elif llm_answer[pair]['result'] == 'C':
+                forbid_dict[(idx_j, idx_i)] = ((var_j, var_i), llm_answer[pair]['explanation'])
+                if (var_j, var_i) in edges_dict['certain_edges']:
+                    edges_dict['certain_edges'].remove((var_j, var_i))
+                if (var_i, var_j) in edges_dict['certain_edges']:
+                    edges_dict['certain_edges'].remove((var_i, var_j))
+
+    for main_node in  grouped_dict.keys():
+        print(f'edges_dict for {main_node}: ')
+        print('directed edges:',edges_dict['certain_edges'])
+        print('undirected edges:',edges_dict['uncertain_edges'])
+        check_node_relationship(main_node)    
+    #########################
     return direct_dict, forbid_dict
 
 def edges_to_relationship(data, edges_dict, boot_edges_prob=None):
@@ -402,150 +684,5 @@ def edges_to_relationship(data, edges_dict, boot_edges_prob=None):
         relation_text += '\n'
     
     return filtered_result_dict, relation_text
-
-def llm_direction(global_state, args, revised_graph, voting_num=10, threshold=0.7):
-    '''
-    :param data: Given Tabular Data in Pandas DataFrame format
-    :param full_graph: An adjacent matrix in Numpy Ndarray format -
-                       causal graph using the full dataset - Matrix[i,j] = 1 indicates j->i
-    :param gpt_setup: Contain information of configurations of GPT-4
-    :param knowledge_docs: A doc containing all necessary domain knowledge information from GPT-4.
-    :return: obvious errors based on LLM, e.g. {"X->Y: "Forced", "Y->Z: "Forbidden"}
-    '''
-
-    data = global_state.user_data.raw_data
-    variables = data.columns
-
-    if global_state.algorithm.selected_algorithm not in ['PC', 'CDNOD', 'GES', 'FCI']:
-        return {}, revised_graph
-
-    knowledge_docs = global_state.user_data.knowledge_docs
-
-    my_visual = Visualization(global_state)
-    edges_dict = my_visual.convert_to_edges(revised_graph)
-    uncertain_edges = edges_dict['uncertain_edges']
-    # bi_edges = edges_dict['bi_edges']
-    # half_edges = edges_dict['half_edges']
-    # none_edges = edges_dict['none_edges']
-    # Let GPT determine direction of uncertain edges
-    #print(uncertain_edges)
-    if len(uncertain_edges) == 0:
-        print('Empty uncertain_edges')
-        return {}, revised_graph
-    
-    prompt_direction = f"""
-    I have a list of tuples where each tuple represents a pair of entities that have a relationship with each other. 
-    For each tuple, please determine the causal relationship between the two entities, indicating which entity causes the other. 
-    You can reference this background knowledge: {knowledge_docs}
-    1. Use each tuple as the key of JSON, for example, if the tuple is ('Raf', 'Mek'), then use ('Raf', 'Mek') as a key
-    2. If the first entity causes the second, the value is 'A'. If the second entity causes the first, the value should be 'B'. If cannot decide, the value is 'C'. The order is very important
-    3. The direction can only be 'A' or 'B' or 'C', do not reply other things
-    Here is the list of tuples: {uncertain_edges}
-    Return me a json following the template below. Do not include anything else.
-    JSON format:
-    {{
-        "tuple1": "A" or "B" or "C",    
-        "tuple2": "A" or "B" or "C",   
-        ......   
-    }}
-    """
-    prob_mat = np.zeros((global_state.statistics.feature_number, global_state.statistics.feature_number))
-    for i in range(voting_num):
-        json_directions = get_json(args, prompt_direction)
-        for key in json_directions.keys():
-            try:
-                tuple = ast.literal_eval(key)
-                direction = json_directions[key]
-                i = variables.get_loc(tuple[0])
-                j = variables.get_loc(tuple[1])
-                if direction == 'A':
-                    prob_mat[j, i] += 1
-                elif direction == 'B':
-                    prob_mat[i, j] += 1
-            except:
-                print('parse tuple error:', key)
-                continue
-    
-    prob_mat /= voting_num
-    #print(prob_mat)
-    revise_indice = np.where(prob_mat>threshold)
-    edges_list = []
-    for i, j in zip(revise_indice[0], revise_indice[1]):
-        revised_graph[i, j] = 1
-        revised_graph[j, i] = -1
-        edges_list.append((variables[j], variables[i]))
-    print('edges list:', edges_list)
-    prompt_justification = f"""
-    I have a list of tuples where each tuple represents a pair of entities that have a relationship with each other. 
-    For example, ('Raf', 'Mek') means 'Raf' causes 'Mek'.
-    1. Provide a brief justification for each tuple's causal relationship based on the following background knowledge {knowledge_docs}.
-    2. Follow this JSON format, you should impute justifications for each tuple as the value
-    3. Only Return me a json that can be loaded directly. Do not include anything else.
-    JSON format:
-    {{
-    
-    """
-    for item in edges_list:
-        prompt_justification += f"""
-                                "{item}": justification here,
-
-                                """
-    prompt_justification += f"""
-                             }}
-                            """
-    
-    json_justification = get_json(args, prompt_justification)
-    json_justification_filtered = {}
-    for pair in edges_list:
-        try:
-            json_justification_filtered[str(pair)] = json_justification[str(pair)]
-        except:
-            json_justification_filtered[str(pair)] = 'There is no justification for it.'
-    
-    return json_justification_filtered, revised_graph
-        
-
-
-def llm_direction_evaluation(global_state):
-    from postprocess.visualization import Visualization
-    
-    true_graph = global_state.user_data.ground_truth
-    if global_state.algorithm.selected_algorithm in ['DirectLiNGAM', 'ICALiNGAM', 'NOTEARS']:
-        full_graph = global_state.results.converted_graph
-    else:
-        full_graph =  global_state.results.raw_result
-    revised_graph = global_state.results.revised_graph
-    my_visual = Visualization(global_state)
-    edges_dict = my_visual.convert_to_edges(full_graph)
-    uncertain_edges = edges_dict['uncertain_edges']
-    variables = global_state.user_data.raw_data.columns
-
-    denom = 0
-    nom = 0
-    for item in uncertain_edges:
-        i = variables.get_loc(item[0])
-        j = variables.get_loc(item[1])
-        if true_graph[i, j]==1 or true_graph[j, i]==1:
-            denom += 1
-        if true_graph[i, j]==revised_graph[i, j] or true_graph[j, i]==revised_graph[j, i]:
-            nom += 1
-    
-    all_edges = sum(true_graph.flatten())
-    exist_uncertain_edges = denom
-    if denom>0:
-        correct_rate = nom/denom
-    else:
-        correct_rate = 'NA'
-
-    print(f"""
-        all_edges: {all_edges},
-        exist_uncertain_edges: {exist_uncertain_edges},
-        correct_rate: {correct_rate}
-          """)
-
-    
-
-
-
 
     

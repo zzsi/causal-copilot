@@ -51,7 +51,7 @@ class Judge(object):
                  revised causal graph based on errors.
         '''
 
-        from postprocess.judge_functions import bootstrap, llm_evaluation
+        from postprocess.judge_functions import bootstrap, llm_evaluation, bootstrap_recommend, llm_evaluation_new
 
         # Statistics Perspective: Bootstrapping to get probability of edges using the selected algorithm.
         edge_recom, boot_probability = bootstrap(data=data, full_graph=full_graph, algorithm=algorithm, hyperparameters=hyperparameters,
@@ -59,56 +59,89 @@ class Judge(object):
         print("Edge Recommendations from Bootstrap method: ", edge_recom)
         #print("Bootstrap Probability: ", boot_probability)
 
+        from causallearn.utils.PCUtils.BackgroundKnowledge import BackgroundKnowledge
+        bk = BackgroundKnowledge()
         ############Edge Pruning with Bootstrap############
         print('Bootstrap Pruning Decisioning')
         revised_graph = full_graph.copy()
+        bootstrap_check_dict = bootstrap_recommend(full_graph, boot_probability)
+        print('bootstrap_check_dict: ',bootstrap_check_dict)
+        # add non-exist edges with high prob
+        if bootstrap_check_dict['high_prob_edges']['non-exist'] != []:
+            for idx_i, idx_j in bootstrap_check_dict['high_prob_edges']['non-exist']:
+                  revised_graph[idx_i, idx_j] = 1
+                  revised_graph[idx_j, idx_i] = -1
+                  node_pattern1 = data.columns[idx_j]
+                  node_pattern2 = data.columns[idx_i]
+                  bk.add_required_by_pattern(node_pattern1, node_pattern2)
+        # delete exist edges with low prob
+        if bootstrap_check_dict['low_prob_edges']['exist'] != []:
+            for idx_i, idx_j in bootstrap_check_dict['low_prob_edges']['exist']:
+                  revised_graph[idx_i, idx_j] = 0
+                  revised_graph[idx_j, idx_i] = 0
+                  node_pattern1 = data.columns[idx_j]
+                  node_pattern2 = data.columns[idx_i]
+                  bk.add_forbidden_by_pattern(node_pattern1, node_pattern2)
+        #####old version#####
         fixed_pairs = []
         bootstrap_pruning_record = []
-        for k in edge_recom.keys():
-            (i, j) = tuple(map(int, k.split('-')))
-            edge = edge_recom[k].split('(')[0]
-            prob = float(edge_recom[k].split('(')[1].strip(')'))
-            # Change edges according to recommendation if bootstrap probability>0.95
-            if prob > 0.95:
-                fixed_pairs.append((i,j))
-                fixed_pairs.append((j,i))
-                text = f'{data.columns[j]} {edge} {data.columns[i]}'
-                bootstrap_pruning_record.append(text)
-                if edge == '->':
-                    revised_graph[i, j] = 1
-                    revised_graph[j, i] = -1
-                elif edge == '-':
-                    revised_graph[i, j] = revised_graph[j, i] = -1
-                elif edge == '<->':
-                    revised_graph[i, j] = revised_graph[j, i] = 1
-                elif edge == 'o->':
-                    revised_graph[i, j] = 1
-                    revised_graph[j, i] = 2
-                elif edge == 'o-o':
-                    revised_graph[i, j] = revised_graph[j, i] = 2
-                else:
-                    revised_graph[i, j] = revised_graph[j, i] = 0
+        # for k in edge_recom.keys():
+        #     (i, j) = tuple(map(int, k.split('-')))
+        #     edge = edge_recom[k].split('(')[0]
+        #     prob = float(edge_recom[k].split('(')[1].strip(')'))
+        #     # Change edges according to recommendation if bootstrap probability>0.95
+        #     if prob > 0.95:
+        #         fixed_pairs.append((i,j))
+        #         fixed_pairs.append((j,i))
+        #         text = f'{data.columns[j]} {edge} {data.columns[i]}'
+        #         bootstrap_pruning_record.append(text)
+        #         if edge == '->':
+        #             revised_graph[i, j] = 1
+        #             revised_graph[j, i] = -1
+        #         elif edge == '-':
+        #             revised_graph[i, j] = revised_graph[j, i] = -1
+        #         elif edge == '<->':
+        #             revised_graph[i, j] = revised_graph[j, i] = 1
+        #         elif edge == 'o->':
+        #             revised_graph[i, j] = 1
+        #             revised_graph[j, i] = 2
+        #         elif edge == 'o-o':
+        #             revised_graph[i, j] = revised_graph[j, i] = 2
+        #         else:
+        #             revised_graph[i, j] = revised_graph[j, i] = 0
         ########################
-
+        from postprocess.visualization import convert_to_edges
+        revised_edges_dict = convert_to_edges(self.global_state.algorithm.selected_algorithm, self.global_state.user_data.raw_data.columns, revised_graph)
+        direct_dict, forbid_dict = llm_evaluation_new(data, self.args, revised_edges_dict, 
+                                                      self.global_state.results.bootstrap_probability, bootstrap_check_dict, 
+                                                      ['base'], 1)
         ############ Edge Pruning with LLM ############
         print('LLM Pruning Decisioning')
-        direct_dict, forbid_dict = llm_evaluation(data, self.args, self.global_state.results.raw_edges, self.global_state.results.bootstrap_probability)
+        #direct_dict, forbid_dict = llm_evaluation(data, self.args, self.global_state.results.raw_edges, self.global_state.results.bootstrap_probability)
         llm_pruning_record={
             'direct_record': direct_dict,
             'forbid_record': forbid_dict
         }
         print(llm_pruning_record)
+        ####construct prior knowledge and revise graph according to LLM#########
         for direct_pair in direct_dict:
             j, i = direct_pair[0], direct_pair[1]
-            revised_graph[i, j] = 1
-            revised_graph[j, i] = -1
+            if (revised_graph[i, j]!=1 or revised_graph[j, i]!=-1) and (i, j) not in fixed_pairs:
+                revised_graph[i, j] = 1
+                revised_graph[j, i] = -1
+                node_pattern1 = data.columns[j]
+                node_pattern2 = data.columns[i]
+                bk.add_required_by_pattern(node_pattern1, node_pattern2)
         for forbid_pair in forbid_dict:
             j, i = forbid_pair[0], forbid_pair[1]
+            node_pattern1 = data.columns[j]
+            node_pattern2 = data.columns[i]
             if (revised_graph[i, j]!=0 or revised_graph[j, i]!=0) and (i, j) not in fixed_pairs:
+                bk.add_forbidden_by_pattern(node_pattern1, node_pattern2)
                 revised_graph[i, j] = revised_graph[j, i] = 0
         ########################
 
-        return {}, bootstrap_pruning_record, boot_probability, llm_pruning_record, revised_graph
+        return {}, bootstrap_pruning_record, boot_probability, llm_pruning_record, revised_graph, bk
 
 
     def forward(self, global_state):
@@ -132,7 +165,8 @@ class Judge(object):
          global_state.results.bootstrap_errors, # bootstrap_pruning_record
          global_state.results.bootstrap_probability,
          global_state.results.llm_errors, # llm_pruning_record
-         global_state.results.revised_graph
+         global_state.results.revised_graph,
+         global_state.results.prior_knowledge
         )= self.quality_judge(
         data=global_state.user_data.processed_data,
         full_graph=adj_matrix,
@@ -144,6 +178,30 @@ class Judge(object):
         global_state.logging.knowledge_conversation.append(conversation)
         return global_state
 
+    def user_postprocess(self, user_revise_dict):
+        from causallearn.utils.PCUtils.BackgroundKnowledge import BackgroundKnowledge
+        from postprocess.visualization import convert_to_edges
+        bk = BackgroundKnowledge()
+        revised_graph = self.global_state.results.revised_graph.copy()
+        variables = self.global_state.user_data.raw_data.columns
+        # Add and Orientation
+        for add_pair in user_revise_dict['add_edges']+user_revise_dict['orient_edges']:
+            bk.add_required_by_pattern(add_pair[0], add_pair[1])
+            idx_j = variables.get_loc(add_pair[0])
+            idx_i = variables.get_loc(add_pair[1])
+            revised_graph[idx_i, idx_j] = 1
+            revised_graph[idx_j, idx_i] = -1
+        # Forbid
+        for forbid_pair in user_revise_dict['forbid_edges']:
+            bk.add_forbidden_by_pattern(forbid_pair[0], forbid_pair[1])
+            idx_j = variables.get_loc(forbid_pair[0])
+            idx_i = variables.get_loc(forbid_pair[1])
+            revised_graph[idx_i, idx_j] = revised_graph[idx_j, idx_i] = 0
+        # Update Revised Graph
+        self.global_state.results.revised_graph = revised_graph 
+        self.global_state.results.revised_edges = convert_to_edges(self.global_state.algorithm.selected_algorithm, 
+                                                                   variables, revised_graph)
+        return self.global_state
 
     def evaluation(self, global_state, revise=False):
         '''

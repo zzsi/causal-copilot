@@ -143,3 +143,5 @@ test.py
 .vscode
 sftp.json
 .history/
+test_result/
+test_for_demo/
