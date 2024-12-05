@@ -3,6 +3,7 @@ import pandas as pd
 from typing import Union, Dict, List, Tuple
 
 from causalnex.structure.notears import from_numpy, from_pandas, from_numpy_lasso, from_pandas_lasso
+from algorithm.evaluation.evaluator import GraphEvaluator
 
 from .base import CausalDiscoveryAlgorithm
 
@@ -60,14 +61,25 @@ class NOTEARS(CausalDiscoveryAlgorithm):
         return adj_matrix, info, sm
     
     def convert_to_adjacency_matrix(self, sm, node_names: List[str]) -> np.ndarray:
+        """
+        Convert NOTEARS StructureModel to end type matrix.
+        
+        Args:
+            sm: NOTEARS StructureModel
+            node_names: List of node names
+            
+        Returns:
+            numpy array with end type indices
+        """
         n = len(node_names)
-        adj_matrix = np.zeros((n, n))
-        for i, node_i in enumerate(node_names):
-            for j, node_j in enumerate(node_names):
-                if sm.has_edge(node_j, node_i):
-                    # only keep the determined edges (j -> i)
-                    adj_matrix[i, j] = 1 # sm.get_edge_data(node_j, node_i)['weight']
-        return adj_matrix
+        inferred_matrix = np.zeros((n, n))
+        
+        for i in range(n):
+            for j in range(n):
+                if sm.has_edge(node_names[i], node_names[j]):  # i->j
+                    end_matrix[j,i] = 1
+        
+        return inferred_matrix
 
     def test_algorithm(self):
         # Generate some sample data
