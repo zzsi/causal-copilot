@@ -301,7 +301,7 @@ class GraphEvaluator:
         
         # Take the best metrics as the final result
         n = len(pred_samples)
-        print(f"Total samples: {n}, Total precision: {total_precision}, total recall: {total_recall}, total f1: {total_f1}, total shd: {total_shd}")
+        # print(f"Total samples: {n}, Total precision: {total_precision}, total recall: {total_recall}, total f1: {total_f1}, total shd: {total_shd}")
         return {
             'precision': best_metrics['precision'],
             'recall': best_metrics['recall'],
@@ -352,6 +352,9 @@ class GraphEvaluator:
 if __name__ == "__main__":
     # Create a test case
     # Initialize evaluator
+    # NOTE: Set sample=False to use the best graph for evaluation
+    # The input pred_graph should be converted to a asymmetric matrix before input, where (i,j) represents edge_type
+    # For the symmetric edges, only one side (i, j) should be set to the edge_type, the other side should be set to 0
     evaluator = GraphEvaluator(has_hidden_confounders=False, sample=False)
     
     # Create a simple true graph (10 nodes)
