@@ -19,6 +19,7 @@ from algorithm.rerank import Reranker
 from postprocess.judge import Judge
 from postprocess.visualization import Visualization
 from postprocess.report_generation import Report_generation
+from user.discuss import Discussion
 
 # Global variables
 UPLOAD_FOLDER = "./demo_data"
@@ -28,6 +29,7 @@ output_dir = None
 REQUIRED_INFO = {
     'data_uploaded': False,
     'initial_query': False,
+    "processing_discussion": False,
 }
 MAX_CONCURRENT_REQUESTS = 5
 MAX_QUEUE_SIZE = 10
@@ -55,7 +57,7 @@ DEMO_DATASETS = {
         "query": "YES. This is a Time-Series dataset, investigate causal factors affecting ozone levels. The data contains atmospheric and weather measurements over time."
     },
     "Linear_Gaussian": {
-        "name": "🟦 Simualted Data: Linear Gaussian",
+        "name": "🟦 Simulated Data: Linear Gaussian",
         "path": "dataset/Linear_Gaussian/Linear_Gaussian_data.csv",
         "query": "NO. The data follows linear relationships with Gaussian noise. Please discover the causal structure."
     },
@@ -135,7 +137,7 @@ def process_message(message, chat_history, download_btn):
     # yield chat_history, download_btn
     
     print('check data upload')
-    if not REQUIRED_INFO['data_uploaded']:
+    if not REQUIRED_INFO['data_uploaded'] and not REQUIRED_INFO["processing_discussion"]:
         chat_history.append((message, "Please upload your dataset first before proceeding."))
         yield chat_history, download_btn
     else:
@@ -147,14 +149,38 @@ def process_message(message, chat_history, download_btn):
         args = type('Args', (), {})()
         for key, value in config.__dict__.items():
             setattr(args, key, value)
-        print('check initial query')
-        args, chat_history, download_btn = process_initial_query(message, chat_history, args)
-        yield chat_history, download_btn
-        print('finish initial query checking')
+        if not REQUIRED_INFO["processing_discussion"]:
+            print('check initial query')
+            args, chat_history, download_btn = process_initial_query(message, chat_history, args)
+            yield chat_history, download_btn
+            print('finish initial query checking')
     try:
         # Initialize global state
-        if REQUIRED_INFO['data_uploaded'] and REQUIRED_INFO['initial_query']:
-            print('strart analysis')
+        if REQUIRED_INFO["processing_discussion"]:
+            # User Discussion Rounds
+            report = open(os.path.join(output_dir, 'output_report', 'report.tex')).read()
+            discussion = Discussion(args, report)
+            conversation_history = [{"role": "system",
+                                     "content": "You are a helpful assistant. Please always refer to the following Causal Analysis information to discuss with the user and answer the user's question\n\n%s" % discussion.report_content}]
+
+            # Answer User Query based on Previous Info
+
+            if message.lower() == "no":
+                chat_history.append((None, "Thank you for using Causal-Copilot! See you!"))
+                yield chat_history, download_btn
+
+                chat_history.append((None, ""))
+                return chat_history, download_btn
+
+            chat_history.append((message, None))
+            yield chat_history, download_btn
+
+            conversation_history, output = discussion.interaction(conversation_history, message)
+            conversation_history.append({"role": "system", "content": output})
+            chat_history.append((None, output))
+            yield chat_history, download_btn
+
+        if REQUIRED_INFO['data_uploaded'] and REQUIRED_INFO['initial_query'] and not REQUIRED_INFO['processing_discussion']:
             # Add user message
             # chat_history.append((message, None))
             # yield chat_history, download_btn
@@ -334,6 +360,7 @@ def process_message(message, chat_history, download_btn):
             # Final steps
             chat_history.append((None, "🎉 Analysis complete!"))
             chat_history.append((None, "📥 You can now download your detailed report using the download button below."))
+            chat_history.append((None, "🤖 If you still have any questions, just say it and let me help you! If not, just say No"))
 
             REQUIRED_INFO['processing'] = False
             REQUIRED_INFO['data_uploaded'] = False
@@ -350,6 +377,7 @@ def process_message(message, chat_history, download_btn):
             yield chat_history, download_btn
 
             chat_history.append((None, ""))
+            REQUIRED_INFO["processing_discussion"] = True
             return chat_history, download_btn
         else:
             yield chat_history, download_btn
@@ -373,6 +401,7 @@ def clear_chat():
     # Reset required info flags
     REQUIRED_INFO['data_uploaded'] = False
     REQUIRED_INFO['initial_query'] = False
+    REQUIRED_INFO['processing_discussion'] = False
 
     # Return initial welcome message
     return [(None, "👋 Hello! I'm your causal discovery assistant. Want to discover some causal relationships today? \n"

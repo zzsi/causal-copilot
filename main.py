@@ -1,5 +1,4 @@
 # Kun Zhou Implemented
-from data.simulation.simulation import SimulationManager
 from preprocess.dataset import knowledge_info
 from preprocess.stat_info_functions import stat_info_collection, convert_stat_info_to_text
 from algorithm.filter import Filter
@@ -62,7 +61,7 @@ def parse_args():
     parser.add_argument(
         '--apikey',
         type=str,
-        default="",
+        default=None,
         help='API Key'
     )
 
@@ -233,7 +232,7 @@ def main(args):
     # Plot Bootstrap Heatmap
     boot_heatmap_path = my_visual_revise.boot_heatmap_plot()
 
-    
+
 
     # algorithm selection process
     '''
@@ -251,7 +250,7 @@ def main(args):
     my_report = Report_generation(global_state, args)
     report = my_report.generation()
     my_report.save_report(report)
-    report_path = os.path.join(global_state.user_data.output_report_dir, 'report.pdf')
+    report_path = os.path.join(global_state.user_data.output_report_dir, 'report.tex')  #.pdf
     while not os.path.isfile(report_path) and try_num<=3:
         try_num = +1
         print('Error occur during the Report Generation, try again')
@@ -261,6 +260,11 @@ def main(args):
         if not os.path.isfile(report_path) and try_num==3:
             print('Error occur during the Report Generation three times, we stop.')
     ################################
+
+    # User discussion part
+    from user.discuss import Discussion
+    discussion = Discussion(args, report)
+    discussion.forward(global_state, report)
 
     return report, global_state
 

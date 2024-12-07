@@ -42,6 +42,7 @@ class Logging:
     argument_conversation: List[Dict] = field(default_factory=list)
     errors_conversion: List[Dict] = field(default_factory=list)
     graph_conversion: Optional[Dict] = field(default_factory=dict)
+    discussion_conversion: List[Dict] = field(default_factory=list)
 
 @dataclass
 class Algorithm:
