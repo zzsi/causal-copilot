@@ -423,22 +423,30 @@ def call_llm_new(args, prompt, prompt_type):
                 Please note hidden confounders, for example a study finds a correlation between coffee consumption and heart disease, but fails to account for smoking, which influences both coffee habits and heart disease risk.
                 Secondly, please provide an explanation of your result, leveraging your expert knowledge on the causal relationship between the left node and the right node, please use only one to two sentences. 
                 Your response should consider the relevant factors and provide a reasoned explanation based on your understanding of the domain.
-
+                **YOU SHOULD**
+                Follow the template below
+                Seperate answers for each pair with ; Do not use ; at other places
+                Each answers for one pair should be in a new line
+                **Response Template**
                 Response me following the template below. Do not include anything else. explanations should only include one to two sentences.
                 ('smoker', 'cancer'): A or B or C or D: explanations ;
                 ('xray' and 'cancer'): A or B or C or D: explanations ;
                 ('pollution' and 'cancer') : A or B or C or D: explanations ;
                 Answer: 
-                ('smoker', 'cancer'): A: Smoking introduces harmful substances into the respiratory system, leading to cellular damage and mutation, which significantly raises the likelihood of cancer development in the lungs or respiratory tract, subsequently impacting the occurrence of respiratory problems like shortness of breath.
-                ('xray', 'cancer'): B: The causal effect of cancer on X-ray is that X-rays are often used to diagnose or detect cancer in different parts of the body, such as the bones, lungs, breasts, or kidneys123. Therefore, having cancer may increase the likelihood of getting an X-ray as part of the diagnostic process or follow-up care.
-                ('pollution', 'cancer') : A: The causal effect of pollution on cancer is that air pollution contains carcinogens (cancercausing substances) that may be absorbed into the body when inhaled and damage the DNA of cells. Therefore air pollution may cause cancer.
+                ('smoker', 'cancer'): A: Smoking introduces harmful substances into the respiratory system, leading to cellular damage and mutation, which significantly raises the likelihood of cancer development in the lungs or respiratory tract, subsequently impacting the occurrence of respiratory problems like shortness of breath;
+                ('xray', 'cancer'): B: The causal effect of cancer on X-ray is that X-rays are often used to diagnose or detect cancer in different parts of the body, such as the bones, lungs, breasts, or kidneys123. Therefore, having cancer may increase the likelihood of getting an X-ray as part of the diagnostic process or follow-up care;
+                ('pollution', 'cancer') : A: The causal effect of pollution on cancer is that air pollution contains carcinogens (cancercausing substances) that may be absorbed into the body when inhaled and damage the DNA of cells. Therefore air pollution may cause cancer;
                 """
     normal_context = """
-    Response Example
-    (smoker, cancer): A: Smoking introduces harmful substances into the respiratory system, leading to cellular damage and mutation, which significantly raises the likelihood of cancer development in the lungs or respiratory tract, subsequently impacting the occurrence of respiratory problems like shortness of breath.
-    (xray, cancer): B: The causal effect of cancer on X-ray is that X-rays are often used to diagnose or detect cancer in different parts of the body, such as the bones, lungs, breasts, or kidneys123. Therefore, having cancer may increase the likelihood of getting an X-ray as part of the diagnostic process or follow-up care.
-    (height, color): C: These two variables are independent because the height of a person does not influence or affect the color of a car they own or drive.
-    (sleep, job performance): D: The relationship between the amount of sleep a person gets and their performance in a job can be complex and is not definitively understood.
+    **YOU SHOULD**
+    Follow the template below
+    Seperate answers for each pair with ; Do not use ; at other places
+    Each answers for one pair should be in a new line
+    **Response Template**
+    (smoker, cancer): A: Smoking introduces harmful substances into the respiratory system, leading to cellular damage and mutation, which significantly raises the likelihood of cancer development in the lungs or respiratory tract, subsequently impacting the occurrence of respiratory problems like shortness of breath;
+    (xray, cancer): B: The causal effect of cancer on X-ray is that X-rays are often used to diagnose or detect cancer in different parts of the body, such as the bones, lungs, breasts, or kidneys123. Therefore, having cancer may increase the likelihood of getting an X-ray as part of the diagnostic process or follow-up care;
+    (height, color): C: These two variables are independent because the height of a person does not influence or affect the color of a car they own or drive;
+    (sleep, job performance): D: The relationship between the amount of sleep a person gets and their performance in a job can be complex and is not definitively understood;
     """
     prompt += normal_context
     # initiate a client
@@ -460,16 +468,19 @@ def call_llm_new(args, prompt, prompt_type):
     contents = response.choices[0].message.content
     # parse response
     llm_answer = {}
-    contents = contents.replace('\n', ';')
-    lines = [line.strip() for line in contents.split(';') if line.strip()]
+    #contents = contents.replace('\n', ';')
+    #lines = [line.strip() for line in contents.split(';') if line.strip()]
+    lines = contents.split('\n')
+    lines = [line for line in lines if line.startswith('(')]
     for line in lines:
         try:
             pair, result, explanation = line.split(':')[0].strip(), line.split(':')[1].strip().upper(), line.split(':')[2].strip()
             llm_answer[pair] = {'result': result,
                                 'explanation': explanation}
-        except:
+        except Exception as e:
             print('The returned LLM evaluation response is wrong, try again')
             print(lines)
+            print(e)
             llm_answer = call_llm_new(args, prompt, prompt_type)
     return llm_answer
 
@@ -619,7 +630,10 @@ def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_
         # Relationships for main node
         relation_text_dict, relation_text = edges_to_relationship(data, edges_dict, boot_edges_prob)
         directed_exist_texts_mainnode = ', '.join([text for text in relation_text_dict['certain_edges'] if main_node in text])
-        undirected_exist_texts_mainnode = ', '.join([text for text in relation_text_dict['uncertain_edges'] if main_node in text])
+        try:
+            undirected_exist_texts_mainnode = ', '.join([text for text in relation_text_dict['uncertain_edges'] if main_node in text])
+        except:
+            undirected_exist_texts_mainnode = 'None'
         # print('directed_exist_texts_mainnode',directed_exist_texts_mainnode)
         # print('undirected_exist_texts_mainnode',undirected_exist_texts_mainnode)
         
@@ -801,24 +815,27 @@ def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_
         print('response: ',llm_answer)
         # Update revised graph and edge dict
         for pair in llm_answer.keys():
-            var_j, var_i = tuple(item.strip().strip('"').strip("'") for item in pair.strip('()').split(','))
-            idx_j, idx_i = data.columns.str.lower().get_loc(var_j.lower()), data.columns.str.lower().get_loc(var_i.lower())
-            if llm_answer[pair]['result'] == 'A':
-                #if (var_j, var_i) not in edges_dict['certain_edges']:
-                if True:
-                    direct_dict[(idx_j, idx_i)] = ((var_j, var_i), llm_answer[pair]['explanation'])
-                    edges_dict['certain_edges'].append((var_j, var_i))
-            elif llm_answer[pair]['result'] == 'B':
-                #if (var_i, var_j) not in edges_dict['certain_edges']:
-                if True:
-                    direct_dict[(idx_i, idx_j)] = ((var_i, var_j), llm_answer[pair]['explanation'])
-                    edges_dict['certain_edges'].append((var_i, var_j))
-            elif llm_answer[pair]['result'] == 'C':
-                forbid_dict[(idx_j, idx_i)] = ((var_j, var_i), llm_answer[pair]['explanation'])
-                if (var_j, var_i) in edges_dict['certain_edges']:
-                    edges_dict['certain_edges'].remove((var_j, var_i))
-                if (var_i, var_j) in edges_dict['certain_edges']:
-                    edges_dict['certain_edges'].remove((var_i, var_j))
+            try:
+                var_j, var_i = tuple(item.strip().strip('"').strip("'") for item in pair.strip('()').split(','))
+                idx_j, idx_i = data.columns.str.lower().get_loc(var_j.lower()), data.columns.str.lower().get_loc(var_i.lower())
+                if llm_answer[pair]['result'] == 'A':
+                    #if (var_j, var_i) not in edges_dict['certain_edges']:
+                    if True:
+                        direct_dict[(idx_j, idx_i)] = ((var_j, var_i), llm_answer[pair]['explanation'])
+                        edges_dict['certain_edges'].append((var_j, var_i))
+                elif llm_answer[pair]['result'] == 'B':
+                    #if (var_i, var_j) not in edges_dict['certain_edges']:
+                    if True:
+                        direct_dict[(idx_i, idx_j)] = ((var_i, var_j), llm_answer[pair]['explanation'])
+                        edges_dict['certain_edges'].append((var_i, var_j))
+                elif llm_answer[pair]['result'] == 'C':
+                    forbid_dict[(idx_j, idx_i)] = ((var_j, var_i), llm_answer[pair]['explanation'])
+                    if (var_j, var_i) in edges_dict['certain_edges']:
+                        edges_dict['certain_edges'].remove((var_j, var_i))
+                    if (var_i, var_j) in edges_dict['certain_edges']:
+                        edges_dict['certain_edges'].remove((var_i, var_j))
+            except:
+                continue
 
     for main_node in  grouped_dict.keys():
         print(f'edges_dict for {main_node}: ')

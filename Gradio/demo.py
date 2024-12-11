@@ -10,7 +10,7 @@ from queue import Queue
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Gradio.demo_config import get_demo_config
 from global_setting.Initialize_state import global_state_initialization
-from preprocess.stat_info_functions import stat_info_collection, convert_stat_info_to_text, user_llm_select_feature, correlation_check, sparsity_check, missing_ratio_table
+from preprocess.stat_info_functions import stat_info_collection, convert_stat_info_to_text, user_llm_select_feature, correlation_check, sparsity_check, missing_ratio_table, drop_greater_miss_between_30_50_feature
 from preprocess.dataset import knowledge_info
 from preprocess.eda_generation import EDA
 from algorithm.filter import Filter
@@ -19,6 +19,8 @@ from algorithm.rerank import Reranker
 from postprocess.judge import Judge
 from postprocess.visualization import Visualization, convert_to_edges
 from postprocess.report_generation import Report_generation
+from openai import OpenAI
+from pydantic import BaseModel
 
 # Global variables
 UPLOAD_FOLDER = "./demo_data"
@@ -161,7 +163,8 @@ def parse_reupload_query(message, chat_history, download_btn):
         #return chat_history, download_btn
 
 def parse_var_selection_query(message, chat_history, download_btn):
-    var_list = [var.strip() for var in message.split(';') if var!='']
+    #var_list = [var.strip() for var in message.split(';') if var!='']
+    var_list = LLM_extract_vars(message)
     if var_list == []:
         chat_history.append((message, "Your variable selection query cannot be parsed, please follow the templete below and retry. \n"
                                         "Templete: PKA, Jnk, PIP2, PIP3, Mek"))
@@ -179,23 +182,48 @@ def parse_var_selection_query(message, chat_history, download_btn):
             REQUIRED_INFO["current_stage"] = "stat_analysis"
             return var_list, chat_history, download_btn
 
+def LLM_extract_vars(message):
+    global args, global_state
+    client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+    class VarList(BaseModel):
+        variables: list[str]
+    
+    columns = global_state.user_data.raw_data.columns
+    completion = client.beta.chat.completions.parse(
+    model="gpt-4o-mini-2024-07-18",
+    messages=[
+        {"role": "system", "content": f"You are a helpful assistant, please extract variable names as a list. "},
+        {"role": "user", "content": message},
+    ],
+    response_format=VarList,
+    )
+
+    var_list = completion.choices[0].message.parsed.variables
+    return var_list
+
 def parse_sparsity_query(message, chat_history, download_btn):
     global REQUIRED_INFO, global_state
     # Select features based on LLM
-    if message == 'LLM':
+    if message == 'LLM' or '':
         try:
             global_state = user_llm_select_feature(global_state = global_state, args=args)
         except:
             global_state = user_llm_select_feature(global_state = global_state, args=args)
-        chat_history.append((message, "The following sparse variables suggested by LLM will be dropped: \n"
-                                        ", ".join(global_state.user_data.llm_drop_features)))
+        if message == 'LLM':
+            chat_history.append((message, "The following sparse variables suggested by LLM will be dropped: \n"
+                                            ", ".join(global_state.user_data.llm_drop_features)))
+        elif message == '':
+            chat_history.append((message, "You do not choose any variables to drop, we will drop the following variables suggested by LLM: \n"
+                                            ", ".join(global_state.user_data.llm_drop_features)))
+        global_state = drop_greater_miss_between_30_50_feature(global_state)
         REQUIRED_INFO["current_stage"] = "reupload_dataset_done"
-        var_list = [var for var in global_state.user_data.llm_drop_features if var in global_state.user_data.raw_data.columns]
+        #var_list = [var for var in global_state.user_data.llm_drop_features if var in global_state.user_data.raw_data.columns]
     # Select features based on user query
     else:
-        var_list = [var.strip() for var in message.split(';')]
+        #var_list = [var.strip() for var in message.split(';')]
+        var_list = LLM_extract_vars(message)
         if var_list == []:
-            chat_history.append((message, "Your sparse variable dropping query cannot be parsed, please follow the templete below and retry. \n"
+            chat_history.append((message, "⚠️ Your sparse variable dropping query cannot be parsed, Please follow the templete below and retry. \n"
                                             "Templete: PKA, Jnk, PIP2, PIP3, Mek"))
         else:
             missing_vars = [var for var in var_list if var not in global_state.user_data.raw_data.columns]
@@ -204,6 +232,7 @@ def parse_sparsity_query(message, chat_history, download_btn):
             else:
                 chat_history.append((message, "✅ Successfully parsed your provided variables. These sparse variables you provided will be dropped."))
                 global_state.user_data.user_drop_features = var_list
+                global_state = drop_greater_miss_between_30_50_feature(global_state)
                 REQUIRED_INFO["current_stage"] = "reupload_dataset_done"
     return chat_history, download_btn
 
@@ -289,7 +318,7 @@ def parse_algo_query(message, chat_history, download_btn):
 def process_message(message, chat_history, download_btn):
     global target_path, REQUIRED_INFO, global_state, args
     REQUIRED_INFO['processing'] = True
-    # initial_process -> check sample size -> check sparsity and drop -> check correlation and drop -> check dimension and drop ->
+    # initial_process -> check sample size -> check missingness ratio and drop -> check correlation and drop -> check dimension and drop ->
     # stat analysis and algorithm -> user edit edges -> report generation
     try:
         if REQUIRED_INFO['current_stage'] == 'initial_process':    
@@ -344,16 +373,18 @@ def process_message(message, chat_history, download_btn):
             # yield chat_history, download_btn
 
             sparsity_dict = sparsity_check(df=global_state.user_data.processed_data)
-            chat_history.append((None, "Sparsity Level Summary: \n"\
-                                 f"1️⃣ High sparsity Level variables (>0.5): {', '.join(sparsity_dict['high']) if sparsity_dict['high']!=[] else 'None'} \n"\
-                                 f"2️⃣ Moderate sparsity Level variables: {', '.join(sparsity_dict['moderate']) if sparsity_dict['moderate']!=[] else 'None'} \n"\
-                                 f"3️⃣ Low sparsity Level variables (<0.3): {', '.join(sparsity_dict['low']) if sparsity_dict['low']!=[] else 'None'}"))
+            chat_history.append((None, "Missing Ratio Summary: \n"\
+                                 f"1️⃣ High Missing Ratio variables (>0.5): {', '.join(sparsity_dict['high']) if sparsity_dict['high']!=[] else 'None'} \n"\
+                                 f"2️⃣ Moderate Missing Ratio variables: {', '.join(sparsity_dict['moderate']) if sparsity_dict['moderate']!=[] else 'None'} \n"\
+                                 f"3️⃣ Low Missing Ratio variables (<0.3): {', '.join(sparsity_dict['low']) if sparsity_dict['low']!=[] else 'None'}"))
             if sparsity_dict['moderate'] != []:
                 REQUIRED_INFO["current_stage"] = 'sparsity_drop'
                 chat_history.append((None, f"📍 The missing ratios of the following variables are greater than 0.3 and smaller than 0.5, please decide which variables you want to drop. \n"
+                                            "⚠️ Please note that variables you want to drop may be confounders, please be cautious in selection."
                                             "Please seperate all variables with a semicolon ; and provide your answer following the template below: \n"
                                             "Templete: PKA; Jnk; PIP2; PIP3; Mek",
-                                            "If you want LLM help you to decide, please enter 'LLM'."))
+                                            #"If you want LLM help you to decide, please enter 'LLM'."
+                                            ))
                 yield chat_history, download_btn
                 return chat_history, download_btn
             else:

@@ -25,7 +25,17 @@ from openai import OpenAI
 # new package
 from fancyimpute import IterativeImputer
 
+def drop_greater_miss_between_30_50_feature(global_state):
+    # Determine selected features for missingness ratio 0.3~0.5
+    user_drop = global_state.user_data.user_drop_features
+    if user_drop:
+        global_state.user_data.selected_features = [element for element in global_state.user_data.selected_features if element not in user_drop]
+    else:
+        global_state.user_data.selected_features = [element for element in global_state.user_data.selected_features if
+                                                     element not in global_state.user_data.llm_drop_features]
 
+        return global_state
+    
 # Correlation checking #################################################################################################
 def correlation_check(global_state):
     df = global_state.user_data.raw_data[global_state.user_data.selected_features]

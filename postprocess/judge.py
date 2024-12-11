@@ -122,9 +122,9 @@ class Judge(object):
             'forbid_record': forbid_dict
         }
         ##########
-        with open('postprocess/test_result/Auto_mpg/results.txt', 'a') as file:
-            # Write each result on a new line
-            file.write(f"{llm_pruning_record}\n")
+        # with open('postprocess/test_result/sachs_full/results.txt', 'a') as file:
+        #     # Write each result on a new line
+        #     file.write(f"{llm_pruning_record}\n")
         ##########
         
         ####construct prior knowledge and revise graph according to LLM#########

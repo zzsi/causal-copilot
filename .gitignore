@@ -143,4 +143,5 @@ output/
 sftp.json
 .history/
 test_result/
+postprocess/test_data/
 test_for_demo/

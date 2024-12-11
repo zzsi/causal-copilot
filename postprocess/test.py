@@ -276,60 +276,16 @@ def independent_test_pruning(data_path='dataset/sachs/sachs.csv',
 
 
 if __name__ == "__main__":
-    calculate_all_metrics(data_path='dataset/sachs/sachs.csv',
-                          true_graph_path='postprocess/test_result/sachs/base_graph.npy',
-                          est_graph_path='postprocess/test_result/sachs_new/',
-                          origin_graph='origin_graph.npy',
-                          revise_graph='ind_revised_graph.npy',
-                          save_path='postprocess/test_result/sachs_new/ind_metrics_sachs.csv')
-    # independent_test_pruning(data_path='dataset/sachs/sachs.csv',
-    #                         est_graph_path='postprocess/test_result/sachs_new/',
-    #                         revise_graph='revised_graph.npy',
-    #                         ind_revise_graph='ind_revised_graph.npy')
+    # calculate_all_metrics(data_path='dataset/sachs/sachs_full.csv',
+    #                       true_graph_path='dataset/sachs/base_graph.npy',
+    #                       est_graph_path='postprocess/test_result/sachs_full/',
+    #                       origin_graph='origin_graph.npy',
+    #                       revise_graph='revised_graph.npy',
+    #                       save_path='postprocess/test_result/sachs_full/ind_metrics_sachs_full.csv')
+    independent_test_pruning(data_path='dataset/sachs/sachs_full.csv',
+                            est_graph_path='postprocess/test_result/sachs_full/',
+                            revise_graph='revised_graph.npy',
+                            ind_revise_graph='ind_revised_graph.npy')
     
     # ########################
-
-
-    # # residual independence test
-    # X = data[['Plcg']]
-    # Y = data[['PIP2']]
-    # from sklearn.linear_model import LinearRegression
-    # from hyppo.independence import Hsic
-
-    # # Fit Gaussian regression models
-    # model_xy = LinearRegression().fit(X, Y)
-    # model_yx = LinearRegression().fit(Y, X)
-
-    # # Compute the estimated noise terms
-    # y_pred = model_xy.predict(X)
-    # e_y = Y - y_pred
-    # x_pred = model_yx.predict(Y)
-    # e_x = X - x_pred
-    # # Perform HSIC test
-    # hsic = Hsic()
-    # stat_xy, pvalue_xy = hsic.test(X.to_numpy(), e_y.to_numpy())
-    # stat_yx, pvalue_yx = hsic.test(Y.to_numpy(), e_x.to_numpy())
-
-    # print(f"Regression from X to Y:")
-    # print(f"Regression result: Y = {model_xy.coef_[0][0]:.2f}X + {model_xy.intercept_[0]:.2f}")
-    # print(f"HSIC p-value: {pvalue_xy:.6f}")
-
-    # print("Regression from Y to X:")
-    # print(f"Regression result: X = {model_yx.coef_[0][0]:.2f}Y + {model_yx.intercept_[0]:.2f}")
-    # print(f"HSIC p-value: {pvalue_yx:.6f}")
-
-    # # Determine the causal direction
-    # if pvalue_xy < pvalue_yx:
-    #     print("The causal direction is X -> Y.")
-    # else:
-    #     print("The causal direction is Y -> X.")
-    # #####################
-    # # combined_array = np.hstack((X.values, Y.values, e_x, e_y))
-    # # from causallearn.utils.cit import CIT
-    # # kci_obj = CIT(data.to_numpy(), "fisherz") # construct a CIT instance with data and method name
-    # # print(kci_obj(5,7,[6]))
-    # # print(data.columns)
-
-
-
 
