@@ -9,6 +9,7 @@ sys.path.insert(0, 'causal-learn')
 sys.path.append('algorithm')
 
 from causalnex.structure.notears import from_numpy, from_pandas, from_numpy_lasso, from_pandas_lasso
+from algorithm.evaluation.evaluator import GraphEvaluator
 
 from .base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
