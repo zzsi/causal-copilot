@@ -47,14 +47,14 @@ def parse_args():
     parser.add_argument(
         '--organization',
         type=str,
-        default="org-5NION61XDUXh0ib0JZpcppqS",
+        default="org-gw7mBMydjDsOnDlTvNQWXqPL",
         help='Organization ID'
     )
 
     parser.add_argument(
         '--project',
         type=str,
-        default="proj_Ry1rvoznXAMj8R2bujIIkhQN",
+        default="proj_SIDtemBJMHUWG7CPdU7yRjsn",
         help='Project ID'
     )
 

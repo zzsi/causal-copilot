@@ -1,5 +1,7 @@
 from openai import OpenAI
 import json
+import os
+
 
 
 class Filter(object):
@@ -7,15 +9,31 @@ class Filter(object):
         self.args = args
         self.client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
 
-    def load_context(self, filename):
-        with open(f"algorithm/context/{filename}.txt", "r") as f:
-            return f.read()
+    def load_algo_context(self):
+        guidelines_path = "algorithm/context/guidelines.txt"
+        algos_folder = "algorithm/context/algos"
+
+        with open(guidelines_path, "r") as f:
+            guidelines = f.read()
+        algo_files_content = []
+        for filename in os.listdir(algos_folder):
+            if filename.endswith(".txt") and filename != "guidelines.txt":
+                file_path = os.path.join(algos_folder, filename)
+                if os.path.isfile(file_path):
+                    with open(file_path, "r") as algo_file:
+                        algo_files_content.append(algo_file.read())
+
+        concatenated_content = guidelines + "\n" + "\n".join(algo_files_content)
+        return concatenated_content
+    
+    def load_select_prompt(self):
+        return open(f"algorithm/context/algo_select_prompt.txt", "r").read()
 
     def create_prompt(self, data, statistics_desc):
         columns = ', '.join(data.columns)
 
-        algo_context = self.load_context("algo")
-        prompt_template = self.load_context("algo_select_prompt")
+        algo_context = self.load_algo_context()
+        prompt_template = self.load_select_prompt()
 
         replacements = {
             "[COLUMNS]": columns,

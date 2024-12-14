@@ -7,6 +7,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 import sys
 
 sys.path.insert(0, 'causal-learn')
+sys.path.append('algorithm')
 
 from causallearn.graph.GraphClass import CausalGraph
 from causallearn.search.ConstraintBased.PC import pc as cl_pc
@@ -16,7 +17,8 @@ from causallearn.search.ScoreBased.GES import ges as cl_ges
 from causallearn.search.FCMBased.lingam.direct_lingam import DirectLiNGAM as CLDirectLiNGAM
 from causallearn.search.FCMBased.lingam.ica_lingam import ICALiNGAM as CLICALiNGAM
 
-from .base import CausalDiscoveryAlgorithm
+from base import CausalDiscoveryAlgorithm
+from evaluation.evaluator import GraphEvaluator
 
 
 class PC(CausalDiscoveryAlgorithm):
@@ -80,14 +82,23 @@ class PC(CausalDiscoveryAlgorithm):
         adj_matrix = cg.G.graph
         inferred_flat = np.zeros_like(adj_matrix)
         indices = np.where(adj_matrix == 1)
-        # save all the determined edges (j -> i) and convert (j -- i) to (j -> i) and (i -> j)
+        print(adj_matrix)
         for i, j in zip(indices[0], indices[1]):
             if adj_matrix[j, i] == -1:
+                # directed edge: j -> i
                 inferred_flat[i, j] = 1
+            elif adj_matrix[j, i] == 1:
+                # bidirected edge: j <-> i
+                if inferred_flat[j, i] == 0:
+                    # keep asymmetric that only one entry is recorded
+                    inferred_flat[i, j] = 3
+
         indices = np.where(adj_matrix == -1)
         for i, j in zip(indices[0], indices[1]):
             if adj_matrix[j, i] == -1:
-                inferred_flat[i, j] = 1
+                # undirected edge: j -- i
+                if inferred_flat[j, i] == 0:
+                    inferred_flat[i, j] = 2
         return inferred_flat
 
     def test_algorithm(self):
@@ -118,23 +129,24 @@ class PC(CausalDiscoveryAlgorithm):
         print(f"Number of definite unshielded colliders: {len(info['definite_UC'])}")
         print(f"Number of definite non-unshielded colliders: {len(info['definite_non_UC'])}")
 
-        # Calculate metrics
+        # Ground truth graph
         gt_graph = np.array([
-            [0, 1, 1, 0, 0],
-            [0, 0, 1, 1, 0],
-            [0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 0]
-        ]).T
-        
-        f1 = f1_score(gt_graph.flatten(), adj_matrix.flatten())
-        precision = precision_score(gt_graph.flatten(), adj_matrix.flatten())
-        recall = recall_score(gt_graph.flatten(), adj_matrix.flatten())
+            [0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0],
+            [1, 1, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 1, 1, 0]
+        ])
+
+        # Use GraphEvaluator to compute metrics
+        evaluator = GraphEvaluator()
+        metrics = evaluator.compute_metrics(gt_graph, adj_matrix)
 
         print("\nMetrics:")
-        print(f"F1 Score: {f1:.4f}")
-        print(f"Precision: {precision:.4f}")
-        print(f"Recall: {recall:.4f}")
+        print(f"F1 Score: {metrics['f1']:.4f}")
+        print(f"Precision: {metrics['precision']:.4f}")
+        print(f"Recall: {metrics['recall']:.4f}")
+        print(f"SHD: {metrics['shd']:.4f}")
 
 
 class FCI(CausalDiscoveryAlgorithm):
@@ -191,18 +203,25 @@ class FCI(CausalDiscoveryAlgorithm):
         adj_matrix = adj_matrix.graph
         inferred_flat = np.zeros_like(adj_matrix)
         indices = np.where(adj_matrix == 1)
-        # save all the determined edges (j -> i) and convert (j -- i) to (j -> i) and (i -> j)
-        for i, j in zip(indices[0], indices[1]):
-            if adj_matrix[j, i] == -1 or adj_matrix[j, i] == 2:
-                inferred_flat[i, j] = 1
-        indices = np.where(adj_matrix == -1)
         for i, j in zip(indices[0], indices[1]):
             if adj_matrix[j, i] == -1:
+                # directed edge: j -> i
                 inferred_flat[i, j] = 1
+            elif adj_matrix[j, i] == 2:
+                # bidirected edge: j o-> i
+                inferred_flat[i, j] = 4
+            elif adj_matrix[j, i] == 1:
+                # bidirected edge: j <-> i
+                if inferred_flat[j, i] == 0:
+                    # keep asymmetric that only one entry is recorded
+                    inferred_flat[i, j] = 3
+
         indices = np.where(adj_matrix == 2)
         for i, j in zip(indices[0], indices[1]):
             if adj_matrix[j, i] == 2:
-                inferred_flat[i, j] = 1
+                # undirected edge: j o-o i
+                if inferred_flat[j, i] == 0:
+                    inferred_flat[i, j] = 6
         return inferred_flat
 
     def test_algorithm(self):
@@ -228,23 +247,24 @@ class FCI(CausalDiscoveryAlgorithm):
         print("Adjacency Matrix:")
         print(adj_matrix)
 
-        # Calculate metrics
+        # Ground truth graph
         gt_graph = np.array([
-            [0, 1, 1, 0, 0],
-            [0, 0, 1, 1, 0],
-            [0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 0]
-        ]).T
-        
-        f1 = f1_score(gt_graph.flatten(), adj_matrix.flatten())
-        precision = precision_score(gt_graph.flatten(), adj_matrix.flatten())
-        recall = recall_score(gt_graph.flatten(), adj_matrix.flatten())
+            [0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0],
+            [1, 1, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 1, 1, 0]
+        ])
+
+        # Use GraphEvaluator to compute metrics
+        evaluator = GraphEvaluator()
+        metrics = evaluator.compute_metrics(gt_graph, adj_matrix)
 
         print("\nMetrics:")
-        print(f"F1 Score: {f1:.4f}")
-        print(f"Precision: {precision:.4f}")
-        print(f"Recall: {recall:.4f}")
+        print(f"F1 Score: {metrics['f1']:.4f}")
+        print(f"Precision: {metrics['precision']:.4f}")
+        print(f"Recall: {metrics['recall']:.4f}")
+        print(f"SHD: {metrics['shd']:.4f}")
 
 
 class CDNOD(CausalDiscoveryAlgorithm):
@@ -309,14 +329,22 @@ class CDNOD(CausalDiscoveryAlgorithm):
         adj_matrix = cg.G.graph
         inferred_flat = np.zeros_like(adj_matrix)
         indices = np.where(adj_matrix == 1)
-        # save all the determined edges (j -> i) and convert (j -- i) to (j -> i) and (i -> j)
         for i, j in zip(indices[0], indices[1]):
             if adj_matrix[j, i] == -1:
+                # directed edge: j -> i
                 inferred_flat[i, j] = 1
+            elif adj_matrix[j, i] == 1:
+                # bidirected edge: j <-> i
+                if inferred_flat[j, i] == 0:
+                    # keep asymmetric that only one entry is recorded
+                    inferred_flat[i, j] = 3
+
         indices = np.where(adj_matrix == -1)
         for i, j in zip(indices[0], indices[1]):
             if adj_matrix[j, i] == -1:
-                inferred_flat[i, j] = 1
+                # undirected edge: j -- i
+                if inferred_flat[j, i] == 0:
+                    inferred_flat[i, j] = 2
         return inferred_flat
 
     def test_algorithm(self):
@@ -344,23 +372,24 @@ class CDNOD(CausalDiscoveryAlgorithm):
         print(adj_matrix)
         print(f"CD-NOD elapsed time: {info['PC_elapsed']:.4f} seconds")
 
-        # Calculate metrics
+        # Ground truth graph
         gt_graph = np.array([
-            [0, 1, 1, 0, 0],
-            [0, 0, 1, 1, 0],
-            [0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 0]
-        ]).T
-        
-        f1 = f1_score(gt_graph.flatten(), adj_matrix[:-1, :-1].flatten())
-        precision = precision_score(gt_graph.flatten(), adj_matrix[:-1, :-1].flatten())
-        recall = recall_score(gt_graph.flatten(), adj_matrix[:-1, :-1].flatten())
+            [0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0],
+            [1, 1, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 1, 1, 0]
+        ])
+
+        # Use GraphEvaluator to compute metrics
+        evaluator = GraphEvaluator()
+        metrics = evaluator.compute_metrics(gt_graph, adj_matrix[:-1, :-1])
 
         print("\nMetrics:")
-        print(f"F1 Score: {f1:.4f}")
-        print(f"Precision: {precision:.4f}")
-        print(f"Recall: {recall:.4f}")
+        print(f"F1 Score: {metrics['f1']:.4f}")
+        print(f"Precision: {metrics['precision']:.4f}")
+        print(f"Recall: {metrics['recall']:.4f}")
+        print(f"SHD: {metrics['shd']:.4f}")
 
 
 class GES(CausalDiscoveryAlgorithm):
@@ -414,14 +443,17 @@ class GES(CausalDiscoveryAlgorithm):
         adj_matrix = G.graph
         inferred_flat = np.zeros_like(adj_matrix)
         indices = np.where(adj_matrix == 1)
-        # save all the determined edges (j -> i) and convert (j -- i) to (j -> i) and (i -> j)
         for i, j in zip(indices[0], indices[1]):
             if adj_matrix[j, i] == -1:
+                # directed edge: j -> i
                 inferred_flat[i, j] = 1
+
         indices = np.where(adj_matrix == -1)
         for i, j in zip(indices[0], indices[1]):
             if adj_matrix[j, i] == -1:
-                inferred_flat[i, j] = 1
+                # undirected edge: j -- i
+                if inferred_flat[j, i] == 0:
+                    inferred_flat[i, j] = 2
         return inferred_flat
 
     def test_algorithm(self):
@@ -446,23 +478,24 @@ class GES(CausalDiscoveryAlgorithm):
         print(adj_matrix)
         print(f"GES score: {info['score']}")
 
-        # Calculate metrics
+        # Ground truth graph
         gt_graph = np.array([
-            [0, 1, 1, 0, 0],
-            [0, 0, 1, 1, 0],
-            [0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 0]
-        ]).T
-        
-        f1 = f1_score(gt_graph.flatten(), adj_matrix.flatten())
-        precision = precision_score(gt_graph.flatten(), adj_matrix.flatten())
-        recall = recall_score(gt_graph.flatten(), adj_matrix.flatten())
+            [0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0],
+            [1, 1, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 1, 1, 0]
+        ])
+
+        # Use GraphEvaluator to compute metrics
+        evaluator = GraphEvaluator()
+        metrics = evaluator.compute_metrics(gt_graph, adj_matrix)
 
         print("\nMetrics:")
-        print(f"F1 Score: {f1:.4f}")
-        print(f"Precision: {precision:.4f}")
-        print(f"Recall: {recall:.4f}")
+        print(f"F1 Score: {metrics['f1']:.4f}")
+        print(f"Precision: {metrics['precision']:.4f}")
+        print(f"Recall: {metrics['recall']:.4f}")
+        print(f"SHD: {metrics['shd']:.4f}")
 
 
 class DirectLiNGAM(CausalDiscoveryAlgorithm):
@@ -520,11 +553,11 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
         # Generate sample data with linear relationships
         np.random.seed(42)
         n_samples = 1000
-        X1 = np.random.normal(0, 1, n_samples)
-        X2 = 0.5 * X1 + np.random.normal(0, 0.5, n_samples)
-        X3 = 0.3 * X1 + 0.7 * X2 + np.random.normal(0, 0.3, n_samples)
-        X4 = 0.6 * X2 + np.random.normal(0, 0.4, n_samples)
-        X5 = 0.4 * X3 + 0.5 * X4 + np.random.normal(0, 0.2, n_samples)
+        X1 = np.random.uniform(0, 1, n_samples)
+        X2 = 0.5 * X1 + np.random.uniform(0, 1, n_samples)
+        X3 = 0.3 * X1 + 0.7 * X2 + np.random.uniform(0, 1, n_samples)
+        X4 = 0.6 * X2 + np.random.uniform(0, 1, n_samples)
+        X5 = 0.4 * X3 + 0.5 * X4 + np.random.uniform(0, 1, n_samples)
         
         df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
 
@@ -539,23 +572,24 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
         print("Causal Order:")
         print(info['causal_order'])
 
-        # Calculate metrics
+        # Ground truth graph
         gt_graph = np.array([
-            [0, 1, 1, 0, 0],
-            [0, 0, 1, 1, 0],
-            [0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 0]
-        ]).T
-        
-        f1 = f1_score(gt_graph.flatten(), adj_matrix.flatten())
-        precision = precision_score(gt_graph.flatten(), adj_matrix.flatten())
-        recall = recall_score(gt_graph.flatten(), adj_matrix.flatten())
+            [0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0],
+            [1, 1, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 1, 1, 0]
+        ])
+
+        # Use GraphEvaluator to compute metrics
+        evaluator = GraphEvaluator()
+        metrics = evaluator.compute_metrics(gt_graph, adj_matrix)
 
         print("\nMetrics:")
-        print(f"F1 Score: {f1:.4f}")
-        print(f"Precision: {precision:.4f}")
-        print(f"Recall: {recall:.4f}")
+        print(f"F1 Score: {metrics['f1']:.4f}")
+        print(f"Precision: {metrics['precision']:.4f}")
+        print(f"Recall: {metrics['recall']:.4f}")
+        print(f"SHD: {metrics['shd']:.4f}")
 
 
 class ICALiNGAM(CausalDiscoveryAlgorithm):
@@ -607,11 +641,11 @@ class ICALiNGAM(CausalDiscoveryAlgorithm):
         # Generate sample data with linear relationships
         np.random.seed(42)
         n_samples = 1000
-        X1 = np.random.normal(0, 1, n_samples)
-        X2 = 0.5 * X1 + np.random.normal(0, 0.5, n_samples)
-        X3 = 0.3 * X1 + 0.7 * X2 + np.random.normal(0, 0.3, n_samples)
-        X4 = 0.6 * X2 + np.random.normal(0, 0.4, n_samples)
-        X5 = 0.4 * X3 + 0.5 * X4 + np.random.normal(0, 0.2, n_samples)
+        X1 = np.random.uniform(0, 1, n_samples)
+        X2 = 0.5 * X1 + np.random.uniform(0, 1, n_samples)
+        X3 = 0.3 * X1 + 0.7 * X2 + np.random.uniform(0, 1, n_samples)
+        X4 = 0.6 * X2 + np.random.uniform(0, 1, n_samples)
+        X5 = 0.4 * X3 + 0.5 * X4 + np.random.uniform(0, 1, n_samples)
         
         df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
 
@@ -626,22 +660,25 @@ class ICALiNGAM(CausalDiscoveryAlgorithm):
         print("Causal Order:")
         print(info['causal_order'])
 
-        # Calculate metrics
+        # Ground truth graph
         gt_graph = np.array([
-            [0, 1, 1, 0, 0],
-            [0, 0, 1, 1, 0],
-            [0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 0]
-        ]).T
-        
-        f1 = f1_score(gt_graph.flatten(), adj_matrix.flatten())
-        precision = precision_score(gt_graph.flatten(), adj_matrix.flatten())
-        recall = recall_score(gt_graph.flatten(), adj_matrix.flatten())
+            [0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0],
+            [1, 1, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 1, 1, 0]
+        ])
+
+        # Use GraphEvaluator to compute metrics
+        evaluator = GraphEvaluator()
+        metrics = evaluator.compute_metrics(gt_graph, adj_matrix)
 
         print("\nMetrics:")
-        print(f"F1 Score: {f1:.4f}")
-        print(f"Precision: {precision:.4f}")
+        print(f"F1 Score: {metrics['f1']:.4f}")
+        print(f"Precision: {metrics['precision']:.4f}")
+        print(f"Recall: {metrics['recall']:.4f}")
+        print(f"SHD: {metrics['shd']:.4f}")
+
 if __name__ == "__main__":
     pc_algo = PC({})
     pc_algo.test_algorithm()
