@@ -114,7 +114,7 @@ class Judge(object):
         ############ Edge Pruning with LLM ############
         from postprocess.visualization import convert_to_edges
         revised_edges_dict = convert_to_edges(self.global_state.algorithm.selected_algorithm, self.global_state.user_data.processed_data.columns, revised_graph)
-        direct_dict, forbid_dict = llm_evaluation_new(data, self.args, revised_edges_dict, 
+        direct_dict, forbid_dict = llm_evaluation_new_cycle(data, self.args, revised_edges_dict, 
                                                       self.global_state.results.bootstrap_probability, bootstrap_check_dict, 
                                                       prompt_type, voting_num)
         llm_pruning_record={

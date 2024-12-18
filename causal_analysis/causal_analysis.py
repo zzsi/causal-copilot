@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import networkx as nx
@@ -22,6 +23,10 @@ def convert_adj_mat(mat):
 
 class Analysis(object):
     def __init__(self, global_state, args):
+        """
+        Hardcoded to test the Auto MPG dataset and adjacency separately,
+        while preserving references to global_state and args (which can be None).
+        """
         self.global_state = global_state
         self.args = args
         self.data = global_state.user_data.processed_data
@@ -83,7 +88,6 @@ class Analysis(object):
         # parent_relevance, noise_relevance
         parent_nodes = list(self.G.predecessors(target_node))
 
-        # a classic housing price dataset
         X = self.data.drop(columns=[target_node])
         y = self.data[[target_node]]
         X100 = shap.utils.sample(X, 100)  # 100 instances for use as the background distribution
@@ -95,7 +99,7 @@ class Analysis(object):
         shap_values_linear = explainer_linear(X)
         
         # Calculate the mean SHAP value for each feature
-        shap_df = pd.DataFrame(abs(shap_values_linear.values), columns=X.columns)
+        shap_df = pd.DataFrame(np.abs(shap_values_linear.values), columns=X.columns)
         mean_shap_values = shap_df.mean()
         
         if visualize == True:
@@ -106,6 +110,7 @@ class Analysis(object):
             #plt.savefig(f'shap_beeswarm_plot.png', bbox_inches='tight') 
             figs.append("shap_beeswarm_plot.png")
             # plt.show()
+
             # 2nd SHAP Plot Bar
             fig, ax = plt.subplots(figsize=(8, 6))
             ax = shap.plots.bar(shap_values_linear, ax=ax, show=False)
@@ -316,6 +321,44 @@ def LLM_parse_query(args, format, prompt, message):
         )
         parsed_response = completion.choices[0].message.content
     return parsed_response
+
+    def estimate_causal_effect(self, treatment, outcome, control_value=0, treatment_value=1):
+        """
+        Estimate the causal effect of a treatment on an outcome using DoWhy (backdoor.linear_regression).
+        """
+        print("Creating Causal Model...")
+        model = CausalModel(
+            data=self.data,
+            treatment=treatment,
+            outcome=outcome,
+            graph=self._generate_dowhy_graph()
+        )
+
+        identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
+        print("Identified Estimand:", identified_estimand)
+
+        causal_estimate = model.estimate_effect(
+            identified_estimand,
+            method_name="backdoor.linear_regression",
+            control_value=control_value,
+            treatment_value=treatment_value
+        )
+        print("Causal Estimate:", causal_estimate)
+        model.test_significance(causal_estimate)
+
+        return causal_estimate
+
+    def _generate_dowhy_graph(self):
+        """
+        Generate a causal graph in DOT format for DoWhy.
+        """
+        edges = nx.edges(self.G)
+        dot_format = "digraph { "
+        for u, v in edges:
+            dot_format += f"{u} -> {v}; "
+        dot_format += "}"
+        return dot_format
+
 
 def main(global_state, args):
     analysis = Analysis(global_state, args)
