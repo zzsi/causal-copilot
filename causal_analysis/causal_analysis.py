@@ -346,8 +346,15 @@ def LLM_parse_query(args, format, prompt, message):
             control_value=control_value,
             treatment_value=treatment_value
         )
-        print("Causal Estimate:", causal_estimate)
+
+        print("\nCausal Estimate:")
+        print(causal_estimate)
         model.test_significance(causal_estimate)
+
+        print("\n=== Interpretation Hint ===")
+        print("A negative causal estimate indicates that increasing the treatment variable (e.g., horsepower)")
+        print("tends to decrease the outcome variable (e.g., mpg), assuming the model and assumptions hold.")
+        print("============================\n")
 
         return causal_estimate
 
