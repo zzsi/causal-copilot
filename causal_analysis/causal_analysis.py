@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import pandas as pd
 import networkx as nx
@@ -16,8 +15,8 @@ from pydantic import BaseModel
 
 
 def convert_adj_mat(mat):
-    # In downstream analysis, we only keep direct edges and ignore all undirect edges
-    mat = (mat==1).astype(int)
+    # In downstream analysis, we only keep direct edges and ignore all undirected edges
+    mat = (mat == 1).astype(int)
     G = mat.T
     return G
 
@@ -90,15 +89,14 @@ class Analysis(object):
 
         X = self.data.drop(columns=[target_node])
         y = self.data[[target_node]]
-        X100 = shap.utils.sample(X, 100)  # 100 instances for use as the background distribution
+        X100 = shap.utils.sample(X, 100)  # background distribution for SHAP
 
-        # SHAP value for a simple linear model
         model_linear = sklearn.linear_model.LinearRegression()
         model_linear.fit(X, y)
         explainer_linear = shap.Explainer(model_linear.predict, X100)
         shap_values_linear = explainer_linear(X)
         
-        # Calculate the mean SHAP value for each feature
+        # Mean absolute SHAP values
         shap_df = pd.DataFrame(np.abs(shap_values_linear.values), columns=X.columns)
         mean_shap_values = shap_df.mean()
         
@@ -326,7 +324,11 @@ def LLM_parse_query(args, format, prompt, message):
         """
         Estimate the causal effect of a treatment on an outcome using DoWhy (backdoor.linear_regression).
         """
-        print("Creating Causal Model...")
+        print("\n" + "#"*60)
+        print(f"Estimating Causal Effect of Treatment: {treatment} on Outcome: {outcome}")
+        print("#"*60)
+
+        print("\nCreating Causal Model...")
         model = CausalModel(
             data=self.data,
             treatment=treatment,
@@ -335,7 +337,8 @@ def LLM_parse_query(args, format, prompt, message):
         )
 
         identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
-        print("Identified Estimand:", identified_estimand)
+        print("\nIdentified Estimand:")
+        print(identified_estimand)
 
         causal_estimate = model.estimate_effect(
             identified_estimand,
@@ -358,9 +361,72 @@ def LLM_parse_query(args, format, prompt, message):
             dot_format += f"{u} -> {v}; "
         dot_format += "}"
         return dot_format
+    
+    def attribute_anomalies(self, target_node, anomaly_samples, confidence_level=0.95):
+        """
+        Perform anomaly attribution and save the bar chart with confidence intervals to ./auto_mpg_output.
+        """
+        print("\n" + "#"*60)
+        print(f"Performing Anomaly Attribution for target node: {target_node}")
+        print("#"*60)
 
+        # Call the attribute_anomalies function
+        attribution_results = gcm.attribute_anomalies(
+            causal_model=self.causal_model,  # Your fitted InvertibleStructuralCausalModel
+            target_node=target_node,        # The target node for anomaly attribution
+            anomaly_samples=anomaly_samples,  # DataFrame of anomalous samples
+            anomaly_scorer=None,            # Use default anomaly scorer
+            attribute_mean_deviation=False, # Attribute anomaly score (not mean deviation)
+            num_distribution_samples=3000,  # Number of samples for marginal distribution
+            shapley_config=None             # Use default Shapley config
+        )
 
+        # Convert results to a DataFrame
+        rows = []
+        for node, contributions in attribution_results.items():
+            rows.append({
+                "Node": node,
+                "MeanAttributionScore": np.mean(contributions),
+                "LowerCI": np.percentile(contributions, (1 - confidence_level) / 2 * 100),
+                "UpperCI": np.percentile(contributions, (1 + confidence_level) / 2 * 100)
+            })
+
+        df = pd.DataFrame(rows).sort_values("MeanAttributionScore", ascending=False)
+
+        # Prepare output directory
+        output_dir = "./auto_mpg_output"
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Extract info for plotting
+        nodes = df["Node"]
+        scores = df["MeanAttributionScore"]
+        lower_bounds = df["LowerCI"]
+        upper_bounds = df["UpperCI"]
+        error = np.array([scores - lower_bounds, upper_bounds - scores])
+
+        # Create figure
+        plt.figure(figsize=(10, 6))  # Adjusted figure size for better readability
+        plt.bar(nodes, scores, yerr=error, align='center', ecolor='black', capsize=5, color='skyblue')
+        plt.xlabel("Nodes")
+        plt.ylabel("Mean Attribution Score")
+        plt.title(f"Anomaly Attribution for {target_node}")
+        plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
+        plt.tight_layout()
+
+        # Save figure
+        fig_path = os.path.join(output_dir, 'attribution_plot.png')
+        plt.savefig(fig_path, bbox_inches='tight')
+        plt.show()  # Show the plot in the notebook or script
+        plt.close()
+
+        return df
+    
 def main(global_state, args):
+    """
+    Modify the main function to call attribute_anomalies and save the results in ./auto_mpg_output.
+    """
+    print("Welcome to the Causal Analysis Demo using the Auto MPG dataset.\n")
+    
     analysis = Analysis(global_state, args)
     message = "The value of PIP3 is abnormal, help me to find which variables cause this anomaly"
     class InfList(BaseModel):
