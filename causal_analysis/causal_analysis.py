@@ -2,9 +2,17 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 from dowhy import gcm, CausalModel
+from dowhy import gcm, CausalModel
 import shap
 import sklearn
 import matplotlib.pyplot as plt
+from openai import OpenAI
+import os 
+
+import sys 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from global_setting.Initialize_state import global_state_initialization
+from pydantic import BaseModel
 from openai import OpenAI
 import os 
 
@@ -29,6 +37,9 @@ class Analysis(object):
         self.global_state = global_state
         self.args = args
         self.data = global_state.user_data.processed_data
+        #self.data = pd.read_csv('dataset/sachs/sachs.csv')
+        self.graph = convert_adj_mat(global_state.results.revised_graph)
+        #self.graph = convert_adj_mat(np.load('postprocess/test_result/sachs/cot_all_relation/3_voting/ind_revised_graph.npy'))
         #self.data = pd.read_csv('dataset/sachs/sachs.csv')
         self.graph = convert_adj_mat(global_state.results.revised_graph)
         #self.graph = convert_adj_mat(np.load('postprocess/test_result/sachs/cot_all_relation/3_voting/ind_revised_graph.npy'))
@@ -80,8 +91,55 @@ class Analysis(object):
 
         print("Please ensure your causal assumptions align with these column types.")
         print("="*60 + "\n")
+        print(self.G)
+        # Construct Causal Model via dowhy/gcm
+        self.causal_model = gcm.InvertibleStructuralCausalModel(self.G)
+        gcm.auto.assign_causal_mechanisms(self.causal_model, self.data)
+        gcm.fit(self.causal_model, self.data)
+
+    def _print_data_disclaimer(self):
+        """
+        Analyze the dataset's columns and print disclaimers about their nature (continuous/discrete/categorical).
+
+        Previously, we had a hard-coded disclaimer. Now we dynamically check column types and counts.
+        """
+        dtypes = self.data.dtypes
+        numeric_cols = dtypes[dtypes != 'object'].index.tolist()
+        object_cols = dtypes[dtypes == 'object'].index.tolist()
+
+        continuous_cols = []
+        discrete_cols = []
+
+        # Simple heuristic: if a numeric column has more than 10 unique values, consider it continuous; otherwise discrete
+        for col in numeric_cols:
+            unique_vals = self.data[col].nunique()
+            if unique_vals > 10:
+                continuous_cols.append(col)
+            else:
+                discrete_cols.append(col)
+
+        print("\n" + "="*60)
+        print("DATASET ANALYSIS:")
+        if object_cols:
+            print(f"Categorical (non-numeric) columns detected: {object_cols}")
+        else:
+            print("No categorical columns detected.")
+
+        if continuous_cols:
+            print(f"Continuous numeric columns detected: {continuous_cols}")
+        else:
+            print("No continuous numeric columns detected.")
+
+        if discrete_cols:
+            print(f"Discrete/low-cardinality numeric columns detected: {discrete_cols}")
+        else:
+            print("No discrete/low-cardinality numeric columns detected.")
+
+        print("Please ensure your causal assumptions align with these column types.")
+        print("="*60 + "\n")
 
     def feature_importance(self, target_node, visualize=True):
+        print('start feature importance analysis')
         print('start feature importance analysis')
         # parent_relevance, noise_relevance = gcm.parent_relevance(self.causal_model, target_node=target_node)
         # parent_relevance, noise_relevance
@@ -102,9 +160,12 @@ class Analysis(object):
         
         if visualize == True:
             figs = []
+            figs = []
             # 1st SHAP Plot beeswarm
             ax = shap.plots.beeswarm(shap_values_linear, plot_size=(8,6), show=False)
             plt.savefig(f'{self.global_state.user_data.output_graph_dir}/shap_beeswarm_plot.png', bbox_inches='tight')  # Save as PNG
+            #plt.savefig(f'shap_beeswarm_plot.png', bbox_inches='tight') 
+            figs.append("shap_beeswarm_plot.png")
             #plt.savefig(f'shap_beeswarm_plot.png', bbox_inches='tight') 
             figs.append("shap_beeswarm_plot.png")
             # plt.show()
@@ -113,6 +174,8 @@ class Analysis(object):
             fig, ax = plt.subplots(figsize=(8, 6))
             ax = shap.plots.bar(shap_values_linear, ax=ax, show=False)
             plt.savefig(f'{self.global_state.user_data.output_graph_dir}/shap_bar_plot.png', bbox_inches='tight')  # Save as PNG
+            #plt.savefig(f'shap_bar_plot.png', bbox_inches='tight') 
+            figs.append("shap_bar_plot.png")
             #plt.savefig(f'shap_bar_plot.png', bbox_inches='tight') 
             figs.append("shap_bar_plot.png")
             #plt.show()

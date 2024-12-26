@@ -7,6 +7,8 @@ from postprocess.visualization import Visualization
 from collections import Counter
 import networkx as nx
 from pydantic import BaseModel
+import networkx as nx
+from pydantic import BaseModel
 
 
 def bootstrap_iteration(data, ts, algorithm, hyperparameters):
@@ -414,6 +416,9 @@ def call_llm_new(args, prompt, prompt_type):
     with open('postprocess/context/COT_prompt.txt', 'r') as file:
         cot_context = file.read()
     
+    with open('postprocess/context/COT_prompt.txt', 'r') as file:
+        cot_context = file.read()
+    
     normal_context = """
     **YOU SHOULD**
     Follow the template below
@@ -429,6 +434,9 @@ def call_llm_new(args, prompt, prompt_type):
     prompt_file = f"postprocess/test_result/sachs_new/prompts/{prompt_type}_prompt.txt"
     with open(prompt_file, 'a') as file:
         file.write(f"{prompt} \n")
+    prompt_file = f"postprocess/test_result/sachs_new/prompts/{prompt_type}_prompt.txt"
+    with open(prompt_file, 'a') as file:
+        file.write(f"{prompt} \n")
     # initiate a client
     client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
     client.chat.completions.create(
@@ -440,6 +448,7 @@ def call_llm_new(args, prompt, prompt_type):
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": cot_context}])
+
 
     # get response          
     response = client.chat.completions.create(
@@ -667,6 +676,7 @@ def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_
         We want to carry out causal discovery analysis, considering these variables: {data.columns.tolist()}. 
         """
         # All Pairwise Relationships
+        if 'all_relation' in prompt_type:
         if 'all_relation' in prompt_type:
             prompt_pruning += f"""
             We have conducted the statistical causal discovery algorithm to find the following causal relationships from a statistical perspective:
@@ -1039,10 +1049,15 @@ def llm_evaluation_new_cycle(data, args, edges_dict, boot_edges_prob, bootstrap_
         - If you are pretty sure there is no relationship, the "result" is 'C'. 
         - If you do not know established evidence, the "result" is 'D'.
         
-        **Do Not**:
-        - Conflate correlation with causation.
-        - Include indirect relationships
-        - Include circular relationships (e.g., "A causes B because B causes A")
+        **Important Considerations**:
+
+        1. **Correlation vs. Causation**:
+        - Remember that statistical correlation does not imply causation. A detected association between variables may not indicate a causal link.
+        - Base your reasoning on domain knowledge and logical inference rather than statistical correlations.
+
+        2. **Direction of Causation**:
+        - The direction of causation is crucial. Ensure that the proposed causal direction is logical and consistent with established domain knowledge.
+        - Avoid assuming causation without proper justification.
 
         Secondly, please provide an explanation of your result, leveraging your expert knowledge on the causal relationship between the left node and the right node, please use only one to two sentences. 
         Your response should consider the relevant factors and provide a reasoned explanation based on your understanding of the domain.
@@ -1183,6 +1198,58 @@ def edges_to_relationship(data, edges_dict, boot_edges_prob=None):
         relation_text += '\n'
     
     return filtered_result_dict, relation_text
+
+
+def LLM_remove_cycles(args, message):
+    client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+    class VarList(BaseModel):
+        nodes: list[str]
+    
+    completion = client.beta.chat.completions.parse(
+    model="gpt-4o-mini-2024-07-18",
+    messages=[
+        {"role": "system", "content": f"You are a helpful assistant, the following relationships form a cycle, please choose an egde to remove this cycle, and save nodes of this edge in a list. "},
+        {"role": "user", "content": message},
+    ],
+    response_format=VarList,
+    )
+
+    node_list = completion.choices[0].message.parsed.nodes
+    return node_list
+
+def check_cycle(args, data, graph):
+    columns = data.columns
+    graph_copy = graph.copy()
+    # Set symmetric positions to 0
+    ones_indices = np.where(graph == 1)
+    symmetric_indices = (ones_indices[1], ones_indices[0])  # swap row and column indices
+    graph_copy[symmetric_indices] = 0
+    G = nx.from_numpy_array(graph_copy, create_using=nx.DiGraph)
+    G = nx.relabel_nodes(G, dict(enumerate(columns)))
+
+    # Check for cycles in the directed graph
+    acyclic = nx.is_directed_acyclic_graph(G)
+
+    # Output the result
+    if acyclic:
+        print("The graph is acyclic (no cycles).")
+    else:
+        print("The graph has cycles.")
+        cycles = list(nx.simple_cycles(G))
+        for cycle in cycles:
+            print(cycle)
+            prompt = " -> ".join(f"{n}" for n in cycle)
+            prompt +=  f" -> {cycle[0]}"
+            print(prompt)
+            remove_nodes = LLM_remove_cycles(args, prompt)
+            print('remove_nodes',remove_nodes)
+            ind_i = columns.get_loc(remove_nodes[0])
+            ind_j = columns.get_loc(remove_nodes[1])
+            graph[ind_i, ind_j] = graph[ind_j, ind_i] = 0
+    
+    return graph
+
+
 
 
 def LLM_remove_cycles(args, message):
