@@ -5,6 +5,8 @@ import json
 from openai import OpenAI
 from postprocess.visualization import Visualization
 from collections import Counter
+import networkx as nx
+from pydantic import BaseModel
 
 
 def bootstrap_iteration(data, ts, algorithm, hyperparameters):
@@ -409,34 +411,9 @@ def call_llm(args, prompt,prompt_type):
     return llm_answer
 
 def call_llm_new(args, prompt, prompt_type):
-    cot_context = """
-                Question and Answer templete:
-                Here is the Question and Answer templete, you should learn and reference it when answering my following questions
-                Question: For a causal graph used to model relationship of various factors and outcomes related to cancer with the following nodes: ['Pollution', 'Cancer', 'Smoker', 'Xray', 'Dyspnoea'], 
-                your task is to double check these relationships about node 'Cancer' from a domain knowledge perspective and determine whether this statistically suggested hypothesis is plausible in the context of the domain.  
-                Firstly, determine the relationship between
-                'smoker' and 'cancer'
-                'xray' and 'cancer'
-                'pollution' and 'cancer'
-                For each node pair, if the left node causes the right node, the "result" is 'A'. If the right node causes the left node, the "result" should be 'B'. If there is no relationship, the "result" is 'C'. If you are not sure, the result is 'D'
-                Please note that Correlation doesn't mean Causation! For example ice cream sales increase in summer alongside higher rates of drowning, where both are influenced by warmer weather rather than one causing the other.
-                Please note hidden confounders, for example a study finds a correlation between coffee consumption and heart disease, but fails to account for smoking, which influences both coffee habits and heart disease risk.
-                Secondly, please provide an explanation of your result, leveraging your expert knowledge on the causal relationship between the left node and the right node, please use only one to two sentences. 
-                Your response should consider the relevant factors and provide a reasoned explanation based on your understanding of the domain.
-                **YOU SHOULD**
-                Follow the template below
-                Seperate answers for each pair with ; Do not use ; at other places
-                Each answers for one pair should be in a new line
-                **Response Template**
-                Response me following the template below. Do not include anything else. explanations should only include one to two sentences.
-                ('smoker', 'cancer'): A or B or C or D: explanations ;
-                ('xray' and 'cancer'): A or B or C or D: explanations ;
-                ('pollution' and 'cancer') : A or B or C or D: explanations ;
-                Answer: 
-                ('smoker', 'cancer'): A: Smoking introduces harmful substances into the respiratory system, leading to cellular damage and mutation, which significantly raises the likelihood of cancer development in the lungs or respiratory tract, subsequently impacting the occurrence of respiratory problems like shortness of breath;
-                ('xray', 'cancer'): B: The causal effect of cancer on X-ray is that X-rays are often used to diagnose or detect cancer in different parts of the body, such as the bones, lungs, breasts, or kidneys123. Therefore, having cancer may increase the likelihood of getting an X-ray as part of the diagnostic process or follow-up care;
-                ('pollution', 'cancer') : A: The causal effect of pollution on cancer is that air pollution contains carcinogens (cancercausing substances) that may be absorbed into the body when inhaled and damage the DNA of cells. Therefore air pollution may cause cancer;
-                """
+    with open('postprocess/context/COT_prompt.txt', 'r') as file:
+        cot_context = file.read()
+    
     normal_context = """
     **YOU SHOULD**
     Follow the template below
@@ -449,6 +426,9 @@ def call_llm_new(args, prompt, prompt_type):
     (sleep, job performance): D: The relationship between the amount of sleep a person gets and their performance in a job can be complex and is not definitively understood;
     """
     prompt += normal_context
+    prompt_file = f"postprocess/test_result/sachs_new/prompts/{prompt_type}_prompt.txt"
+    with open(prompt_file, 'a') as file:
+        file.write(f"{prompt} \n")
     # initiate a client
     client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
     client.chat.completions.create(
@@ -460,6 +440,7 @@ def call_llm_new(args, prompt, prompt_type):
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": cot_context}])
+
     # get response          
     response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -468,8 +449,6 @@ def call_llm_new(args, prompt, prompt_type):
     contents = response.choices[0].message.content
     # parse response
     llm_answer = {}
-    #contents = contents.replace('\n', ';')
-    #lines = [line.strip() for line in contents.split(';') if line.strip()]
     lines = contents.split('\n')
     lines = [line for line in lines if line.startswith('(')]
     for line in lines:
@@ -644,7 +623,7 @@ def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_
         We want to carry out causal discovery analysis, considering these variables: {data.columns.tolist()}. 
         """
         # All Pairwise Relationships
-        if 'all_relations' in prompt_type:
+        if 'all_relation' in prompt_type:
             prompt_pruning += f"""
             We have conducted the statistical causal discovery algorithm to find the following causal relationships from a statistical perspective:
             {relation_text}
@@ -743,16 +722,6 @@ def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_
                 """
 
         prompt_pruning += f"""
-        **Important Considerations**:
-
-        1. **Correlation vs. Causation**:
-        - Remember that statistical correlation does not imply causation. A detected association between variables may not indicate a causal link.
-        - Base your reasoning on domain knowledge and logical inference rather than statistical correlations.
-
-        2. **Direction of Causation**:
-        - The direction of causation is crucial. Ensure that the proposed causal direction is logical and consistent with established domain knowledge.
-        - Avoid assuming causation without proper justification.
-
         **Your Task**:
         Your task is to double check these causal relationships about node {main_node} from a domain knowledge perspective and determine whether this statistically suggested hypothesis is plausible in the context of the domain.  
 
@@ -767,10 +736,15 @@ def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_
         - If you are pretty sure there is no relationship, the "result" is 'C'. 
         - If you do not know established evidence, the "result" is 'D'.
         
-        **Do Not**:
-        - Conflate correlation with causation.
-        - Include indirect relationships
-        - Include circular relationships (e.g., "A causes B because B causes A")
+        **Important Considerations**:
+
+        1. **Correlation vs. Causation**:
+        - Remember that statistical correlation does not imply causation. A detected association between variables may not indicate a causal link.
+        - Base your reasoning on domain knowledge and logical inference rather than statistical correlations.
+
+        2. **Direction of Causation**:
+        - The direction of causation is crucial. Ensure that the proposed causal direction is logical and consistent with established domain knowledge.
+        - Avoid assuming causation without proper justification.
 
         Secondly, please provide an explanation of your result, leveraging your expert knowledge on the causal relationship between the left node and the right node, please use only one to two sentences. 
         Your response should consider the relevant factors and provide a reasoned explanation based on your understanding of the domain.
@@ -910,5 +884,57 @@ def edges_to_relationship(data, edges_dict, boot_edges_prob=None):
         relation_text += '\n'
     
     return filtered_result_dict, relation_text
+
+
+def LLM_remove_cycles(args, message):
+    client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+    class VarList(BaseModel):
+        nodes: list[str]
+    
+    completion = client.beta.chat.completions.parse(
+    model="gpt-4o-mini-2024-07-18",
+    messages=[
+        {"role": "system", "content": f"You are a helpful assistant, the following relationships form a cycle, please choose an egde to remove this cycle, and save nodes of this edge in a list. "},
+        {"role": "user", "content": message},
+    ],
+    response_format=VarList,
+    )
+
+    node_list = completion.choices[0].message.parsed.nodes
+    return node_list
+
+def check_cycle(args, data, graph):
+    columns = data.columns
+    graph_copy = graph.copy()
+    # Set symmetric positions to 0
+    ones_indices = np.where(graph == 1)
+    symmetric_indices = (ones_indices[1], ones_indices[0])  # swap row and column indices
+    graph_copy[symmetric_indices] = 0
+    G = nx.from_numpy_array(graph_copy, create_using=nx.DiGraph)
+    G = nx.relabel_nodes(G, dict(enumerate(columns)))
+
+    # Check for cycles in the directed graph
+    acyclic = nx.is_directed_acyclic_graph(G)
+
+    # Output the result
+    if acyclic:
+        print("The graph is acyclic (no cycles).")
+    else:
+        print("The graph has cycles.")
+        cycles = list(nx.simple_cycles(G))
+        for cycle in cycles:
+            print(cycle)
+            prompt = " -> ".join(f"{n}" for n in cycle)
+            prompt +=  f" -> {cycle[0]}"
+            print(prompt)
+            remove_nodes = LLM_remove_cycles(args, prompt)
+            print('remove_nodes',remove_nodes)
+            ind_i = columns.get_loc(remove_nodes[0])
+            ind_j = columns.get_loc(remove_nodes[1])
+            graph[ind_i, ind_j] = graph[ind_j, ind_i] = 0
+    
+    return graph
+
+
 
     

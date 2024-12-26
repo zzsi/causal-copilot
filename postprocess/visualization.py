@@ -93,7 +93,8 @@ class Visualization(object):
                         mat[j, i] = g.get_edge_data(parent, child)['weight']
                 else:
                     mat = g.adjacency_matrix_
-            pyd = make_dot(mat, labels=labels, pos=pos)         
+            #pyd = make_dot(mat, labels=labels, pos=pos)  
+            pyd = make_dot(mat, labels=labels)       
             pyd.render(outfile=path, cleanup=True)
             return None
 

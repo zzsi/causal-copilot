@@ -9,6 +9,7 @@ from postprocess.visualization import Visualization, convert_to_edges
 from postprocess.judge_functions import edges_to_relationship
 import PyPDF2
 import ast
+import json 
 
 def compile_tex_to_pdf_with_refs(tex_file, output_dir=None, clean=True):
     """
@@ -92,24 +93,35 @@ class Report_generation(object):
         self.visual_dir = global_state.user_data.output_graph_dir
 
     def get_title(self):
-        if os.path.isdir(self.data_file):
-            for file in os.listdir(self.data_file):
-                if file.endswith(".csv"):
-                    data_path = file
-                    filename = os.path.splitext(os.path.basename(data_path))[0]
-                    filename = filename.capitalize()
-                    filename = filename.capitalize().replace("_", r"\_")
-                    title = f'Causal Discovery Report on {filename}'
-                    break
-        elif self.data_file.endswith(".csv"):
-            data_path = self.data_file
-            filename = os.path.splitext(os.path.basename(data_path))[0]
-            filename = filename.capitalize()
-            filename = filename.capitalize().replace("_", r"\_")
-            title = f'Causal Discovery Report on {filename}'
-        else:
-            title = 'Causal Discovery Report on Given Dataset'
-        return title, filename
+        response_title = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": f"You are a helpful assistant, please give me the name of the given dataset {self.data_file}\n"
+                                                "For example, if the dataset is Sachs.csv, then return me with 'Sachs'. If the dataset is a directory called Abalone, then return me with 'Abalone'.\n"
+                                                "Only give me the string of name, do not include anything else."},
+            ]
+        )
+        dataset = response_title.choices[0].message.content
+        title = f'Causal Discovery Report on {dataset.capitalize()}'
+        return title, dataset
+        # if os.path.isdir(self.data_file):
+        #     for file in os.listdir(self.data_file):
+        #         if file.endswith(".csv"):
+        #             data_path = file
+        #             filename = os.path.splitext(os.path.basename(data_path))[0]
+        #             filename = filename.capitalize()
+        #             filename = filename.capitalize().replace("_", r"\_")
+        #             title = f'Causal Discovery Report on {filename}'
+        #             break
+        # elif self.data_file.endswith(".csv"):
+        #     data_path = self.data_file
+        #     filename = os.path.splitext(os.path.basename(data_path))[0]
+        #     filename = filename.capitalize()
+        #     filename = filename.capitalize().replace("_", r"\_")
+        #     title = f'Causal Discovery Report on {filename}'
+        # else:
+        #     title = 'Causal Discovery Report on Given Dataset'
+        # return title, filename
     
     def intro_prompt(self):
         prompt = f"""
@@ -134,13 +146,15 @@ class Report_generation(object):
     
     def background_prompt(self):
         prompt = f"""
-        I want to conduct a causal discovery on a dataset and write a report. There are some background knowledge about this dataset.
-        There are three sections:
-        ### 1. Detailed Explanation about the Variables
-        ### 2. Possible Causal Relations among These Variables
-        ### 3. Other Background Domain Knowledge that may be Helpful for Experts
-        Please give me text in the first section ### 1. Detailed Explanation about the Variables
-        I only need the text, do not include title
+        I want to conduct a causal discovery on a dataset and write a report. There are some background knowledge about this dataset.There are three sections:
+### 1. Detailed Explanation about the Variables
+### 2. Possible Causal Relations among These Variables
+### 3. Other Background Domain Knowledge that may be Helpful for Experts
+        **Your Tasks**
+        1. Summarize contents in <Section 1. Detailed Explanation about the Variables and Section 3. Other Background Domain Knowledge that may be Helpful for Experts> in 1-2 paragraphs.
+        2. I only need the text, do not include title
+        3. If you want to use bollet points, make sure it's in latex {{itemize}} format. 
+        4. If there are contents like **content** which means the bold fonts, change it into latex bold format \\textbf{{content}}
         Background about this dataset: {self.knowledge_docs}
         """
     
@@ -154,7 +168,7 @@ class Report_generation(object):
         )
         section1 = response_background.choices[0].message.content
         section1 = re.sub(r'.*\*\*(.*?)\*\*', r'\\textbf{\1}', section1)
-        section1 = section1.replace(r'\textbf', r'\\newline \\textbf')
+        #section1 = section1.replace(r'\textbf', r'\\newline \\textbf')
 
         col_names = '\t'.join(self.data.columns)
         prompt = f"""
@@ -164,17 +178,28 @@ There are three sections:
 ### 2. Possible Causal Relations among These Variables
 ### 3. Other Background Domain Knowledge that may be Helpful for Experts
 
-Please give me text in the second section ### 2. Possible Causal Relations among These Variables:
-1. In this part, all relationships should be listed in this format: **A -> B**: explanation. 
-2. Only one variable can appear at each side of ->; for example, **A -> B** is ok but **A -> B/C** is wrong, and **A -> B and C** is also wrong.
-3. All variables should be among {col_names}, please delete contents that include any other variables!
-4. Do not include any Greek Letters! Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
+Please extract all relationships in the second section ### 2. Possible Causal Relations among These Variables, and return in a JSON format
+**Thinking Steps**
+1. Extract all pairwise relationships, for example A causes B because ....; C causes D because ....; Only include relationships between two variables!
+2. Check whether these variables are among {col_names}, please delete contents that include any other variables!
+3. Save the result in json, the key is the tuple of pairs, the value is the explanation. 
+4. Check whether the json result can be parsed directly, if not you should revise it
 
-For example: 
-- **'Raf' -> 'Mek'**: Raf activates Mek through phosphorylation, initiating the MAPK signaling cascade.
+This is an example:
+You have A causes B because explanation1; C causes D because explanation2
+The JSON should be
+{{
+"(A, B)": explanation1,
+"(C, D)": explanation2
+}}
 
-I only need the text; do not include the title.
-Background about this dataset: {self.knowledge_docs}
+**You Must**
+1. Only pairwise relationships can be included
+2. All variables should be among {col_names}, please delete contents that include any other variables!
+3. Only return me a JSON can be parsed directly, DO NOT include anything else like ```!
+
+**Backgroud Knowledge**
+{self.knowledge_docs}
 """
         response_background = self.client.chat.completions.create(
             model="gpt-4o-mini",
@@ -183,50 +208,64 @@ Background about this dataset: {self.knowledge_docs}
                 {"role": "user", "content": prompt}
             ]
         )
-        section2 = response_background.choices[0].message.content
-        section2 = re.sub(r'.*\*\*(.*?)\*\*', r'\\textbf{\1}', section2)
-        section2 = section2.replace(r'\textbf', r'\\newline \\textbf')
-
+        result = response_background.choices[0].message.content
+        print(result)
+        result = result.strip("```json").strip("```")
+        result = json.loads(result)
+        print(result)
         variables = self.data.columns
-        pattern = r'\*\*(.*?)\s*(→|↔|->|<->)\s*(.*?)\*\*'
-        relations = []
-        # Find all matches
-        matches = re.findall(pattern, section2)
-        for match in matches:
-            left_part = match[0]
-            right_part = match[2]
+        section2 = """
+        \\begin{itemize}
+        """
+        # section2 = re.sub(r'.*\*\*(.*?)\*\*', r'\\textbf{\1}', section2)
+        # section2 = section2.replace(r'\textbf', r'\\newline \\textbf')
 
-            elements = [left_part]
-            split_elements = re.split(r'\s*(→|↔|->|<->)\s*', right_part)
-            # Iterate over the split elements
-            for i in range(0, len(split_elements), 2):
-                element = split_elements[i]
-                if element:  # Avoid empty strings
-                    elements.append(element)
-            # Create pairs for the elements
-            for i in range(len(elements) - 1):
-                # deal with case like 'Length and Diameter'->'Viscera Weight' or 'Length\Diameter'->'Viscera Weight'
-                if '/' in elements[i + 1] or 'and' in elements[i + 1]:
-                    targets = [t for t in elements[i + 1].split('/|and')]
-                    for target in targets:
-                        relations.append((elements[i], target))
-                else:
-                    relations.append((elements[i], elements[i + 1]))
-        # deal with case like ('Length, Diameter, Height', 'Viscera Weight')
-        result = []
-        for relation in relations:
-            left = relation[0].split(',')
-            right = relation[1].split(',')
-            for l in left:
-                for r in right:
-                    result.append((l.strip(), r.strip()))
+        # 
+        # pattern = r'\*\*(.*?)\s*(→|↔|->|<->)\s*(.*?)\*\*'
+        # relations = []
+        # # Find all matches
+        # matches = re.findall(pattern, section2)
+        # for match in matches:
+        #     left_part = match[0]
+        #     right_part = match[2]
+
+        #     elements = [left_part]
+        #     split_elements = re.split(r'\s*(→|↔|->|<->)\s*', right_part)
+        #     # Iterate over the split elements
+        #     for i in range(0, len(split_elements), 2):
+        #         element = split_elements[i]
+        #         if element:  # Avoid empty strings
+        #             elements.append(element)
+        #     # Create pairs for the elements
+        #     for i in range(len(elements) - 1):
+        #         # deal with case like 'Length and Diameter'->'Viscera Weight' or 'Length\Diameter'->'Viscera Weight'
+        #         if '/' in elements[i + 1] or 'and' in elements[i + 1]:
+        #             targets = [t for t in elements[i + 1].split('/|and')]
+        #             for target in targets:
+        #                 relations.append((elements[i], target))
+        #         else:
+        #             relations.append((elements[i], elements[i + 1]))
+        # # deal with case like ('Length, Diameter, Height', 'Viscera Weight')
+        # result = []
+        # for relation in relations:
+        #     left = relation[0].split(',')
+        #     right = relation[1].split(',')
+        #     for l in left:
+        #         for r in right:
+        #             result.append((l.strip(), r.strip()))
+        
         # Potential Relationship Visualization
         zero_matrix = np.zeros((len(variables), len(variables)))
-        for tuple in result:
-            if tuple[0].lower() in variables.str.lower() and tuple[1].lower() in variables.str.lower():
-                ind1 = variables.str.lower().get_loc(tuple[0].lower())
-                ind2 = variables.str.lower().get_loc(tuple[1].lower())
+        for pair in result.keys():
+            print(pair)
+            explanation = result[pair]
+            pair = ast.literal_eval(pair)
+            if pair[0].lower() in variables.str.lower() and pair[1].lower() in variables.str.lower():
+                ind1 = variables.str.lower().get_loc(pair[0].lower())
+                ind2 = variables.str.lower().get_loc(pair[1].lower())
                 zero_matrix[ind2, ind1] = 1
+                section2 += f"\item \\textbf{{{pair[0]} \\rightarrow {pair[1]}}}: {explanation} \n"
+        section2 += "\end{itemize}"
 
         my_visual = Visualization(self.global_state)
         g = nx.from_numpy_array(zero_matrix, create_using=nx.DiGraph)
@@ -536,6 +575,11 @@ Background about this dataset: {self.knowledge_docs}
         
         return "\n".join(latex_lines)
 
+    def bold_conversion(self, text):
+        while '**' in text:
+            text = text.replace('**', r'\textbf{', 1).replace('**', '}', 1)
+        return text
+
     
     def graph_revise_prompts(self):
         repsonse = f"""
@@ -637,30 +681,29 @@ Background about this dataset: {self.knowledge_docs}
                     'half_edges': 'edge of non-ancestor ($o->$)', #(o->)
                     'non_edges': 'egde of no D-Seperation set', #(o-o)
                     'non_existence':'No Edge'}
-        graph_text = "The above heatmaps show the confidence probability we have on different kinds of edges, including "
+        graph_text += "The above heatmaps show the confidence probability we have on different kinds of edges, including "
         for k in bootstrap_dict.keys():
             graph_text += f"{text_map[k]}, "
-        graph_text += 'and probability of no edge.'
         for k_zero in zero_graphs:
             k_zero= k_zero.replace("_", "-")
             graph_text += f"The heatmap of {k_zero} is not shown because probabilities of all edges are 0. "
     
-        graph_text += """Based on the confidence probability heatmap, we have edges with high, moderate, and low edges.
-        \\begin{{itemize}}"""
-        high_prob_pairs = self.global_state.results.bootstrap_check_dict['high_prob_edges']['exist']+self.global_state.results.bootstrap_check_dict['high_prob_edges']['non-exist']
-        middle_prob_pairs = self.global_state.results.bootstrap_check_dict['middle_prob_edges']['exist']+self.global_state.results.bootstrap_check_dict['middle_prob_edges']['non-exist']
-        middle_prob_pairs = list(set(tuple(sorted((i, j))) for (i, j) in middle_prob_pairs))
-        low_prob_pairs = self.global_state.results.bootstrap_check_dict['low_prob_edges']['exist']
-        if high_prob_pairs != []:
-            graph_text += "\n \item \\textbf{{High Confidence Edges}}: "
-            graph_text += ', '.join(f'{self.data.columns[idx_j]} $\\rightarrow$ {self.data.columns[idx_i]}' for idx_i, idx_j in high_prob_pairs)
-        if middle_prob_pairs != []:
-            graph_text += "\n \item \\textbf{{Middle Confidence Edges}}: "
-            graph_text += ', '.join(f'{self.data.columns[idx_j]} - {self.data.columns[idx_i]}' for idx_i, idx_j in middle_prob_pairs)
-        if low_prob_pairs != []:
-            graph_text += "\n \item \\textbf{{Low Confidence Edges}}: "
-            graph_text += ', '.join(f'{self.data.columns[idx_j]} $\\rightarrow$ {self.data.columns[idx_i]}' for idx_i, idx_j in low_prob_pairs)
-        graph_text += "\n \end{{itemize}}"
+        # graph_text += """Based on the confidence probability heatmap, we have edges with high, moderate, and low edges.
+        # \\begin{{itemize}}"""
+        # high_prob_pairs = self.global_state.results.bootstrap_check_dict['high_prob_edges']['exist']+self.global_state.results.bootstrap_check_dict['high_prob_edges']['non-exist']
+        # middle_prob_pairs = self.global_state.results.bootstrap_check_dict['middle_prob_edges']['exist']+self.global_state.results.bootstrap_check_dict['middle_prob_edges']['non-exist']
+        # middle_prob_pairs = list(set(tuple(sorted((i, j))) for (i, j) in middle_prob_pairs))
+        # low_prob_pairs = self.global_state.results.bootstrap_check_dict['low_prob_edges']['exist']
+        # if high_prob_pairs != []:
+        #     graph_text += "\n \item \\textbf{{High Confidence Edges}}: "
+        #     graph_text += ', '.join(f'{self.data.columns[idx_j]} $\\rightarrow$ {self.data.columns[idx_i]}' for idx_i, idx_j in high_prob_pairs)
+        # if middle_prob_pairs != []:
+        #     graph_text += "\n \item \\textbf{{Middle Confidence Edges}}: "
+        #     graph_text += ', '.join(f'{self.data.columns[idx_j]} - {self.data.columns[idx_i]}' for idx_i, idx_j in middle_prob_pairs)
+        # if low_prob_pairs != []:
+        #     graph_text += "\n \item \\textbf{{Low Confidence Edges}}: "
+        #     graph_text += ', '.join(f'{self.data.columns[idx_j]} $\\rightarrow$ {self.data.columns[idx_i]}' for idx_i, idx_j in low_prob_pairs)
+        # graph_text += "\n \end{{itemize}}"
         return graph_text
         
 
@@ -680,16 +723,24 @@ Background about this dataset: {self.knowledge_docs}
         Based on this statistical confidence result, and background knowledge about these variables,
         Please write a paragraph to analyze the reliability of this causal relationship graph. 
         
-        For example, you can write in the following way, and please analyze 1. the reliability and 2. give conclusion 
-        base on both bootstrap probability and expert knowledge background.
-        Template:
-        From the Statistics perspective, we have high confidence to believe that these edges exist:..., and these edges don't exist:...
+        **Your Task**
+        Firstly, briefly describe how we get these probability with 1-2 sentences.
+        Secondly, categorize and these relationships into 3 types and list them out: High Confidence Level, Moderate Confidence Level, Low Confidence Level
         
-        However, based on the expert knowledge, we know that these edges exist:...., and these edges don't exist:... 
-        
-        Therefore, the result of this causal graph is reliable/not reliable.
+        **Template**
+        To evaluate how much confidence we have on each edge, we conducted bootstrapping to calculate the probability of existence for each edge.
+        From the Statistics perspective, we can categorize the edges' probability of existence into three types:
+        \\begin{{itemize}}
+        \item \\textbf{{High Confidence Edges}}: ...
+        \item \\textbf{{Moderate Confidence Edges}}: ...
+        \item \\textbf{{Low Confidence Edges}}: ...
+        \end{{itemize}}
+
+        **You Must**
+        1. Follow the template above, do not include anything else like  ```
+        2. Write in a professional and concise way, and include all relationships provided.
+        3. The list must be in latex format
         """
-        #print('confidence_analysis_prompts:',prompt)
         print("Start to analyze graph reliability")
         response = self.client.chat.completions.create(
             model="gpt-4o-mini",
@@ -699,6 +750,7 @@ Background about this dataset: {self.knowledge_docs}
             ]
         )
         response_doc = response.choices[0].message.content
+        response_doc = response_doc.replace('%', '\%')
         #print('reliability analysis:',response_doc)
         return response_doc
 
@@ -706,11 +758,12 @@ Background about this dataset: {self.knowledge_docs}
         text = f"""
                 \\begin{{figure}}[H]
                     \centering
-                    \includegraphics[height=0.3\\textheight]{{{self.global_state.user_data.output_graph_dir}/refutation_graph.jpg}}
+                    \includegraphics[height=0.8\\textwidth]{{{self.global_state.user_data.output_graph_dir}/refutation_graph.jpg}}
                     \caption{{Refutation Graph}}
                 \end{{figure}} \n
                 """
         text += self.global_state.results.refutation_analysis
+        text = text.replace('%', '\%')
         return text 
     
     def abstract_prompt(self):
@@ -764,6 +817,38 @@ Background about this dataset: {self.knowledge_docs}
             )
 
         response_doc = response.choices[0].message.content
+        return response_doc
+    
+    def conclusion_prompt(self):
+        response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system",
+                     "content": 
+                     f"""
+                     You are an expert in the causal discovery field and helpful assistant.                    
+                     """},
+                    {"role": "user", "content": 
+                     f"""
+                     Help me to write a 1-2 paragraphs conclusion according to the given information. 
+                     You should cover:
+                      1. what data is analyzed (find it in title and introduction)
+                      2. what methodology we used (find it in Discovery Procedure)
+                      3. what result we got, this point is important (find it in Graph Result Analysis and Graph Revise Procesure)
+                      4. what is our contribution, this point is important (summarize it by yourself)
+                     Only include your conclusion text content in the response. Don't include any other things like title, etc.
+                     0. Title: {self.title}
+                     1. Introduction: {self.intro_info}
+                     2. Discovery Procedure: {self.discover_process},
+                     3. Graph Result Analysis: {self.graph_prompt},
+                     4. Graph Revise Procesure: {self.revise_process}
+                     4. Reliability Analysis: {self.reliability_prompt}
+                     """}
+                ]
+            )
+
+        response_doc = response.choices[0].message.content
+        response_doc = response_doc.replace("_", r"\_")
         return response_doc
     
     def load_context(self, filepath):
@@ -873,6 +958,7 @@ Background about this dataset: {self.knowledge_docs}
             self.preprocess_plot = self.preprocess_plot_prompt()
             # Graph effect info
             self.graph_prompt = self.list_conversion(self.global_state.logging.graph_conversion['initial_graph_analysis'])
+            self.graph_prompt = self.bold_conversion(self.graph_prompt)
             # Graph Revise info
             if self.data_mode == 'real':
                 self.revise_process = self.graph_revise_prompts()
@@ -883,6 +969,7 @@ Background about this dataset: {self.knowledge_docs}
             self.confidence_graph_prompt = self.confidence_graph_prompts()
             self.refutation_analysis = self.refutation_analysis_prompts()
             self.abstract = self.abstract_prompt()
+            self.conclusion = self.conclusion_prompt()
             
 
             if self.data_mode == 'simulated':
@@ -911,7 +998,8 @@ Background about this dataset: {self.knowledge_docs}
                 "[REVISE_PROCESS]": self.revise_process.replace("&", r"\&") or "",
                 "[RELIABILITY_ANALYSIS]": self.reliability_prompt.replace("&", r"\&") or "",
                 "[CONFIDENCE_GRAPH]": self.confidence_graph_prompt or "",
-                "[REFUTATION_GRAPH]": self.resutation_analysis or ""
+                "[REFUTATION_GRAPH]": self.refutation_analysis or "",
+                "[CONCLUSION]": self.conclusion.replace("&", r"\&") or ""
             }
             replacement2 = {
                 "[TITLE]": self.title or "",
@@ -983,7 +1071,7 @@ Background about this dataset: {self.knowledge_docs}
                 ]
                 )
                 output = response.choices[0].message.content
-                with open(f'{save_path}/report.tex', 'w', encoding='utf-8') as file:
+                with open(f'{save_path}/report_revised.tex', 'w', encoding='utf-8') as file:
                     file.write(output)
             else:
                 break
@@ -1002,4 +1090,4 @@ Background about this dataset: {self.knowledge_docs}
         self.latex_bug_checking(f'{save_path}/report.tex')
         # Compile the .tex file to PDF using pdflatex
         print('start compilation')
-        compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
+        compile_tex_to_pdf_with_refs(f'{save_path}/report_revised.tex', save_path)

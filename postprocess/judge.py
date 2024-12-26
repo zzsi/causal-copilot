@@ -51,7 +51,7 @@ class Judge(object):
                  revised causal graph based on errors.
         '''
 
-        from postprocess.judge_functions import bootstrap, llm_evaluation, bootstrap_recommend, llm_evaluation_new, kci_pruning
+        from postprocess.judge_functions import bootstrap, llm_evaluation, bootstrap_recommend, llm_evaluation_new, kci_pruning, check_cycle
 
         # Statistics Perspective: Bootstrapping to get probability of edges using the selected algorithm.
         edge_recom, boot_probability = bootstrap(data=data, full_graph=full_graph, algorithm=algorithm, hyperparameters=hyperparameters,
@@ -150,8 +150,10 @@ class Judge(object):
         print('kci_forbid_dict', kci_forbid_dict)
         for idx_j, idx_i in kci_forbid_dict.keys():
             revised_graph[idx_i, idx_j] = revised_graph[idx_j, idx_i] = 0
-        direct_dict_filtered = {key: value for key, value in direct_dict.items() if key not in kci_forbid_dict}
-        print('direct_dict_filtered', direct_dict_filtered)
+        
+        ########### Check Cycles ##########
+        revised_graph = check_cycle(self.args, data, revised_graph)
+
 
         return {}, bootstrap_check_dict, boot_probability, llm_pruning_record, revised_graph, bk
 
@@ -219,6 +221,7 @@ class Judge(object):
 
     def graph_refutation(self, global_state):
         import networkx as nx
+        from openai import OpenAI
         data = global_state.user_data.processed_data
         revised_graph = global_state.results.revised_graph
         savepath = global_state.user_data.output_graph_dir
@@ -236,8 +239,28 @@ class Judge(object):
         cleaned_matches = [match.strip() for match in matches]
         # Concatenate all matches with a space
         result = ' '.join(cleaned_matches)
+        # Generate an analysis paragraph
+        prompt = f"""
+**Context**
+To analyze the reliability of the causal graph, we conduct a graph refutation test, and we need a brief analysis for it.
+**Your Task**
+Write a brief 1 paragraph analysis for the causal graph refutation test based on the provided test result and test introduction.
+**Test Result**
+{result}
+**Test Introduction**
+The results of falsify_graph show the output of two tests. The first measures whether the LMCs implied by the graph are satisfied by the data. It compares the number of LMCs violated by the given graph to the number of LMCs violated by random graphs. For a significance value of 0.05, if the number of LMC violations by the given graph is lower than the 5% best random graphs, then we do not reject the graph. The second test (tPa) checks whether the graph is falsifiable. That is, assuming that the given graph is correct, how many other graphs share the same number of LMC violations? Since the graph is assumed to be correct, the correct LMCs are those that are implied by the graph and hence the reference number of violations is zero. For a significance value of 0.05, if less than 5% of random graphs have zero LMC violations, then it indicates that the LMCs implied by the graph can falsify (or refute) the graph.
+"""
+        client = OpenAI(organization=self.args.organization, project=self.args.project, api_key=self.args.apikey)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        response_doc = response.choices[0].message.content
 
-        return result  
+        return response_doc  
 
     def evaluation(self, global_state, revise=False):
         '''

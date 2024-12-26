@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="dataset/sachs/sachs_full.csv",
+        default="dataset/sachs/sachs.csv",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -48,21 +48,21 @@ def parse_args():
     parser.add_argument(
         '--organization',
         type=str,
-        default="org-5NION61XDUXh0ib0JZpcppqS",
+        default="org-gw7mBMydjDsOnDlTvNQWXqPL",
         help='Organization ID'
     )
 
     parser.add_argument(
         '--project',
         type=str,
-        default="proj_Ry1rvoznXAMj8R2bujIIkhQN",
+        default="proj_SIDtemBJMHUWG7CPdU7yRjsn",
         help='Project ID'
     )
 
     parser.add_argument(
         '--apikey',
         type=str,
-        default="",
+        default=None,
         help='API Key'
     )
 
@@ -217,9 +217,9 @@ def main(args, prompt_type, voting_num):
     global_state = judge.forward(global_state, prompt_type, voting_num)
     end_time = time.time()
     duration = end_time-start_time
-    with open('postprocess/test_result/sachs_full/duration.txt', 'a') as file:
-        # Write the text to the file
-        file.write(f'prompt: {prompt}, voting_num: {voting_num}, duration: {duration} \n')
+    # with open('postprocess/test_result/sachs_full/duration.txt', 'a') as file:
+    #     # Write the text to the file
+    #     file.write(f'prompt: {prompt}, voting_num: {voting_num}, duration: {duration} \n')
 
     # ##############################
     # if global_state.user_data.ground_truth is not None:
@@ -236,25 +236,17 @@ def main(args, prompt_type, voting_num):
     # Plot Bootstrap Heatmap
     boot_heatmap_path = my_visual_revise.boot_heatmap_plot()
 
-    ##### Save infos of Post-Processing ######
-    import numpy as np
-    import shutil
-    import os 
-    save_path = f'postprocess/test_result/sachs_full/{prompt_type}/{voting_num}_voting/'
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-    print("Original Graph: ", global_state.results.raw_result.G.graph)
-    np.save(save_path+'origin_graph', global_state.results.raw_result.G.graph)
-    print("Revised Graph: ", global_state.results.revised_graph)
-    np.save(save_path+'revised_graph', global_state.results.revised_graph)
-    
-    # from postprocess.test import manual_metrics, causallearn_metrics
-    # true_mat = np.load('postprocess/test_result/ground_truth_sachs.npy')
-    # initial_manual_result = manual_metrics(true_mat, global_state.results.raw_result.G.graph)
-    # print('initial_manual_result',initial_manual_result)
-    # revised_manual_result = causallearn_metrics(true_mat,  global_state.results.revised_graph)
-    # print('revised_manual_result',revised_manual_result)
-    # calculate time
+    # ##### Save infos of Post-Processing ######
+    # import numpy as np
+    # import shutil
+    # import os 
+    # save_path = f'postprocess/test_result/sachs_full/{prompt_type}/{voting_num}_voting/'
+    # if not os.path.exists(save_path):
+    #     os.makedirs(save_path)
+    # print("Original Graph: ", global_state.results.raw_result.G.graph)
+    # np.save(save_path+'origin_graph', global_state.results.raw_result.G.graph)
+    # print("Revised Graph: ", global_state.results.revised_graph)
+    # np.save(save_path+'revised_graph', global_state.results.revised_graph)
 
     # algorithm selection process
     '''
@@ -290,10 +282,11 @@ def main(args, prompt_type, voting_num):
 
 if __name__ == '__main__':
     args = parse_args()
-    prompt_folders = [#'base', 'markov_blanket', 
-                      'all_relation', 'cot_base', 'cot_markov_blanket', 
-                      'cot_all_relation']
-    voting_folders = [3, 10, 20]
+    prompt_folders = ['base', 'markov_blanket', 'all_relation', 
+                      #'cot_base', 'cot_markov_blanket', 'cot_all_relation'
+                      ]
+    voting_folders = [1, #3, 10, 20
+                      ]
     for prompt in prompt_folders:
         for voting_num in voting_folders:
             main(args, prompt, voting_num)

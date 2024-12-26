@@ -11,9 +11,9 @@ class DemoConfig:
     output_graph_dir: str = 'output_graph'
 
     # OpenAI Settings
-    organization: str = "org-5NION61XDUXh0ib0JZpcppqS"
-    project: str = "proj_Ry1rvoznXAMj8R2bujIIkhQN"
-    apikey: str = None
+    organization: str = "org-gw7mBMydjDsOnDlTvNQWXqPL"
+    project: str = "proj_SIDtemBJMHUWG7CPdU7yRjsn"
+    apikey: str = None 
     
     # Analysis Settings
     simulation_mode: str = "offline"
