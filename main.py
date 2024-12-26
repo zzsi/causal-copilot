@@ -5,7 +5,7 @@ from algorithm.filter import Filter
 from algorithm.program import Programming
 from algorithm.rerank import Reranker
 from postprocess.judge import Judge
-from postprocess.visualization import Visualization
+from postprocess.visualization import Visualization, convert_to_edges
 from preprocess.eda_generation import EDA
 from postprocess.report_generation import Report_generation
 from global_setting.Initialize_state import global_state_initialization, load_data
@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="dataset/Abalone/Abalone.csv",
+        default="dataset/sachs/sachs.csv",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument(
         '--output-report-dir',
         type=str,
-        default='dataset/Abalone/output_report',
+        default='dataset/sachs/output_report',
         help='Directory to save the output report'
     )
 
@@ -39,7 +39,7 @@ def parse_args():
     parser.add_argument(
         '--output-graph-dir',
         type=str,
-        default='dataset/Abalone/output_graph',
+        default='dataset/sachs/output_graph',
         help='Directory to save the output graph'
     )
 
@@ -82,7 +82,7 @@ def parse_args():
     parser.add_argument(
         '--debug',
         action='store_true',
-        default=False,
+        default=True,
         help='Enable debugging mode'
     )
 
@@ -142,7 +142,7 @@ def process_user_query(query, data):
     print("User query processed.")
     return data
 
-def main(args):
+def main(args, prompt_type, voting_num):
     global_state = global_state_initialization(args)
     global_state = load_data(global_state, args)
 
@@ -150,14 +150,13 @@ def main(args):
         global_state.user_data.raw_data = load_real_world_data(args.data_file)
     
     global_state.user_data.processed_data = process_user_query(args.initial_query, global_state.user_data.raw_data)
+    global_state.user_data.visual_selected_features = global_state.user_data.processed_data.columns.tolist()
 
     # Show the exacted global state
     print(global_state)
 
     # background info collection
     #print("Original Data: ", global_state.user_data.raw_data)
-
-    
 
     if args.debug:
         # Fake statistics for debugging
@@ -203,7 +202,7 @@ def main(args):
     # Plot Initial Graph
     _ = my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf', pos=pos_est)
     my_report = Report_generation(global_state, args)
-    global_state.results.raw_edges = my_visual_initial.convert_to_edges(global_state.results.raw_result)
+    global_state.results.raw_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.processed_data.columns, global_state.results.raw_result)
     global_state.logging.graph_conversion['initial_graph_analysis'] = my_report.graph_effect_prompts()
 
     judge = Judge(global_state, args)
@@ -212,12 +211,16 @@ def main(args):
         print("Mat Ground Truth: ", global_state.user_data.ground_truth)
         global_state.results.metrics = judge.evaluation(global_state)
         print(global_state.results.metrics)
-
-    global_state = judge.forward(global_state)
+    import time 
+    start_time = time.time()
+    global_state = judge.forward(global_state, prompt_type, voting_num)
+    end_time = time.time()
+    duration = end_time-start_time
+    # with open('postprocess/test_result/sachs_full/duration.txt', 'a') as file:
+    #     # Write the text to the file
+    #     file.write(f'prompt: {prompt}, voting_num: {voting_num}, duration: {duration} \n')
 
     # ##############################
-    # from postprocess.judge_functions import llm_direction_evaluation
-    # llm_direction_evaluation(global_state)
     # if global_state.user_data.ground_truth is not None:
     #     print("Revised Graph: ", global_state.results.revised_graph)
     #     print("Mat Ground Truth: ", global_state.user_data.ground_truth)
@@ -228,7 +231,7 @@ def main(args):
     # Plot Revised Graph
     my_visual_revise = Visualization(global_state)
     pos_new = my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf', pos=pos_est)
-    global_state.results.revised_edges = my_visual_revise.convert_to_edges(global_state.results.revised_graph)
+    global_state.results.revised_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.raw_data.columns, global_state.results.revised_graph)
     # Plot Bootstrap Heatmap
     boot_heatmap_path = my_visual_revise.boot_heatmap_plot()
 
@@ -272,4 +275,12 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    main(args)
+    prompt_folders = ['base', 'markov_blanket', 'all_relation', 
+                      #'cot_base', 'cot_markov_blanket', 'cot_all_relation'
+                      ]
+    voting_folders = [1, #3, 10, 20
+                      ]
+    for prompt in prompt_folders:
+        for voting_num in voting_folders:
+            main(args, prompt, voting_num)
+            

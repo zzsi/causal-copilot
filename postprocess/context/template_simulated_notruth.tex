@@ -63,13 +63,13 @@ We employ several statistical methods to identify data properties.
 The shape of the data, data types, and missing values are assessed directly from the dataframe, and Time-Series and Heterogeneity are derived from user queries.
 
 We conducted the Ramsey's RESET test to assess linearity between each pair of variables, provided the total number of tests was fewer than 100. If the number of tests exceeded 100, we randomly selected 100 variable pairs for testing.
-To correct for multiple testing, we applied the Benjamini \& Yekutieli procedure, which is robust when dealing with dependent or correlated data. 
+To correct for multiple testing, we applied the Benjamini and Yekutieli procedure, which is robust when dealing with dependent or correlated data. 
 The linearity assumption was considered satisfied if all tested variable pairs demonstrated linearity; otherwise, it was considered violated if at least one pair showed non-linearity.
 
 The assumption of Gaussian noise was tested using the Shapiro-Wilk test. The testing procedures were similar to those for linearity and depended on the concluded linearity assumption. 
 If the dataset was found to satisfy the linearity assumption, we fitted an OLS model between each pair of variables and obtained the residuals. 
 If the dataset did not satisfy the linearity assumption, we employed a flexible non-parametric method, locally weighted scatterplot smoothing (LOWESS), to fit the model and obtain the residuals. 
-Again, we used the Benjamini \& Yekutieli procedure to correct for multiple testing results. 
+Again, we used the Benjamini and Yekutieli procedure to correct for multiple testing results. 
 
 [PREPROCESS_GRAPH]
 
@@ -130,11 +130,14 @@ The above is the initial result graph produced by our algorithm.
 
 \subsection{Graph Reliability Analysis}
 
+\subsubsection{Bootstrap Probability}
 [CONFIDENCE_GRAPH]
-
 [RELIABILITY_ANALYSIS]
 
-%\section{Metrics Evaluation}
+\subsubsection{Refutation Analysis}
+[REFUTATION_GRAPH]
 
+\subsection{Conclusion}
+[CONCLUSION]
 
 \end{document}

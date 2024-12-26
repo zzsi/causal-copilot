@@ -140,7 +140,9 @@ simulated_data/
 gradio_output/
 demo_data/
 output/
-test.py
 .vscode
 sftp.json
 .history/
+test_result/
+postprocess/test_data/
+test_for_demo/
