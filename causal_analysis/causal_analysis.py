@@ -390,7 +390,7 @@ if __name__ == '__main__':
         parser.add_argument(
             '--apikey',
             type=str,
-            default="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",
+            default=None,
             help='API Key'
         )
 
