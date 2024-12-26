@@ -1,5 +1,4 @@
 # Kun Zhou Implemented
-from data.simulation.simulation import SimulationManager
 from preprocess.dataset import knowledge_info
 from preprocess.stat_info_functions import stat_info_collection, convert_stat_info_to_text
 from algorithm.filter import Filter
@@ -236,17 +235,7 @@ def main(args, prompt_type, voting_num):
     # Plot Bootstrap Heatmap
     boot_heatmap_path = my_visual_revise.boot_heatmap_plot()
 
-    # ##### Save infos of Post-Processing ######
-    # import numpy as np
-    # import shutil
-    # import os 
-    # save_path = f'postprocess/test_result/sachs_full/{prompt_type}/{voting_num}_voting/'
-    # if not os.path.exists(save_path):
-    #     os.makedirs(save_path)
-    # print("Original Graph: ", global_state.results.raw_result.G.graph)
-    # np.save(save_path+'origin_graph', global_state.results.raw_result.G.graph)
-    # print("Revised Graph: ", global_state.results.revised_graph)
-    # np.save(save_path+'revised_graph', global_state.results.revised_graph)
+
 
     # algorithm selection process
     '''
@@ -258,26 +247,30 @@ def main(args, prompt_type, voting_num):
         flag, algorithm_setup = judge(preprocessed_data, code, results, statistics_dict, algorithm_setup, knowledge_docs)
     '''
 
-    # #############Report Generation###################
-    # import os 
-    # try_num = 1
-    # my_report = Report_generation(global_state, args)
-    # report = my_report.generation()
-    # my_report.save_report(report)
-    # report_path = os.path.join(global_state.user_data.output_report_dir, 'report.pdf')
-    # while not os.path.isfile(report_path) and try_num<=3:
-    #     try_num = +1
-    #     print('Error occur during the Report Generation, try again')
-    #     report_gen = Report_generation(global_state, args)
-    #     report = report_gen.generation(debug=False)
-    #     report_gen.save_report(report)
-    #     if not os.path.isfile(report_path) and try_num==3:
-    #         print('Error occur during the Report Generation three times, we stop.')
-    # ################################
-    # destination_path = os.path.join(save_path, os.path.basename(report_path))
-    # shutil.copy(report_path, destination_path)
-    
-    #return report, global_state
+    #############Report Generation###################
+    import os 
+    try_num = 1
+    my_report = Report_generation(global_state, args)
+    report = my_report.generation()
+    my_report.save_report(report)
+    report_path = os.path.join(global_state.user_data.output_report_dir, 'report.tex')  #.pdf
+    while not os.path.isfile(report_path) and try_num<=3:
+        try_num = +1
+        print('Error occur during the Report Generation, try again')
+        report_gen = Report_generation(global_state, args)
+        report = report_gen.generation(debug=False)
+        report_gen.save_report(report)
+        if not os.path.isfile(report_path) and try_num==3:
+            print('Error occur during the Report Generation three times, we stop.')
+    ################################
+
+    # User discussion part
+    from user.discuss import Discussion
+    discussion = Discussion(args, report)
+    discussion.forward(global_state, report)
+
+    return report, global_state
+
 
 
 if __name__ == '__main__':
