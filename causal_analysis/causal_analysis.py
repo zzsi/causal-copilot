@@ -7,20 +7,16 @@ import shap
 import sklearn
 import matplotlib.pyplot as plt
 from openai import OpenAI
+from pydantic import BaseModel
 import os 
+
+from causal_analysis.hte.hte_filter import HTE_Filter
+from causal_analysis.hte.hte_params import HTE_Param_Selector
+from causal_analysis.hte.hte_program import HTE_Programming
 
 import sys 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from global_setting.Initialize_state import global_state_initialization
-from pydantic import BaseModel
-from openai import OpenAI
-import os 
-
-import sys 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from global_setting.Initialize_state import global_state_initialization
-from pydantic import BaseModel
-
 
 def convert_adj_mat(mat):
     # In downstream analysis, we only keep direct edges and ignore all undirected edges
@@ -46,56 +42,12 @@ class Analysis(object):
         self.G = nx.from_numpy_array(self.graph, create_using=nx.DiGraph) # convert adj matrix into DiGraph
         self.G = nx.relabel_nodes(self.G, {i: name for i, name in enumerate(self.data.columns)})
         print(self.G)
+        self.dot_graph = self._generate_dowhy_graph()
         # Construct Causal Model via dowhy/gcm
         self.causal_model = gcm.InvertibleStructuralCausalModel(self.G)
         gcm.auto.assign_causal_mechanisms(self.causal_model, self.data)
         gcm.fit(self.causal_model, self.data)
 
-    def _print_data_disclaimer(self):
-        """
-        Analyze the dataset's columns and print disclaimers about their nature (continuous/discrete/categorical).
-
-        Previously, we had a hard-coded disclaimer. Now we dynamically check column types and counts.
-        """
-        dtypes = self.data.dtypes
-        numeric_cols = dtypes[dtypes != 'object'].index.tolist()
-        object_cols = dtypes[dtypes == 'object'].index.tolist()
-
-        continuous_cols = []
-        discrete_cols = []
-
-        # Simple heuristic: if a numeric column has more than 10 unique values, consider it continuous; otherwise discrete
-        for col in numeric_cols:
-            unique_vals = self.data[col].nunique()
-            if unique_vals > 10:
-                continuous_cols.append(col)
-            else:
-                discrete_cols.append(col)
-
-        print("\n" + "="*60)
-        print("DATASET ANALYSIS:")
-        if object_cols:
-            print(f"Categorical (non-numeric) columns detected: {object_cols}")
-        else:
-            print("No categorical columns detected.")
-
-        if continuous_cols:
-            print(f"Continuous numeric columns detected: {continuous_cols}")
-        else:
-            print("No continuous numeric columns detected.")
-
-        if discrete_cols:
-            print(f"Discrete/low-cardinality numeric columns detected: {discrete_cols}")
-        else:
-            print("No discrete/low-cardinality numeric columns detected.")
-
-        print("Please ensure your causal assumptions align with these column types.")
-        print("="*60 + "\n")
-        print(self.G)
-        # Construct Causal Model via dowhy/gcm
-        self.causal_model = gcm.InvertibleStructuralCausalModel(self.G)
-        gcm.auto.assign_causal_mechanisms(self.causal_model, self.data)
-        gcm.fit(self.causal_model, self.data)
 
     def _print_data_disclaimer(self):
         """
@@ -195,7 +147,7 @@ class Analysis(object):
             data=self.data,
             treatment=treatment,
             outcome=outcome,
-            graph=self._generate_dowhy_graph()
+            graph=self.dot_graph()
         )
 
         identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
@@ -290,18 +242,28 @@ class Analysis(object):
         return df, figs
 
 
-    def call_LLM(self, prompt):
+    def call_LLM(self, format, prompt, message):
         client = OpenAI(organization=self.args.organization, project=self.args.project, api_key=self.args.apikey)
-        client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are an expert in Causal Discovery."}])
-        response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "user", "content": prompt}])
-        contents = response.choices[0].message.content
-        return contents
+        if format:
+            completion = client.beta.chat.completions.parse(
+            model="gpt-4o-mini-2024-07-18",
+            messages=[
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": message},
+            ],
+            response_format=format,
+            )
+            parsed_response = completion.choices[0].message.parsed
+        else: 
+            completion = client.beta.chat.completions.parse(
+            model="gpt-4o-mini-2024-07-18",
+            messages=[
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": message},
+            ],
+            )
+            parsed_response = completion.choices[0].message.content
+        return parsed_response
 
     def forward(self, task, desc, key_node):
         if task == 'Feature Importance':
@@ -314,7 +276,7 @@ class Analysis(object):
             **Mean of Shapley Values**: {mean_shap_values}
             ""Description from User**: {desc}
             """
-            response = self.call_LLM(prompt)
+            response = self.call_LLM(response = self.call_LLM(args, None, 'You are an expert in Causal Discovery.', prompt))
             return response, figs 
         
         elif task == 'Treatment Effect Estimation':
@@ -336,7 +298,36 @@ class Analysis(object):
             **P-value of Significance Test for Causal Estimate**: {p_value}
             **Description from User**: {desc}
             """
-            response = self.call_LLM(prompt)
+            response = self.call_LLM(response = self.call_LLM(args, None, 'You are an expert in Causal Discovery.', prompt))
+            return response, None
+        
+        elif task == 'Heterogeneous Treatment Effect Estimation':
+            message = desc
+            class VarList(BaseModel):
+                treantment: str
+                confounders: list[str]
+            prompt = f"""You are a helpful assistant, please do the following tasks:
+            Firstly, identify the Treatment Variable in user's query and save it in treantment as a string
+            Secondly, identify a list of confounders and save it in confounders as a list of string
+            The variable name must be among these variables: {self.data.columns}
+            The outcome Y is {key_node}
+            """
+            parsed_response = self.call_LLM(args, VarList, prompt, message)
+            treatment = parsed_response['treatment']
+            confounders = parsed_response['confounders']
+            self.estimate_hte_effect(outcome=key_node, treatment=treatment, X_col=confounders, query=desc)
+            parent_nodes = list(self.G.predecessors(key_node))
+
+            # prompt = f"""
+            # I'm doing the feature importance analysis and please help me to write a brief analysis in bullet points.
+            # Here are some informations:
+            # **Result Variable we care about**: {key_node}
+            # **Parent Nodes of the Result Variable**: {parent_nodes}
+            # **Causal Estimate Result**: {causal_estimate}
+            # **P-value of Significance Test for Causal Estimate**: {p_value}
+            # **Description from User**: {desc}
+            # """
+            # response = self.call_LLM(prompt)
             return response, None
         
         elif task == 'Anormaly Attribution':
@@ -354,10 +345,29 @@ class Analysis(object):
             We estimated the contribution of the ancestors of {key_node}, including {key_node} itself, to the observed anomaly.
             In this method, we use invertible causal mechanisms to reconstruct and modify the noise leading to a certain observation. We then ask, “If the noise value of a specific node was from its ‘normal’ distribution, would we still have observed an anomalous value in the target node?”. The change in the severity of the anomaly in the target node after altering an upstream noise variable’s value, based on its learned distribution, indicates the node’s contribution to the anomaly. The advantage of using the noise value over the actual node value is that we measure only the influence originating from the node and not inherited from its parents.
             """
-            response = self.call_LLM(prompt)
+            response = self.call_LLM(args, None, 'You are an expert in Causal Discovery.', prompt)
             return response, figs
 
 
+    def estimate_hte_effect(self, outcome, treatment, X_col, query):
+        print("\nCreating Causal Model...")
+        model = CausalModel(
+            data=self.data,
+            treatment=treatment,
+            outcome=outcome,
+            graph=self.dot_graph()
+        )
+        W_col = model.get_backdoor_variables()
+        # Algorithm selection and deliberation
+        filter = HTE_Filter(args)
+        global_state = filter.forward(global_state, query)
+
+        reranker = HTE_Param_Selector(args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
+        global_state = reranker.forward(global_state)
+
+        programmer = HTE_Programming(args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
+        hte, hte_lower, hte_upper = programmer.forward(global_state, task='hte')
+        return hte, hte_lower, hte_upper
 
 ##############
 def LLM_parse_query(args, format, prompt, message):
@@ -383,114 +393,6 @@ def LLM_parse_query(args, format, prompt, message):
         parsed_response = completion.choices[0].message.content
     return parsed_response
 
-    def estimate_causal_effect(self, treatment, outcome, control_value=0, treatment_value=1):
-        """
-        Estimate the causal effect of a treatment on an outcome using DoWhy (backdoor.linear_regression).
-        """
-        print("\n" + "#"*60)
-        print(f"Estimating Causal Effect of Treatment: {treatment} on Outcome: {outcome}")
-        print("#"*60)
-
-        print("\nCreating Causal Model...")
-        model = CausalModel(
-            data=self.data,
-            treatment=treatment,
-            outcome=outcome,
-            graph=self._generate_dowhy_graph()
-        )
-
-        identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
-        print("\nIdentified Estimand:")
-        print(identified_estimand)
-
-        causal_estimate = model.estimate_effect(
-            identified_estimand,
-            method_name="backdoor.linear_regression",
-            control_value=control_value,
-            treatment_value=treatment_value
-        )
-
-        print("\nCausal Estimate:")
-        print(causal_estimate)
-        model.test_significance(causal_estimate)
-
-        print("\n=== Interpretation Hint ===")
-        print("A negative causal estimate indicates that increasing the treatment variable (e.g., horsepower)")
-        print("tends to decrease the outcome variable (e.g., mpg), assuming the model and assumptions hold.")
-        print("============================\n")
-
-        return causal_estimate
-
-    def _generate_dowhy_graph(self):
-        """
-        Generate a causal graph in DOT format for DoWhy.
-        """
-        edges = nx.edges(self.G)
-        dot_format = "digraph { "
-        for u, v in edges:
-            dot_format += f"{u} -> {v}; "
-        dot_format += "}"
-        return dot_format
-    
-    def attribute_anomalies(self, target_node, anomaly_samples, confidence_level=0.95):
-        """
-        Perform anomaly attribution and save the bar chart with confidence intervals to ./auto_mpg_output.
-        """
-        print("\n" + "#"*60)
-        print(f"Performing Anomaly Attribution for target node: {target_node}")
-        print("#"*60)
-
-        # Call the attribute_anomalies function
-        attribution_results = gcm.attribute_anomalies(
-            causal_model=self.causal_model,  # Your fitted InvertibleStructuralCausalModel
-            target_node=target_node,        # The target node for anomaly attribution
-            anomaly_samples=anomaly_samples,  # DataFrame of anomalous samples
-            anomaly_scorer=None,            # Use default anomaly scorer
-            attribute_mean_deviation=False, # Attribute anomaly score (not mean deviation)
-            num_distribution_samples=3000,  # Number of samples for marginal distribution
-            shapley_config=None             # Use default Shapley config
-        )
-
-        # Convert results to a DataFrame
-        rows = []
-        for node, contributions in attribution_results.items():
-            rows.append({
-                "Node": node,
-                "MeanAttributionScore": np.mean(contributions),
-                "LowerCI": np.percentile(contributions, (1 - confidence_level) / 2 * 100),
-                "UpperCI": np.percentile(contributions, (1 + confidence_level) / 2 * 100)
-            })
-
-        df = pd.DataFrame(rows).sort_values("MeanAttributionScore", ascending=False)
-
-        # Prepare output directory
-        output_dir = "./auto_mpg_output"
-        os.makedirs(output_dir, exist_ok=True)
-
-        # Extract info for plotting
-        nodes = df["Node"]
-        scores = df["MeanAttributionScore"]
-        lower_bounds = df["LowerCI"]
-        upper_bounds = df["UpperCI"]
-        error = np.array([scores - lower_bounds, upper_bounds - scores])
-
-        # Create figure
-        plt.figure(figsize=(10, 6))  # Adjusted figure size for better readability
-        plt.bar(nodes, scores, yerr=error, align='center', ecolor='black', capsize=5, color='skyblue')
-        plt.xlabel("Nodes")
-        plt.ylabel("Mean Attribution Score")
-        plt.title(f"Anomaly Attribution for {target_node}")
-        plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
-        plt.tight_layout()
-
-        # Save figure
-        fig_path = os.path.join(output_dir, 'attribution_plot.png')
-        plt.savefig(fig_path, bbox_inches='tight')
-        plt.show()  # Show the plot in the notebook or script
-        plt.close()
-
-        return df
-    
 def main(global_state, args):
     """
     Modify the main function to call attribute_anomalies and save the results in ./auto_mpg_output.
@@ -508,7 +410,7 @@ def main(global_state, args):
             Firstly identify whether user want to conduct causal tasks and save the boolean result in indicator. 
             Secondly if user want to conduct causal tasks, please identify what tasks the user want to do and save them as a list in tasks.
             Please choose among the following causal tasks, if there's no matched task just return an empty list 
-            Tasks you can choose: 1. Treatment Effect Estimation; 2. Anormaly Attribution; 3. Feature Importance
+            Tasks you can choose: 1. Treatment Effect Estimation; 2. Anormaly Attribution; 3. Feature Importance 4. Heterogeneous Treatment Effect Estimation
             thirdly, save user's description for their tasks as a list in descriptions, the length of description list must be the same with task list
             Fourthly, save the key result variable user care about as a list, each task must have a key result variable and they can be the same, the length of result variable list must be the same with task list
             """

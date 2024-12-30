@@ -142,7 +142,7 @@ def process_user_query(query, data):
     print("User query processed.")
     return data
 
-def main(args, prompt_type, voting_num):
+def main(args):
     global_state = global_state_initialization(args)
     global_state = load_data(global_state, args)
 
@@ -213,20 +213,13 @@ def main(args, prompt_type, voting_num):
         print(global_state.results.metrics)
     import time 
     start_time = time.time()
-    global_state = judge.forward(global_state, prompt_type, voting_num)
+    global_state = judge.forward(global_state, 'cot_markov_blanket', 1)
     end_time = time.time()
     duration = end_time-start_time
     # with open('postprocess/test_result/sachs_full/duration.txt', 'a') as file:
     #     # Write the text to the file
     #     file.write(f'prompt: {prompt}, voting_num: {voting_num}, duration: {duration} \n')
 
-    # ##############################
-    # if global_state.user_data.ground_truth is not None:
-    #     print("Revised Graph: ", global_state.results.revised_graph)
-    #     print("Mat Ground Truth: ", global_state.user_data.ground_truth)
-    #     global_state.results.revised_metrics = judge.evaluation(global_state)
-    #     print(global_state.results.revised_metrics)
-    # ################################
     #############Visualization for Revised Graph###################
     # Plot Revised Graph
     my_visual_revise = Visualization(global_state)
@@ -275,12 +268,5 @@ def main(args, prompt_type, voting_num):
 
 if __name__ == '__main__':
     args = parse_args()
-    prompt_folders = ['base', 'markov_blanket', 'all_relation', 
-                      #'cot_base', 'cot_markov_blanket', 'cot_all_relation'
-                      ]
-    voting_folders = [1, #3, 10, 20
-                      ]
-    for prompt in prompt_folders:
-        for voting_num in voting_folders:
-            main(args, prompt, voting_num)
+    main(args)
             
