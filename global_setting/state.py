@@ -38,6 +38,7 @@ class Statistics:
     num_test: int = 100
     ratio: float = 0.5
     data_type: Optional[str] = None
+    data_type_column: Optional[str] = None
     heterogeneous: Optional[bool] = None
     domain_index: Optional[str] = None
     description: Optional[str] = None
@@ -90,12 +91,19 @@ class Results:
     prior_knowledge: Optional[object] = None
     refutation_analysis: Optional[object] = None
 
-    
+@dataclass
+class Inference:
+    hte_algo_json: Optional[Dict] = None
+    hte_model_y_json: Optional[Dict] = None
+    hte_model_T_json: Optional[Dict] = None
+    hte_model_param: Optional[Dict] = None
+
 @dataclass
 class GlobalState:
     user_data: UserData = field(default_factory=UserData)
     statistics: Statistics = field(default_factory=Statistics)
     logging: Logging = field(default_factory=Logging)
     algorithm: Algorithm = field(default_factory=Algorithm)
+    inference: Inference = field(default_factory=Inference)
     results: Results = field(default_factory=Results)
 
