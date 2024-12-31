@@ -52,8 +52,6 @@ class Analysis(object):
     def _print_data_disclaimer(self):
         """
         Analyze the dataset's columns and print disclaimers about their nature (continuous/discrete/categorical).
-
-        Previously, we had a hard-coded disclaimer. Now we dynamically check column types and counts.
         """
         dtypes = self.data.dtypes
         numeric_cols = dtypes[dtypes != 'object'].index.tolist()
