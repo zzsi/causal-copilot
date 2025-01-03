@@ -1,5 +1,7 @@
 import json
 import numpy as np
+import os
+
 class Reranker(object):
     # Kun Zhou Implemented
     def __init__(self, args):
@@ -104,9 +106,16 @@ class Reranker(object):
         knowledge_docs = global_state.user_data.knowledge_docs
 
         # Load hyperparameters context
-        with open("algorithm/context/hyperparameters.json", "r") as f:
-            hp_context = json.load(f)
-
+        hp_context = {}
+        hyperparameters_folder = "algorithm/context/hyperparameters"
+        for filename in os.listdir(hyperparameters_folder):
+            if filename.endswith(".json"):
+                file_path = os.path.join(hyperparameters_folder, filename)
+                with open(file_path, "r") as f:
+                    algo_hp = json.load(f)
+                    algo_name = algo_hp.pop("algorithm_name")
+                    hp_context[algo_name] = algo_hp
+            
         # Load additional context files for parameters that have them
         for algo in hp_context:
             for param in hp_context[algo]:
@@ -185,7 +194,7 @@ class Reranker(object):
             primary_params = getattr(wrappers, selected_algo)().get_primary_params()
 
             # Prepare hyperparameter information
-            hp_info_str = str(hp_context[selected_algo])
+            hp_info_str = str([selected_algo])
 
             # Create the hyperparameter selection prompt
             hp_prompt = hp_prompt.replace("[COLUMNS]", table_columns)

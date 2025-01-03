@@ -677,7 +677,6 @@ def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_
         """
         # All Pairwise Relationships
         if 'all_relation' in prompt_type:
-        if 'all_relation' in prompt_type:
             prompt_pruning += f"""
             We have conducted the statistical causal discovery algorithm to find the following causal relationships from a statistical perspective:
             {relation_text}
@@ -691,28 +690,28 @@ def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_
             {directed_exist_texts_mainnode} and {undirected_exist_texts_mainnode}
             """
             # Add adjacency matrix context
-        if 'adj_matrix' in prompt_type:
-            adj_matrix = edges_dict_to_adj_matrix(edges_dict, data.columns)
-            prompt_pruning += f"""
-            This is the adjacency matrix representation of the current causal graph:
+        # if 'adj_matrix' in prompt_type:
+        #     adj_matrix = edges_dict_to_adj_matrix(edges_dict, data.columns)
+        #     prompt_pruning += f"""
+        #     This is the adjacency matrix representation of the current causal graph:
 
-            **Adjacency Matrix**:
-            Variables: {data.columns.tolist()}
-            Matrix:
-            {adj_matrix.tolist()}
+        #     **Adjacency Matrix**:
+        #     Variables: {data.columns.tolist()}
+        #     Matrix:
+        #     {adj_matrix.tolist()}
 
-            **Definitions of Causal Structures**:
-            - **Chain Structure (A → B → C)**:
-            - Variable A causes B, and B causes C.
-            - **Fork Structure (A ← B → C)**:
-            - Variable B causes both A and C.
-            - **Collider Structure (A → B ← C)**:
-            - Variables A and C both cause B.
+        #     **Definitions of Causal Structures**:
+        #     - **Chain Structure (A → B → C)**:
+        #     - Variable A causes B, and B causes C.
+        #     - **Fork Structure (A ← B → C)**:
+        #     - Variable B causes both A and C.
+        #     - **Collider Structure (A → B ← C)**:
+        #     - Variables A and C both cause B.
 
-            **Your Task**:
-            1. Analyze the adjacency matrix and identify causal structures such as chains, forks, and colliders.
-            2. Reevaluate the relationships involving {main_node} in the context of these structures.
-            """
+        #     **Your Task**:
+        #     1. Analyze the adjacency matrix and identify causal structures such as chains, forks, and colliders.
+        #     2. Reevaluate the relationships involving {main_node} in the context of these structures.
+        #     """
         if 'new_relationship_prompt' in prompt_type:
             prompt_pruning += f"""
             We are conducting a causal discovery analysis on the following variables: {data.columns.tolist()}.
@@ -940,28 +939,28 @@ def llm_evaluation_new_cycle(data, args, edges_dict, boot_edges_prob, bootstrap_
             {directed_exist_texts_mainnode} and {undirected_exist_texts_mainnode}
             """
             # Add adjacency matrix context
-        if 'adj_matrix' in prompt_type:
-            adj_matrix = edges_dict_to_adj_mat(edges_dict, data.columns)
-            prompt_pruning += f"""
-            This is the adjacency matrix representation of the current causal graph:
+        # if 'adj_matrix' in prompt_type:
+        #     adj_matrix = edges_dict_to_adj_mat(edges_dict, data.columns)
+        #     prompt_pruning += f"""
+        #     This is the adjacency matrix representation of the current causal graph:
 
-            **Adjacency Matrix**:
-            Variables: {data.columns.tolist()}
-            Matrix:
-            {adj_matrix.tolist()}
+        #     **Adjacency Matrix**:
+        #     Variables: {data.columns.tolist()}
+        #     Matrix:
+        #     {adj_matrix.tolist()}
 
-            **Definitions of Causal Structures**:
-            - **Chain Structure (A → B → C)**:
-            - Variable A causes B, and B causes C.
-            - **Fork Structure (A ← B → C)**:
-            - Variable B causes both A and C.
-            - **Collider Structure (A → B ← C)**:
-            - Variables A and C both cause B.
+        #     **Definitions of Causal Structures**:
+        #     - **Chain Structure (A → B → C)**:
+        #     - Variable A causes B, and B causes C.
+        #     - **Fork Structure (A ← B → C)**:
+        #     - Variable B causes both A and C.
+        #     - **Collider Structure (A → B ← C)**:
+        #     - Variables A and C both cause B.
 
-            **Your Task**:
-            1. Analyze the adjacency matrix and identify causal structures such as chains, forks, and colliders.
-            2. Reevaluate the relationships involving {main_node} in the context of these structures.
-            """
+        #     **Your Task**:
+        #     1. Analyze the adjacency matrix and identify causal structures such as chains, forks, and colliders.
+        #     2. Reevaluate the relationships involving {main_node} in the context of these structures.
+        #     """
         if 'new_relationship_prompt' in prompt_type:
             prompt_pruning += f"""
             We are conducting a causal discovery analysis on the following variables: {data.columns.tolist()}.

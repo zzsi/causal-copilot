@@ -65,7 +65,7 @@ DEMO_DATASETS = {
         "query": "YES. This is a Time-Series dataset, investigate causal factors affecting ozone levels. The data contains atmospheric and weather measurements over time."
     },
     "Linear_Gaussian": {
-        "name": "🟦 Simualted Data: Linear Gaussian",
+        "name": "🟦 Simulated Data: Linear Gaussian",
         "path": "dataset/Linear_Gaussian/Linear_Gaussian_data.csv",
         "query": "NO. The data follows linear relationships with Gaussian noise. Please discover the causal structure."
     },
@@ -1120,6 +1120,7 @@ def clear_chat():
     # Reset required info flags
     REQUIRED_INFO['data_uploaded'] = False
     REQUIRED_INFO['initial_query'] = False
+    REQUIRED_INFO['processing_discussion'] = False
 
     # Return initial welcome message
     return [(None, "👋 Hello! I'm your causal discovery assistant. Want to discover some causal relationships today? \n"

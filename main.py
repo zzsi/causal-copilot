@@ -1,5 +1,4 @@
 # Kun Zhou Implemented
-from data.simulation.simulation import SimulationManager
 from preprocess.dataset import knowledge_info
 from preprocess.stat_info_functions import stat_info_collection, convert_stat_info_to_text
 from algorithm.filter import Filter
@@ -143,7 +142,7 @@ def process_user_query(query, data):
     print("User query processed.")
     return data
 
-def main(args, prompt_type, voting_num):
+def main(args):
     global_state = global_state_initialization(args)
     global_state = load_data(global_state, args)
 
@@ -214,20 +213,13 @@ def main(args, prompt_type, voting_num):
         print(global_state.results.metrics)
     import time 
     start_time = time.time()
-    global_state = judge.forward(global_state, prompt_type, voting_num)
+    global_state = judge.forward(global_state, 'cot_markov_blanket', 1)
     end_time = time.time()
     duration = end_time-start_time
     # with open('postprocess/test_result/sachs_full/duration.txt', 'a') as file:
     #     # Write the text to the file
     #     file.write(f'prompt: {prompt}, voting_num: {voting_num}, duration: {duration} \n')
 
-    # ##############################
-    # if global_state.user_data.ground_truth is not None:
-    #     print("Revised Graph: ", global_state.results.revised_graph)
-    #     print("Mat Ground Truth: ", global_state.user_data.ground_truth)
-    #     global_state.results.revised_metrics = judge.evaluation(global_state)
-    #     print(global_state.results.revised_metrics)
-    # ################################
     #############Visualization for Revised Graph###################
     # Plot Revised Graph
     my_visual_revise = Visualization(global_state)
@@ -236,17 +228,7 @@ def main(args, prompt_type, voting_num):
     # Plot Bootstrap Heatmap
     boot_heatmap_path = my_visual_revise.boot_heatmap_plot()
 
-    # ##### Save infos of Post-Processing ######
-    # import numpy as np
-    # import shutil
-    # import os 
-    # save_path = f'postprocess/test_result/sachs_full/{prompt_type}/{voting_num}_voting/'
-    # if not os.path.exists(save_path):
-    #     os.makedirs(save_path)
-    # print("Original Graph: ", global_state.results.raw_result.G.graph)
-    # np.save(save_path+'origin_graph', global_state.results.raw_result.G.graph)
-    # print("Revised Graph: ", global_state.results.revised_graph)
-    # np.save(save_path+'revised_graph', global_state.results.revised_graph)
+
 
     # algorithm selection process
     '''
@@ -258,36 +240,33 @@ def main(args, prompt_type, voting_num):
         flag, algorithm_setup = judge(preprocessed_data, code, results, statistics_dict, algorithm_setup, knowledge_docs)
     '''
 
-    # #############Report Generation###################
-    # import os 
-    # try_num = 1
-    # my_report = Report_generation(global_state, args)
-    # report = my_report.generation()
-    # my_report.save_report(report)
-    # report_path = os.path.join(global_state.user_data.output_report_dir, 'report.pdf')
-    # while not os.path.isfile(report_path) and try_num<=3:
-    #     try_num = +1
-    #     print('Error occur during the Report Generation, try again')
-    #     report_gen = Report_generation(global_state, args)
-    #     report = report_gen.generation(debug=False)
-    #     report_gen.save_report(report)
-    #     if not os.path.isfile(report_path) and try_num==3:
-    #         print('Error occur during the Report Generation three times, we stop.')
-    # ################################
-    # destination_path = os.path.join(save_path, os.path.basename(report_path))
-    # shutil.copy(report_path, destination_path)
-    
-    #return report, global_state
+    #############Report Generation###################
+    import os 
+    try_num = 1
+    my_report = Report_generation(global_state, args)
+    report = my_report.generation()
+    my_report.save_report(report)
+    report_path = os.path.join(global_state.user_data.output_report_dir, 'report.tex')  #.pdf
+    while not os.path.isfile(report_path) and try_num<=3:
+        try_num = +1
+        print('Error occur during the Report Generation, try again')
+        report_gen = Report_generation(global_state, args)
+        report = report_gen.generation(debug=False)
+        report_gen.save_report(report)
+        if not os.path.isfile(report_path) and try_num==3:
+            print('Error occur during the Report Generation three times, we stop.')
+    ################################
+
+    # User discussion part
+    from user.discuss import Discussion
+    discussion = Discussion(args, report)
+    discussion.forward(global_state, report)
+
+    return report, global_state
+
 
 
 if __name__ == '__main__':
     args = parse_args()
-    prompt_folders = ['base', 'markov_blanket', 'all_relation', 
-                      #'cot_base', 'cot_markov_blanket', 'cot_all_relation'
-                      ]
-    voting_folders = [1, #3, 10, 20
-                      ]
-    for prompt in prompt_folders:
-        for voting_num in voting_folders:
-            main(args, prompt, voting_num)
+    main(args)
             

@@ -604,6 +604,7 @@ def stat_info_collection(global_state):
 
     # Update global state
     global_state.statistics.data_type = dataset_type["Data Type"]
+    global_state.statistics.data_type_column = each_type
 
     # Imputation
     if global_state.statistics.missingness:
