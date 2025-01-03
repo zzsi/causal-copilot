@@ -842,20 +842,20 @@ def process_message(message, chat_history, download_btn):
             chat_history.append(("📊 Generate causal graph visualization...", None))
             yield chat_history, download_btn
             my_visual_initial = Visualization(global_state)
-            pos = my_visual_initial.get_pos(global_state.results.raw_result)
+            pos = my_visual_initial.get_pos(global_state.results.converted_graph)
             global_state.results.row_pos = pos
             if global_state.user_data.ground_truth is not None:
                 my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.jpg', global_state.results.row_pos)
                 my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.pdf', global_state.results.row_pos)
                 chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/true_graph.jpg',)))
                 yield chat_history, download_btn
-            if global_state.results.raw_result is not None:
-                my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.jpg', global_state.results.row_pos)
-                my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf', global_state.results.row_pos)
+            if global_state.results.converted_graph is not None:
+                my_visual_initial.plot_pdag(global_state.results.converted_graph, 'initial_graph.jpg', global_state.results.row_pos)
+                my_visual_initial.plot_pdag(global_state.results.converted_graph, 'initial_graph.pdf', global_state.results.row_pos)
                 chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/initial_graph.jpg',)))
                 yield chat_history, download_btn
                 my_report = Report_generation(global_state, args)
-                global_state.results.raw_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.processed_data.columns, global_state.results.raw_result)
+                global_state.results.raw_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.processed_data.columns, global_state.results.converted_graph)
                 global_state.logging.graph_conversion['initial_graph_analysis'] = my_report.graph_effect_prompts()
                 analysis_clean = global_state.logging.graph_conversion['initial_graph_analysis'].replace('"',"").replace("\\n\\n", "\n\n").replace("\\n", "\n").replace("'", "")
                 print(analysis_clean)
@@ -882,7 +882,7 @@ def process_message(message, chat_history, download_btn):
             if indicator:
                 REQUIRED_INFO["current_stage"] = 'revise_graph'
             else: 
-                global_state.results.revised_graph = global_state.results.raw_result
+                global_state.results.revised_graph = global_state.results.converted_graph
                 if REQUIRED_INFO["interactive_mode"]:
                     REQUIRED_INFO['current_stage'] = 'user_postprocess'
                     chat_history.append((None, "If you are not satisfied with the causal graph, please tell us which edges you want to forbid or add, and we will revise the graph according to your instruction. \n"
