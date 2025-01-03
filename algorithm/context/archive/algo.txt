@@ -1,0 +1,230 @@
+## Input
+
+User’s input + Analysis about the data properties + Domain Knowledge
+
+- User’s input
+    - Requirement
+        - Output type (e.g. DAG or MEC)
+        - Time complexity v.s. Precision
+    - Data Types
+        - It is time-series/tabular,
+        - Many or a few hidden confounders
+        - Prior about the data
+            - distribution
+- Analysis about the data properties
+    - Scale (e.g. variable size, sample size…)
+    - Functional (e.g. linear, non-linear)
+    - Distribution (e.g. Gaussian, non-gaussian, discrete/continuous)
+    - Non-stationary/Heterogeneous
+- Domain Knowledge from LLM
+
+## Available Algorithms
+
+Current available algorithms implemented for usage:
+
+- PC
+- FCI
+- CDNOD
+- GES
+- NOTEARS
+- DirectLiNGAM
+- ICALiNGAM
+
+## Domain Knowledge about Algorithm Selection
+
+Based on the characteristics of your data and requirements, consider the following priority order for selecting causal discovery algorithms:
+
+1. If your data is nonstationary or heterogeneous across domains/time:
+   - Use CDNOD as the first choice
+   - Note that DO NOT use it if your data is not heterogeneous or nonstationary
+   
+2. If your data is linear or you prefer a score-based approach and assume no hidden confounders:
+   - Consider GES (Greedy Equivalence Search)
+   
+3. If the noise is non-Gaussian and you believe the relationships are linear:
+   - Try DirectLiNGAM first
+   - If computational resources allow, also consider ICALiNGAM
+   - Note that DO NOT use them if there are non-linear relations in your data.
+
+4. If you have a large dataset with all relevant variables observed:
+   - Start with PC algorithm
+   
+5. If your data is high-dimensional and you prefer a continuous optimization approach:
+   - Experiment with NOTEARS
+   
+6. If you suspect the presence of hidden confounders:
+   - Try FCI as the primary algorithm
+
+Additional considerations:
+
+- For large datasets where efficiency is crucial, prioritize PC or GES
+- If you need a fully directed graph rather than a Markov equivalence class, prefer LiNGAM variants or NOTEARS
+- When dealing with non-linear relationships, consider extensions of these algorithms designed for non-linear data
+
+Default algorithm ranking for general cases (when data doesn't favor any specific characteristics):
+
+1. PC: Good balance between generality and computational efficiency
+2. GES: Efficient for larger datasets and provides a good general approach
+3. FCI: More general than PC but computationally more intensive
+4. NOTEARS: Efficient for high-dimensional data but assumes linear relationships
+5. DirectLiNGAM: Efficient but assumes linear relationships and non-Gaussian noise
+6. ICALiNGAM: More computationally intensive than DirectLiNGAM
+7. CDNOD: Specialized for nonstationary/heterogeneous data, may be overkill for stationary data
+
+## Algorithms Description (Tabular)
+
+### PC
+
+- **Description**: The PC algorithm is a constraint-based method that learns the structure of a causal graph from data by testing conditional independencies between variables. It constructs a directed acyclic graph (DAG) representing the causal relationships.
+- **Assumptions**
+    - **Causal Sufficiency**: No hidden confounders exist, meaning all relevant variables are observed.
+    - **Faithfulness**: The observed statistical dependencies reflect the true causal structure, without any coincidental independencies.
+    - **Markov Condition**: Each variable is conditionally independent of its non-effects given its direct causes.
+    - **Non-cyclic**: The underlying causal structure is acyclic.
+- **Advantages**
+    - Efficient for large-scale datasets due to its ability to quickly prune unnecessary edges.
+- **Limitations**
+    - The pairwise independence test can only operate on a pair of single-dimensional observation variable.
+    - Output Markov Equivalent class rather than Directed Acyclic Graph
+    - Would be benefit if have large sample for statistical independence tests
+- **Suitable Cases**:
+    - Large datasets where computational efficiency is crucial.
+    - Scenarios where all relevant variables are observed and the underlying causal structure is assumed to be acyclic.
+
+### FCI
+
+- **Description**: FCI is an extension of the PC algorithm designed to handle the presence of hidden confounders. It outputs a Partial Ancestral Graph (PAG) representing causal relationships with hidden variables.
+- **Assumptions**
+    - **Faithfulness**: The observed dependencies reflect the underlying causal graph.
+    - **Markov Condition**: Each variable is independent of its non-effects given its direct causes.
+- **Advantages**
+    - Accommodate  the existence of hidden confounders
+- **Limitations**:
+    - Similar to PC’s limitations
+    - Computationally more intensive than the PC algorithm.
+    - Like PC, it identifies a PAG, which is less informative than a full DAG.
+
+### CDNOD
+
+- **Description**:
+CDNOD (Causal Discovery from Nonstationary/heterogeneous Data) is a framework designed to discover causal relationships in data where the underlying generating process changes across different domains or over time. This method extends traditional conditional independence based causal discovery approaches to handle nonstationary and heterogeneous data, which is common in many real-world applications.
+
+**Assumptions**:
+
+- **Nonstationarity**: The data distribution is allowed to change over time or across different domains. CDNOD assumes that these changes can be captured by a known index (domain or time).
+- **Faithfulness**: The observed dependencies in the data faithfully represent the underlying causal structure.
+- **Markov Condition**: Each variable is independent of its non-effects given its direct causes.
+
+**Advantages**:
+
+- **Adaptability to Nonstationary Data**: Unlike traditional methods that assume a static data distribution, CDNOD is tailored for scenarios where the causal structure may change over time or across domains.
+- **Identification of Mechanism Changes**: CDNOD can not only identify the causal skeleton but also estimate the properties of the changes in the causal mechanisms, providing more information about directions.
+
+**Limitations**:
+
+- **Dependence on Domain/Time Index**: The method requires accurate and available domain or time indices to effectively model the changes in distribution. It can not handle streaming data.
+- **Computational Complexity**: Handling nonstationary data adds computational overhead, particularly in large datasets with complex causal relationships.
+- **Similar to PC**: While CDNOD extends PC, it still inherits some limitations, such as the dependency on large sample sizes for reliable conditional independence testing and the output being a Markov equivalence class rather than a fully directed acyclic graph.
+
+**Suitable Cases**:
+
+- **Nonstationary Environments**: CDNOD is particularly suitable for applications where data distributions change over time or across different environments, such as in financial markets, climate studies, or biomedical research.
+- **Heterogeneous Data**: When the data is collected from different domains or under different conditions, CDNOD can effectively identify causal relationships that adapt to these variations.
+
+### GES
+
+- **Description**: Greedy Equivalence Search (GES) is a score-based causal discovery algorithm that identifies the optimal causal structure by navigating the space of equivalence classes of Directed Acyclic Graphs (DAGs). The algorithm operates in two phases—forward and backward—using a score function like the Bayesian Information Criterion (BIC) or a generalized score to evaluate and optimize the graph structure.
+- **Assumptions**:
+    - **Causal Sufficiency**: Assumes that all relevant variables are observed, and there are no hidden confounders.
+    - **Faithfulness**: The observed statistical dependencies correspond to the true causal relationships.
+    - **Markov Condition**: Every variable is conditionally independent of its non-effects given its direct causes.
+    - **No Cycles**: The causal structure is assumed to be acyclic.
+- **Advantages**:
+    - **Efficiency in Complex Search Spaces**: GES is designed to efficiently navigate large and complex search spaces by leveraging the equivalence class representation, which reduces the number of structures that need to be evaluated.
+    - **Versatility**: With the option to use BIC or generalized scores, GES can be applied to various types of data, including those with non-Gaussian distributions or high-dimensional variables.
+    - **Global Optimization**: The properties of score functions ensure that  GES optimizes a global criterion by doing through a series of local steps.
+- **Limitations**:
+    - **Parametric Assumptions**: The BIC score relies on the assumption of Gaussianity and linearity, which may not always be appropriate, potentially leading to biased results.
+    - **Computational Demands**: While GES is efficient, the generalized scoring functions, particularly those involving cross-validation, can be computationally intensive, especially for large datasets.
+    - **Output**: The output is a Markov equivalence class, meaning that the algorithm identifies a set of DAGs rather than a single, definitive DAG.
+- **Suitable Cases**:
+    - **Large-Scale Data with Gaussian or Linear Assumptions**: GES with BIC is particularly suitable for datasets that fit Gaussian assumptions, providing an efficient and robust method for causal discovery.
+    - **Complex, Non-Gaussian Data**: When working with non-Gaussian data or datasets with complex structures, the generalized score function offers a flexible alternative, albeit at a higher computational cost.
+    - **Applications Requiring Global Optimization**: GES is ideal for scenarios where global optimization across the entire causal structure is crucial, such as in high-dimensional or large-scale causal discovery tasks.
+
+### NOTEARS
+
+- **Description**: NOTEARS transforms the combinatorial problem of learning Directed Acyclic Graphs (DAGs) into a continuous optimization problem. Traditional approaches like GES conduct discrete search over graph structures, which are computationally intractable for large datasets.
+- **Assumptions**:
+    - **Acyclicity**: The underlying causal structure is assumed to be a Directed Acyclic Graph (DAG).
+    - **Linearity and Additivity (for Linear NOTEARS)**: In its basic form, NOTEARS assumes that the causal relationships between variables are linear and additive.
+    - **Gaussian Noise**: It is often assumed that the noise terms in the causal model are Gaussian.
+    - **No Hidden Confounders**: NOTEARS assumes that all relevant variables are observed, meaning that there are no unmeasured confounders influencing the relationships between the observed variables.
+- **Advantages**:
+    - **Scalability**: NOTEARS can efficiently scale to large datasets because it leverages continuous optimization methods rather than discrete combinatorial searches.
+    - **Flexibility**: The method is flexible and can be extended to various types of data, including linear and nonlinear relationships, by adjusting the form of the loss function.
+- **Limitations**:
+    - **Sensitivity to Model Assumptions**: Although flexible, the performance of NOTEARS depends on the choice of the model and the loss function, which need to be carefully selected based on the data characteristics.
+    - **Computational Complexity**: While NOTEARS is more scalable than traditional combinatorial methods, it can still be computationally demanding. Especially when the number of variables are large (> 1000), optimization would be time-consuming.
+- **Suitable Cases**:
+    - **High-dimensional Data**: NOTEARS is particularly suitable for applications involving high-dimensional data where traditional combinatorial methods struggle.
+    - **Nonlinear Causal Relationships**: The method is adaptable to scenarios where the causal relationships are nonlinear, making it versatile across different domains.
+
+### LiNGAM
+
+**Description:** LiNGAM (Linear Non-Gaussian Acyclic Model) is a causal discovery method designed to identify causal structures in data where the relationships between variables are linear, and the noise terms are non-Gaussian
+
+- **Assumptions**
+    - **Linearity**: The relationships between variables are assumed to be linear.
+    - **Non-Gaussianity**: The noise terms are non-Gaussian, which is critical for the identifiability of the model.
+    - **Acyclicity**: The causal graph is a Directed Acyclic Graph (DAG), meaning there are no feedback loops or cycles in the relationships.
+- **Advantages**:
+    - **Unique Identification**: LiNGAM can uniquely identify the causal structure, rather than just an equivalence class, thanks to the non-Gaussianity assumption.
+    - **No Time-Ordering Required**: The method does not require a pre-specified time order of variables, making it flexible in various applications.
+- **Limitations**:
+    - **Sensitivity to Assumptions**: The method's success relies heavily on the linearity and non-Gaussianity independent noise assumptions, which may not hold in all real-world datasets.
+    - **Computational Complexity**: The ICA step, especially in high-dimensional data, can be computationally demanding.
+- **Variants**
+    - **Direct-LiNGAM**
+        - **Description**: DirectLiNGAM improves introduces an efficient, stepwise linear regression approach to directly estimate the causal order, making it faster and more scalable. It sacrifices the inference speed for better precision compared to ICA-LiNGAM.
+    - **ICA-LiNGAM**
+        - **Description**: This variant uses linear ICA to estimate the causal order by decomposing the observed data into independent components, which are then used to construct the causal model.
+    - **RCD (Repetitive Causal Discovery)**
+        - **Description**: RCD is designed to address scenarios with latent confounders by repetitively applying LiNGAM to subsets of data. This iterative approach helps identify and correct for the presence of unobserved variables, leading to a more accurate causal model.
+        - **Advantages**:
+            - **Handles Latent Confounders**: Specifically designed to detect and account for latent variables that could confound causal inference.
+            - **Robustness through Repetition**: The repetitive application helps validate the consistency of the causal structure across different subsets.
+        - **Limitations**:
+            - **Increased Computational Load**: The repetitive nature of the method increases computational demands.
+    - **CAM-UV (Causal Additive Models with Unobserved Variables)**
+        
+        **Description**: CAM-UV extends the LiNGAM framework to handle additive models with unobserved variables. It allows for non-linear relationships between variables and can accommodate the presence of unobserved confounders, making it more flexible and applicable to complex datasets.
+        
+        **Advantages**:
+        
+        - **Nonlinear Relationship Modeling**: Unlike other LiNGAM variants, CAM-UV can model non-linear causal relationships, expanding its applicability.
+        - **Handling of Unobserved Variables**: Can account for unobserved confounders, making it more robust in real-world scenarios where not all variables are measured.
+        
+        **Limitations**:
+        
+        - **Computational Intensity**: The inclusion of non-linear models and unobserved variables comes at the cost of higher computational requirements.
+    - **Post-Nonlinear (PNL) Model**
+        - **Description**: The model assumes that the observed effect is generated by a nonlinear transformation of the cause plus a non-Gaussian noise term, which is then further transformed by a post-nonlinear function.
+        - **Advantages**:
+            - **Handling of Nonlinear Relationships**: The PNL model can uncover causal directions even when the relationship between variables is highly nonlinear.
+        - **Limitations**:
+            - **Computational Complexity**: The introduction of nonlinear functions increases the computational demands, particularly in high-dimensional datasets.
+            - **Complexity in Application**: Applying the PNL model requires careful consideration of the nonlinear functions and noise characteristics, making it more challenging to use than simpler models.
+    - **Additive Noise Model (ANM)**
+        
+        **Description**: ANM assumes that the effect is a general non-linear function of the cause plus additive noise that is independent of the cause.
+        
+        **Advantages**:
+        
+        - **Flexibility**: ANM can handle a wide range of causal relationships, including nonlinear ones, making it applicable to diverse datasets.
+        
+        **Limitations**:
+        
+        - **Dependency on Additivity Assumption**: If the relationship is not well-approximated by an additive model, the method's effectiveness diminishes.
+        - **Computational Complexity**: Similar to PNL, ANM can be computationally demanding.
+- **Suitable Cases:**   Econometrics, neuroscience, and other fields where data often have non-Gaussian noise, such as financial time series.
