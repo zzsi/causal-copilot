@@ -234,7 +234,6 @@ def time_series_lag_est(df: pd.DataFrame, nlags = 50):
 # print(lags)
 
 ########################################################################################################################
-
 def data_preprocess (clean_df: pd.DataFrame, ts: bool = False):
     '''
     :param df: Dataset in Panda DataFrame format.
@@ -249,14 +248,21 @@ def data_preprocess (clean_df: pd.DataFrame, ts: bool = False):
 
     for column in clean_df.columns:
 
-        dtype = clean_df[column].dtype
+        col_data = clean_df[column]
 
-        if pd.api.types.is_numeric_dtype(dtype) and dtype != 'bool':
-            column_type[column] = 'Continuous'
+        # Exclude NaN values for type determination
+        non_nan_data = col_data.dropna()
+
+        if pd.api.types.is_numeric_dtype(non_nan_data):
+            is_effective_integer = np.all(np.floor(non_nan_data) == non_nan_data)
+            # Check if numeric
+            if is_effective_integer and non_nan_data.nunique() < 6:
+                column_type[column] = "Category"
+            else:
+                column_type[column] = "Continuous"
         else:
-            column_type[column] = 'Category'
-        # elif isinstance(dtype, pd.CategoricalDtype) or pd.api.types.is_object_dtype(dtype) or dtype == 'bool' or dtype == 'int64':
-        #     column_type[column] = 'Category'
+            # Non-numeric data types
+            column_type[column] = "Category"
 
     all_type = list(column_type.values())
     unique_type = list(set(all_type))
@@ -282,8 +288,8 @@ def data_preprocess (clean_df: pd.DataFrame, ts: bool = False):
 
     return column_type, overall_type
 
-# clean_data, miss_res, each_type, dataset_type = data_preprocess(df = df, ratio = 0.5, ts = False)
-# print(clean_data)
+column_type, overall_type = data_preprocess(clean_df = df, ts = False)
+print(column_type)
 
 def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
     '''

@@ -51,12 +51,12 @@ class Judge(object):
                  revised causal graph based on errors.
         '''
 
-        from postprocess.judge_functions import bootstrap, llm_evaluation, bootstrap_recommend, llm_evaluation_new, kci_pruning, check_cycle
+        from postprocess.judge_functions import bootstrap, bootstrap_recommend, llm_evaluation_new, kci_pruning, check_cycle
 
         # Statistics Perspective: Bootstrapping to get probability of edges using the selected algorithm.
         edge_recom, boot_probability = bootstrap(data=data, full_graph=full_graph, algorithm=algorithm, hyperparameters=hyperparameters,
                                                   boot_num=boot_num, ts=False, parallel=self.args.parallel)
-        print("Edge Recommendations from Bootstrap method: ", edge_recom)
+        #print("Edge Recommendations from Bootstrap method: ", edge_recom)
         #print("Bootstrap Probability: ", boot_probability)
 
         from causallearn.utils.PCUtils.BackgroundKnowledge import BackgroundKnowledge
@@ -70,7 +70,7 @@ class Judge(object):
         if bootstrap_check_dict['high_prob_edges']['non-exist'] != []:
             for idx_i, idx_j in bootstrap_check_dict['high_prob_edges']['non-exist']:
                   revised_graph[idx_i, idx_j] = 1
-                  revised_graph[idx_j, idx_i] = -1
+                  revised_graph[idx_j, idx_i] = 0
                   node_pattern1 = data.columns[idx_j]
                   node_pattern2 = data.columns[idx_i]
                   bk.add_required_by_pattern(node_pattern1, node_pattern2)
@@ -130,9 +130,9 @@ class Judge(object):
         ####construct prior knowledge and revise graph according to LLM#########
         for direct_pair in direct_dict:
             j, i = direct_pair[0], direct_pair[1]
-            if (revised_graph[i, j]!=1 or revised_graph[j, i]!=-1) and (i, j) not in fixed_pairs:
+            if (revised_graph[i, j]!=1 or revised_graph[j, i]!=0) and (i, j) not in fixed_pairs:
                 revised_graph[i, j] = 1
-                revised_graph[j, i] = -1
+                revised_graph[j, i] = 0
                 node_pattern1 = data.columns[j]
                 node_pattern2 = data.columns[i]
                 bk.add_required_by_pattern(node_pattern1, node_pattern2)
@@ -160,19 +160,20 @@ class Judge(object):
 
     def forward(self, global_state, prompt_type, voting_num):
         
-        if self.global_state.algorithm.selected_algorithm in ['DirectLiNGAM', 'ICALiNGAM', 'NOTEARS']:
-            adj_matrix = global_state.results.converted_graph
-        else:
-            if self.global_state.algorithm.selected_algorithm == 'FCI':
-                g = global_state.results.raw_result[0]
-            elif self.global_state.algorithm.selected_algorithm == 'GES':
-                g = global_state.results.raw_result['G']
-            else:
-                g = global_state.results.raw_result
-            try:
-                adj_matrix = g.graph
-            except:
-                adj_matrix = g.G.graph
+        # if self.global_state.algorithm.selected_algorithm in ['DirectLiNGAM', 'ICALiNGAM', 'NOTEARS']:
+        #     adj_matrix = global_state.results.converted_graph
+        # else:
+        #     if self.global_state.algorithm.selected_algorithm == 'FCI':
+        #         g = global_state.results.raw_result[0]
+        #     elif self.global_state.algorithm.selected_algorithm == 'GES':
+        #         g = global_state.results.raw_result['G']
+        #     else:
+        #         g = global_state.results.raw_result
+        #     try:
+        #         adj_matrix = g.graph
+        #     except:
+        #         adj_matrix = g.G.graph
+        adj_matrix = global_state.results.converted_graph
 
         
         (conversation,
@@ -206,7 +207,7 @@ class Judge(object):
             idx_j = variables.get_loc(add_pair[0])
             idx_i = variables.get_loc(add_pair[1])
             revised_graph[idx_i, idx_j] = 1
-            revised_graph[idx_j, idx_i] = -1
+            revised_graph[idx_j, idx_i] = 0
         # Forbid
         for forbid_pair in user_revise_dict['forbid_edges']:
             bk.add_forbidden_by_pattern(forbid_pair[0], forbid_pair[1])

@@ -48,16 +48,16 @@ def bootstrap_iteration(data, ts, algorithm, hyperparameters):
     # Execute the algorithm with data and hyperparameters
     converted_graph, info, raw_result = algo_func(hyperparameters).fit(boot_sample)
 
-    if algorithm == 'PC':
-        boot_graph = raw_result.G.graph
-    elif algorithm == 'FCI':
-        boot_graph = raw_result[0].graph
-    elif algorithm == "GES":
-        boot_graph = raw_result['G'].graph
-    elif algorithm == 'CDNOD':
-        boot_graph = raw_result.G.graph
-    else:
-        boot_graph = converted_graph
+    # if algorithm == 'PC':
+    #     boot_graph = raw_result.G.graph
+    # elif algorithm == 'FCI':
+    #     boot_graph = raw_result[0].graph
+    # elif algorithm == "GES":
+    #     boot_graph = raw_result['G'].graph
+    # elif algorithm == 'CDNOD':
+    #     boot_graph = raw_result.G.graph
+    # else:
+    boot_graph = converted_graph
 
     return boot_graph
 
@@ -68,7 +68,8 @@ def bootstrap_probability(boot_result, algorithm):
     certain_edges_prob = np.zeros((m,m))  # -> and use converted graph
     uncertain_edges_prob = np.zeros((m,m))  # -
     bi_edges_prob = np.zeros((m,m))  # <->
-    half_edges_prob = np.zeros((m,m))  # o->
+    half_certain_edges_prob = np.zeros((m,m))  # o->
+    half_uncertain_edges_prob = np.zeros((m,m))  # o-
     none_edges_prob = np.zeros((m,m))  # o-o
     none_exist_prob = np.zeros((m,m)) # did not exist edge
 
@@ -79,28 +80,43 @@ def bootstrap_probability(boot_result, algorithm):
                 elements_ij = boot_result[:, i, j]
                 elements_ji = boot_result[:, j, i]
 
-                if algorithm in ['PC','GES','CDNOD','FCI']:
-                    # j -> i
-                    certain_edges_prob[i, j] = np.mean((elements_ij == 1) & (elements_ji == -1))
-                    # i - j
-                    uncertain_edges_prob[i, j] = np.mean((elements_ij == -1) & (elements_ji == -1))
-                    # i <-> j
-                    bi_edges_prob[i, j] = np.mean((elements_ij == 1) & (elements_ji == 1))
-                else:
-                    # j -> i
-                    certain_edges_prob[i, j] = np.mean(elements_ij == 1)
+                # i x j
+                none_exist_prob[i, j] = np.mean((elements_ij == 0) & (elements_ji == 0))
+                # j -> i
+                certain_edges_prob[i, j] = np.mean((elements_ij == 1) & (elements_ji == 0))
+                # i - j
+                uncertain_edges_prob[i, j] = np.mean((elements_ij == 2) | (elements_ji == 2))
+                # i <-> j
+                bi_edges_prob[i, j] = np.mean((elements_ij == 3) | (elements_ji == 3))
+                # j o-> i
+                half_certain_edges_prob[i, j] = np.mean((elements_ij == 4) & (elements_ji == 0))
+                # j o- i
+                half_uncertain_edges_prob[i, j] = np.mean((elements_ij == 5) & (elements_ji == 0))
+                # i o-o j
+                none_edges_prob[i, j] = np.mean((elements_ij == 6) | (elements_ji == 6))
 
-                # no existence of edge
-                none_exist_prob[i, j] = np.mean(elements_ij == 0)
+                # if algorithm in ['PC','GES','CDNOD','FCI']:
+                #     # j -> i
+                #     certain_edges_prob[i, j] = np.mean((elements_ij == 1) & (elements_ji == -1))
+                #     # i - j
+                #     uncertain_edges_prob[i, j] = np.mean((elements_ij == -1) & (elements_ji == -1))
+                #     # i <-> j
+                #     bi_edges_prob[i, j] = np.mean((elements_ij == 1) & (elements_ji == 1))
+                # else:
+                #     # j -> i
+                #     certain_edges_prob[i, j] = np.mean(elements_ij == 1)
 
-                if algorithm == 'FCI':
-                    # j o-> i
-                    half_edges_prob[i, j] = np.mean((elements_ij == 1) & (elements_ji == 2))
-                    # i o-o j
-                    none_edges_prob[i, j] = np.mean((elements_ij == 2) & (elements_ji == 2))
+                # # no existence of edge
+                # none_exist_prob[i, j] = np.mean(elements_ij == 0)
+
+                # if algorithm == 'FCI':
+                #     # j o-> i
+                #     half_edges_prob[i, j] = np.mean((elements_ij == 1) & (elements_ji == 2))
+                #     # i o-o j
+                #     none_edges_prob[i, j] = np.mean((elements_ij == 2) & (elements_ji == 2))
 
 
-    edges_prob = np.stack((certain_edges_prob, uncertain_edges_prob, bi_edges_prob, half_edges_prob, none_edges_prob, none_exist_prob), axis=0)
+    edges_prob = np.stack((certain_edges_prob, uncertain_edges_prob, bi_edges_prob, half_certain_edges_prob, half_uncertain_edges_prob, none_edges_prob, none_exist_prob), axis=0)
 
     return edges_prob
 
@@ -170,16 +186,19 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, parall
 
     boot_effect_save_array = np.array(boot_effect_save)
 
+
     # Each layer of edges_prob represents:
-    # 0. certain_edges_prob: ->
-    # 1. uncertain_edges_prob: -
-    # 2. bi_edges_prob: <->
-    # 3. half_edges_prob: o->
-    # 4. none_edges_prob: o-o
-    # 5. none_exist_prob: x
+    # 0. none_exist_prob: x
+    # 1. certain_edges_prob: ->
+    # 2. uncertain_edges_prob: -
+    # 3. bi_edges_prob: <->
+    # 4. half_certain_edges_prob: o->
+    # 5. half_uncertain_edges_prob: o-
+    # 6. none_edges_prob: o-o
+
     edges_prob = bootstrap_probability(boot_effect_save_array, algorithm)
 
-    recommend = ['->', '-', '<->', 'o->', 'o-o', 'Forbid']
+    recommend = ['->', '-', '<->', 'o->', 'o-', 'o-o','Forbid']
 
     boot_recommend = {}
 
@@ -192,75 +211,111 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, parall
                 element_ji = raw_graph[j, i]
                 prob_ij = edges_prob[:, i, j]
 
-                if algorithm in ['PC','GES','CDNOD','FCI']:
-                    certain_edge_raw = (element_ij == 1 and element_ji == -1)
-                    uncertain_edge_raw = (element_ij == -1 and element_ji == -1)
-                    bi_edge_raw = (element_ij == 1 and element_ji == 1)
-                    non_exist_raw = (element_ij == 0 or element_ji == 0)
+                non_exist_raw = (element_ij == 0 and element_ji == 0)
+                certain_edge_raw = (element_ij == 1 and element_ji == 0)
+                uncertain_edge_raw = (element_ij == 2 or element_ji == 2)
+                bi_edge_raw = (element_ij == 3 or element_ji == 3)
+                half_certain_edges_raw = (element_ij == 4 and element_ji == 0)
+                half_uncertain_edges_raw = (element_ij == 5 and element_ji == 0)
+                none_edge_raw = (element_ij == 6 or element_ji == 6)
 
-                    cond0 = certain_edge_raw and (edges_prob[0, i, j] < 0.05)  # j -> i
-                    cond1 = uncertain_edge_raw and (edges_prob[1, i, j] < 0.05)  # j - i
-                    cond2 = bi_edge_raw and (edges_prob[2, i, j] < 0.05)  # j <-> i
-                    cond5 = non_exist_raw and (edges_prob[5, i, j] < 0.05)  # j x i
-
-                    if algorithm == 'FCI':
-                        half_edge_raw = (element_ij == 1 and element_ji == 2)
-                        none_edge_raw = (element_ij == 2 and element_ji == 1)
-
-                        cond3 = half_edge_raw and (edges_prob[3, i, j] < 0.05)  # j o-> i
-                        cond4 = none_edge_raw and (edges_prob[4, i, j] < 0.05)  # j o-o i
-                else:
-                    certain_edge_raw = (element_ij == 1)
-                    non_exist_raw = (element_ij == 0)
-
-                    cond0 = certain_edge_raw and (edges_prob[0, i, j] < 0.05)  # j -> i
-                    cond5 = non_exist_raw and (edges_prob[5, i, j] < 0.05)  # j x i
+                cond0 = certain_edge_raw and (edges_prob[0, i, j] < 0.05)  # j -> i
+                cond1 = uncertain_edge_raw and (edges_prob[1, i, j] < 0.05)  # j - i
+                cond2 = bi_edge_raw and (edges_prob[2, i, j] < 0.05)  # j <-> i
+                cond3 = half_certain_edges_raw and (edges_prob[3, i, j] < 0.05)  # j o-> i
+                cond4 = half_uncertain_edges_raw and (edges_prob[4, i, j] < 0.05)  # j o- i
+                cond5 = none_edge_raw and (edges_prob[5, i, j] < 0.05)  # j o-o i
+                cond6 = non_exist_raw and (edges_prob[6, i, j] < 0.05)  # j x i
 
                 # Bootstrap probability is less than 0.05
-                if algorithm in ['PC', 'GES', 'CDNOD']:
-                    if cond0 or cond1 or cond2 or cond5:
-                        boot_recommend[str(j) + '-' + str(i)] = recommend[np.argmax(prob_ij)] + '(' + str(np.max(prob_ij)) + ')'
-                elif algorithm == 'FCI':
-                    if cond0 or cond1 or cond2 or cond3 or cond4 or cond5:
-                        boot_recommend[str(j) + '-' + str(i)] = recommend[np.argmax(prob_ij)] + '(' + str(np.max(prob_ij)) + ')'
-                else:
-                    if cond0 or cond5:
-                        boot_recommend[str(j) + '-' + str(i)] = recommend[np.argmax(prob_ij)] + '(' + str(np.max(prob_ij)) + ')'
+                if cond0 or cond1 or cond2 or cond3 or cond4 or cond5 or cond6:
+                    boot_recommend[str(j) + '-' + str(i)] = recommend[np.argmax(prob_ij)] + '(' + str(
+                        np.max(prob_ij)) + ')'
 
                 # Bootstrap probability is greater than 0.95
                 if (not certain_edge_raw) and (edges_prob[0, i, j] > 0.95):
                     boot_recommend[str(j) + '-' + str(i)] = '->' + '(' + str(edges_prob[0, i, j]) + ')'
-                elif (not non_exist_raw) and (edges_prob[5, i, j] > 0.95):
-                    boot_recommend[str(j) + '-' + str(i)] = 'Forbid' + '(' + str(edges_prob[5, i, j]) + ')'
-
-                if algorithm in ['PC', 'GES', 'CDNOD','FCI']:
-                    if (not uncertain_edge_raw) and (edges_prob[1, i, j] > 0.95):
+                elif (not uncertain_edge_raw) and (edges_prob[1, i, j] > 0.95):
                         boot_recommend[str(j) + '-' + str(i)] = '-' + '(' + str(edges_prob[1, i, j]) + ')'
-                    elif (not bi_edge_raw) and (edges_prob[2, i, j] > 0.95):
-                        boot_recommend[str(j) + '-' + str(i)] = '<->' + '(' + str(edges_prob[2, i, j]) + ')'
+                elif (not bi_edge_raw) and (edges_prob[2, i, j] > 0.95):
+                    boot_recommend[str(j) + '-' + str(i)] = '<->' + '(' + str(edges_prob[2, i, j]) + ')'
+                elif (not half_certain_edges_raw) and (edges_prob[3, i, j] > 0.95):
+                    boot_recommend[str(j) + '-' + str(i)] = 'o->' + '(' + str(edges_prob[3, i, j]) + ')'
+                elif (not half_uncertain_edges_raw) and (edges_prob[4, i, j] > 0.95):
+                    boot_recommend[str(j) + '-' + str(i)] = 'o-' + '(' + str(edges_prob[4, i, j]) + ')'
+                elif (not none_edge_raw) and (edges_prob[5, i, j] > 0.95):
+                    boot_recommend[str(j) + '-' + str(i)] = 'o-o' + '(' + str(edges_prob[5, i, j]) + ')'
+                elif (not non_exist_raw) and (edges_prob[6, i, j] > 0.95):
+                    boot_recommend[str(j) + '-' + str(i)] = 'Forbid' + '(' + str(edges_prob[6, i, j]) + ')'
 
-                    if algorithm == 'FCI':
-                        if (not half_edge_raw) and (edges_prob[3, i, j] > 0.95):
-                            boot_recommend[str(j) + '-' + str(i)] = 'o->' + '(' + str(edges_prob[3, i, j]) + ')'
-                        elif (not none_edge_raw) and (edges_prob[4, i, j] > 0.95):
-                            boot_recommend[str(j) + '-' + str(i)] = 'o-o' + '(' + str(edges_prob[4, i, j]) + ')'
+                # if algorithm in ['PC','GES','CDNOD','FCI']:
+                #     certain_edge_raw = (element_ij == 1 and element_ji == 0)
+                #     uncertain_edge_raw = (element_ij == 2 or element_ji == 2)
+                #     bi_edge_raw = (element_ij == 3 or element_ji == 3)
+                #     non_exist_raw = (element_ij == 0 and element_ji == 0)
+                #
+                #     cond0 = certain_edge_raw and (edges_prob[0, i, j] < 0.05)  # j -> i
+                #     cond1 = uncertain_edge_raw and (edges_prob[1, i, j] < 0.05)  # j - i
+                #     cond2 = bi_edge_raw and (edges_prob[2, i, j] < 0.05)  # j <-> i
+                #     cond5 = non_exist_raw and (edges_prob[5, i, j] < 0.05)  # j x i
+                #
+                #     if algorithm == 'FCI':
+                #         half_edge_raw = (element_ij == 1 and element_ji == 2)
+                #         none_edge_raw = (element_ij == 2 and element_ji == 1)
+                #
+                #         cond3 = half_edge_raw and (edges_prob[3, i, j] < 0.05)  # j o-> i
+                #         cond4 = none_edge_raw and (edges_prob[4, i, j] < 0.05)  # j o-o i
+                #         cond6 = none_edge_raw and (edges_prob[6, i, j] < 0.05)  # j x i
+                # else:
+                #     certain_edge_raw = (element_ij == 1)
+                #     non_exist_raw = (element_ij == 0)
+                #
+                #     cond0 = certain_edge_raw and (edges_prob[0, i, j] < 0.05)  # j -> i
+                #     cond5 = non_exist_raw and (edges_prob[5, i, j] < 0.05)  # j x i
+
+
+                # # Bootstrap probability is less than 0.05
+                # if algorithm in ['PC', 'GES', 'CDNOD']:
+                #     if cond0 or cond1 or cond2 or cond5:
+                #         boot_recommend[str(j) + '-' + str(i)] = recommend[np.argmax(prob_ij)] + '(' + str(np.max(prob_ij)) + ')'
+                # elif algorithm == 'FCI':
+                #     if cond0 or cond1 or cond2 or cond3 or cond4 or cond5 or cond6:
+                #         boot_recommend[str(j) + '-' + str(i)] = recommend[np.argmax(prob_ij)] + '(' + str(np.max(prob_ij)) + ')'
+                # else:
+                #     if cond0 or cond5:
+                #         boot_recommend[str(j) + '-' + str(i)] = recommend[np.argmax(prob_ij)] + '(' + str(np.max(prob_ij)) + ')'
+                #
+                # # Bootstrap probability is greater than 0.95
+                # if (not certain_edge_raw) and (edges_prob[0, i, j] > 0.95):
+                #     boot_recommend[str(j) + '-' + str(i)] = '->' + '(' + str(edges_prob[0, i, j]) + ')'
+                # elif (not non_exist_raw) and (edges_prob[5, i, j] > 0.95):
+                #     boot_recommend[str(j) + '-' + str(i)] = 'Forbid' + '(' + str(edges_prob[5, i, j]) + ')'
+                #
+                # if algorithm in ['PC', 'GES', 'CDNOD','FCI']:
+                #     if (not uncertain_edge_raw) and (edges_prob[1, i, j] > 0.95):
+                #         boot_recommend[str(j) + '-' + str(i)] = '-' + '(' + str(edges_prob[1, i, j]) + ')'
+                #     elif (not bi_edge_raw) and (edges_prob[2, i, j] > 0.95):
+                #         boot_recommend[str(j) + '-' + str(i)] = '<->' + '(' + str(edges_prob[2, i, j]) + ')'
+                #
+                #     if algorithm == 'FCI':
+                #         if (not half_edge_raw) and (edges_prob[3, i, j] > 0.95):
+                #             boot_recommend[str(j) + '-' + str(i)] = 'o->' + '(' + str(edges_prob[3, i, j]) + ')'
+                #         elif (not none_edge_raw) and (edges_prob[4, i, j] > 0.95):
+                #             boot_recommend[str(j) + '-' + str(i)] = 'o-o' + '(' + str(edges_prob[4, i, j]) + ')'
 
     # Convert edges_prob to a dict
     boot_edges_prob = {'certain_edges': edges_prob[0,:,:],
-                       'uncertain_edges': None,
-                       'bi_edges': None,
-                       'half_edges': None,
-                       'non_edges': None,
-                       'non_existence':edges_prob[5, :, :]}
+                       'uncertain_edges': edges_prob[1,:,:],
+                       'bi_edges': edges_prob[2,:,:],
+                       'half_edges': edges_prob[3,:,:], # o->
+                       'half_uncertain_edges': edges_prob[4,:,:], # o-
+                       'non_edges': edges_prob[5,:,:],
+                       'non_existence':edges_prob[6, :, :]}
 
-    if algorithm in ['PC','GES','CDNOD','FCI']:
-        boot_edges_prob['uncertain_edges'] = edges_prob[1,:,:]
-        boot_edges_prob['bi_edges'] = edges_prob[2,:,:]
-        if algorithm == 'FCI':
-            boot_edges_prob['half_edges'] = edges_prob[3,:,:]
-            boot_edges_prob['non_edges'] = edges_prob[4,:,:]
 
     return boot_recommend, boot_edges_prob
+
+
 
 def bootstrap_recommend(raw_graph, boot_edges_prob):
     direct_prob_mat =  boot_edges_prob['certain_edges']
@@ -1159,21 +1214,24 @@ def edges_to_relationship(data, edges_dict, boot_edges_prob=None):
             'certain_edges': 'causes',
             'uncertain_edges': 'has undirected relationship with',
             'bi_edges': 'has hidden confounder with',
-            'half_edges': 'is not a descendant of',
+            'half_certain_edges': 'is not a descendant of',
+            'half_uncertain_edges': 'is not a descendant of',
             'none_edges': 'has no D-seperation set with'
         }
     result_dict = {
             'certain_edges': [],
             'uncertain_edges': [],
             'bi_edges': [],
-            'half_edges': [],
+            'half_certain_edges': [],
+            'half_uncertain_edges': [],
             'none_edges': []
         }
     summary_dict = {
             'certain_edges': 'These variable pairs have certain directed edge between them: \n',
             'uncertain_edges': 'These variable pairs have undirected relationship between them: \n',
             'bi_edges': 'These variable pairs have hidden confounders between them: \n',
-            'half_edges': 'These variable pairs have non-descendant relationship between them: \n',
+            'half_certain_edges': 'These variable pairs have non-descendant directed relationship between them: \n',
+            'half_uncertain_edges': 'These variable pairs have non-descendant undirected relationship between them: \n',
             'none_edges': 'These variable pairs have no D-seperation between them: \n'
         }
     for edge_type in relation_dict.keys():
