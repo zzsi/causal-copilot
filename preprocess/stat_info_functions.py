@@ -234,6 +234,7 @@ def time_series_lag_est(df: pd.DataFrame, nlags = 50):
 # print(lags)
 
 ########################################################################################################################
+
 def data_preprocess (clean_df: pd.DataFrame, ts: bool = False):
     '''
     :param df: Dataset in Panda DataFrame format.
@@ -288,8 +289,8 @@ def data_preprocess (clean_df: pd.DataFrame, ts: bool = False):
 
     return column_type, overall_type
 
-column_type, overall_type = data_preprocess(clean_df = df, ts = False)
-print(column_type)
+# column_type, overall_type = data_preprocess(clean_df = df, ts = False)
+# print(column_type)
 
 def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
     '''

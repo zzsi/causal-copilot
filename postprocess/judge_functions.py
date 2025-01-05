@@ -316,7 +316,6 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, parall
     return boot_recommend, boot_edges_prob
 
 
-
 def bootstrap_recommend(raw_graph, boot_edges_prob):
     direct_prob_mat =  boot_edges_prob['certain_edges']
     high_prob_idx_direct = np.where(direct_prob_mat >= 0.9)
