@@ -6,6 +6,7 @@ from dowhy import gcm, CausalModel
 import shap
 import sklearn
 import matplotlib.pyplot as plt
+import seaborn as sns
 from openai import OpenAI
 from pydantic import BaseModel
 import os 
@@ -34,6 +35,7 @@ class Analysis(object):
         self.args = args
         self.data = global_state.user_data.processed_data
         #self.data = pd.read_csv('dataset/sachs/sachs.csv')
+        #TODO: graph format
         self.graph = convert_adj_mat(global_state.results.revised_graph)
         #self.graph = convert_adj_mat(np.load('postprocess/test_result/sachs/cot_all_relation/3_voting/ind_revised_graph.npy'))
         #self.data = pd.read_csv('dataset/sachs/sachs.csv')
@@ -47,7 +49,6 @@ class Analysis(object):
         self.causal_model = gcm.InvertibleStructuralCausalModel(self.G)
         gcm.auto.assign_causal_mechanisms(self.causal_model, self.data)
         gcm.fit(self.causal_model, self.data)
-
 
     def _print_data_disclaimer(self):
         """
@@ -241,6 +242,40 @@ class Analysis(object):
         # plt.close()
         return df, figs
 
+    def estimate_hte_effect(self, outcome, treatment, X_col, query):
+        print("\nCreating Causal Model...")
+        model = CausalModel(
+            data=self.data,
+            treatment=treatment,
+            outcome=outcome,
+            graph=self.dot_graph()
+        )
+        W_col = model.get_backdoor_variables()
+        # Algorithm selection and deliberation
+        filter = HTE_Filter(args)
+        global_state = filter.forward(global_state, query)
+
+        reranker = HTE_Param_Selector(args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
+        global_state = reranker.forward(global_state)
+
+        programmer = HTE_Programming(args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
+        hte, hte_lower, hte_upper = programmer.forward(global_state, task='hte')
+
+        plt.figure(figsize=(8, 6))
+        sns.histplot(hte, bins=30, kde=True, color='skyblue', alpha=0.7)
+        plt.axvline(hte.mean(), color='firebrick', linestyle='--', label='Mean HTE')
+        plt.xlabel("Heterogeneous Treatment Effect (HTE)")
+        plt.ylabel("Frequency")
+        plt.title("Distribution of Heterogeneous Treatment Effects")
+        # Save figure
+        fig_path = f'{self.global_state.user_data.output_graph_dir}/attribution_plot.png'
+        plt.savefig(fig_path)
+        figs = [fig_path]
+
+        return hte, hte_lower, hte_upper, figs
+    
+    def sensityvity_analysis(self,):
+        pass
 
     def call_LLM(self, format, prompt, message):
         client = OpenAI(organization=self.args.organization, project=self.args.project, api_key=self.args.apikey)
@@ -349,25 +384,7 @@ class Analysis(object):
             return response, figs
 
 
-    def estimate_hte_effect(self, outcome, treatment, X_col, query):
-        print("\nCreating Causal Model...")
-        model = CausalModel(
-            data=self.data,
-            treatment=treatment,
-            outcome=outcome,
-            graph=self.dot_graph()
-        )
-        W_col = model.get_backdoor_variables()
-        # Algorithm selection and deliberation
-        filter = HTE_Filter(args)
-        global_state = filter.forward(global_state, query)
-
-        reranker = HTE_Param_Selector(args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
-        global_state = reranker.forward(global_state)
-
-        programmer = HTE_Programming(args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
-        hte, hte_lower, hte_upper = programmer.forward(global_state, task='hte')
-        return hte, hte_lower, hte_upper
+    
 
 ##############
 def LLM_parse_query(args, format, prompt, message):
