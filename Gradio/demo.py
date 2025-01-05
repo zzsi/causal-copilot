@@ -995,11 +995,13 @@ def process_message(message, chat_history, download_btn):
             yield chat_history, download_btn
             return chat_history, download_btn  
         if REQUIRED_INFO["current_stage"] == 'inference_analysis': 
-            yield parse_inference_query(message, chat_history, download_btn)
+            chat_history, download_btn =  parse_inference_query(message, chat_history, download_btn)
+            yield chat_history, download_btn
             print('inference_analysis')
         
         if REQUIRED_INFO["current_stage"] == 'analysis_discussion':
-            yield parse_inf_discuss_query(message, chat_history, download_btn)
+            chat_history, download_btn =  parse_inf_discuss_query(message, chat_history, download_btn)
+            yield chat_history, download_btn
         def parse_inf_discuss_query(message, chat_history, download_btn):
             chat_history.append((message, None))
             global_state.logging.downstream_discuss.append({"role": "user", "content": message})
