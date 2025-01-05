@@ -6,6 +6,7 @@ from dowhy import gcm, CausalModel
 import shap
 import sklearn
 import matplotlib.pyplot as plt
+import seaborn as sns
 from openai import OpenAI
 from pydantic import BaseModel
 import os 
@@ -34,6 +35,7 @@ class Analysis(object):
         self.args = args
         self.data = global_state.user_data.processed_data
         #self.data = pd.read_csv('dataset/sachs/sachs.csv')
+        #TODO: graph format
         self.graph = convert_adj_mat(global_state.results.revised_graph)
         #self.graph = convert_adj_mat(np.load('postprocess/test_result/sachs/cot_all_relation/3_voting/ind_revised_graph.npy'))
         #self.data = pd.read_csv('dataset/sachs/sachs.csv')
@@ -47,7 +49,6 @@ class Analysis(object):
         self.causal_model = gcm.InvertibleStructuralCausalModel(self.G)
         gcm.auto.assign_causal_mechanisms(self.causal_model, self.data)
         gcm.fit(self.causal_model, self.data)
-
 
     def _print_data_disclaimer(self):
         """
@@ -241,6 +242,120 @@ class Analysis(object):
         # plt.close()
         return df, figs
 
+    def estimate_hte_effect(self, outcome, treatment, X_col, query):
+        print("\nCreating Causal Model...")
+        model = CausalModel(
+            data=self.data,
+            treatment=treatment,
+            outcome=outcome,
+            graph=self.dot_graph()
+        )
+        W_col = model.get_backdoor_variables()
+        # Algorithm selection and deliberation
+        filter = HTE_Filter(args)
+        global_state = filter.forward(global_state, query)
+
+        reranker = HTE_Param_Selector(args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
+        global_state = reranker.forward(global_state)
+
+        programmer = HTE_Programming(args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
+        hte, hte_lower, hte_upper = programmer.forward(global_state, task='hte')
+
+        plt.figure(figsize=(8, 6))
+        sns.histplot(hte, bins=30, kde=True, color='skyblue', alpha=0.7)
+        plt.axvline(hte.mean(), color='firebrick', linestyle='--', label='Mean HTE')
+        plt.xlabel("Heterogeneous Treatment Effect (HTE)")
+        plt.ylabel("Frequency")
+        plt.title("Distribution of Heterogeneous Treatment Effects")
+        # Save figure
+        fig_path = f'{self.global_state.user_data.output_graph_dir}/attribution_plot.png'
+        plt.savefig(fig_path)
+        figs = [fig_path]
+
+        return hte, hte_lower, hte_upper, figs
+
+    def counterfactual_estimation(self, treatment_name, response_name, observed_val = None, intervened_treatment = None):
+        # observed_val should be a df as the processed data
+        if observed_val is None:
+            min_index = self.data[treatment_name].idxmin()
+            observed_val = pd.DataFrame([self.data.loc[min_index].to_dict()])
+        else:
+            column_type = self.global_state.statistics.data_type_column
+
+            for column in self.data.columns:
+                if column_type[column] == "Category":
+                    observed_cat = observed_val[column].iloc[0]
+                    category_mapping = dict(enumerate(self.data[column].cat.categories))
+                    observed_cat_code = {v: k for k, v in category_mapping.items()}.get(observed_cat)
+                    observed_val.loc[0, column] = observed_cat_code
+
+        if intervened_treatment is None:
+            intervened_treatment = self.data[treatment_name].min() + 1.0
+
+        est_sample = gcm.counterfactual_samples(
+            self.causal_model,
+            {treatment_name: lambda x: intervened_treatment},
+            observed_data=observed_val)
+
+        categories = ['Observed', 'Intervened']
+        treatment_values = [observed_val[treatment_name].iloc[0], est_sample[treatment_name].iloc[0]]
+        response_values = [observed_val[response_name].iloc[0], est_sample[response_name].iloc[0]]
+
+        bar_width = 0.35
+
+        x = np.arange(len(categories))  # [0, 1]
+
+        plt.bar(x - bar_width / 2, treatment_values, width=bar_width, label='Treatment', color='blue')
+        plt.bar(x + bar_width / 2, response_values, width=bar_width, label='Response', color='orange')
+
+        plt.ylabel('Values')
+        plt.title('Counterfactual Estimation')
+        plt.xticks(x, categories)
+        plt.legend()
+
+        for i, v in enumerate(treatment_values):
+            plt.text(i - bar_width / 2, v + 0.5, f"{v:.1f}", ha='center')
+        for i, v in enumerate(response_values):
+            plt.text(i + bar_width / 2, v + 0.5, f"{v:.1f}", ha='center')
+
+        path = self.global_state.user_data.output_graph_dir
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+        print(f"Saving residuals plot to {os.path.join(path, 'counterfactual_est_fig.jpg')}")
+        plt.savefig(os.path.join(path, 'counterfactual_est_fig.jpg'))
+
+
+    def simulate_intervention(self, treatment_name, shift_intervention = None, atomic_intervention = None):
+        if atomic_intervention is None:
+            atomic_intervention_val = self.data[treatment_name].min() + 1.0
+
+        if shift_intervention is None:
+            shift_intervention_val = 1
+
+        atomic_samples = gcm.interventional_samples(self.causal_model,
+                                             {treatment_name: lambda x: atomic_intervention_val},
+                                             num_samples_to_draw=1000)
+
+        shift_samples = gcm.interventional_samples(self.causal_model,
+                                                    {treatment_name: lambda x: x + shift_intervention_val},
+                                                    num_samples_to_draw=1000)
+
+        path = self.global_state.user_data.output_graph_dir
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        print(f"Saving simulated dataset {os.path.join(path, 'simulated_atomic_intervention.csv')}")
+        atomic_samples.to_csv(os.path.join(path, 'simulated_atomic_intervention.csv'), index=False)
+
+        print(f"Saving simulated dataset {os.path.join(path, 'simulated_shift_intervention.csv')}")
+        shift_samples.to_csv(os.path.join(path, 'simulated_shift_intervention.csv'), index=False)
+
+
+
+    def sensityvity_analysis(self,):
+        pass
 
     def call_LLM(self, format, prompt, message):
         client = OpenAI(organization=self.args.organization, project=self.args.project, api_key=self.args.apikey)
@@ -349,25 +464,7 @@ class Analysis(object):
             return response, figs
 
 
-    def estimate_hte_effect(self, outcome, treatment, X_col, query):
-        print("\nCreating Causal Model...")
-        model = CausalModel(
-            data=self.data,
-            treatment=treatment,
-            outcome=outcome,
-            graph=self.dot_graph()
-        )
-        W_col = model.get_backdoor_variables()
-        # Algorithm selection and deliberation
-        filter = HTE_Filter(args)
-        global_state = filter.forward(global_state, query)
-
-        reranker = HTE_Param_Selector(args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
-        global_state = reranker.forward(global_state)
-
-        programmer = HTE_Programming(args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
-        hte, hte_lower, hte_upper = programmer.forward(global_state, task='hte')
-        return hte, hte_lower, hte_upper
+    
 
 ##############
 def LLM_parse_query(args, format, prompt, message):
