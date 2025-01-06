@@ -139,18 +139,19 @@ def draw(
     # add the nodes that in the G but not in the PAG
     for node in full_node_names:
         if node not in dot.body:
-            dot.node(str(node), shape=shape, height=".5", width=".5")
+            if len(full_node_names)<=10:
+                dot.node(str(node), shape=shape, height=".5", width=".5")
 
     # get the directed graph component and add any remaining nodes
     if hasattr(G, "get_graphs"):
         directed_G = G.get_graphs("directed")
     else:
         directed_G = G
-
     # add any nodes from full_node_names that aren't in directed_G
     for node in full_node_names:
         if node not in directed_G:
-            directed_G.add_node(node)
+            if len(full_node_names)<=10:
+                directed_G.add_node(node)
 
     for v in full_node_names:
         child = str(v)
