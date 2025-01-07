@@ -35,12 +35,14 @@ class Visualization(object):
         return pos
 
     def plot_pdag(self, mat, save_path, pos=None, relation=False):
-        print(mat)
+        #print(mat)
         algo = self.global_state.algorithm.selected_algorithm
         path = os.path.join(self.save_dir, save_path)
         #old version
         #if algo in ['PC', 'FCI', 'CDNOD', 'GES'] or relation:
         edges_dict = convert_to_edges(algo, self.data.columns, mat)
+        print(mat)
+        print(edges_dict)
         pag = PAG()
         for edge in edges_dict['certain_edges']:
             pag.add_edge(edge[0], edge[1], pag.directed_edge_name)
@@ -76,8 +78,8 @@ class Visualization(object):
                     'bi_edges': 'Bi-Directed Edge', #(<->)
                     'half_certain_edges': 'Directed Non-Ancestor Edge', #(o->)
                     'half_uncertain_edges': 'Undirected Non-Ancestor Edge', #(o-)
-                    'non_edges': 'No D-Seperation Edge', #(o-o)
-                    'non_existence':'No Edge'}
+                    'none_edges': 'No D-Seperation Edge', #(o-o)
+                    'none_existence':'No Edge'}
         paths = []
         for key in boot_prob_dict.keys():
             prob_mat = boot_prob_dict[key]

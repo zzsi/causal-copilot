@@ -168,7 +168,6 @@ class Report_generation(object):
         )
         section1 = response_background.choices[0].message.content
         section1 = re.sub(r'.*\*\*(.*?)\*\*', r'\\textbf{\1}', section1)
-        #section1 = section1.replace(r'\textbf', r'\\newline \\textbf')
 
         col_names = '\t'.join(self.data.columns)
         prompt = f"""
@@ -209,63 +208,32 @@ The JSON should be
             ]
         )
         result = response_background.choices[0].message.content
-        print(result)
         result = result.strip("```json").strip("```")
         result = json.loads(result)
-        print(result)
+        result_parsed = {}
+        for k, v in result.items():
+            # Remove parentheses and split by comma
+            key = tuple(x.strip() for x in k.strip('()').split(','))
+            result_parsed[key] = v
+        #print(result_parsed)
         variables = self.data.columns
-        section2 = """
-        \\begin{itemize}
-        """
-        # section2 = re.sub(r'.*\*\*(.*?)\*\*', r'\\textbf{\1}', section2)
-        # section2 = section2.replace(r'\textbf', r'\\newline \\textbf')
-
-        # 
-        # pattern = r'\*\*(.*?)\s*(→|↔|->|<->)\s*(.*?)\*\*'
-        # relations = []
-        # # Find all matches
-        # matches = re.findall(pattern, section2)
-        # for match in matches:
-        #     left_part = match[0]
-        #     right_part = match[2]
-
-        #     elements = [left_part]
-        #     split_elements = re.split(r'\s*(→|↔|->|<->)\s*', right_part)
-        #     # Iterate over the split elements
-        #     for i in range(0, len(split_elements), 2):
-        #         element = split_elements[i]
-        #         if element:  # Avoid empty strings
-        #             elements.append(element)
-        #     # Create pairs for the elements
-        #     for i in range(len(elements) - 1):
-        #         # deal with case like 'Length and Diameter'->'Viscera Weight' or 'Length\Diameter'->'Viscera Weight'
-        #         if '/' in elements[i + 1] or 'and' in elements[i + 1]:
-        #             targets = [t for t in elements[i + 1].split('/|and')]
-        #             for target in targets:
-        #                 relations.append((elements[i], target))
-        #         else:
-        #             relations.append((elements[i], elements[i + 1]))
-        # # deal with case like ('Length, Diameter, Height', 'Viscera Weight')
-        # result = []
-        # for relation in relations:
-        #     left = relation[0].split(',')
-        #     right = relation[1].split(',')
-        #     for l in left:
-        #         for r in right:
-        #             result.append((l.strip(), r.strip()))
-        
-        # Potential Relationship Visualization
-        zero_matrix = np.zeros((len(variables), len(variables)))
-        for pair in result.keys():
-            print(pair)
-            explanation = result[pair]
-            pair = ast.literal_eval(pair)
-            if pair[0].lower() in variables.str.lower() and pair[1].lower() in variables.str.lower():
-                ind1 = variables.str.lower().get_loc(pair[0].lower())
-                ind2 = variables.str.lower().get_loc(pair[1].lower())
-                zero_matrix[ind2, ind1] = 1
-                section2 += f"\item \\textbf{{{pair[0]} \\rightarrow {pair[1]}}}: {explanation} \n"
-        section2 += "\end{itemize}"
+        if result_parsed != {}:
+            section2 = """
+            \\begin{itemize}
+            """
+            # Potential Relationship Visualization
+            zero_matrix = np.zeros((len(variables), len(variables)))
+            for pair in result_parsed.keys():
+                explanation = result_parsed[pair]
+                #pair = ast.literal_eval(pair)
+                if pair[0].lower() in variables.str.lower() and pair[1].lower() in variables.str.lower():
+                    ind1 = variables.str.lower().get_loc(pair[0].lower())
+                    ind2 = variables.str.lower().get_loc(pair[1].lower())
+                    zero_matrix[ind2, ind1] = 1
+                    section2 += f"\item \\textbf{{{pair[0]} $\\rightarrow$ {pair[1]}}}: {explanation} \n"
+            section2 += "\end{itemize}"
+        else:
+            section2 = ""
 
         my_visual = Visualization(self.global_state)
         g = nx.from_numpy_array(zero_matrix, create_using=nx.DiGraph)
@@ -275,9 +243,6 @@ The JSON should be
         pos = nx.spring_layout(g)
         _ = my_visual.plot_pdag(zero_matrix, 'potential_relation.pdf', pos=pos, relation=True)
         relation_path = f'{self.visual_dir}/potential_relation.pdf'
-        #TODO: fix graph bug here
-        # section2 = re.sub(r'.*\*\*(.*?)\*\*', r'\\textbf{\1}', section2)
-        # section2 = section2.replace(r'\textbf', r'\\newline \\textbf')
 
         def get_pdf_page_size(pdf_path):
             with open(pdf_path, 'rb') as file:
@@ -285,35 +250,35 @@ The JSON should be
                 page = reader.pages[0]
                 width = page.mediabox.width
                 height = page.mediabox.height
-                return height>(0.7*width)
+                return 0.7*height>(width)
             
         if sum(zero_matrix.flatten())!=0:
-            figure_tall =  get_pdf_page_size(relation_path)
-            if figure_tall:
-                relation_prompt = f"""
-                \\begin{{minipage}}[t]{{0.6\linewidth}}
-                {section2}
-                \\vfill
-                \end{{minipage}}
-                %\hspace{{0.05\\textwidth}}
-                \\begin{{minipage}}[t]{{0.4\linewidth}}
-                    \\begin{{figure}}[H]
-                        \centering
-                        \\resizebox{{\linewidth}}{{!}}{{\includegraphics[height=0.3\\textheight]{relation_path}}}
-                        \caption{{\label{{fig:relation}}Possible Causal Relation Graph}}
-                    \end{{figure}}
-                \end{{minipage}}
-                """
-            else:
-                relation_prompt = f"""
-                {section2}
+            # figure_tall =  get_pdf_page_size(relation_path)
+            # if figure_tall:
+            #     relation_prompt = f"""
+            #     \\begin{{minipage}}[t]{{0.6\linewidth}}
+            #     {section2}
+            #     \\vfill
+            #     \end{{minipage}}
+            #     %\hspace{{0.05\\textwidth}}
+            #     \\begin{{minipage}}[t]{{0.35\linewidth}}
+            #         \\begin{{figure}}[H]
+            #             \centering
+            #             \\resizebox{{\linewidth}}{{!}}{{\includegraphics[height=0.3\\textheight]{{{relation_path}}}}}
+            #             \caption{{\label{{fig:relation}}Possible Causal Relation Graph}}
+            #         \end{{figure}}
+            #     \end{{minipage}}
+            #     """
+            # else:
+            relation_prompt = f"""
+            {section2}
 
-                \\begin{{figure}}[H]
-                \centering
-                \includegraphics[width=0.5\linewidth]{relation_path}
-                \caption{{\label{{fig:relation}}Possible Causal Relation Graph}}
-                \end{{figure}}
-                """
+            \\begin{{figure}}[H]
+            \centering
+            \includegraphics[width=0.5\linewidth]{{{relation_path}}}
+            \caption{{\label{{fig:relation}}Possible Causal Relation Graph}}
+            \end{{figure}}
+            """
         else:
             relation_prompt = f"""
                 {section2}
@@ -333,9 +298,9 @@ The JSON should be
         prop_table = f"""
         \\begin{{tabular}}{{rrrrrrr}}
             \\toprule
-            Shape ($n$ x $d$) & Data Type & Missing Value & Linearity & Gaussian Errors & Time-Series & Heterogeneity \\
+            Shape ($n$ x $d$) & Data Type & Missing Value & Linearity & Gaussian Errors & Time-Series & Heterogeneity \\\\
             \midrule
-            {shape}   & {data_type} & {missingness} & {linearity} & {gaussian_error} & {stationary} & {heterogeneous} \\
+            {shape}   & {data_type} & {missingness} & {linearity} & {gaussian_error} & {stationary} & {heterogeneous} \\\\
             \\bottomrule
         \end{{tabular}}
         """
@@ -418,7 +383,7 @@ The JSON should be
         else:
             response_corr_doc += f"\item Weak Correlated Variables: {', '.join(low_corr_list) if low_corr_list != [] else 'None'} \n"
         response_corr_doc += "\end{itemize} \n"
-        print('response_corr_doc: ',response_corr_doc)
+        #print('response_corr_doc: ',response_corr_doc)
         return response_dist_doc, response_corr_doc
              
 
@@ -455,7 +420,7 @@ The JSON should be
         for param in params:
             sub_block = f"""
                         \item 
-                        \\textbf{params[param]['full_name']}:
+                        \\textbf{{{params[param]['full_name']}}}:
                         \\begin{{itemize}}
                             \item \\textbf{{Value}}: {params[param]['value']}
                             \item \\textbf{{Explanation}}: {params[param]['explanation']}
@@ -502,8 +467,8 @@ The JSON should be
             In the final step, we performed graph tuning with suggestions provided by the Bootstrap and LLM.
             
             Firstly, we use the Bootstrap technique to get how much confidence we have on each edge in the initial graph.
-            If the confidence probability of a certain edge is greater than 95% and it is not in the initial graph, we force it.
-            Otherwise, if the confidence probability is smaller than 5% and it exists in the initial graph, we forbid it.
+            If the confidence probability of a certain edge is greater than 95\% and it is not in the initial graph, we force it.
+            Otherwise, if the confidence probability is smaller than 5\% and it exists in the initial graph, we forbid it.
             For those moderate confidence edges, we utilize LLM to double check their existence and direction according to its knowledge repository.
             
             In this step LLM can use background knowledge to add some edges that are neglected by Statistical Methods, delete and redirect some unreasonable relationships.
@@ -647,9 +612,10 @@ The JSON should be
         name_map = {'certain_edges': 'Directed Edge', #(->)
                     'uncertain_edges': 'Undirected Edge', #(-)
                     'bi_edges': 'Bi-Directed Edge', #(<->)
-                    'half_edges': 'Non-Ancestor Edge', #(o->)
-                    'non_edges': 'No D-Seperation Edge', #(o-o)
-                    'non_existence':'No Edge'}
+                    'half_certain_edges': 'Non-Ancestor Edge', #(o->)
+                    'half_uncertain_edges': 'edge of non-ancestor ($o-$)', #(o-)
+                    'none_edges': 'No D-Seperation Edge', #(o-o)
+                    'none_existence':'No Edge'}
         graph_text = """
         \\begin{figure}[H]
             \centering
@@ -678,9 +644,10 @@ The JSON should be
         text_map = {'certain_edges': 'directed edge ($->$)', #(->)
                     'uncertain_edges': 'undirected edge ($-$)', #(-)
                     'bi_edges': 'edge with hidden confounders ($<->$)', #(<->)
-                    'half_edges': 'edge of non-ancestor ($o->$)', #(o->)
-                    'non_edges': 'egde of no D-Seperation set', #(o-o)
-                    'non_existence':'No Edge'}
+                    'half_certain_edges': 'edge of non-ancestor ($o->$)', #(o->)
+                    'half_uncertain_edges': 'edge of non-ancestor ($o-$)', #(o-)
+                    'none_edges': 'egde of no D-Seperation set', #(o-o)
+                    'none_existence':'No Edge'}
         graph_text += "The above heatmaps show the confidence probability we have on different kinds of edges, including "
         for k in bootstrap_dict.keys():
             graph_text += f"{text_map[k]}, "
@@ -708,7 +675,7 @@ The JSON should be
         
 
     def confidence_analysis_prompts(self):
-        edges_dict = self.global_state.results.revised_edges
+        edges_dict = self.global_state.results.raw_edges
         relation_text_dict, relation_text = edges_to_relationship(self.data, edges_dict, self.bootstrap_probability)
         #relation_prob = self.graph_effect_prompts()
 
@@ -755,15 +722,18 @@ The JSON should be
         return response_doc
 
     def refutation_analysis_prompts(self):
-        text = f"""
-                \\begin{{figure}}[H]
-                    \centering
-                    \includegraphics[height=0.8\\textwidth]{{{self.global_state.user_data.output_graph_dir}/refutation_graph.jpg}}
-                    \caption{{Refutation Graph}}
-                \end{{figure}} \n
-                """
-        text += self.global_state.results.refutation_analysis
-        text = text.replace('%', '\%')
+        if self.global_state.results.refutation_analysis is not None:
+            text = f"""
+                    \\begin{{figure}}[H]
+                        \centering
+                        \includegraphics[height=0.8\\textwidth]{{{self.global_state.user_data.output_graph_dir}/refutation_graph.jpg}}
+                        \caption{{Refutation Graph}}
+                    \end{{figure}} \n
+                    """
+            text += self.global_state.results.refutation_analysis
+            text = text.replace('%', '\%')
+        else:
+            text = ''
         return text 
     
     def abstract_prompt(self):
@@ -1021,29 +991,6 @@ The JSON should be
             prompt_template = self.replace_greek_with_latex(prompt_template)
             #print(prompt_template)
             return prompt_template
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system",
-                     "content": """
-                     You are a causal discovery expert, help me to revise this latex report templete. 
-                     1. Provide your response in Latex format, and only include Latex content which can be rendered to pdf directly. Don't include other things
-                     2. Pay attention to orders of section, subsection, subsubsection... based on the meaning of headings
-                     3. If there is number in \subsection{{1. headings}}, please remove the number and only reserve the heading text \subsection{heading}
-                     4. If there is step number in \subsection{{Step 1 headings}}, please remove the step number and only reserve the heading text \subsection{heading}
-                     5. Replace ↔ with $\leftrightarrow$, -> with $\\rightarrow$
-                     6. All **text** should be replaced with \\textbf{text}
-                     7. Do not include any Greek Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
-                     8. Do not change any parameters in figure settings
-                     9. Only include your latex content in the response which can be rendered to pdf directly. Don't include other things like '''latex '''
-                     10. ALL _ should be replaced by \_
-                     """},
-                    {"role": "user", "content": prompt_template}
-                ]
-            )
-
-            output = response.choices[0].message.content
-            return output
     
     def latex_bug_checking(self, tex_path, num_error_corrections=2):
         save_path = self.global_state.user_data.output_report_dir
@@ -1090,4 +1037,4 @@ The JSON should be
         self.latex_bug_checking(f'{save_path}/report.tex')
         # Compile the .tex file to PDF using pdflatex
         print('start compilation')
-        compile_tex_to_pdf_with_refs(f'{save_path}/report_revised.tex', save_path)
+        compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)

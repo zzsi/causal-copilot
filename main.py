@@ -89,7 +89,7 @@ def parse_args():
     parser.add_argument(
         '--initial_query',
         type=str,
-        default="selected algorithm: XGES",
+        default="selected algorithm: FGES",
         help='Initial query for the algorithm'
     )
 
@@ -212,15 +212,9 @@ def main(args):
         print("Mat Ground Truth: ", global_state.user_data.ground_truth)
         global_state.results.metrics = judge.evaluation(global_state)
         print(global_state.results.metrics)
-    import time 
-    start_time = time.time()
-    global_state = judge.forward(global_state, 'cot_markov_blanket', 1)
-    end_time = time.time()
-    duration = end_time-start_time
-    # with open('postprocess/test_result/sachs_full/duration.txt', 'a') as file:
-    #     # Write the text to the file
-    #     file.write(f'prompt: {prompt}, voting_num: {voting_num}, duration: {duration} \n')
-
+    
+    global_state = judge.forward(global_state, 'cot_all_relation', 1)
+    
     #############Visualization for Revised Graph###################
     # Plot Revised Graph
     my_visual_revise = Visualization(global_state)
@@ -228,6 +222,7 @@ def main(args):
     global_state.results.revised_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.raw_data.columns, global_state.results.revised_graph)
     # Plot Bootstrap Heatmap
     boot_heatmap_path = my_visual_revise.boot_heatmap_plot()
+    global_state.results.refutation_analysis = judge.graph_refutation(global_state)
 
     # algorithm selection process
     '''
@@ -245,25 +240,23 @@ def main(args):
     my_report = Report_generation(global_state, args)
     report = my_report.generation()
     my_report.save_report(report)
-    report_path = os.path.join(global_state.user_data.output_report_dir, 'report.tex')  
-    while not os.path.isfile(report_path) and try_num<=3:
-        try_num = +1
+    report_path = os.path.join(global_state.user_data.output_report_dir, 'report.pdf')  
+    while (not os.path.isfile(report_path)) and try_num<3:
+        try_num += 1
         print('Error occur during the Report Generation, try again')
         report_gen = Report_generation(global_state, args)
         report = report_gen.generation(debug=False)
         report_gen.save_report(report)
-        if not os.path.isfile(report_path) and try_num==3:
-            print('Error occur during the Report Generation three times, we stop.')
+    if not os.path.isfile(report_path) and try_num == 3:
+        print('Error occur during the Report Generation three times, we stop.')
     ################################
 
     # User discussion part
     from user.discuss import Discussion
     discussion = Discussion(args, report)
-    discussion.forward(global_state, report)
+    discussion.forward(global_state)
 
     return report, global_state
-
-
 
 if __name__ == '__main__':
     args = parse_args()
