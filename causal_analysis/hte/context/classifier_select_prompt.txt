@@ -17,6 +17,12 @@ For the chosen one algorithm, provide:
 3. Justification for its suitability based on the dataset characteristics
 
 Present your recommendation in a structured JSON format, provide only the most suitable algorithm given the dataset characteristics.
+**You can only choose from these Regressors**:
+- LogisticRegression  
+- RandomForestClassifier  
+- HistGradientBoostingClassifier  
+- SVC 
+- SGDClassifier  
 
 Please structure your response like this example, DO NOT include anything else:
 
