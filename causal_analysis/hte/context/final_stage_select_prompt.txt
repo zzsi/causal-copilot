@@ -6,9 +6,9 @@ Given a dataset with the following properties:
 
 We want to choose a nonlinear regression model for the DML final stage to estimate HTE.
 
-Please analyze the dataset characteristics and the task description, and recommend suitable regression algorithm. Use the following context information to inform your recommendations:
+Please analyze the dataset characteristics and the task description, and recommend the most suitable one regression algorithm. Use the following context information to inform your recommendations:
 
-Regressors:
+You can only choose from these Regressors, and use exactly the same name in your response:
 [ALGO_CONTEXT]
 
 For each recommended algorithm, provide:
@@ -16,14 +16,13 @@ For each recommended algorithm, provide:
 2. Brief description
 3. Justification for its suitability based on the dataset characteristics
 
-Present your recommendations in a structured JSON format, provide the most suitable algorithm given the dataset characteristics.
+Present your recommendations in a structured JSON format, provide only the most suitable one algorithm given the dataset characteristics.
 
-Please structure your response like this example:
+Please structure your response like this example, DO NOT include anything else:
 
 {
   "name": "Regressor Name",
   "description": "Brief description of the regressor.",
   "justification": "Explanation of why this regressor is suitable for the given dataset.",
 }
-    
-Please provide your recommendations following this JSON structure.
+

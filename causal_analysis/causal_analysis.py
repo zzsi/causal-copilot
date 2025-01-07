@@ -10,20 +10,52 @@ import seaborn as sns
 from openai import OpenAI
 from pydantic import BaseModel
 import os 
+import sys 
 
 from causal_analysis.hte.hte_filter import HTE_Filter
 from causal_analysis.hte.hte_params import HTE_Param_Selector
 from causal_analysis.hte.hte_program import HTE_Programming
-
-import sys 
+#from hte import *
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from global_setting.Initialize_state import global_state_initialization
 
 def convert_adj_mat(mat):
     # In downstream analysis, we only keep direct edges and ignore all undirected edges
+    mat = np.array(mat)
     mat = (mat == 1).astype(int)
     G = mat.T
     return G
+
+def plot_hte_dist(hte, fig_path):
+    plt.figure(figsize=(8, 6))
+    sns.histplot(hte, bins=30, kde=True, color='skyblue', alpha=0.7)
+    plt.axvline(hte.mean(), color='firebrick', linestyle='--', label='Mean HTE')
+    plt.xlabel("Heterogeneous Treatment Effect (HTE)")
+    plt.ylabel("Frequency")
+    plt.title("Distribution of Heterogeneous Treatment Effects")
+    # Save figure
+    plt.savefig(fig_path)
+
+def plot_cate_violin(data, hte, group_cols, fig_path):
+    data = pd.concat([data, hte], axis=1)
+    num_groups = len(group_cols)
+    fig, axes = plt.subplots(num_groups, 1, figsize=(10, 6 * num_groups), sharex=False)
+    if num_groups == 1:
+        axes = [axes]  # Ensure axes is always a list for consistency
+
+    for ax, group_col in zip(axes, group_cols):
+        sns.violinplot(
+            x=group_col, y='hte', data=data, ax=ax, inner="quartile", scale="width"
+        )
+        # Customize the subplot
+        ax.set_title(f"CATE Distribution by {group_col.capitalize()}")
+        ax.set_xlabel(group_col.capitalize())
+        ax.set_ylabel("CATE")
+        ax.grid(True)
+
+    # Adjust layout to prevent overlap
+    plt.tight_layout()
+    plt.savefig(fig_path)
 
 class Analysis(object):
     def __init__(self, global_state, args):
@@ -37,10 +69,6 @@ class Analysis(object):
         #self.data = pd.read_csv('dataset/sachs/sachs.csv')
         #TODO: graph format
         self.graph = convert_adj_mat(global_state.results.revised_graph)
-        #self.graph = convert_adj_mat(np.load('postprocess/test_result/sachs/cot_all_relation/3_voting/ind_revised_graph.npy'))
-        #self.data = pd.read_csv('dataset/sachs/sachs.csv')
-        self.graph = convert_adj_mat(global_state.results.revised_graph)
-        #self.graph = convert_adj_mat(np.load('postprocess/test_result/sachs/cot_all_relation/3_voting/ind_revised_graph.npy'))
         self.G = nx.from_numpy_array(self.graph, create_using=nx.DiGraph) # convert adj matrix into DiGraph
         self.G = nx.relabel_nodes(self.G, {i: name for i, name in enumerate(self.data.columns)})
         print(self.G)
@@ -93,7 +121,6 @@ class Analysis(object):
 
     def feature_importance(self, target_node, visualize=True):
         print('start feature importance analysis')
-        print('start feature importance analysis')
         # parent_relevance, noise_relevance = gcm.parent_relevance(self.causal_model, target_node=target_node)
         # parent_relevance, noise_relevance
         parent_nodes = list(self.G.predecessors(target_node))
@@ -110,15 +137,13 @@ class Analysis(object):
         # Mean absolute SHAP values
         shap_df = pd.DataFrame(np.abs(shap_values_linear.values), columns=X.columns)
         mean_shap_values = shap_df.mean()
+        shap_df.to_csv(f'{self.global_state.user_data.output_graph_dir}/shap_df.csv', index=False)
         
+        figs = []
         if visualize == True:
-            figs = []
-            figs = []
             # 1st SHAP Plot beeswarm
             ax = shap.plots.beeswarm(shap_values_linear, plot_size=(8,6), show=False)
             plt.savefig(f'{self.global_state.user_data.output_graph_dir}/shap_beeswarm_plot.png', bbox_inches='tight')  # Save as PNG
-            #plt.savefig(f'shap_beeswarm_plot.png', bbox_inches='tight') 
-            figs.append("shap_beeswarm_plot.png")
             #plt.savefig(f'shap_beeswarm_plot.png', bbox_inches='tight') 
             figs.append("shap_beeswarm_plot.png")
             # plt.show()
@@ -127,8 +152,6 @@ class Analysis(object):
             fig, ax = plt.subplots(figsize=(8, 6))
             ax = shap.plots.bar(shap_values_linear, ax=ax, show=False)
             plt.savefig(f'{self.global_state.user_data.output_graph_dir}/shap_bar_plot.png', bbox_inches='tight')  # Save as PNG
-            #plt.savefig(f'shap_bar_plot.png', bbox_inches='tight') 
-            figs.append("shap_bar_plot.png")
             #plt.savefig(f'shap_bar_plot.png', bbox_inches='tight') 
             figs.append("shap_bar_plot.png")
             #plt.show()
@@ -148,7 +171,7 @@ class Analysis(object):
             data=self.data,
             treatment=treatment,
             outcome=outcome,
-            graph=self.dot_graph()
+            graph=self.dot_graph
         )
 
         identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
@@ -174,7 +197,12 @@ class Analysis(object):
         print("tends to decrease the outcome variable (e.g., mpg), assuming the model and assumptions hold.")
         print("============================\n")
 
-        return causal_estimate, p_value
+        # Sensitivity Analysis for the estimation
+        #refutation, figs = self.sensitivity_analysis(outcome, model, identified_estimand, causal_estimate)
+        refutation = None
+        figs = []
+
+        return causal_estimate, p_value, refutation, figs
 
     def _generate_dowhy_graph(self):
         """
@@ -237,7 +265,7 @@ class Analysis(object):
         # Save figure
         fig_path = f'{self.global_state.user_data.output_graph_dir}/attribution_plot.png'
         plt.savefig(fig_path, bbox_inches='tight')
-        figs = [fig_path]
+        figs = ['attribution_plot.png']
         # plt.show()  # Show the plot in the notebook or script
         # plt.close()
         return df, figs
@@ -248,35 +276,55 @@ class Analysis(object):
             data=self.data,
             treatment=treatment,
             outcome=outcome,
-            graph=self.dot_graph()
+            graph=self.dot_graph
         )
-        W_col = model.get_backdoor_variables()
+        identified_estimand = model.identify_effect()
+        W_col = identified_estimand.get_backdoor_variables()
         # Algorithm selection and deliberation
         filter = HTE_Filter(args)
-        global_state = filter.forward(global_state, query)
+        self.global_state = filter.forward(self.global_state, query)
 
-        reranker = HTE_Param_Selector(args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
-        global_state = reranker.forward(global_state)
+        reranker = HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
+        self.global_state = reranker.forward(self.global_state)
 
-        programmer = HTE_Programming(args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
-        hte, hte_lower, hte_upper = programmer.forward(global_state, task='hte')
+        programmer = HTE_Programming(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
+        hte, hte_lower, hte_upper = programmer.forward(self.global_state, task='hte')
+        hte_df = pd.DataFrame({'hte': hte})
+        hte_df.to_csv(f'{self.global_state.user_data.output_graph_dir}/hte.csv', index=False)
 
-        plt.figure(figsize=(8, 6))
-        sns.histplot(hte, bins=30, kde=True, color='skyblue', alpha=0.7)
-        plt.axvline(hte.mean(), color='firebrick', linestyle='--', label='Mean HTE')
-        plt.xlabel("Heterogeneous Treatment Effect (HTE)")
-        plt.ylabel("Frequency")
-        plt.title("Distribution of Heterogeneous Treatment Effects")
-        # Save figure
-        fig_path = f'{self.global_state.user_data.output_graph_dir}/attribution_plot.png'
-        plt.savefig(fig_path)
-        figs = [fig_path]
+        dist_fig_path = f'{self.global_state.user_data.output_graph_dir}/hte_dist.png'
+        plot_hte_dist(hte, dist_fig_path)
+        figs = ['hte_dist.png']
+        cate_fig_path = f'{self.global_state.user_data.output_graph_dir}/cate_dist.png'
+        plot_cate_violin(self.data, hte, X_col, cate_fig_path)
+        figs.append('cate_dist.png')
 
         return hte, hte_lower, hte_upper, figs
     
-    def sensityvity_analysis(self,):
-        pass
+    def sensitivity_analysis(self, target_node, model, estimand, estimate):
+        # if self.global_state.statistics.linearity:
+        #      simulation_method = "linear-partial-R2"
+        # else:
+        #      simulation_method = "non-parametric-partial-R2",
 
+        # Use the most important factor as the benchmark_common_causes
+        file_exists = os.path.exists(f'{self.global_state.user_data.output_graph_dir}/shap_df.csv')
+        if not file_exists:
+            self.feature_importance(target_node, visualize=False)
+        shap_df = pd.read_csv(f'{self.global_state.user_data.output_graph_dir}/shap_df.csv')
+        max_col = shap_df.mean().idxmax()
+        refute = model.refute_estimate(estimand, estimate,
+                               method_name = "add_unobserved_common_cause",
+                               simulation_method = "non-parametric-partial-R2",
+                               benchmark_common_causes = [max_col],
+                               effect_fraction_on_outcome = [1,2,3]
+                              )
+        plt.savefig(f'{self.global_state.user_data.output_graph_dir}/ate_refutation.png')
+        plt.close()
+        figs = ['ate_refutation.png']
+
+        return refute, figs 
+      
     def call_LLM(self, format, prompt, message):
         client = OpenAI(organization=self.args.organization, project=self.args.project, api_key=self.args.apikey)
         if format:
@@ -311,59 +359,89 @@ class Analysis(object):
             **Mean of Shapley Values**: {mean_shap_values}
             ""Description from User**: {desc}
             """
-            response = self.call_LLM(response = self.call_LLM(args, None, 'You are an expert in Causal Discovery.', prompt))
+            response = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
             return response, figs 
         
-        elif task == 'Treatment Effect Estimation':
+        elif task == 'Average Treatment Effect Estimation':
             prompt = f"""
             I'm doing the Treatment Effect Estimation analysis, please identify the Treatment Variable in this description:
             {desc}
             The variable name must be among these variables: {self.data.columns}
             Only return me with the variable name, do not include anything else.
             """
-            treatment = self.call_LLM(prompt)
-            causal_estimate, p_value = self.estimate_causal_effect(treatment=treatment, outcome=key_node, control_value=0, treatment_value=1)
+            treatment = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
+            causal_estimate, p_value, refutation, figs = self.estimate_causal_effect(treatment=treatment, outcome=key_node, control_value=0, treatment_value=1)
             parent_nodes = list(self.G.predecessors(key_node))
+            # Analysis for Effect Estimation
             prompt = f"""
-            I'm doing the feature importance analysis and please help me to write a brief analysis in bullet points.
+            I'm doing the Treatment Effect Estimation analysis and please help me to write a brief analysis in bullet points.
             Here are some informations:
             **Result Variable we care about**: {key_node}
+            **Treatment Variable**: {treatment}
             **Parent Nodes of the Result Variable**: {parent_nodes}
             **Causal Estimate Result**: {causal_estimate}
             **P-value of Significance Test for Causal Estimate**: {p_value}
             **Description from User**: {desc}
             """
-            response = self.call_LLM(response = self.call_LLM(args, None, 'You are an expert in Causal Discovery.', prompt))
-            return response, None
+            response1 = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
+            # Analysis for Sensitivity Analysis
+            prompt = f"""
+            I'm doing the sensitivity analysis for my treatment effect estimation, please help me to write a brief analysis in bullet points.
+            **Contents you need to incode**
+            1. Brief Introduction of the sensitivity analysis method we use
+            2. Summary of the sensitivity analysis result
+            3. Brief Interpretation of the plot
+            4. Conclude whether the treatment effect estimation is reliable or not based on the sensitivity analysis result
+            Here are some informations:
+            **Result Variable we care about**: {key_node}
+            **Causal Estimate Result**: {causal_estimate}
+            **Sensitivity Analysis Result**: 
+            {str(refutation)}
+            **Method We Use**:
+            Sensitivity analysis helps us study how robust an estimated effect is when the assumption of no unobserved confounding is violated. That is, how much bias does our estimate have due to omitting an (unobserved) confounder? Known as the omitted variable bias (OVB), it gives us a measure of how the inclusion of an omitted common cause (confounder) would have changed the estimated effect.
+            **Information in the plot**: 
+            a. The x-axis shows hypothetical partial R2 values of unobserved confounder(s) with the treatment. The y-axis shows hypothetical partial R2 of unobserved confounder(s) with the outcome. 
+            b. At <x=0,y=0>, the black diamond shows the original estimate (theta_s) without considering the unobserved confounders.
+            c. The contour levels represent adjusted estimate of the effect, which would be obtained if the unobserved confounder(s) had been included in the estimation model. 
+            d. The red contour line is the critical threshold where the adjusted effect goes to zero. Thus, confounders with such strength or stronger are sufficient to reverse the sign of the estimated effect and invalidate the estimate’s conclusions. 
+            e. The red triangle shows the estimated effect when the unobserved covariate has 1 or 2 or 3 times partial-R^2 of a chosen benchmark observed covariate with the outcome.
+            **Description from User**: {desc}
+            """
+            #response2 = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
+            response2 = ''
+            response = response1 + '\n' + response2
+
+            return response, figs
         
         elif task == 'Heterogeneous Treatment Effect Estimation':
             message = desc
             class VarList(BaseModel):
-                treantment: str
+                treatment: str
                 confounders: list[str]
             prompt = f"""You are a helpful assistant, please do the following tasks:
-            Firstly, identify the Treatment Variable in user's query and save it in treantment as a string
-            Secondly, identify a list of confounders and save it in confounders as a list of string
+            Firstly, identify the Treatment Variable in user's query and save it in treatment as a string
+            Secondly, identify a list of heterogeneous confounders and save it in confounders as a list of string, the list SHOULD NOT be empty
             The variable name must be among these variables: {self.data.columns}
             The outcome Y is {key_node}
             """
-            parsed_response = self.call_LLM(args, VarList, prompt, message)
-            treatment = parsed_response['treatment']
-            confounders = parsed_response['confounders']
-            self.estimate_hte_effect(outcome=key_node, treatment=treatment, X_col=confounders, query=desc)
+            parsed_response = self.call_LLM(VarList, prompt, message)
+            treatment = parsed_response.treatment
+            confounders = parsed_response.confounders
+            hte, hte_lower, hte_upper, figs = self.estimate_hte_effect(outcome=key_node, treatment=treatment, X_col=confounders, query=desc)
             parent_nodes = list(self.G.predecessors(key_node))
 
-            # prompt = f"""
-            # I'm doing the feature importance analysis and please help me to write a brief analysis in bullet points.
-            # Here are some informations:
-            # **Result Variable we care about**: {key_node}
-            # **Parent Nodes of the Result Variable**: {parent_nodes}
-            # **Causal Estimate Result**: {causal_estimate}
-            # **P-value of Significance Test for Causal Estimate**: {p_value}
-            # **Description from User**: {desc}
-            # """
-            # response = self.call_LLM(prompt)
-            return response, None
+            prompt = f"""
+            I'm doing the Heterogeneous Treatment Effect Estimation and please help me to write a brief analysis in bullet points.
+            Here are some informations:
+            **Result Variable we care about**: {key_node}
+            **Treatment Variable**: {treatment}
+            **Heterogeneous Confounders we coutrol**: {confounders}
+            **Upper and Lower Bound of Confidence Inferval with P-value=0.05**: {hte_upper}, {hte_lower}
+            **Information in the plot**: Distribution of the HTE; Violin plot of the CATE grouped by: {confounders}
+            **Description from User**: {desc}
+            """
+            response = self.call_LLM(None, 'You are an expert in Causal Discovery.',prompt)
+            return response, figs
         
         elif task == 'Anormaly Attribution':
             df, figs = self.attribute_anomalies(target_node=key_node, anomaly_samples=self.data, confidence_level=0.95)
@@ -380,8 +458,11 @@ class Analysis(object):
             We estimated the contribution of the ancestors of {key_node}, including {key_node} itself, to the observed anomaly.
             In this method, we use invertible causal mechanisms to reconstruct and modify the noise leading to a certain observation. We then ask, “If the noise value of a specific node was from its ‘normal’ distribution, would we still have observed an anomalous value in the target node?”. The change in the severity of the anomaly in the target node after altering an upstream noise variable’s value, based on its learned distribution, indicates the node’s contribution to the anomaly. The advantage of using the noise value over the actual node value is that we measure only the influence originating from the node and not inherited from its parents.
             """
-            response = self.call_LLM(args, None, 'You are an expert in Causal Discovery.', prompt)
+            response = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
             return response, figs
+        
+        else:
+            return None, None
 
 
     
@@ -417,29 +498,59 @@ def main(global_state, args):
     print("Welcome to the Causal Analysis Demo using the Auto MPG dataset.\n")
     
     analysis = Analysis(global_state, args)
-    message = "The value of PIP3 is abnormal, help me to find which variables cause this anomaly"
+    message = "What's the Heterogeneous Treatment Effect of PIP2 on PIP3"
     class InfList(BaseModel):
-        indicator: bool
-        tasks: list[str]
-        descriptions: list[str]
-        key_node: list[str]
-    prompt = """You are a helpful assistant, please do the following tasks:
-            Firstly identify whether user want to conduct causal tasks and save the boolean result in indicator. 
-            Secondly if user want to conduct causal tasks, please identify what tasks the user want to do and save them as a list in tasks.
+                tasks: list[str]
+                descriptions: list[str]
+                key_node: list[str]
+    prompt = f"""You are a helpful assistant, please do the following tasks:
+            **Tasks*
+            Firstly please identify what tasks the user want to do and save them as a list in tasks.
             Please choose among the following causal tasks, if there's no matched task just return an empty list 
-            Tasks you can choose: 1. Treatment Effect Estimation; 2. Anormaly Attribution; 3. Feature Importance 4. Heterogeneous Treatment Effect Estimation
-            thirdly, save user's description for their tasks as a list in descriptions, the length of description list must be the same with task list
-            Fourthly, save the key result variable user care about as a list, each task must have a key result variable and they can be the same, the length of result variable list must be the same with task list
+            You can only choose from the following tasks: 
+            1. Average Treatment Effect Estimation; 2. Heterogeneous Treatment Effect Estimation 3. Anormaly Attribution; 4. Feature Importance
+            Secondly, save user's description for their tasks as a list in descriptions, the length of description list must be the same with task list
+            Thirdly, save the key result variable user care about as a list, each task must have a key result variable and they can be the same, the length of result variable list must be the same with task list
+            key result variable must be among this list!
+            {global_state.user_data.processed_data.columns}
+            **Question Examples**
+            1. Average Treatment Effect Estimation:
+            What is the causal effect of introducing coding classes in schools on students' future career prospects?
+            What is the average treatment effect of a minimum wage increase on employment rates?
+            How much does the availability of free internet in rural areas improve educational outcomes?
+            How does access to affordable childcare affect women’s labor force participation?
+            What is the impact of reforestation programs on air quality in urban areas?
+            2. Heterogeneous Treatment Effect Estimation:
+            What is the heterogeneity in the impact of reforestation programs on air quality across neighborhoods with varying traffic density?
+            How does the introduction of mental health support programs in schools impact academic performance differently for students with varying levels of pre-existing stress?
+            Which demographic groups benefit most from telemedicine adoption in terms of reduced healthcare costs and improved health outcomes?
+            How does the effectiveness of renewable energy subsidies vary for households with different income levels or geographic locations?
+            3. Anormaly Attribution
+            How can we attribute a sudden increase in stock market volatility to specific economic events or market sectors?
+            Which variables (e.g., transaction amount, location, time) explain anomalies in loan repayment behavior?
+            What factors explain unexpected delays in surgery schedules or patient discharge times?
+            What are the root causes of deviations in supply chain delivery times?
+            What factors contribute most to unexpected drops in product sales during a specific period?
+            4. Feature Importance
+            What are the most influential factors driving credit score predictions?
+            What are the key factors influencing the effectiveness of a specific treatment or medication?
+            Which product attributes (e.g., price, brand, reviews) are the most influential in predicting online sales?
+            Which environmental variables (e.g., humidity, temperature, CO2 levels) are most important for predicting weather patterns?
+            What customer behaviors (e.g., browsing time, cart size) contribute most to predicting cart abandonment?
             """
     global_state.logging.downstream_discuss.append({"role": "user", "content": message})
     parsed_response = LLM_parse_query(args, InfList, prompt, message)
-    indicator, tasks_list, descs_list, key_node_list = parsed_response.indicator, parsed_response.tasks, parsed_response.descriptions, parsed_response.key_node
-    print(indicator, tasks_list, descs_list, key_node_list)
+    tasks_list, descs_list, key_node_list = parsed_response.tasks, parsed_response.descriptions, parsed_response.key_node
+    print(tasks_list, descs_list, key_node_list)
     #tasks_list, descs_list, key_node_list = ['Treatment Effect Estimation'], ['Analyze the treatment effect of PIP2 to PIP3.'], ['PIP3']
+    import matplotlib.image as mpimg
     for i, (task, desc, key_node) in enumerate(zip(tasks_list, descs_list, key_node_list)):
         print(task, desc, key_node)
         response, figs = analysis.forward(task, desc, key_node)
-        print(response, figs)
+        print(response)
+        for file_name in figs:
+            img = mpimg.imread(f'{global_state.user_data.output_graph_dir}/{file_name}')  # Read the image
+            plt.imshow(img)  
 
 if __name__ == '__main__':
     import argparse
@@ -488,7 +599,7 @@ if __name__ == '__main__':
         parser.add_argument(
             '--apikey',
             type=str,
-            default=None,
+            default=None, 
             help='API Key'
         )
 
@@ -534,11 +645,22 @@ if __name__ == '__main__':
             help='Demo mode'
         )
 
+        parser.add_argument(
+            '--revised_graph',
+            type=str,
+            default='postprocess/test_result/sachs_new/cot_all_relation/3_voting/revised_graph.npy',
+            help='Demo mode'
+        )
+
         args = parser.parse_args()
         return args
     args = parse_args()
     global_state = global_state_initialization(args)
     global_state.user_data.raw_data = pd.read_csv(args.data_file)
     global_state.user_data.processed_data = global_state.user_data.raw_data
+    global_state.results.revised_graph = np.load(args.revised_graph)
+    global_state.user_data.output_graph_dir = args.output_graph_dir
+    global_state.statistics.description = 'Continuous Nonlinear dataset with 11 columns'
+    global_state.statistics.data_type_column = {key: 'continuous' for key in global_state.user_data.processed_data.columns}
 
     main(global_state, args)
