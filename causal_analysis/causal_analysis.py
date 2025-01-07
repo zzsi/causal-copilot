@@ -11,6 +11,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 import os 
 import sys 
+import warnings
 
 from causal_analysis.hte.hte_filter import HTE_Filter
 from causal_analysis.hte.hte_params import HTE_Param_Selector
@@ -28,8 +29,8 @@ def convert_adj_mat(mat):
 
 def plot_hte_dist(hte, fig_path):
     plt.figure(figsize=(8, 6))
-    sns.histplot(hte, bins=30, kde=True, color='skyblue', alpha=0.7)
-    plt.axvline(hte.mean(), color='firebrick', linestyle='--', label='Mean HTE')
+    sns.histplot(hte['hte'], bins=30, kde=True, color='skyblue', alpha=0.7)
+    plt.axvline(hte['hte'].mean(), color='firebrick', linestyle='--', label='Mean HTE')
     plt.xlabel("Heterogeneous Treatment Effect (HTE)")
     plt.ylabel("Frequency")
     plt.title("Distribution of Heterogeneous Treatment Effects")
@@ -178,32 +179,36 @@ class Analysis(object):
             outcome=outcome,
             graph=self.dot_graph
         )
-    
-        identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
-        print("\nIdentified Estimand:")
-        print(identified_estimand)
-    
-        causal_estimate = model.estimate_effect(
-            identified_estimand,
-            method_name="backdoor.linear_regression",
-            control_value=control_value,
-            treatment_value=treatment_value,
-            target_units=target_units  # <- new parameter
-        )
-    
-        print("\nCausal Estimate:")
-        print(causal_estimate)
-    
-        # significance test
-        significance_results = causal_estimate.estimator.test_significance(self.data, causal_estimate.value)
-        p_value = significance_results['p_value'][0]
-        print("Significance Test Results:", p_value)
+        try:
+            identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
+            print("\nIdentified Estimand:")
+            print(identified_estimand)
+        
+            causal_estimate = model.estimate_effect(
+                identified_estimand,
+                method_name="backdoor.linear_regression",
+                control_value=control_value,
+                treatment_value=treatment_value,
+                target_units=target_units  # <- new parameter
+            )
+        
+            print("\nCausal Estimate:")
+            print(causal_estimate)
+            # Call test_significance with the estimate value
+            significance_results = causal_estimate.estimator.test_significance(self.data,causal_estimate.value)
+            p_value = significance_results['p_value'][0]
+            print("Significance Test Results:", p_value)
+
+            # Sensitivity Analysis for the estimation
+            refutation, figs = self.sensitivity_analysis(outcome, model, identified_estimand, causal_estimate, treatment, outcome)
+        except:
+            causal_estimate, p_value, refutation, figs = None, None, None, []
     
         print("\n=== Interpretation Hint ===")
         print("Negative estimate => increasing treatment tends to decrease outcome.")
         print("============================\n")
-    
-        return causal_estimate, p_value
+
+        return causal_estimate, p_value, refutation, figs
 
     def estimate_causal_effect_dml(self, treatment, outcome,
                                control_value=0, treatment_value=1,
@@ -221,7 +226,7 @@ class Analysis(object):
             data=self.data,
             treatment=treatment,
             outcome=outcome,
-            graph=self.dot_graph()
+            graph=self.dot_graph
         )
     
         identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
@@ -232,15 +237,21 @@ class Analysis(object):
         # Example default regressors I hard-coded for now.
         #
         from sklearn.ensemble import RandomForestRegressor
-        outcome_model = RandomForestRegressor(n_estimators=100, max_depth=5, random_state=42)
-        treatment_model = RandomForestRegressor(n_estimators=100, max_depth=5, random_state=42)
-    
+        outcome_model = RandomForestRegressor(n_estimators=10, max_depth=5, random_state=42)
+        treatment_model = RandomForestRegressor(n_estimators=10, max_depth=5, random_state=42)
+        final_model = RandomForestRegressor(n_estimators=10, max_depth=5, random_state=42)
+
+        warnings.filterwarnings('ignore')
         causal_estimate = model.estimate_effect(
             identified_estimand,
-            method_name="backdoor.dml",
+            method_name="backdoor.econml.dml.DML",
             method_params={
-                "outcome_model": outcome_model,
-                "treatment_model": treatment_model,
+                "init_params":{
+                "model_y": outcome_model,
+                "model_t": treatment_model,
+                "model_final": final_model
+                },
+                "fit_params":{}
             },
             control_value=control_value,
             treatment_value=treatment_value,
@@ -248,18 +259,14 @@ class Analysis(object):
         )
     
         # significance test (similar to linear_regression approach)
-        significance_results = causal_estimate.estimator.test_significance(self.data, causal_estimate.value)
-        p_value = significance_results['p_value'][0]
-        print("Significance Test Results (DML):", p_value)
+        p_value = None
     
         print("\n=== Interpretation Hint ===")
         print("Uses DML with RandomForestRegressor as default for outcome & treatment models.")
         print("============================\n")
 
         # Sensitivity Analysis for the estimation
-        #refutation, figs = self.sensitivity_analysis(outcome, model, identified_estimand, causal_estimate)
-        refutation = None
-        figs = []
+        refutation, figs = self.sensitivity_analysis(outcome, model, identified_estimand, causal_estimate, treatment, outcome)
 
         return causal_estimate, p_value, refutation, figs
 
@@ -339,6 +346,11 @@ class Analysis(object):
         )
         identified_estimand = model.identify_effect()
         W_col = identified_estimand.get_backdoor_variables()
+        if len(W_col) == 0:
+            W_col = ['W']
+            W = pd.DataFrame(np.zeros((len(self.data), 1)), columns=W_col)
+            self.data = pd.concat([self.data, W], axis=1)
+            self.global_state.user_data.processed_data = self.data
         # Algorithm selection and deliberation
         filter = HTE_Filter(args)
         self.global_state = filter.forward(self.global_state, query)
@@ -348,15 +360,17 @@ class Analysis(object):
 
         programmer = HTE_Programming(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
         hte, hte_lower, hte_upper = programmer.forward(self.global_state, task='hte')
-        hte_df = pd.DataFrame({'hte': hte})
-        hte_df.to_csv(f'{self.global_state.user_data.output_graph_dir}/hte.csv', index=False)
+        hte = pd.DataFrame({'hte': hte.flatten()})
+        hte.to_csv(f'{self.global_state.user_data.output_graph_dir}/hte.csv', index=False)
 
         dist_fig_path = f'{self.global_state.user_data.output_graph_dir}/hte_dist.png'
         plot_hte_dist(hte, dist_fig_path)
         figs = ['hte_dist.png']
         cate_fig_path = f'{self.global_state.user_data.output_graph_dir}/cate_dist.png'
-        plot_cate_violin(self.data, hte, X_col, cate_fig_path)
-        figs.append('cate_dist.png')
+        visual_X_col = [col for col in X_col if self.global_state.statistics.data_type_column[col]!='continuous']
+        if visual_X_col != []:
+            plot_cate_violin(self.data, hte, X_col, cate_fig_path)
+            figs.append('cate_dist.png')
 
         return hte, hte_lower, hte_upper, figs
 
@@ -440,8 +454,36 @@ class Analysis(object):
 
 
 
-    def sensityvity_analysis(self,):
-        pass
+    def sensitivity_analysis(self, target_node, model, estimand, estimate, treatment, outcome):
+        # if self.global_state.statistics.linearity:
+        #      simulation_method = "linear-partial-R2"
+        # else:
+        #      simulation_method = "non-parametric-partial-R2",
+
+        # Use the most important factor as the benchmark_common_causes
+        file_exists = os.path.exists(f'{self.global_state.user_data.output_graph_dir}/shap_df.csv')
+        if not file_exists:
+            self.feature_importance(target_node, visualize=False)
+        shap_df = pd.read_csv(f'{self.global_state.user_data.output_graph_dir}/shap_df.csv')
+        max_col = shap_df.mean().idxmax()
+
+        print('model.get_common_causes',model.get_common_causes())
+        if model.get_common_causes() == [] or model.get_common_causes() is None:
+            refute = model.refute_estimate(estimand, estimate, method_name="data_subset_refuter", subset_fraction=0.9)
+            figs = []
+        else:
+            refute = model.refute_estimate(estimand, estimate,
+                                method_name = "add_unobserved_common_cause",
+                                simulation_method = "non-parametric-partial-R2",
+                                benchmark_common_causes = [max_col],
+                                effect_fraction_on_outcome = [1,2,3]
+                                )
+            plt.savefig(f'{self.global_state.user_data.output_graph_dir}/ate_refutation.png')
+            plt.close()
+            figs = ['ate_refutation.png']
+        print(refute)
+
+        return refute, figs 
 
     def call_LLM(self, format, prompt, message):
         client = OpenAI(organization=self.args.organization, project=self.args.project, api_key=self.args.apikey)
@@ -490,44 +532,56 @@ class Analysis(object):
             treatment = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
             causal_estimate, p_value, refutation, figs = self.estimate_causal_effect(treatment=treatment, outcome=key_node, control_value=0, treatment_value=1)
             parent_nodes = list(self.G.predecessors(key_node))
-            # Analysis for Effect Estimation
-            prompt = f"""
-            I'm doing the Treatment Effect Estimation analysis and please help me to write a brief analysis in bullet points.
-            Here are some informations:
-            **Result Variable we care about**: {key_node}
-            **Treatment Variable**: {treatment}
-            **Parent Nodes of the Result Variable**: {parent_nodes}
-            **Causal Estimate Result**: {causal_estimate}
-            **P-value of Significance Test for Causal Estimate**: {p_value}
-            **Description from User**: {desc}
-            """
-            response1 = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
-            # Analysis for Sensitivity Analysis
-            prompt = f"""
-            I'm doing the sensitivity analysis for my treatment effect estimation, please help me to write a brief analysis in bullet points.
-            **Contents you need to incode**
-            1. Brief Introduction of the sensitivity analysis method we use
-            2. Summary of the sensitivity analysis result
-            3. Brief Interpretation of the plot
-            4. Conclude whether the treatment effect estimation is reliable or not based on the sensitivity analysis result
-            Here are some informations:
-            **Result Variable we care about**: {key_node}
-            **Causal Estimate Result**: {causal_estimate}
-            **Sensitivity Analysis Result**: 
-            {str(refutation)}
-            **Method We Use**:
-            Sensitivity analysis helps us study how robust an estimated effect is when the assumption of no unobserved confounding is violated. That is, how much bias does our estimate have due to omitting an (unobserved) confounder? Known as the omitted variable bias (OVB), it gives us a measure of how the inclusion of an omitted common cause (confounder) would have changed the estimated effect.
-            **Information in the plot**: 
-            a. The x-axis shows hypothetical partial R2 values of unobserved confounder(s) with the treatment. The y-axis shows hypothetical partial R2 of unobserved confounder(s) with the outcome. 
-            b. At <x=0,y=0>, the black diamond shows the original estimate (theta_s) without considering the unobserved confounders.
-            c. The contour levels represent adjusted estimate of the effect, which would be obtained if the unobserved confounder(s) had been included in the estimation model. 
-            d. The red contour line is the critical threshold where the adjusted effect goes to zero. Thus, confounders with such strength or stronger are sufficient to reverse the sign of the estimated effect and invalidate the estimate’s conclusions. 
-            e. The red triangle shows the estimated effect when the unobserved covariate has 1 or 2 or 3 times partial-R^2 of a chosen benchmark observed covariate with the outcome.
-            **Description from User**: {desc}
-            """
-            #response2 = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
-            response2 = ''
-            response = response1 + '\n' + response2
+            if causal_estimate is not None:
+                # Analysis for Effect Estimation
+                prompt = f"""
+                I'm doing the Treatment Effect Estimation analysis and please help me to write a brief analysis in bullet points.
+                Here are some informations:
+                **Result Variable we care about**: {key_node}
+                **Treatment Variable**: {treatment}
+                **Parent Nodes of the Result Variable**: {parent_nodes}
+                **Causal Estimate Result**: {causal_estimate.value}
+                **P-value of Significance Test for Causal Estimate**: {p_value}
+                **Description from User**: {desc}
+                """
+                response1 = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
+                # Analysis for Refutation Analysis
+                prompt = f"""
+                I'm doing the refutation analysis for my treatment effect estimation, please help me to write a brief analysis in bullet points.
+                **Contents you need to incode**
+                1. Brief Introduction of the refutation analysis method we use
+                2. Summary of the refutation analysis result
+                3. Brief Interpretation of the plot
+                4. Conclude whether the treatment effect estimation is reliable or not based on the refutation analysis result
+                Here are some informations:
+                **Result Variable we care about**: {key_node}
+                **Causal Estimate Result**: {causal_estimate}
+                """
+                if figs == []:
+                    prompt += f"""
+                **Refutation Result**: 
+                {str(refutation)}
+                **Method We Use**: Use Data Subsampling to answer Does the estimated effect change significantly when we replace the given dataset with a randomly selected subset?
+                """
+                else:
+                    prompt += f"""
+                **Sensitivity Analysis Result**: 
+                {str(refutation)}
+                **Method We Use**:
+                Sensitivity analysis helps us study how robust an estimated effect is when the assumption of no unobserved confounding is violated. That is, how much bias does our estimate have due to omitting an (unobserved) confounder? Known as the omitted variable bias (OVB), it gives us a measure of how the inclusion of an omitted common cause (confounder) would have changed the estimated effect.
+                **Information in the plot**: 
+                a. The x-axis shows hypothetical partial R2 values of unobserved confounder(s) with the treatment. The y-axis shows hypothetical partial R2 of unobserved confounder(s) with the outcome. 
+                b. At <x=0,y=0>, the black diamond shows the original estimate (theta_s) without considering the unobserved confounders.
+                c. The contour levels represent adjusted estimate of the effect, which would be obtained if the unobserved confounder(s) had been included in the estimation model. 
+                d. The red contour line is the critical threshold where the adjusted effect goes to zero. Thus, confounders with such strength or stronger are sufficient to reverse the sign of the estimated effect and invalidate the estimate’s conclusions. 
+                e. The red triangle shows the estimated effect when the unobserved covariate has 1 or 2 or 3 times partial-R^2 of a chosen benchmark observed covariate with the outcome.
+                **Description from User**: {desc}
+                """
+                response2 = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
+                response = response1 + '\n' + response2
+            else:
+                response = "We cannot identify a valid treatment effect estimand for your query, please adjust your query based on the causal graph and retry."
+                figs = []
 
             return response, figs
         
@@ -554,6 +608,8 @@ class Analysis(object):
             **Result Variable we care about**: {key_node}
             **Treatment Variable**: {treatment}
             **Heterogeneous Confounders we coutrol**: {confounders}
+            **Method we use**: 
+            Double Machine Learning, algorithm {self.global_state.inference.hte_algo_json['name']} with model_y={self.global_state.inference.hte_model_param['model_y']}, model_t={self.global_state.inference.hte_model_param['model_t']}
             **Upper and Lower Bound of Confidence Inferval with P-value=0.05**: {hte_upper}, {hte_lower}
             **Information in the plot**: Distribution of the HTE; Violin plot of the CATE grouped by: {confounders}
             **Description from User**: {desc}
@@ -616,10 +672,10 @@ def main(global_state, args):
     print("Welcome to the Causal Analysis Demo using the Auto MPG dataset.\n")
     
     analysis = Analysis(global_state, args)
-    message = "The value of PIP3 is abnormal, help me to find which variables cause this anomaly"
+    message = "What is the Heterogeneous Treatment Effect of PIP2 on PIP3"
 
     # EXAMPLE: Test the new DML method
-    dml_estimate, dml_p_value = analysis.estimate_causal_effect_dml(
+    dml_estimate, dml_p_value, refutaion, figs = analysis.estimate_causal_effect_dml(
         treatment='PIP2',
         outcome='PIP3',
         target_units='treated'  # e.g., ATT
@@ -628,7 +684,7 @@ def main(global_state, args):
     print("p-value:", dml_p_value)
 
     # EXAMPLE: Compare with linear approach, specifying a different target_units
-    lin_estimate, lin_p_value = analysis.estimate_causal_effect(
+    lin_estimate, lin_p_value, refutaion, figs = analysis.estimate_causal_effect(
         treatment='PIP2',
         outcome='PIP3',
         target_units=lambda df: df[df['PIP2'] > 100].index  # example subgroup
