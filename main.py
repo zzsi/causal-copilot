@@ -1,12 +1,11 @@
 # Kun Zhou Implemented
-from data.simulation.simulation import SimulationManager
 from preprocess.dataset import knowledge_info
 from preprocess.stat_info_functions import stat_info_collection, convert_stat_info_to_text
 from algorithm.filter import Filter
 from algorithm.program import Programming
 from algorithm.rerank import Reranker
 from postprocess.judge import Judge
-from postprocess.visualization import Visualization
+from postprocess.visualization import Visualization, convert_to_edges
 from preprocess.eda_generation import EDA
 from postprocess.report_generation import Report_generation
 from global_setting.Initialize_state import global_state_initialization, load_data
@@ -24,7 +23,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="dataset/Abalone/Abalone.csv",
+        default="dataset/sachs/sachs.csv",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -32,7 +31,7 @@ def parse_args():
     parser.add_argument(
         '--output-report-dir',
         type=str,
-        default='dataset/Abalone/output_report',
+        default='dataset/sachs/output_report',
         help='Directory to save the output report'
     )
 
@@ -40,7 +39,7 @@ def parse_args():
     parser.add_argument(
         '--output-graph-dir',
         type=str,
-        default='dataset/Abalone/output_graph',
+        default='dataset/sachs/output_graph',
         help='Directory to save the output graph'
     )
 
@@ -48,21 +47,21 @@ def parse_args():
     parser.add_argument(
         '--organization',
         type=str,
-        default="org-5NION61XDUXh0ib0JZpcppqS",
+        default="org-gw7mBMydjDsOnDlTvNQWXqPL",
         help='Organization ID'
     )
 
     parser.add_argument(
         '--project',
         type=str,
-        default="proj_Ry1rvoznXAMj8R2bujIIkhQN",
+        default="proj_SIDtemBJMHUWG7CPdU7yRjsn",
         help='Project ID'
     )
 
     parser.add_argument(
         '--apikey',
         type=str,
-        default="",
+        default=None,
         help='API Key'
     )
 
@@ -83,14 +82,14 @@ def parse_args():
     parser.add_argument(
         '--debug',
         action='store_true',
-        default=False,
+        default=True,
         help='Enable debugging mode'
     )
 
     parser.add_argument(
         '--initial_query',
         type=str,
-        default="selected algorithm: PC",
+        default="selected algorithm: XGES",
         help='Initial query for the algorithm'
     )
 
@@ -151,6 +150,7 @@ def main(args):
         global_state.user_data.raw_data = load_real_world_data(args.data_file)
     
     global_state.user_data.processed_data = process_user_query(args.initial_query, global_state.user_data.raw_data)
+    global_state.user_data.visual_selected_features = global_state.user_data.processed_data.columns.tolist()
 
     # Show the exacted global state
     print(global_state)
@@ -158,10 +158,10 @@ def main(args):
     # background info collection
     #print("Original Data: ", global_state.user_data.raw_data)
 
-    
-
     if args.debug:
         # Fake statistics for debugging
+        global_state.statistics.sample_size = 853
+        global_state.statistics.feature_number = 11
         global_state.statistics.missingness = False
         global_state.statistics.data_type = "Continuous"
         global_state.statistics.linearity = True
@@ -197,43 +197,37 @@ def main(args):
     #############Visualization for Initial Graph###################
     my_visual_initial = Visualization(global_state)
     # Get the position of the nodes
-    pos_est = my_visual_initial.get_pos(global_state.results.raw_result)
+    pos_est = my_visual_initial.get_pos(global_state.results.converted_graph)
     # Plot True Graph
     if global_state.user_data.ground_truth is not None:
         _ = my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.pdf', pos=pos_est)
     # Plot Initial Graph
-    _ = my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf', pos=pos_est)
+    _ = my_visual_initial.plot_pdag(global_state.results.converted_graph, 'initial_graph.pdf', pos=pos_est)
     my_report = Report_generation(global_state, args)
-    global_state.results.raw_edges = my_visual_initial.convert_to_edges(global_state.results.raw_result)
+    global_state.results.raw_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.processed_data.columns, global_state.results.converted_graph)
     global_state.logging.graph_conversion['initial_graph_analysis'] = my_report.graph_effect_prompts()
-
     judge = Judge(global_state, args)
     if global_state.user_data.ground_truth is not None:
         print("Original Graph: ", global_state.results.converted_graph)
         print("Mat Ground Truth: ", global_state.user_data.ground_truth)
         global_state.results.metrics = judge.evaluation(global_state)
         print(global_state.results.metrics)
+    import time 
+    start_time = time.time()
+    global_state = judge.forward(global_state, 'cot_markov_blanket', 1)
+    end_time = time.time()
+    duration = end_time-start_time
+    # with open('postprocess/test_result/sachs_full/duration.txt', 'a') as file:
+    #     # Write the text to the file
+    #     file.write(f'prompt: {prompt}, voting_num: {voting_num}, duration: {duration} \n')
 
-    global_state = judge.forward(global_state)
-
-    # ##############################
-    # from postprocess.judge_functions import llm_direction_evaluation
-    # llm_direction_evaluation(global_state)
-    # if global_state.user_data.ground_truth is not None:
-    #     print("Revised Graph: ", global_state.results.revised_graph)
-    #     print("Mat Ground Truth: ", global_state.user_data.ground_truth)
-    #     global_state.results.revised_metrics = judge.evaluation(global_state)
-    #     print(global_state.results.revised_metrics)
-    # ################################
     #############Visualization for Revised Graph###################
     # Plot Revised Graph
     my_visual_revise = Visualization(global_state)
     pos_new = my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf', pos=pos_est)
-    global_state.results.revised_edges = my_visual_revise.convert_to_edges(global_state.results.revised_graph)
+    global_state.results.revised_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.raw_data.columns, global_state.results.revised_graph)
     # Plot Bootstrap Heatmap
     boot_heatmap_path = my_visual_revise.boot_heatmap_plot()
-
-    
 
     # algorithm selection process
     '''
@@ -251,7 +245,7 @@ def main(args):
     my_report = Report_generation(global_state, args)
     report = my_report.generation()
     my_report.save_report(report)
-    report_path = os.path.join(global_state.user_data.output_report_dir, 'report.pdf')
+    report_path = os.path.join(global_state.user_data.output_report_dir, 'report.tex')  
     while not os.path.isfile(report_path) and try_num<=3:
         try_num = +1
         print('Error occur during the Report Generation, try again')
@@ -262,6 +256,11 @@ def main(args):
             print('Error occur during the Report Generation three times, we stop.')
     ################################
 
+    # User discussion part
+    from user.discuss import Discussion
+    discussion = Discussion(args, report)
+    discussion.forward(global_state, report)
+
     return report, global_state
 
 
@@ -269,3 +268,4 @@ def main(args):
 if __name__ == '__main__':
     args = parse_args()
     main(args)
+            

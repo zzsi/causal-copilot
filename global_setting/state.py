@@ -16,22 +16,40 @@ class UserData:
     knowledge_docs: Optional[str] = None
     output_report_dir: Optional[str] = None
     output_graph_dir: Optional[str] = None
+    selected_features: Optional[object] = None
+    important_features: Optional[object] = None
+    visual_selected_features: Optional[object] = None
+    system_drop_features: Optional[object] = None
+    user_drop_features: Optional[object] = None
+    llm_drop_features: Optional[object] = None
+    high_corr_drop_features: Optional[object] = None
+    nan_indicator: Optional[str] = None
 
 @dataclass
 class Statistics:
+    miss_ratio: List[Dict] = field(default_factory=list)
     linearity: Optional[bool] = None
     gaussian_error: Optional[bool] = None
     missingness: Optional[bool] = None
     sample_size: Optional[int] = None
     feature_number: Optional[int] = None
-    boot_num: int = 100
+    boot_num: int = 20
     alpha: float = 0.1
     num_test: int = 100
     ratio: float = 0.5
     data_type: Optional[str] = None
+    data_type_column: Optional[str] = None
     heterogeneous: Optional[bool] = None
     domain_index: Optional[str] = None
     description: Optional[str] = None
+    time_series: Optional[bool] = False # indicator of time-series data
+    time_lag: List[Dict] = field(default_factory=list) # estimated time lags for each feature
+    nlags: int = 50
+    
+    def update(self, values_dict: dict):
+        for key, value in values_dict.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
 
 @dataclass
 class Logging:
@@ -42,6 +60,8 @@ class Logging:
     argument_conversation: List[Dict] = field(default_factory=list)
     errors_conversion: List[Dict] = field(default_factory=list)
     graph_conversion: Optional[Dict] = field(default_factory=dict)
+    downstream_discuss: List[Dict] = field(default_factory=list)
+    final_discuss: List[Dict] = field(default_factory=list)
 
 @dataclass
 class Algorithm:
@@ -55,6 +75,7 @@ class Algorithm:
 @dataclass
 class Results:
     raw_result: Optional[object] = None
+    raw_pos: Optional[object] = None
     raw_edges: Optional[Dict] = None
     raw_info: Optional[Dict] = None
     converted_graph: Optional[str] = None
@@ -63,10 +84,19 @@ class Results:
     revised_edges: Optional[Dict] = None
     revised_metrics: Optional[Dict] = None
     bootstrap_probability: Optional[np.ndarray] = None
+    bootstrap_check_dict: Optional[Dict] = None
     llm_errors: List[Dict] = field(default_factory=list)
     bootstrap_errors: List[Dict] = field(default_factory=list)
     eda_result: Optional[Dict] = None
-    llm_directions: Optional[object] = None
+    prior_knowledge: Optional[object] = None
+    refutation_analysis: Optional[object] = None
+
+@dataclass
+class Inference:
+    hte_algo_json: Optional[Dict] = None
+    hte_model_y_json: Optional[Dict] = None
+    hte_model_T_json: Optional[Dict] = None
+    hte_model_param: Optional[Dict] = None
 
 @dataclass
 class GlobalState:
@@ -74,5 +104,6 @@ class GlobalState:
     statistics: Statistics = field(default_factory=Statistics)
     logging: Logging = field(default_factory=Logging)
     algorithm: Algorithm = field(default_factory=Algorithm)
+    inference: Inference = field(default_factory=Inference)
     results: Results = field(default_factory=Results)
 
