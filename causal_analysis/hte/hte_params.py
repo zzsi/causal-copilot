@@ -75,7 +75,7 @@ class HTE_Param_Selector(object):
         # Set up the Hyperparameters
         # Load hyperparameters prompt template
         import json
-        import causal_analysis.hte.wrappers as wrappers
+        import hte.wrappers as wrappers
 
         y_prompt = self.prompt_generation(self.y_col, global_state)
         T_prompt = self.prompt_generation(self.T_col, global_state)
