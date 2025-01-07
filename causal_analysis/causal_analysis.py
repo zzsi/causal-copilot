@@ -5,7 +5,6 @@ from dowhy import gcm, CausalModel
 from dowhy import gcm, CausalModel
 import shap
 import sklearn
-from sklearn.ensemble import RandomForestRegressor
 import matplotlib.pyplot as plt
 import seaborn as sns
 from openai import OpenAI
@@ -160,13 +159,17 @@ class Analysis(object):
             plt.close()
         return parent_nodes, mean_shap_values, figs
     
-    def estimate_causal_effect(self, treatment, outcome, control_value=0, treatment_value=1):
+    def estimate_causal_effect(self, treatment, outcome, 
+                           control_value=0, treatment_value=1,
+                           target_units='ate'):
         """
-        Estimate the causal effect of a treatment on an outcome using DoWhy (backdoor.linear_regression).
+        Estimate the causal effect of a treatment on an outcome 
+        using DoWhy (backdoor.linear_regression).
+    
+        :param target_units: 'ate', 'treated', or a callable lambda for a subset (CATE).
         """
         print("\n" + "#"*60)
         print(f"Estimating Causal Effect of Treatment: {treatment} on Outcome: {outcome}")
-        print(f"Method: backdoor.linear_regression | target_units={target_units}")
         print(f"Method: backdoor.linear_regression | target_units={target_units}")
         print("#"*60)
     
@@ -174,26 +177,27 @@ class Analysis(object):
             data=self.data,
             treatment=treatment,
             outcome=outcome,
-            graph=self.dot_graph()
+            graph=self.dot_graph
         )
-
-        identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
-        print("\nIdentified Estimand:")
-        print(identified_estimand)
-
-        causal_estimate = model.estimate_effect(
-            identified_estimand,
-            method_name="backdoor.linear_regression",
-            control_value=control_value,
-            treatment_value=treatment_value
-        )
-
-        print("\nCausal Estimate:")
-        print(causal_estimate)
-        # Call test_significance with the estimate value
-        significance_results = causal_estimate.estimator.test_significance(self.data,causal_estimate.value)
-        p_value = significance_results['p_value'][0]
-        print("Significance Test Results:", p_value)
+        try:
+            identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
+            print("\nIdentified Estimand:")
+            print(identified_estimand)
+        
+            causal_estimate = model.estimate_effect(
+                identified_estimand,
+                method_name="backdoor.linear_regression",
+                control_value=control_value,
+                treatment_value=treatment_value,
+                target_units=target_units  # <- new parameter
+            )
+        
+            print("\nCausal Estimate:")
+            print(causal_estimate)
+            # Call test_significance with the estimate value
+            significance_results = causal_estimate.estimator.test_significance(self.data,causal_estimate.value)
+            p_value = significance_results['p_value'][0]
+            print("Significance Test Results:", p_value)
 
             # Sensitivity Analysis for the estimation
             refutation, figs = self.sensitivity_analysis(outcome, model, identified_estimand, causal_estimate, treatment, outcome)
@@ -201,11 +205,70 @@ class Analysis(object):
             causal_estimate, p_value, refutation, figs = None, None, None, []
     
         print("\n=== Interpretation Hint ===")
-        print("A negative causal estimate indicates that increasing the treatment variable (e.g., horsepower)")
-        print("tends to decrease the outcome variable (e.g., mpg), assuming the model and assumptions hold.")
+        print("Negative estimate => increasing treatment tends to decrease outcome.")
         print("============================\n")
 
-        return causal_estimate, p_value
+        return causal_estimate, p_value, refutation, figs
+
+    def estimate_causal_effect_dml(self, treatment, outcome,
+                               control_value=0, treatment_value=1,
+                               target_units='ate'):
+        """
+        Estimate the causal effect (DML) of a treatment on an outcome,
+        specifying target_units for ATE, ATT, or a custom subset (CATE).
+        """
+        print("\n" + "#"*60)
+        print(f"Estimating Causal Effect (DML) of Treatment: {treatment} on Outcome: {outcome}")
+        print(f"Method: backdoor.dml | target_units={target_units}")
+        print("#"*60)
+    
+        model = CausalModel(
+            data=self.data,
+            treatment=treatment,
+            outcome=outcome,
+            graph=self.dot_graph
+        )
+    
+        identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
+        print("\nIdentified Estimand (DML):")
+        print(identified_estimand)
+
+    
+        # Example default regressors I hard-coded for now.
+        #
+        from sklearn.ensemble import RandomForestRegressor
+        outcome_model = RandomForestRegressor(n_estimators=10, max_depth=5, random_state=42)
+        treatment_model = RandomForestRegressor(n_estimators=10, max_depth=5, random_state=42)
+        final_model = RandomForestRegressor(n_estimators=10, max_depth=5, random_state=42)
+
+        warnings.filterwarnings('ignore')
+        causal_estimate = model.estimate_effect(
+            identified_estimand,
+            method_name="backdoor.econml.dml.DML",
+            method_params={
+                "init_params":{
+                "model_y": outcome_model,
+                "model_t": treatment_model,
+                "model_final": final_model
+                },
+                "fit_params":{}
+            },
+            control_value=control_value,
+            treatment_value=treatment_value,
+            target_units=target_units  # <- here
+        )
+    
+        # significance test (similar to linear_regression approach)
+        p_value = None
+    
+        print("\n=== Interpretation Hint ===")
+        print("Uses DML with RandomForestRegressor as default for outcome & treatment models.")
+        print("============================\n")
+
+        # Sensitivity Analysis for the estimation
+        refutation, figs = self.sensitivity_analysis(outcome, model, identified_estimand, causal_estimate, treatment, outcome)
+
+        return causal_estimate, p_value, refutation, figs
 
     def _generate_dowhy_graph(self):
         """
@@ -609,7 +672,28 @@ def main(global_state, args):
     print("Welcome to the Causal Analysis Demo using the Auto MPG dataset.\n")
     
     analysis = Analysis(global_state, args)
-    message = "The value of PIP3 is abnormal, help me to find which variables cause this anomaly"
+    message = "What is the Heterogeneous Treatment Effect of PIP2 on PIP3"
+
+    # EXAMPLE: Test the new DML method
+    dml_estimate, dml_p_value, refutaion, figs = analysis.estimate_causal_effect_dml(
+        treatment='PIP2',
+        outcome='PIP3',
+        target_units='treated'  # e.g., ATT
+    )
+    print("DML Estimate:", dml_estimate.value)
+    print("p-value:", dml_p_value)
+
+    # EXAMPLE: Compare with linear approach, specifying a different target_units
+    lin_estimate, lin_p_value, refutaion, figs = analysis.estimate_causal_effect(
+        treatment='PIP2',
+        outcome='PIP3',
+        target_units=lambda df: df[df['PIP2'] > 100].index  # example subgroup
+    )
+    print("Linear Subgroup Estimate (CATE approach):", lin_estimate.value)
+    print("p-value:", lin_p_value)
+    # Testing code to check the above functions replace it appropriately
+
+    
     class InfList(BaseModel):
                 tasks: list[str]
                 descriptions: list[str]
