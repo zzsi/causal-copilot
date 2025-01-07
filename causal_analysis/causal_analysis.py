@@ -206,8 +206,8 @@ class Analysis(object):
         print(identified_estimand)
 
     
-        # Example default regressors (hard-coded for now)
-        # We'll later let the LLM choose them in Step 3.
+        # Example default regressors I hard-coded for now.
+        #
         from sklearn.ensemble import RandomForestRegressor
         outcome_model = RandomForestRegressor(n_estimators=100, max_depth=5, random_state=42)
         treatment_model = RandomForestRegressor(n_estimators=100, max_depth=5, random_state=42)
@@ -558,6 +558,27 @@ def main(global_state, args):
     
     analysis = Analysis(global_state, args)
     message = "The value of PIP3 is abnormal, help me to find which variables cause this anomaly"
+
+    # EXAMPLE: Test the new DML method
+    dml_estimate, dml_p_value = analysis.estimate_causal_effect_dml(
+        treatment='PIP2',
+        outcome='PIP3',
+        target_units='treated'  # e.g., ATT
+    )
+    print("DML Estimate:", dml_estimate.value)
+    print("p-value:", dml_p_value)
+
+    # EXAMPLE: Compare with linear approach, specifying a different target_units
+    lin_estimate, lin_p_value = analysis.estimate_causal_effect(
+        treatment='PIP2',
+        outcome='PIP3',
+        target_units=lambda df: df[df['PIP2'] > 100].index  # example subgroup
+    )
+    print("Linear Subgroup Estimate (CATE approach):", lin_estimate.value)
+    print("p-value:", lin_p_value)
+    # Testing code to check the above functions replace it appropriately
+
+    
     class InfList(BaseModel):
         indicator: bool
         tasks: list[str]
