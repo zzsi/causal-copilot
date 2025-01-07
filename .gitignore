@@ -135,8 +135,11 @@ dmypy.json
 # data/simulation/dummy
 data/simulation/simulated_data
 preprocess/result
+postprocess/test_result
+causal_analysis/test_result
 simulated_data
 gradio_output/
+Gradio/test_for_demo
 demo_data/
 output/
 test.py
