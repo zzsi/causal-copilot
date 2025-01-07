@@ -6,19 +6,25 @@ Given a dataset with the following properties:
 
 We want to predict [TARGET_NODE] with a classification model.
 
-Please analyze the dataset characteristics and the task description, and recommend suitable classification algorithm. Use the following context information to inform your recommendations:
+Please analyze the dataset characteristics and the task description, and recommend the most suitable one classification algorithm. Use the following context information to inform your recommendations:
 
-Classifier:
+You can only choose from these Classifiers, and use exactly the same name in your response:
 [ALGO_CONTEXT]
 
-For each recommended algorithm, provide:
+For the chosen one algorithm, provide:
 1. Classifier name (name of the available classifier in the implementation)
 2. Brief description
 3. Justification for its suitability based on the dataset characteristics
 
-Present your recommendations in a structured JSON format, provide the most suitable algorithm given the dataset characteristics.
+Present your recommendation in a structured JSON format, provide only the most suitable algorithm given the dataset characteristics.
+**You can only choose from these Regressors**:
+- LogisticRegression  
+- RandomForestClassifier  
+- HistGradientBoostingClassifier  
+- SVC 
+- SGDClassifier  
 
-Please structure your response like this example:
+Please structure your response like this example, DO NOT include anything else:
 
 {
   "name": "classifier Name",
@@ -26,4 +32,3 @@ Please structure your response like this example:
   "justification": "Explanation of why this classifier is suitable for the given dataset.",
 }
     
-Please provide your recommendations following this JSON structure.

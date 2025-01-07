@@ -195,16 +195,15 @@ def main(args):
     #############Visualization for Initial Graph###################
     my_visual_initial = Visualization(global_state)
     # Get the position of the nodes
-    pos_est = my_visual_initial.get_pos(global_state.results.raw_result)
+    pos_est = my_visual_initial.get_pos(global_state.results.converted_graph)
     # Plot True Graph
     if global_state.user_data.ground_truth is not None:
         _ = my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.pdf', pos=pos_est)
     # Plot Initial Graph
-    _ = my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf', pos=pos_est)
+    _ = my_visual_initial.plot_pdag(global_state.results.converted_graph, 'initial_graph.pdf', pos=pos_est)
     my_report = Report_generation(global_state, args)
-    global_state.results.raw_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.processed_data.columns, global_state.results.raw_result)
+    global_state.results.raw_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.processed_data.columns, global_state.results.converted_graph)
     global_state.logging.graph_conversion['initial_graph_analysis'] = my_report.graph_effect_prompts()
-
     judge = Judge(global_state, args)
     if global_state.user_data.ground_truth is not None:
         print("Original Graph: ", global_state.results.converted_graph)
@@ -228,8 +227,6 @@ def main(args):
     # Plot Bootstrap Heatmap
     boot_heatmap_path = my_visual_revise.boot_heatmap_plot()
 
-
-
     # algorithm selection process
     '''
     round = 0
@@ -246,7 +243,7 @@ def main(args):
     my_report = Report_generation(global_state, args)
     report = my_report.generation()
     my_report.save_report(report)
-    report_path = os.path.join(global_state.user_data.output_report_dir, 'report.tex')  #.pdf
+    report_path = os.path.join(global_state.user_data.output_report_dir, 'report.tex')  
     while not os.path.isfile(report_path) and try_num<=3:
         try_num = +1
         print('Error occur during the Report Generation, try again')

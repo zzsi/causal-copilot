@@ -524,7 +524,7 @@ The JSON should be
         """
         variables = self.data.columns
 
-        edges_dict = convert_to_edges(self.algo, variables, self.raw_graph)
+        edges_dict = convert_to_edges(self.algo, variables, self.graph)
         relation_text_dict, relation_text = edges_to_relationship(self.data, edges_dict)
 
         prompt = f"""

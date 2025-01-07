@@ -333,68 +333,121 @@ def parse_algo_query(message, chat_history, download_btn):
 
 def parse_inference_query(message, chat_history, download_btn):
             chat_history.append((message, None))
-            yield chat_history, download_btn
+            #yield chat_history, download_btn
             if message.lower() == 'no' or message == '':
                 chat_history.append((None, "✅ No need for downstream analysis, continue to the next section..."))
-                yield chat_history, download_btn
+                #yield chat_history, download_btn
                 REQUIRED_INFO["current_stage"] = 'report_generation'
             else:
                 class InfList(BaseModel):
                             tasks: list[str]
                             descriptions: list[str]
                             key_node: list[str]
-                prompt = """You are a helpful assistant, please do the following tasks:
-                        **Tasks*
-                        Firstly please identify what tasks the user want to do and save them as a list in tasks.
-                        Please choose among the following causal tasks, if there's no matched task just return an empty list 
-                        Tasks you can choose: 1. Treatment Effect Estimation; 2. Anormaly Attribution; 3. Feature Importance
-                        Secondly, save user's description for their tasks as a list in descriptions, the length of description list must be the same with task list
-                        Thirdly, save the key result variable user care about as a list, each task must have a key result variable and they can be the same, the length of result variable list must be the same with task list
-                        **Question Examples**
-                        1. Treatment Effect Estimation:
-                        What is the causal effect of introducing coding classes in schools on students' future career prospects?
-                        What is the average treatment effect of a minimum wage increase on employment rates?
-                        How much does the availability of free internet in rural areas improve educational outcomes?
-                        How does access to affordable childcare affect women’s labor force participation?
-                        What is the impact of reforestation programs on air quality in urban areas?
-                        2. Anormaly Attribution
-                        How can we attribute a sudden increase in stock market volatility to specific economic events or market sectors?
-                        Which variables (e.g., transaction amount, location, time) explain anomalies in loan repayment behavior?
-                        What factors explain unexpected delays in surgery schedules or patient discharge times?
-                        What are the root causes of deviations in supply chain delivery times?
-                        What factors contribute most to unexpected drops in product sales during a specific period?
-                        3. Feature Importance
-                        What are the most influential factors driving credit score predictions?
-                        What are the key factors influencing the effectiveness of a specific treatment or medication?
-                        Which product attributes (e.g., price, brand, reviews) are the most influential in predicting online sales?
-                        Which environmental variables (e.g., humidity, temperature, CO2 levels) are most important for predicting weather patterns?
-                        What customer behaviors (e.g., browsing time, cart size) contribute most to predicting cart abandonment?
-                        """
+                prompt = f"""You are a helpful assistant, please do the following tasks:
+            **Tasks*
+            Firstly please identify what tasks the user want to do and save them as a list in tasks.
+            Please choose among the following causal tasks, if there's no matched task just return an empty list 
+            You can only choose from the following tasks: 
+            1. Average Treatment Effect Estimation; 2. Heterogeneous Treatment Effect Estimation 3. Anormaly Attribution; 4. Feature Importance
+            Secondly, save user's description for their tasks as a list in descriptions, the length of description list must be the same with task list
+            Thirdly, save the key result variable user care about as a list, each task must have a key result variable and they can be the same, the length of result variable list must be the same with task list
+            key result variable must be among this list!
+            {global_state.user_data.processed_data.columns}
+            **Question Examples**
+            1. Average Treatment Effect Estimation:
+            What is the causal effect of introducing coding classes in schools on students' future career prospects?
+            What is the average treatment effect of a minimum wage increase on employment rates?
+            How much does the availability of free internet in rural areas improve educational outcomes?
+            How does access to affordable childcare affect women’s labor force participation?
+            What is the impact of reforestation programs on air quality in urban areas?
+            2. Heterogeneous Treatment Effect Estimation:
+            What is the heterogeneity in the impact of reforestation programs on air quality across neighborhoods with varying traffic density?
+            How does the introduction of mental health support programs in schools impact academic performance differently for students with varying levels of pre-existing stress?
+            Which demographic groups benefit most from telemedicine adoption in terms of reduced healthcare costs and improved health outcomes?
+            How does the effectiveness of renewable energy subsidies vary for households with different income levels or geographic locations?
+            3. Anormaly Attribution
+            How can we attribute a sudden increase in stock market volatility to specific economic events or market sectors?
+            Which variables (e.g., transaction amount, location, time) explain anomalies in loan repayment behavior?
+            What factors explain unexpected delays in surgery schedules or patient discharge times?
+            What are the root causes of deviations in supply chain delivery times?
+            What factors contribute most to unexpected drops in product sales during a specific period?
+            4. Feature Importance
+            What are the most influential factors driving credit score predictions?
+            What are the key factors influencing the effectiveness of a specific treatment or medication?
+            Which product attributes (e.g., price, brand, reviews) are the most influential in predicting online sales?
+            Which environmental variables (e.g., humidity, temperature, CO2 levels) are most important for predicting weather patterns?
+            What customer behaviors (e.g., browsing time, cart size) contribute most to predicting cart abandonment?
+            """
                 global_state.logging.downstream_discuss.append({"role": "user", "content": message})
                 parsed_response = LLM_parse_query(InfList, prompt, message)
                 tasks_list, descs_list, key_node_list = parsed_response.tasks, parsed_response.descriptions, parsed_response.key_node
                 print(tasks_list, descs_list, key_node_list)
                 if tasks_list == []:
                     chat_history.append((None, "We cannot identify any supported task in your query, please retry or type 'NO' to skip this step."))
-                    yield chat_history, download_btn
+                    #yield chat_history, download_btn
                     #return chat_history, download_btn
                 else:
                     chat_history.append((None, f"Analyzing for your causal task..."))
-                    yield chat_history, download_btn
+                    #yield chat_history, download_btn
                     analysis = Analysis(global_state, args)
                     for i, (task, desc, key_node) in enumerate(zip(tasks_list, descs_list, key_node_list)):
                         info, figs = analysis.forward(task, desc, key_node)
-                        for fig in figs:
-                            chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/{fig}',)))
-                        chat_history.append((None, info))
-                        #yield chat_history, download_btn
-                        global_state.logging.downstream_discuss.append({"role": "system", "content": info})
-                    chat_history.append((None, "Do you have questions about this analysis? Or do you want to conduct other downstream analysis? \n"
-                                                "Please reply NO if you want to end this part. Please describe your needs."))
-                    REQUIRED_INFO["current_stage"] = 'analysis_discussion'
-                    yield chat_history, download_btn
+                        if info is None:
+                            chat_history.append((None, 'Your query cannot be parsed, please ask again or reply NO to end this part.'))
+                            REQUIRED_INFO["current_stage"] = 'analysis_discussion'
+                        else:
+                            for fig in figs:
+                                chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/{fig}',)))
+                            chat_history.append((None, info))
+                            #yield chat_history, download_btn
+                            global_state.logging.downstream_discuss.append({"role": "system", "content": info})
+                            chat_history.append((None, "Do you have questions about this analysis? Or do you want to conduct other downstream analysis? \n"
+                                                        "Please reply NO if you want to end this part. Please describe your needs."))
+                        REQUIRED_INFO["current_stage"] = 'analysis_discussion'
+                    #yield chat_history, download_btn
             return chat_history, download_btn
 
+def parse_inf_discuss_query(message, chat_history, download_btn):
+            chat_history.append((message, None))
+            global_state.logging.downstream_discuss.append({"role": "user", "content": message})
+            #yield chat_history, download_btn
+            if message.lower() == 'no' or message == '':
+                print('go to report_generation')
+                chat_history.append((None, "✅ No need for downstream analysis, continue to the next section..."))
+                #yield chat_history, download_btn
+                REQUIRED_INFO["current_stage"] = 'report_generation'
+            else:
+                class DiscussList(BaseModel):
+                            indicator: bool
+                            answer: str
+                prompt = f"""You are a helpful assistant, here is the previous conversation history for your reference:
+                        ** Conversation History **
+                        {global_state.logging.downstream_discuss}
+                        ** Your Task **
+                        Firstly identify whether you can answer user's question based on the given history and save the boolean result in indicator. 
+                        If the given history is enough to answer the question, set the indicator to True, otherwise set it to False.
+                        Secondly, if indicator is True, save your answer to user's question in answer, your answer should be in bullet points; Otherwise set the answer to be None.
+                        """
+                global_state.logging.downstream_discuss.append({"role": "user", "content": message})
+                parsed_response = LLM_parse_query(DiscussList, prompt, message)
+                answer_ind, answer_info = parsed_response.indicator, parsed_response.answer 
+                print(answer_ind, answer_info)
+            
+                if answer_ind:
+                    chat_history.append((None, answer_info))
+                    global_state.logging.downstream_discuss.append({"role": "system", "content": answer_info})
+                    #yield chat_history, download_btn
+                    chat_history.append((None, "Do you have questions about this analysis? Or do you want to conduct other downstream analysis? \n"
+                                                "You can also input 'NO' to end this part. Please describe your needs."))
+                    #yield chat_history, download_btn
+                    #return chat_history, download_btn
+                else:
+                    # REQUIRED_INFO["current_stage"] = 'inference_analysis'
+                    # chat_history.append((None, "Receive your question! Input 'yes' to analyze it..."))
+                    # yield chat_history, download_btn
+                    # return process_message(message, chat_history, download_btn)  
+                    chat_history, download_btn = parse_inference_query(message, chat_history, download_btn)                   
+            return chat_history, download_btn            
 
 def process_message(message, chat_history, download_btn):
     global target_path, REQUIRED_INFO, global_state, args
@@ -842,20 +895,20 @@ def process_message(message, chat_history, download_btn):
             chat_history.append(("📊 Generate causal graph visualization...", None))
             yield chat_history, download_btn
             my_visual_initial = Visualization(global_state)
-            pos = my_visual_initial.get_pos(global_state.results.raw_result)
+            pos = my_visual_initial.get_pos(global_state.results.converted_graph)
             global_state.results.row_pos = pos
             if global_state.user_data.ground_truth is not None:
                 my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.jpg', global_state.results.row_pos)
                 my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.pdf', global_state.results.row_pos)
                 chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/true_graph.jpg',)))
                 yield chat_history, download_btn
-            if global_state.results.raw_result is not None:
-                my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.jpg', global_state.results.row_pos)
-                my_visual_initial.plot_pdag(global_state.results.raw_result, 'initial_graph.pdf', global_state.results.row_pos)
+            if global_state.results.converted_graph is not None:
+                my_visual_initial.plot_pdag(global_state.results.converted_graph, 'initial_graph.jpg', global_state.results.row_pos)
+                my_visual_initial.plot_pdag(global_state.results.converted_graph, 'initial_graph.pdf', global_state.results.row_pos)
                 chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/initial_graph.jpg',)))
                 yield chat_history, download_btn
                 my_report = Report_generation(global_state, args)
-                global_state.results.raw_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.processed_data.columns, global_state.results.raw_result)
+                global_state.results.raw_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.processed_data.columns, global_state.results.converted_graph)
                 global_state.logging.graph_conversion['initial_graph_analysis'] = my_report.graph_effect_prompts()
                 analysis_clean = global_state.logging.graph_conversion['initial_graph_analysis'].replace('"',"").replace("\\n\\n", "\n\n").replace("\\n", "\n").replace("'", "")
                 print(analysis_clean)
@@ -882,7 +935,7 @@ def process_message(message, chat_history, download_btn):
             if indicator:
                 REQUIRED_INFO["current_stage"] = 'revise_graph'
             else: 
-                global_state.results.revised_graph = global_state.results.raw_result
+                global_state.results.revised_graph = global_state.results.converted_graph
                 if REQUIRED_INFO["interactive_mode"]:
                     REQUIRED_INFO['current_stage'] = 'user_postprocess'
                     chat_history.append((None, "If you are not satisfied with the causal graph, please tell us which edges you want to forbid or add, and we will revise the graph according to your instruction. \n"
@@ -995,52 +1048,13 @@ def process_message(message, chat_history, download_btn):
             yield chat_history, download_btn
             return chat_history, download_btn  
         if REQUIRED_INFO["current_stage"] == 'inference_analysis': 
-            yield parse_inference_query(message, chat_history, download_btn)
+            chat_history, download_btn =  parse_inference_query(message, chat_history, download_btn)
+            yield chat_history, download_btn
             print('inference_analysis')
         
         if REQUIRED_INFO["current_stage"] == 'analysis_discussion':
-            yield parse_inf_discuss_query(message, chat_history, download_btn)
-        def parse_inf_discuss_query(message, chat_history, download_btn):
-            chat_history.append((message, None))
-            global_state.logging.downstream_discuss.append({"role": "user", "content": message})
-            #yield chat_history, download_btn
-            if message.lower() == 'no' or message == '':
-                print('go to report_generation')
-                chat_history.append((None, "✅ No need for downstream analysis, continue to the next section..."))
-                #yield chat_history, download_btn
-                REQUIRED_INFO["current_stage"] = 'report_generation'
-            else:
-                class DiscussList(BaseModel):
-                            indicator: bool
-                            answer: str
-                prompt = f"""You are a helpful assistant, here is the previous conversation history for your reference:
-                        ** Conversation History **
-                        {global_state.logging.downstream_discuss}
-                        ** Your Task **
-                        Firstly identify whether you can answer user's question based on the given history and save the boolean result in indicator. 
-                        If the given history is enough to answer the question, set the indicator to True, otherwise set it to False.
-                        Secondly, if indicator is True, save your answer to user's question in answer, your answer should be in bullet points; Otherwise set the answer to be None.
-                        """
-                global_state.logging.downstream_discuss.append({"role": "user", "content": message})
-                parsed_response = LLM_parse_query(DiscussList, prompt, message)
-                answer_ind, answer_info = parsed_response.indicator, parsed_response.answer 
-                print(answer_ind, answer_info)
-            
-                if answer_ind:
-                    chat_history.append((None, answer_info))
-                    global_state.logging.downstream_discuss.append({"role": "system", "content": answer_info})
-                    #yield chat_history, download_btn
-                    chat_history.append((None, "Do you have questions about this analysis? Or do you want to conduct other downstream analysis? \n"
-                                                "You can also input 'NO' to end this part. Please describe your needs."))
-                    #yield chat_history, download_btn
-                    #return chat_history, download_btn
-                else:
-                    # REQUIRED_INFO["current_stage"] = 'inference_analysis'
-                    # chat_history.append((None, "Receive your question! Input 'yes' to analyze it..."))
-                    # yield chat_history, download_btn
-                    # return process_message(message, chat_history, download_btn)  
-                    chat_history, download_btn = parse_inference_query(message, chat_history, download_btn)                   
-            return chat_history, download_btn            
+            chat_history, download_btn =  parse_inf_discuss_query(message, chat_history, download_btn)
+            yield chat_history, download_btn
 
         # Report Generation
         if REQUIRED_INFO["current_stage"] == 'report_generation': # empty query or postprocess query parsed successfully

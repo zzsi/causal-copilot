@@ -55,6 +55,7 @@ class HTE_Filter(object):
 
         output = response.choices[0].message.content
         hte_algo = self.parse_response(output)
+        print('hte algo response:', hte_algo)
 
         global_state.inference.hte_algo_json = hte_algo
 
