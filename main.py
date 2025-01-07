@@ -243,7 +243,7 @@ def main(args):
     my_report = Report_generation(global_state, args)
     report = my_report.generation()
     my_report.save_report(report)
-    report_path = os.path.join(global_state.user_data.output_report_dir, 'report.tex')  #.pdf
+    report_path = os.path.join(global_state.user_data.output_report_dir, 'report.tex')  
     while not os.path.isfile(report_path) and try_num<=3:
         try_num = +1
         print('Error occur during the Report Generation, try again')

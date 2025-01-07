@@ -485,12 +485,6 @@ def call_llm_new(args, prompt, prompt_type):
     (sleep, job performance): D: The relationship between the amount of sleep a person gets and their performance in a job can be complex and is not definitively understood;
     """
     prompt += normal_context
-    prompt_file = f"postprocess/test_result/sachs_new/prompts/{prompt_type}_prompt.txt"
-    with open(prompt_file, 'a') as file:
-        file.write(f"{prompt} \n")
-    prompt_file = f"postprocess/test_result/sachs_new/prompts/{prompt_type}_prompt.txt"
-    with open(prompt_file, 'a') as file:
-        file.write(f"{prompt} \n")
     # initiate a client
     client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
     client.chat.completions.create(

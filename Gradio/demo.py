@@ -384,14 +384,18 @@ def parse_inference_query(message, chat_history, download_btn):
                     analysis = Analysis(global_state, args)
                     for i, (task, desc, key_node) in enumerate(zip(tasks_list, descs_list, key_node_list)):
                         info, figs = analysis.forward(task, desc, key_node)
-                        for fig in figs:
-                            chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/{fig}',)))
-                        chat_history.append((None, info))
-                        #yield chat_history, download_btn
-                        global_state.logging.downstream_discuss.append({"role": "system", "content": info})
-                    chat_history.append((None, "Do you have questions about this analysis? Or do you want to conduct other downstream analysis? \n"
-                                                "Please reply NO if you want to end this part. Please describe your needs."))
-                    REQUIRED_INFO["current_stage"] = 'analysis_discussion'
+                        if info is None:
+                            chat_history.append((None, 'Your query cannot be parsed, please ask again or reply NO to end this part.'))
+                            REQUIRED_INFO["current_stage"] = 'analysis_discussion'
+                        else:
+                            for fig in figs:
+                                chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/{fig}',)))
+                            chat_history.append((None, info))
+                            #yield chat_history, download_btn
+                            global_state.logging.downstream_discuss.append({"role": "system", "content": info})
+                        chat_history.append((None, "Do you have questions about this analysis? Or do you want to conduct other downstream analysis? \n"
+                                                    "Please reply NO if you want to end this part. Please describe your needs."))
+                        REQUIRED_INFO["current_stage"] = 'analysis_discussion'
                     yield chat_history, download_btn
             return chat_history, download_btn
 
