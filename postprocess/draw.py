@@ -1,4 +1,5 @@
 from typing import List, Optional, Tuple
+import networkx as nx
 
 
 def _draw_pag_edges(
@@ -159,18 +160,22 @@ def draw(
             dot.node(child, shape=shape, height=".5", width=".5", pos=f"{pos[v][0]*10},{pos[v][1]*10}!")
         else:
             dot.node(child, shape=shape, height=".5", width=".5")
+        
+        try:
+            for parent in directed_G.predecessors(v):
+                if parent == v or not directed_G.has_edge(parent, v):
+                    continue
 
-        for parent in directed_G.predecessors(v):
-            if parent == v or not directed_G.has_edge(parent, v):
-                continue
-
-            # memoize if we have seen the bidirected circular edge before
-            if f"{child}-{parent}" in found_circle_sibs or f"{parent}-{child}" in found_circle_sibs:
-                continue
-            parent = str(parent)
-            if parent == v:
-                dot.edge(parent, child, style="invis", **attrs)
-            else:
-                dot.edge(parent, child, color="blue", **attrs)
+                # memoize if we have seen the bidirected circular edge before
+                if f"{child}-{parent}" in found_circle_sibs or f"{parent}-{child}" in found_circle_sibs:
+                    continue
+                parent = str(parent)
+                if parent == v:
+                    dot.edge(parent, child, style="invis", **attrs)
+                else:
+                    dot.edge(parent, child, color="blue", **attrs)
+        except nx.exception.NetworkXError as e:
+            # the node is completely independent in the inferred graph
+            pass
 
     return dot

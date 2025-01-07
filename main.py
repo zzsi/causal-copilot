@@ -89,7 +89,7 @@ def parse_args():
     parser.add_argument(
         '--initial_query',
         type=str,
-        default="selected algorithm: PC",
+        default="selected algorithm: FGES",
         help='Initial query for the algorithm'
     )
 
@@ -149,7 +149,8 @@ def main(args):
     if args.data_mode == 'real':
         global_state.user_data.raw_data = load_real_world_data(args.data_file)
     
-    global_state.user_data.processed_data = process_user_query(args.initial_query, global_state.user_data.raw_data)
+    global_state.user_data.processed_data = global_state.user_data.raw_data
+    # global_state.user_data.processed_data = process_user_query(args.initial_query, global_state.user_data.raw_data)
     global_state.user_data.visual_selected_features = global_state.user_data.processed_data.columns.tolist()
 
     # Show the exacted global state
@@ -160,6 +161,8 @@ def main(args):
 
     if args.debug:
         # Fake statistics for debugging
+        global_state.statistics.sample_size = 853
+        global_state.statistics.feature_number = 11
         global_state.statistics.missingness = False
         global_state.statistics.data_type = "Continuous"
         global_state.statistics.linearity = True
