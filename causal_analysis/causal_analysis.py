@@ -158,43 +158,102 @@ class Analysis(object):
             plt.close()
         return parent_nodes, mean_shap_values, figs
     
-    def estimate_causal_effect(self, treatment, outcome, control_value=0, treatment_value=1):
+    def estimate_causal_effect(self, treatment, outcome, 
+                           control_value=0, treatment_value=1,
+                           target_units='ate'):
         """
-        Estimate the causal effect of a treatment on an outcome using DoWhy (backdoor.linear_regression).
+        Estimate the causal effect of a treatment on an outcome 
+        using DoWhy (backdoor.linear_regression).
+    
+        :param target_units: 'ate', 'treated', or a callable lambda for a subset (CATE).
         """
         print("\n" + "#"*60)
         print(f"Estimating Causal Effect of Treatment: {treatment} on Outcome: {outcome}")
+        print(f"Method: backdoor.linear_regression | target_units={target_units}")
         print("#"*60)
-
-        print("\nCreating Causal Model...")
+    
         model = CausalModel(
             data=self.data,
             treatment=treatment,
             outcome=outcome,
             graph=self.dot_graph
         )
-
+    
         identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
         print("\nIdentified Estimand:")
         print(identified_estimand)
-
+    
         causal_estimate = model.estimate_effect(
             identified_estimand,
             method_name="backdoor.linear_regression",
             control_value=control_value,
-            treatment_value=treatment_value
+            treatment_value=treatment_value,
+            target_units=target_units  # <- new parameter
         )
-
+    
         print("\nCausal Estimate:")
         print(causal_estimate)
-        # Call test_significance with the estimate value
-        significance_results = causal_estimate.estimator.test_significance(self.data,causal_estimate.value)
+    
+        # significance test
+        significance_results = causal_estimate.estimator.test_significance(self.data, causal_estimate.value)
         p_value = significance_results['p_value'][0]
         print("Significance Test Results:", p_value)
-
+    
         print("\n=== Interpretation Hint ===")
-        print("A negative causal estimate indicates that increasing the treatment variable (e.g., horsepower)")
-        print("tends to decrease the outcome variable (e.g., mpg), assuming the model and assumptions hold.")
+        print("Negative estimate => increasing treatment tends to decrease outcome.")
+        print("============================\n")
+    
+        return causal_estimate, p_value
+
+    def estimate_causal_effect_dml(self, treatment, outcome,
+                               control_value=0, treatment_value=1,
+                               target_units='ate'):
+        """
+        Estimate the causal effect (DML) of a treatment on an outcome,
+        specifying target_units for ATE, ATT, or a custom subset (CATE).
+        """
+        print("\n" + "#"*60)
+        print(f"Estimating Causal Effect (DML) of Treatment: {treatment} on Outcome: {outcome}")
+        print(f"Method: backdoor.dml | target_units={target_units}")
+        print("#"*60)
+    
+        model = CausalModel(
+            data=self.data,
+            treatment=treatment,
+            outcome=outcome,
+            graph=self.dot_graph()
+        )
+    
+        identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
+        print("\nIdentified Estimand (DML):")
+        print(identified_estimand)
+
+    
+        # Example default regressors I hard-coded for now.
+        #
+        from sklearn.ensemble import RandomForestRegressor
+        outcome_model = RandomForestRegressor(n_estimators=100, max_depth=5, random_state=42)
+        treatment_model = RandomForestRegressor(n_estimators=100, max_depth=5, random_state=42)
+    
+        causal_estimate = model.estimate_effect(
+            identified_estimand,
+            method_name="backdoor.dml",
+            method_params={
+                "outcome_model": outcome_model,
+                "treatment_model": treatment_model,
+            },
+            control_value=control_value,
+            treatment_value=treatment_value,
+            target_units=target_units  # <- here
+        )
+    
+        # significance test (similar to linear_regression approach)
+        significance_results = causal_estimate.estimator.test_significance(self.data, causal_estimate.value)
+        p_value = significance_results['p_value'][0]
+        print("Significance Test Results (DML):", p_value)
+    
+        print("\n=== Interpretation Hint ===")
+        print("Uses DML with RandomForestRegressor as default for outcome & treatment models.")
         print("============================\n")
 
         # Sensitivity Analysis for the estimation
@@ -300,31 +359,90 @@ class Analysis(object):
         figs.append('cate_dist.png')
 
         return hte, hte_lower, hte_upper, figs
-    
-    def sensitivity_analysis(self, target_node, model, estimand, estimate):
-        # if self.global_state.statistics.linearity:
-        #      simulation_method = "linear-partial-R2"
-        # else:
-        #      simulation_method = "non-parametric-partial-R2",
 
-        # Use the most important factor as the benchmark_common_causes
-        file_exists = os.path.exists(f'{self.global_state.user_data.output_graph_dir}/shap_df.csv')
-        if not file_exists:
-            self.feature_importance(target_node, visualize=False)
-        shap_df = pd.read_csv(f'{self.global_state.user_data.output_graph_dir}/shap_df.csv')
-        max_col = shap_df.mean().idxmax()
-        refute = model.refute_estimate(estimand, estimate,
-                               method_name = "add_unobserved_common_cause",
-                               simulation_method = "non-parametric-partial-R2",
-                               benchmark_common_causes = [max_col],
-                               effect_fraction_on_outcome = [1,2,3]
-                              )
-        plt.savefig(f'{self.global_state.user_data.output_graph_dir}/ate_refutation.png')
-        plt.close()
-        figs = ['ate_refutation.png']
+    def counterfactual_estimation(self, treatment_name, response_name, observed_val = None, intervened_treatment = None):
+        # observed_val should be a df as the processed data
+        if observed_val is None:
+            min_index = self.data[treatment_name].idxmin()
+            observed_val = pd.DataFrame([self.data.loc[min_index].to_dict()])
+        else:
+            column_type = self.global_state.statistics.data_type_column
 
-        return refute, figs 
-      
+            for column in self.data.columns:
+                if column_type[column] == "Category":
+                    observed_cat = observed_val[column].iloc[0]
+                    category_mapping = dict(enumerate(self.data[column].cat.categories))
+                    observed_cat_code = {v: k for k, v in category_mapping.items()}.get(observed_cat)
+                    observed_val.loc[0, column] = observed_cat_code
+
+        if intervened_treatment is None:
+            intervened_treatment = self.data[treatment_name].min() + 1.0
+
+        est_sample = gcm.counterfactual_samples(
+            self.causal_model,
+            {treatment_name: lambda x: intervened_treatment},
+            observed_data=observed_val)
+
+        categories = ['Observed', 'Intervened']
+        treatment_values = [observed_val[treatment_name].iloc[0], est_sample[treatment_name].iloc[0]]
+        response_values = [observed_val[response_name].iloc[0], est_sample[response_name].iloc[0]]
+
+        bar_width = 0.35
+
+        x = np.arange(len(categories))  # [0, 1]
+
+        plt.bar(x - bar_width / 2, treatment_values, width=bar_width, label='Treatment', color='blue')
+        plt.bar(x + bar_width / 2, response_values, width=bar_width, label='Response', color='orange')
+
+        plt.ylabel('Values')
+        plt.title('Counterfactual Estimation')
+        plt.xticks(x, categories)
+        plt.legend()
+
+        for i, v in enumerate(treatment_values):
+            plt.text(i - bar_width / 2, v + 0.5, f"{v:.1f}", ha='center')
+        for i, v in enumerate(response_values):
+            plt.text(i + bar_width / 2, v + 0.5, f"{v:.1f}", ha='center')
+
+        path = self.global_state.user_data.output_graph_dir
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+        print(f"Saving residuals plot to {os.path.join(path, 'counterfactual_est_fig.jpg')}")
+        plt.savefig(os.path.join(path, 'counterfactual_est_fig.jpg'))
+
+
+    def simulate_intervention(self, treatment_name, shift_intervention = None, atomic_intervention = None):
+        if atomic_intervention is None:
+            atomic_intervention_val = self.data[treatment_name].min() + 1.0
+
+        if shift_intervention is None:
+            shift_intervention_val = 1
+
+        atomic_samples = gcm.interventional_samples(self.causal_model,
+                                             {treatment_name: lambda x: atomic_intervention_val},
+                                             num_samples_to_draw=1000)
+
+        shift_samples = gcm.interventional_samples(self.causal_model,
+                                                    {treatment_name: lambda x: x + shift_intervention_val},
+                                                    num_samples_to_draw=1000)
+
+        path = self.global_state.user_data.output_graph_dir
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        print(f"Saving simulated dataset {os.path.join(path, 'simulated_atomic_intervention.csv')}")
+        atomic_samples.to_csv(os.path.join(path, 'simulated_atomic_intervention.csv'), index=False)
+
+        print(f"Saving simulated dataset {os.path.join(path, 'simulated_shift_intervention.csv')}")
+        shift_samples.to_csv(os.path.join(path, 'simulated_shift_intervention.csv'), index=False)
+
+
+
+    def sensityvity_analysis(self,):
+        pass
+
     def call_LLM(self, format, prompt, message):
         client = OpenAI(organization=self.args.organization, project=self.args.project, api_key=self.args.apikey)
         if format:
@@ -498,7 +616,28 @@ def main(global_state, args):
     print("Welcome to the Causal Analysis Demo using the Auto MPG dataset.\n")
     
     analysis = Analysis(global_state, args)
-    message = "What's the Heterogeneous Treatment Effect of PIP2 on PIP3"
+    message = "The value of PIP3 is abnormal, help me to find which variables cause this anomaly"
+
+    # EXAMPLE: Test the new DML method
+    dml_estimate, dml_p_value = analysis.estimate_causal_effect_dml(
+        treatment='PIP2',
+        outcome='PIP3',
+        target_units='treated'  # e.g., ATT
+    )
+    print("DML Estimate:", dml_estimate.value)
+    print("p-value:", dml_p_value)
+
+    # EXAMPLE: Compare with linear approach, specifying a different target_units
+    lin_estimate, lin_p_value = analysis.estimate_causal_effect(
+        treatment='PIP2',
+        outcome='PIP3',
+        target_units=lambda df: df[df['PIP2'] > 100].index  # example subgroup
+    )
+    print("Linear Subgroup Estimate (CATE approach):", lin_estimate.value)
+    print("p-value:", lin_p_value)
+    # Testing code to check the above functions replace it appropriately
+
+    
     class InfList(BaseModel):
                 tasks: list[str]
                 descriptions: list[str]
