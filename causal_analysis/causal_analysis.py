@@ -135,46 +135,106 @@ class Analysis(object):
             plt.close()
         return parent_nodes, mean_shap_values, figs
     
-    def estimate_causal_effect(self, treatment, outcome, control_value=0, treatment_value=1):
+    def estimate_causal_effect(self, treatment, outcome, 
+                           control_value=0, treatment_value=1,
+                           target_units='ate'):
         """
-        Estimate the causal effect of a treatment on an outcome using DoWhy (backdoor.linear_regression).
+        Estimate the causal effect of a treatment on an outcome 
+        using DoWhy (backdoor.linear_regression).
+    
+        :param target_units: 'ate', 'treated', or a callable lambda for a subset (CATE).
         """
         print("\n" + "#"*60)
         print(f"Estimating Causal Effect of Treatment: {treatment} on Outcome: {outcome}")
+        print(f"Method: backdoor.linear_regression | target_units={target_units}")
         print("#"*60)
-
-        print("\nCreating Causal Model...")
+    
         model = CausalModel(
             data=self.data,
             treatment=treatment,
             outcome=outcome,
             graph=self.dot_graph()
         )
-
+    
         identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
         print("\nIdentified Estimand:")
         print(identified_estimand)
-
+    
         causal_estimate = model.estimate_effect(
             identified_estimand,
             method_name="backdoor.linear_regression",
             control_value=control_value,
-            treatment_value=treatment_value
+            treatment_value=treatment_value,
+            target_units=target_units  # <- new parameter
         )
-
+    
         print("\nCausal Estimate:")
         print(causal_estimate)
-        # Call test_significance with the estimate value
-        significance_results = causal_estimate.estimator.test_significance(self.data,causal_estimate.value)
+    
+        # significance test
+        significance_results = causal_estimate.estimator.test_significance(self.data, causal_estimate.value)
         p_value = significance_results['p_value'][0]
         print("Significance Test Results:", p_value)
-
+    
         print("\n=== Interpretation Hint ===")
-        print("A negative causal estimate indicates that increasing the treatment variable (e.g., horsepower)")
-        print("tends to decrease the outcome variable (e.g., mpg), assuming the model and assumptions hold.")
+        print("Negative estimate => increasing treatment tends to decrease outcome.")
         print("============================\n")
-
+    
         return causal_estimate, p_value
+
+    def estimate_causal_effect_dml(self, treatment, outcome,
+                               control_value=0, treatment_value=1,
+                               target_units='ate'):
+        """
+        Estimate the causal effect (DML) of a treatment on an outcome,
+        specifying target_units for ATE, ATT, or a custom subset (CATE).
+        """
+        print("\n" + "#"*60)
+        print(f"Estimating Causal Effect (DML) of Treatment: {treatment} on Outcome: {outcome}")
+        print(f"Method: backdoor.dml | target_units={target_units}")
+        print("#"*60)
+    
+        model = CausalModel(
+            data=self.data,
+            treatment=treatment,
+            outcome=outcome,
+            graph=self.dot_graph()
+        )
+    
+        identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
+        print("\nIdentified Estimand (DML):")
+        print(identified_estimand)
+
+    
+        # Example default regressors (hard-coded for now)
+        # We'll later let the LLM choose them in Step 3.
+        from sklearn.ensemble import RandomForestRegressor
+        outcome_model = RandomForestRegressor(n_estimators=100, max_depth=5, random_state=42)
+        treatment_model = RandomForestRegressor(n_estimators=100, max_depth=5, random_state=42)
+    
+        causal_estimate = model.estimate_effect(
+            identified_estimand,
+            method_name="backdoor.dml",
+            method_params={
+                "outcome_model": outcome_model,
+                "treatment_model": treatment_model,
+            },
+            control_value=control_value,
+            treatment_value=treatment_value,
+            target_units=target_units  # <- here
+        )
+    
+        # significance test (similar to linear_regression approach)
+        significance_results = causal_estimate.estimator.test_significance(self.data, causal_estimate.value)
+        p_value = significance_results['p_value'][0]
+        print("Significance Test Results (DML):", p_value)
+    
+        print("\n=== Interpretation Hint ===")
+        print("Uses DML with RandomForestRegressor as default for outcome & treatment models.")
+        print("============================\n")
+    
+        return causal_estimate, p_value
+    
 
     def _generate_dowhy_graph(self):
         """
