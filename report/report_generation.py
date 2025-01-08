@@ -1,5 +1,9 @@
-from openai import OpenAI
+
+
+import sys
 import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from openai import OpenAI
 import re
 import numpy as np 
 from plumbum.cmd import latexmk
@@ -7,6 +11,7 @@ from plumbum import local
 import networkx as nx
 from postprocess.visualization import Visualization, convert_to_edges
 from postprocess.judge_functions import edges_to_relationship
+from report.help_functions import *
 import PyPDF2
 import ast
 import json 
@@ -104,24 +109,6 @@ class Report_generation(object):
         dataset = response_title.choices[0].message.content
         title = f'Causal Discovery Report on {dataset.capitalize()}'
         return title, dataset
-        # if os.path.isdir(self.data_file):
-        #     for file in os.listdir(self.data_file):
-        #         if file.endswith(".csv"):
-        #             data_path = file
-        #             filename = os.path.splitext(os.path.basename(data_path))[0]
-        #             filename = filename.capitalize()
-        #             filename = filename.capitalize().replace("_", r"\_")
-        #             title = f'Causal Discovery Report on {filename}'
-        #             break
-        # elif self.data_file.endswith(".csv"):
-        #     data_path = self.data_file
-        #     filename = os.path.splitext(os.path.basename(data_path))[0]
-        #     filename = filename.capitalize()
-        #     filename = filename.capitalize().replace("_", r"\_")
-        #     title = f'Causal Discovery Report on {filename}'
-        # else:
-        #     title = 'Causal Discovery Report on Given Dataset'
-        # return title, filename
     
     def intro_prompt(self):
         prompt = f"""
@@ -243,33 +230,8 @@ The JSON should be
         pos = nx.spring_layout(g)
         _ = my_visual.plot_pdag(zero_matrix, 'potential_relation.pdf', pos=pos, relation=True)
         relation_path = f'{self.visual_dir}/potential_relation.pdf'
-
-        def get_pdf_page_size(pdf_path):
-            with open(pdf_path, 'rb') as file:
-                reader = PyPDF2.PdfReader(file)
-                page = reader.pages[0]
-                width = page.mediabox.width
-                height = page.mediabox.height
-                return 0.7*height>(width)
             
         if sum(zero_matrix.flatten())!=0:
-            # figure_tall =  get_pdf_page_size(relation_path)
-            # if figure_tall:
-            #     relation_prompt = f"""
-            #     \\begin{{minipage}}[t]{{0.6\linewidth}}
-            #     {section2}
-            #     \\vfill
-            #     \end{{minipage}}
-            #     %\hspace{{0.05\\textwidth}}
-            #     \\begin{{minipage}}[t]{{0.35\linewidth}}
-            #         \\begin{{figure}}[H]
-            #             \centering
-            #             \\resizebox{{\linewidth}}{{!}}{{\includegraphics[height=0.3\\textheight]{{{relation_path}}}}}
-            #             \caption{{\label{{fig:relation}}Possible Causal Relation Graph}}
-            #         \end{{figure}}
-            #     \end{{minipage}}
-            #     """
-            # else:
             relation_prompt = f"""
             {section2}
 
@@ -391,17 +353,15 @@ The JSON should be
         algo_candidates = self.algo_can
         response = """
         \\begin{itemize}
-
         """
  
         for algo in algo_candidates:
             sub_block = f"""
-                        \item \\textbf{{{algo}}}:
-                        \\begin{{itemize}}
-                            \item \\textbf{{Description}}: {algo_candidates[algo]['description']}
-                            \item \\textbf{{Justification}}: {algo_candidates[algo]['justification']}
-                        \end{{itemize}}
-
+            \item \\textbf{{{algo}}}:
+            \\begin{{itemize}}
+                \item \\textbf{{Description}}: {algo_candidates[algo]['description']}
+                \item \\textbf{{Justification}}: {algo_candidates[algo]['justification']}
+            \end{{itemize}}
                          """
             response += sub_block
 
@@ -414,18 +374,16 @@ The JSON should be
         params = self.algo_param['hyperparameters']
         response = """
         \\begin{itemize}
-
         """
  
         for param in params:
             sub_block = f"""
-                        \item 
-                        \\textbf{{{params[param]['full_name']}}}:
-                        \\begin{{itemize}}
-                            \item \\textbf{{Value}}: {params[param]['value']}
-                            \item \\textbf{{Explanation}}: {params[param]['explanation']}
-                        \end{{itemize}}
-
+            \item 
+            \\textbf{{{params[param]['full_name']}}}:
+            \\begin{{itemize}}
+                \item \\textbf{{Value}}: {params[param]['value']}
+                \item \\textbf{{Explanation}}: {params[param]['explanation']}
+            \end{{itemize}}
                          """
             response += sub_block
 
@@ -446,13 +404,13 @@ The JSON should be
         In this initial step, we preprocessed the data and examined its statistical characteristics. 
         This involved cleaning the data, handling missing values, and performing exploratory data analysis to understand distributions and relationships between variables.
                 
-        \subsection{{Algorithm Selection assisted with LLM}}
+        \subsection{{Algorithm Recommendation assisted with LLM}}
         Following data preprocessing, we employed a large language model (LLM) to assist in 
         selecting appropriate algorithms for causal discovery based on the statistical characteristics of the dataset and relevant background knowledge. 
         The top three chosen algorithms, listed in order of suitability, are as follows:   
         {algo_list}
 
-        Considering data properties, algorithm capability and LLM's suggestion, the final algorithm we choose is [ALGO].
+        Considering data properties, algorithm capability and user's instruction, the final algorithm we choose is [ALGO].
 
         \subsection{{Hyperparameter Values Proposal assisted with LLM}}
         Once the algorithms were selected, the LLM aided in proposing hyperparameters 
@@ -467,9 +425,9 @@ The JSON should be
             In the final step, we performed graph tuning with suggestions provided by the Bootstrap and LLM.
             
             Firstly, we use the Bootstrap technique to get how much confidence we have on each edge in the initial graph.
-            If the confidence probability of a certain edge is greater than 95\% and it is not in the initial graph, we force it.
-            Otherwise, if the confidence probability is smaller than 5\% and it exists in the initial graph, we forbid it.
-            For those moderate confidence edges, we utilize LLM to double check their existence and direction according to its knowledge repository.
+            If the confidence probability of a certain edge is greater than 90\% and it is not in the initial graph, we force it.
+            Otherwise, if the confidence probability is smaller than 10\% and it exists in the initial graph, we forbid it.
+            For those existing edges and moderate confidence edges, we utilize LLM to double check their existence and direction according to its knowledge repository.
             
             In this step LLM can use background knowledge to add some edges that are neglected by Statistical Methods, delete and redirect some unreasonable relationships.
             Voting techniques are used to enhance the robustness of results given by LLM, and the results given by LLM should not change results given by Bootstrap.
@@ -513,39 +471,8 @@ The JSON should be
             ]
         )
         response_doc = response.choices[0].message.content
-        #print('graph effect: ',response_doc)
         return response_doc
 
-    def list_conversion(self, text):
-        # Split the text into lines
-        lines = text.strip().split('\n')
-        latex_lines = []
-        
-        # Process each line
-        for line in lines:
-            line = line.strip()
-            if line.startswith('-') or line.startswith('*') or line.startswith('+'):
-                # Convert bullet points to LaTeX itemize
-                if len(latex_lines) > 1:  # Not the first list item
-                    latex_lines.append(r"  \item " + line[2:].strip())
-                else:  # Starting a new itemize list
-                    latex_lines.append(r"\begin{itemize}")
-                    latex_lines.append(r"  \item " + line[2:].strip())
-            else:
-                # If it's a regular line, add it as is
-                latex_lines.append(line)
-        # Close any open itemize
-        if len(latex_lines) > 1:
-            latex_lines.append(r"\end{itemize}")
-        
-        return "\n".join(latex_lines)
-
-    def bold_conversion(self, text):
-        while '**' in text:
-            text = text.replace('**', r'\textbf{', 1).replace('**', '}', 1)
-        return text
-
-    
     def graph_revise_prompts(self):
         repsonse = f"""
         By using the method mentioned in the Section 4.4, we provide a revise graph pruned with Bootstrap and LLM suggestion.
@@ -630,9 +557,9 @@ The JSON should be
             graph_text += f"""
             \\begin{{subfigure}}{{{length}\\textwidth}}
                     \centering
-                    \includegraphics[width=\linewidth]{graph_path}
+                    \includegraphics[width=\linewidth]{{{graph_path}}}
                     \\vfill
-                    \caption{caption}
+                    \caption{{{caption}}}
                 \end{{subfigure}}"""
         
         graph_text += """
@@ -651,26 +578,9 @@ The JSON should be
         graph_text += "The above heatmaps show the confidence probability we have on different kinds of edges, including "
         for k in bootstrap_dict.keys():
             graph_text += f"{text_map[k]}, "
-        for k_zero in zero_graphs:
-            k_zero= k_zero.replace("_", "-")
-            graph_text += f"The heatmap of {k_zero} is not shown because probabilities of all edges are 0. "
+        zero_graphs = [k.replace("_", "-") for k in zero_graphs]
+        graph_text += "The heatmap of " + ', '.join(zero_graphs) + " is not shown because probabilities of all edges are 0. "
     
-        # graph_text += """Based on the confidence probability heatmap, we have edges with high, moderate, and low edges.
-        # \\begin{{itemize}}"""
-        # high_prob_pairs = self.global_state.results.bootstrap_check_dict['high_prob_edges']['exist']+self.global_state.results.bootstrap_check_dict['high_prob_edges']['non-exist']
-        # middle_prob_pairs = self.global_state.results.bootstrap_check_dict['middle_prob_edges']['exist']+self.global_state.results.bootstrap_check_dict['middle_prob_edges']['non-exist']
-        # middle_prob_pairs = list(set(tuple(sorted((i, j))) for (i, j) in middle_prob_pairs))
-        # low_prob_pairs = self.global_state.results.bootstrap_check_dict['low_prob_edges']['exist']
-        # if high_prob_pairs != []:
-        #     graph_text += "\n \item \\textbf{{High Confidence Edges}}: "
-        #     graph_text += ', '.join(f'{self.data.columns[idx_j]} $\\rightarrow$ {self.data.columns[idx_i]}' for idx_i, idx_j in high_prob_pairs)
-        # if middle_prob_pairs != []:
-        #     graph_text += "\n \item \\textbf{{Middle Confidence Edges}}: "
-        #     graph_text += ', '.join(f'{self.data.columns[idx_j]} - {self.data.columns[idx_i]}' for idx_i, idx_j in middle_prob_pairs)
-        # if low_prob_pairs != []:
-        #     graph_text += "\n \item \\textbf{{Low Confidence Edges}}: "
-        #     graph_text += ', '.join(f'{self.data.columns[idx_j]} $\\rightarrow$ {self.data.columns[idx_i]}' for idx_i, idx_j in low_prob_pairs)
-        # graph_text += "\n \end{{itemize}}"
         return graph_text
         
 
@@ -726,7 +636,7 @@ The JSON should be
             text = f"""
                     \\begin{{figure}}[H]
                         \centering
-                        \includegraphics[height=0.8\\textwidth]{{{self.global_state.user_data.output_graph_dir}/refutation_graph.jpg}}
+                        \includegraphics[width=0.7\\textwidth]{{{self.global_state.user_data.output_graph_dir}/refutation_graph.jpg}}
                         \caption{{Refutation Graph}}
                     \end{{figure}} \n
                     """
@@ -821,10 +731,6 @@ The JSON should be
         response_doc = response_doc.replace("_", r"\_")
         return response_doc
     
-    def load_context(self, filepath):
-        with open(filepath, "r") as f:
-            return f.read()
-
     def latex_convert(self, text):
         prompt = f"""
         Please convert this markdown format text into latex format.
@@ -851,39 +757,6 @@ The JSON should be
         response_doc = response.choices[0].message.content
         return response_doc
 
-
-    # Function to replace Greek letters in text
-    def replace_greek_with_latex(self, text):
-        greek_to_latex = {
-            "α": r"$\alpha$",
-            "β": r"$\beta$",
-            "γ": r"$\gamma$",
-            "δ": r"$\delta$",
-            "ε": r"$\epsilon$",
-            "ζ": r"$\zeta$",
-            "η": r"$\eta$",
-            "θ": r"$\theta$",
-            "ι": r"$\iota$",
-            "κ": r"$\kappa$",
-            "λ": r"$\lambda$",
-            "μ": r"$\mu$",
-            "ν": r"$\nu$",
-            "ξ": r"$\xi$",
-            "ο": r"$o$",
-            "π": r"$\pi$",
-            "ρ": r"$\rho$",
-            "σ": r"$\sigma$",
-            "τ": r"$\tau$",
-            "υ": r"$\upsilon$",
-            "φ": r"$\phi$",
-            "χ": r"$\chi$",
-            "ψ": r"$\psi$",
-            "ω": r"$\omega$",
-        }
-        # Use regular expressions to find and replace Greek letters
-        pattern = "|".join(map(re.escape, greek_to_latex.keys()))
-        return re.sub(pattern, lambda match: greek_to_latex[match.group()], text)
-
     def generation(self, debug=False):
             '''
             generate and save the report
@@ -892,7 +765,7 @@ The JSON should be
             '''
             if debug:
                 # Load appropriate template based on data mode and ground truth
-                prompt_template = self.load_context("postprocess/context/template_debug.tex")
+                prompt_template = load_context("report/context/template_debug.tex")
                 return prompt_template
 
             # Non-debug path continues with full report generation
@@ -921,14 +794,13 @@ The JSON should be
                 self.background_info1, self.background_info2 = '', ''
             # EDA info
             dist_info, corr_info = self.eda_prompt()
-            #dist_info = self.latex_convert(dist_info)
-            #corr_info = self.latex_convert(corr_info)
             # Procedure info
             self.discover_process = self.procedure_prompt()
             self.preprocess_plot = self.preprocess_plot_prompt()
             # Graph effect info
-            self.graph_prompt = self.list_conversion(self.global_state.logging.graph_conversion['initial_graph_analysis'])
-            self.graph_prompt = self.bold_conversion(self.graph_prompt)
+            self.graph_prompt = list_conversion(self.global_state.logging.graph_conversion['initial_graph_analysis'])
+            self.graph_prompt = fix_latex_itemize(self.graph_prompt)
+            self.graph_prompt = bold_conversion(self.graph_prompt)
             # Graph Revise info
             if self.data_mode == 'real':
                 self.revise_process = self.graph_revise_prompts()
@@ -944,14 +816,14 @@ The JSON should be
 
             if self.data_mode == 'simulated':
                 if self.global_state.user_data.ground_truth is not None:
-                    prompt_template = self.load_context("postprocess/context/template_simulated.tex")
+                    prompt_template = load_context("report/context/template_simulated.tex")
                 else:
-                    prompt_template = self.load_context("postprocess/context/template_simulated_notruth.tex")
+                    prompt_template = load_context("report/context/template_simulated_notruth.tex")
             else:
                 if self.global_state.user_data.ground_truth is not None:
-                    prompt_template = self.load_context("postprocess/context/template_real.tex")
+                    prompt_template = load_context("report/context/template_real.tex")
                 else:
-                    prompt_template = self.load_context("postprocess/context/template_real_notruth.tex")
+                    prompt_template = load_context("report/context/template_real_notruth.tex")
 
             replacement1 = {
                 "[ABSTRACT]": self.abstract.replace("&", r"\&") or "",
@@ -988,7 +860,7 @@ The JSON should be
                 prompt_template = prompt_template.replace(placeholder, value)
             for placeholder, value in replacement2.items():
                 prompt_template = prompt_template.replace(placeholder, value)
-            prompt_template = self.replace_greek_with_latex(prompt_template)
+            prompt_template = replace_greek_with_latex(prompt_template)
             #print(prompt_template)
             return prompt_template
     
@@ -1032,9 +904,29 @@ The JSON should be
             file.write(report)
         with open(f'{save_path}/report.tex', 'w', encoding='utf-8') as file:
             file.write(report)
-        # fix latex bugs before rendering
-        print('check latex bug')
-        self.latex_bug_checking(f'{save_path}/report.tex')
+        # # fix latex bugs before rendering
+        # print('check latex bug')
+        # self.latex_bug_checking(f'{save_path}/report.tex')
         # Compile the .tex file to PDF using pdflatex
         print('start compilation')
         compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
+
+def test(args, global_state):
+    my_report = Report_generation(global_state, args)
+    report = my_report.generation()
+    my_report.save_report(report)
+
+import pickle  
+if __name__ == '__main__':
+    with open('args.pkl', 'rb') as file:
+        args = pickle.load(file)
+    with open('global_state.pkl', 'rb') as file:
+        global_state = pickle.load(file)
+    test(args, global_state)
+    # print(global_state.logging.graph_conversion['initial_graph_analysis'])
+    # graph_prompt = list_conversion(global_state.logging.graph_conversion['initial_graph_analysis'])
+    # print('\nlist_conversion',graph_prompt)
+    # # graph_prompt = fix_latex_itemize(graph_prompt)
+    # # print('\nfix_latex_itemize',graph_prompt)
+    # graph_prompt = bold_conversion(graph_prompt)
+    # print(graph_prompt)

@@ -85,7 +85,7 @@ class Results:
     revised_metrics: Optional[Dict] = None
     bootstrap_probability: Optional[np.ndarray] = None
     bootstrap_check_dict: Optional[Dict] = None
-    llm_errors: List[Dict] = field(default_factory=list)
+    llm_errors: Optional[Dict] = None
     bootstrap_errors: List[Dict] = field(default_factory=list)
     eda_result: Optional[Dict] = None
     prior_knowledge: Optional[object] = None

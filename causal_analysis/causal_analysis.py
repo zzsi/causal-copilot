@@ -201,7 +201,10 @@ class Analysis(object):
 
             # Sensitivity Analysis for the estimation
             refutation, figs = self.sensitivity_analysis(outcome, model, identified_estimand, causal_estimate, treatment, outcome)
-        except:
+        except Exception as e:
+            print(str(e))
+            import traceback
+            traceback.print_exc()
             causal_estimate, p_value, refutation, figs = None, None, None, []
     
         print("\n=== Interpretation Hint ===")

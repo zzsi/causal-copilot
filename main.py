@@ -7,7 +7,7 @@ from algorithm.rerank import Reranker
 from postprocess.judge import Judge
 from postprocess.visualization import Visualization, convert_to_edges
 from preprocess.eda_generation import EDA
-from postprocess.report_generation import Report_generation
+from report.report_generation import Report_generation
 from global_setting.Initialize_state import global_state_initialization, load_data
 
 import json
@@ -151,12 +151,7 @@ def main(args):
     
     global_state.user_data.processed_data = process_user_query(args.initial_query, global_state.user_data.raw_data)
     global_state.user_data.visual_selected_features = global_state.user_data.processed_data.columns.tolist()
-
-    # Show the exacted global state
-    print(global_state)
-
-    # background info collection
-    #print("Original Data: ", global_state.user_data.raw_data)
+    global_state.user_data.selected_features = global_state.user_data.processed_data.columns.tolist()
 
     if args.debug:
         # Fake statistics for debugging
@@ -233,7 +228,6 @@ def main(args):
         code, results = programmer.forward(preprocessed_data, algorithm, hyper_suggest)
         flag, algorithm_setup = judge(preprocessed_data, code, results, statistics_dict, algorithm_setup, knowledge_docs)
     '''
-
     #############Report Generation###################
     import os 
     try_num = 1

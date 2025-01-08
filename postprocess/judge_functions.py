@@ -331,9 +331,10 @@ def bootstrap_recommend(raw_graph, boot_edges_prob):
     middle_prob_idx_undirect = np.where((undirect_prob_mat < 0.9) & (undirect_prob_mat > 0.1))
     middle_prob_edges_undirect = list(zip(middle_prob_idx_undirect[0], middle_prob_idx_undirect[1]))
     
-    middle_prob_edges = list(set(middle_prob_edges_direct+high_prob_edges_undirect+middle_prob_edges_undirect))
+    middle_prob_edges = list(set(high_prob_edges_direct+high_prob_edges_undirect+\
+                                 middle_prob_edges_direct+middle_prob_edges_undirect))
     
-    print('middle_prob_edges',middle_prob_edges)
+    #print('middle_prob_edges',middle_prob_edges)
 
     bootstrap_check_dict = {
         'high_prob_edges':{
@@ -351,7 +352,7 @@ def bootstrap_recommend(raw_graph, boot_edges_prob):
     }
     def exist_check(prob_edges, dict_key):
         for pair in prob_edges:
-            if raw_graph[pair[0],pair[1]]==1 and raw_graph[pair[1],pair[0]]==-1:
+            if raw_graph[pair[0],pair[1]] != 0:
                 bootstrap_check_dict[dict_key]['exist'].append(pair)
             else:
                 bootstrap_check_dict[dict_key]['non-exist'].append(pair)
@@ -447,7 +448,7 @@ def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_
         if key not in grouped_dict:
             grouped_dict[key] = []  # Create a new list if the key doesn't exist
         grouped_dict[key].append((data.columns[idx_i], data.columns[idx_j]))
-    print('grouped_dict',grouped_dict)
+    #print('grouped_dict',grouped_dict)
 
     direct_dict = {}
     forbid_dict = {}
@@ -486,7 +487,7 @@ def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_
             for node in related_nodes:
                 directed_exist_texts_related = ', '.join([text for text in relation_text_dict['certain_edges'] if node in text])
                 undirected_exist_texts_related = ', '.join([text for text in relation_text_dict['uncertain_edges'] if node in text])
-                prompt_pruning += f"""
+                relationship += f"""
                 Edges of node {node}:
                 {directed_exist_texts_related} and {undirected_exist_texts_related}
                 """
@@ -527,14 +528,14 @@ def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_
                     merged_dict.setdefault(key,[]).append(value)
             for pair_i in merged_dict.keys():
                 result_list = [single_vote['result'] for single_vote in merged_dict[pair_i]]
-                print('result_list',result_list)
+                #print('result_list',result_list)
                 explanation_list = [single_vote['explanation'] for single_vote in merged_dict[pair_i]]
                 majority_result = Counter(result_list).most_common(1)[0][0]
                 majority_explanation = explanation_list[result_list.index(majority_result)]
                 llm_answer[pair_i]={'result': majority_result,
                                     'explanation': majority_explanation}
         ########### end of voting #################### 
-        print('response: ',llm_answer)
+        #print('response: ',llm_answer)
         # Update revised graph and edge dict
         for pair in llm_answer.keys():
             try:
@@ -558,9 +559,9 @@ def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_
                 continue
 
     for main_node in  grouped_dict.keys():
-        print(f'edges_dict for {main_node}: ')
-        print('directed edges:',edges_dict['certain_edges'])
-        print('undirected edges:',edges_dict['uncertain_edges'])
+        # print(f'edges_dict for {main_node}: ')
+        # print('directed edges:',edges_dict['certain_edges'])
+        # print('undirected edges:',edges_dict['uncertain_edges'])
         check_node_relationship(main_node)    
     #########################
     return direct_dict, forbid_dict
