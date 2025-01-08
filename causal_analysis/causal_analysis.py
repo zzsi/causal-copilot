@@ -414,9 +414,9 @@ class Analysis(object):
         plt.legend()
 
         for i, v in enumerate(treatment_values):
-            plt.text(i - bar_width / 2, v + 0.5, f"{v:.1f}", ha='center')
+            plt.text(i - bar_width / 2, v, f"{v:.1f}", ha='center')
         for i, v in enumerate(response_values):
-            plt.text(i + bar_width / 2, v + 0.5, f"{v:.1f}", ha='center')
+            plt.text(i + bar_width / 2, v, f"{v:.1f}", ha='center')
 
         path = self.global_state.user_data.output_graph_dir
 
