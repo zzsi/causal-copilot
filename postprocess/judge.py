@@ -62,10 +62,10 @@ class Judge(object):
         from causallearn.utils.PCUtils.BackgroundKnowledge import BackgroundKnowledge
         bk = BackgroundKnowledge()
         ############Edge Pruning with Bootstrap############
-        print('Bootstrap Pruning Decisioning')
+        print('Bootstrap Pruning Decisioning...')
         revised_graph = full_graph.copy()
         bootstrap_check_dict = bootstrap_recommend(full_graph, boot_probability)
-        print('bootstrap_check_dict: ',bootstrap_check_dict)
+        #print('bootstrap_check_dict: ',bootstrap_check_dict)
         # add non-exist edges with high prob
         if bootstrap_check_dict['high_prob_edges']['non-exist'] != []:
             for idx_i, idx_j in bootstrap_check_dict['high_prob_edges']['non-exist']:
@@ -121,11 +121,6 @@ class Judge(object):
             'direct_record': direct_dict,
             'forbid_record': forbid_dict
         }
-        ##########
-        # with open('postprocess/test_result/sachs_full/results.txt', 'a') as file:
-        #     # Write each result on a new line
-        #     file.write(f"{llm_pruning_record}\n")
-        ##########
         
         ####construct prior knowledge and revise graph according to LLM#########
         for direct_pair in direct_dict:
@@ -154,28 +149,12 @@ class Judge(object):
         ########### Check Cycles ##########
         revised_graph = check_cycle(self.args, data, revised_graph)
 
-
         return {}, bootstrap_check_dict, boot_probability, llm_pruning_record, revised_graph, bk
 
 
     def forward(self, global_state, prompt_type, voting_num):
-        
-        # if self.global_state.algorithm.selected_algorithm in ['DirectLiNGAM', 'ICALiNGAM', 'NOTEARS']:
-        #     adj_matrix = global_state.results.converted_graph
-        # else:
-        #     if self.global_state.algorithm.selected_algorithm == 'FCI':
-        #         g = global_state.results.raw_result[0]
-        #     elif self.global_state.algorithm.selected_algorithm == 'GES':
-        #         g = global_state.results.raw_result['G']
-        #     else:
-        #         g = global_state.results.raw_result
-        #     try:
-        #         adj_matrix = g.graph
-        #     except:
-        #         adj_matrix = g.G.graph
         adj_matrix = global_state.results.converted_graph
 
-        
         (conversation,
          global_state.results.bootstrap_check_dict, 
          global_state.results.bootstrap_probability,

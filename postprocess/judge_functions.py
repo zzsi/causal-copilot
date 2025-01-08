@@ -307,10 +307,10 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, parall
     boot_edges_prob = {'certain_edges': edges_prob[0,:,:],
                        'uncertain_edges': edges_prob[1,:,:],
                        'bi_edges': edges_prob[2,:,:],
-                       'half_edges': edges_prob[3,:,:], # o->
+                       'half_certain_edges': edges_prob[3,:,:], # o->
                        'half_uncertain_edges': edges_prob[4,:,:], # o-
-                       'non_edges': edges_prob[5,:,:],
-                       'non_existence':edges_prob[6, :, :]}
+                       'none_edges': edges_prob[5,:,:],
+                       'none_existence':edges_prob[6, :, :]}
 
 
     return boot_recommend, boot_edges_prob
@@ -380,111 +380,10 @@ def get_json(args, prompt):
             jsons_cleaned = get_json(args,prompt)
         return jsons_cleaned
 
-def call_llm(args, prompt,prompt_type):
-    cot_context = """
-            Question and Answer templete:
-            Here is the Question and Answer templete, you should learn and reference it when answering my following questions
-            Question: For a causal graph used to model relationship of various factors and outcomes related to cancer with the following nodes: ['Pollution', 'Cancer', 'Smoker', 'Xray', 'Dyspnoea'], 
-            your task is to double check these relationship between 'smoker' and 'cancer' from a domain knowledge perspective and determine whether this statistically suggested hypothesis is plausible in the context of the domain.  
-            if the 'smoker' causes the 'cancer', the "result" is 'A'. If the 'cancer' causes the 'smoker', the "result" should be 'B'. If there is no relationship, the "result" is 'C'. If you are not sure, the result is 'D'
-            'xray' and 'cancer'
-            'pollution' and 'cancer'
-            For each node pair, 
-            Please note that Correlation doesn't mean Causation! For example ice cream sales increase in summer alongside higher rates of drowning, where both are influenced by warmer weather rather than one causing the other.
-            Please note hidden confounders, for example a study finds a correlation between coffee consumption and heart disease, but fails to account for smoking, which influences both coffee habits and heart disease risk.
-            Secondly, please provide an explanation of your result, leveraging your expert knowledge on the causal relationship between the left node and the right node, please use only one to two sentences. 
-            Your response should consider the relevant factors and provide a reasoned explanation based on your understanding of the domain.
-
-            Response me following the template below. Do not include anything else. explanations should only include one to two sentences.
-            A or B or C or D: explanations ;
-            Answer: 
-            A: Smoking introduces harmful substances into the respiratory system, leading to cellular damage and mutation, which significantly raises the likelihood of cancer development in the lungs or respiratory tract, subsequently impacting the occurrence of respiratory problems like shortness of breath.
-
-            Question and Answer templete:
-            Here is the Question and Answer templete, you should learn and reference it when answering my following questions
-            Question: For a causal graph used to model relationship of various factors and outcomes related to cancer with the following nodes: ['Pollution', 'Cancer', 'Smoker', 'Xray', 'Dyspnoea'], 
-            your task is to double check these relationship between 'xray' and 'cancer' from a domain knowledge perspective and determine whether this statistically suggested hypothesis is plausible in the context of the domain.  
-            if the 'xray'' causes the 'cancer', the "result" is 'A'. If the 'cancer' causes the 'xray', the "result" should be 'B'. If there is no relationship, the "result" is 'C'. If you are not sure, the result is 'D'
-            'pollution' and 'cancer'
-            For each node pair, 
-            Please note that Correlation doesn't mean Causation! For example ice cream sales increase in summer alongside higher rates of drowning, where both are influenced by warmer weather rather than one causing the other.
-            Please note hidden confounders, for example a study finds a correlation between coffee consumption and heart disease, but fails to account for smoking, which influences both coffee habits and heart disease risk.
-            Secondly, please provide an explanation of your result, leveraging your expert knowledge on the causal relationship between the left node and the right node, please use only one to two sentences. 
-            Your response should consider the relevant factors and provide a reasoned explanation based on your understanding of the domain.
-
-            Response me following the template below. Do not include anything else. explanations should only include one to two sentences.
-            A or B or C or D: explanations ;
-            Answer: 
-            B: The causal effect of cancer on X-ray is that X-rays are often used to diagnose or detect cancer in different parts of the body, such as the bones, lungs, breasts, or kidneys123. Therefore, having cancer may increase the likelihood of getting an X-ray as part of the diagnostic process or follow-up care.
-            
-            Question and Answer templete:
-            Here is the Question and Answer templete, you should learn and reference it when answering my following questions
-            Question: For a causal graph used to model relationship of various factors and outcomes related to cancer with the following nodes: ['Pollution', 'Cancer', 'Smoker', 'Xray', 'Dyspnoea'], 
-            your task is to double check these relationship between 'pollution' and 'cancer' from a domain knowledge perspective and determine whether this statistically suggested hypothesis is plausible in the context of the domain.  
-            if the 'pollution' causes the 'cancer', the "result" is 'A'. If the 'cancer' causes the 'pollution', the "result" should be 'B'. If there is no relationship, the "result" is 'C'. If you are not sure, the result is 'D'
-            Please note that Correlation doesn't mean Causation! For example ice cream sales increase in summer alongside higher rates of drowning, where both are influenced by warmer weather rather than one causing the other.
-            Please note hidden confounders, for example a study finds a correlation between coffee consumption and heart disease, but fails to account for smoking, which influences both coffee habits and heart disease risk.
-            Secondly, please provide an explanation of your result, leveraging your expert knowledge on the causal relationship between the left node and the right node, please use only one to two sentences. 
-            Your response should consider the relevant factors and provide a reasoned explanation based on your understanding of the domain.
-
-            Response me following the template below. Do not include anything else. explanations should only include one to two sentences.
-            A or B or C or D: explanations ;
-            Answer: 
-            A: The causal effect of pollution on cancer is that air pollution contains carcinogens (cancercausing substances) that may be absorbed into the body when inhaled and damage the DNA of cells. Therefore air pollution may cause cancer.
-            """
-    normal_context = """
-    Response Example
-    A: Smoking introduces harmful substances into the respiratory system, leading to cellular damage and mutation, which significantly raises the likelihood of cancer development in the lungs or respiratory tract, subsequently impacting the occurrence of respiratory problems like shortness of breath.
-    B: The causal effect of cancer on X-ray is that X-rays are often used to diagnose or detect cancer in different parts of the body, such as the bones, lungs, breasts, or kidneys123. Therefore, having cancer may increase the likelihood of getting an X-ray as part of the diagnostic process or follow-up care.
-    C: These two variables are independent because the height of a person does not influence or affect the color of a car they own or drive.
-    D: The relationship between the amount of sleep a person gets and their performance in a job can be complex and is not definitively understood.
-    """
-    prompt += normal_context
-    # initiate a client
-    client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
-    client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are an expert in Causal Discovery."}])
-    if 'cot' in prompt_type:
-        client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": cot_context}])
-    # get response          
-    response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "user", "content": prompt}])
-    contents = response.choices[0].message.content
-    try:
-        result, explanation = contents.split(':')[0].strip().upper(), contents.split(':')[1].strip()
-        llm_answer = {'result': result,
-                      'explanation': explanation}
-    except:
-        print('The returned LLM evaluation response is wrong, try again')
-        llm_answer = call_llm(args,prompt)
-    return llm_answer
-
 def call_llm_new(args, prompt, prompt_type):
     with open('postprocess/context/COT_prompt.txt', 'r') as file:
         cot_context = file.read()
     
-    with open('postprocess/context/COT_prompt.txt', 'r') as file:
-        cot_context = file.read()
-    
-    normal_context = """
-    **YOU SHOULD**
-    Follow the template below
-    Seperate answers for each pair with ; Do not use ; at other places
-    Each answers for one pair should be in a new line
-    **Response Template**
-    (smoker, cancer): A: Smoking introduces harmful substances into the respiratory system, leading to cellular damage and mutation, which significantly raises the likelihood of cancer development in the lungs or respiratory tract, subsequently impacting the occurrence of respiratory problems like shortness of breath;
-    (xray, cancer): B: The causal effect of cancer on X-ray is that X-rays are often used to diagnose or detect cancer in different parts of the body, such as the bones, lungs, breasts, or kidneys123. Therefore, having cancer may increase the likelihood of getting an X-ray as part of the diagnostic process or follow-up care;
-    (height, color): C: These two variables are independent because the height of a person does not influence or affect the color of a car they own or drive;
-    (sleep, job performance): D: The relationship between the amount of sleep a person gets and their performance in a job can be complex and is not definitively understood;
-    """
-    prompt += normal_context
     # initiate a client
     client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
     client.chat.completions.create(
@@ -496,7 +395,6 @@ def call_llm_new(args, prompt, prompt_type):
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": cot_context}])
-
 
     # get response          
     response = client.chat.completions.create(
@@ -519,158 +417,6 @@ def call_llm_new(args, prompt, prompt_type):
             print(e)
             llm_answer = call_llm_new(args, prompt, prompt_type)
     return llm_answer
-
-def llm_evaluation(data, args, edges_dict, boot_edges_prob, bootstrap_check_dict, prompt_type, voting_num):
-    """
-    Here we let LLM double check the result of initial graph, and make edition (determine direction & delete edge)
-    Provided Info:
-    1. Structure of whole graph
-    (ancestor decendant ... relationship?)
-    2. Bootstrap Probability
-    3. Pair relationship in the original graph
-    Return: Result dicts with domain knowledge and explanation
-    """
-    direct_dict = {}
-    forbid_dict = {}
-    relation_text_dict, relation_text = edges_to_relationship(data, edges_dict, boot_edges_prob)
-    #print('relation_text_dict:',relation_text_dict)
-    #print('edges_dict: ', edges_dict)
-    ### conbine uncertain edges
-    uncertain_edges_exist = bootstrap_check_dict['middle_prob_edges']['exist']
-    uncertain_edges_nonexist = bootstrap_check_dict['middle_prob_edges']['non-exist']
-    combined_uncertain_edges = uncertain_edges_exist + uncertain_edges_nonexist
-    # Remove duplicate tuples
-    combined_uncertain_edges = list(set(tuple(sorted((i, j))) for (i, j) in combined_uncertain_edges))
-    for idx_i, idx_j in combined_uncertain_edges:
-        var_j = data.columns[idx_j]
-        var_i = data.columns[idx_i]
-        directed_exist_texts_j = ', '.join([text for text in relation_text_dict['certain_edges']+relation_text_dict['uncertain_edges'] if var_j in text])
-        directed_exist_texts_i = ', '.join([text for text in relation_text_dict['certain_edges']+relation_text_dict['uncertain_edges'] if var_i in text])
-        # Basic Prompt: No infos and ask relationships directly
-        prompt_pruning = f"""
-        Context: We want to carry out causal discovery analysis, considering these variables: {data.columns.tolist()}. 
-        """
-        # All Pairwise Relationships
-        if 'all_relations' in prompt_type:
-            prompt_pruning += f"""
-            This is a context for your reference: 
-            We have conducted the statistical causal discovery algorithm to find the following causal relationships from a statistical perspective:
-            {relation_text}, but it may not be correct. 
-            """
-        # Markov Blanket Context
-        if 'markov_blanket' in prompt_type:
-            prompt_pruning += f"""
-            This is a context for your reference, and your answer cannot add cycles and colliders to these relationships
-            We have conducted the statistical causal discovery algorithm to find the following causal relationships from a statistical perspective:
-            Edges of node {var_j}:
-            {directed_exist_texts_j}
-            Edges of node {var_i}:
-            {directed_exist_texts_i}
-            """
-            # Relationships for related node
-            # Extract tuples containing main node
-            tuples_with_j = [t for t in edges_dict['uncertain_edges']+edges_dict['certain_edges'] if var_j in t]
-            related_nodes_j = [item for t in tuples_with_j for item in t if item != var_j]
-            tuples_with_i = [t for t in edges_dict['uncertain_edges']+edges_dict['certain_edges'] if var_i in t]
-            related_nodes_i = [item for t in tuples_with_i for item in t if item != var_i]
-            related_nodes_all = list(set(related_nodes_j+related_nodes_i))
-            for node in related_nodes_all:
-                directed_exist_texts_related = ', '.join([text for text in relation_text_dict['certain_edges'] if node in text])
-                undirected_exist_texts_related = ', '.join([text for text in relation_text_dict['uncertain_edges'] if node in text])
-                # print('directed_exist_texts_related',directed_exist_texts_related)
-                # print('undirected_exist_texts_related',undirected_exist_texts_related)
-                prompt_pruning += f"""
-                Edges of node {node}:
-                {directed_exist_texts_related} and {undirected_exist_texts_related}
-                """
-
-        prompt_pruning += f"""
-        Question: your task is to double check these relationship between {var_j} and {var_i} from a domain knowledge perspective and determine whether this statistically suggested hypothesis is plausible in the context of the domain.  
-
-        If {var_j} causes {var_i}, the "result" is 'A'. If {var_i} causes {var_j}, the "result" should be 'B'. If you are really sure there is no relationship, the "result" is 'C'. Otherwise the "result" is 'D'.
-        Please note that Correlation doesn't mean Causation! For example ice cream sales increase in summer alongside higher rates of drowning, where both are influenced by warmer weather rather than one causing the other.
-        Please note hidden confounders, for example a study finds a correlation between coffee consumption and heart disease, but fails to account for smoking, which influences both coffee habits and heart disease risk.
-        Secondly, please provide an explanation of your result, leveraging your expert knowledge on the causal relationship between the left node and the right node, please use only one to two sentences. 
-        Your response should consider the relevant factors and provide a reasoned explanation based on your understanding of the domain.
-
-        Response me following the template below. Do not include anything else. explanations should only include one to two sentences
-        A or B or C or D: explanations 
-            """
-        #print('prompt_pruning:', prompt_pruning)
-        
-        ### Ask with Voting ###
-        if voting_num == 1:
-            llm_answer = call_llm(args, prompt_pruning, prompt_type)
-        else:
-            llm_answer_merge = []
-            llm_answer = {}
-            for i_vote in range(voting_num):
-                llm_answer_i = call_llm(args, prompt_pruning, prompt_type)
-                llm_answer_merge.append(llm_answer_i)
-            result_list = [single_vote['result'] for single_vote in llm_answer_merge]
-            print('result_list',result_list)
-            explanation_list = [single_vote['explanation'] for single_vote in llm_answer_merge]
-            majority_result = Counter(result_list).most_common(1)[0][0]
-            majority_explanation = explanation_list[result_list.index(majority_result)]
-            llm_answer={'result': majority_result,
-                        'explanation': majority_explanation}
-        ########### end of voting #################### 
-        result, explanation = llm_answer['result'], llm_answer['explanation']
-        print((var_j, var_i), result)
-        print('response: ',llm_answer)
-        if result == 'A':
-            if (var_j, var_i) not in edges_dict['certain_edges']:
-                direct_dict[(idx_j, idx_i)] = ((var_j, var_i), explanation)
-        elif result == 'B':
-            if (var_i, var_j) not in edges_dict['certain_edges']:
-                direct_dict[(idx_i, idx_j)] = ((var_i, var_j), explanation)
-        elif result == 'C':
-            forbid_dict[(idx_j, idx_i)] = ((var_j, var_i), explanation)
-    return direct_dict, forbid_dict
-
-def check_for_cycles(graph, edge_addition):
-    """
-    Check if adding the given edge introduces a cycle in the graph.
-    :param graph: The current causal graph.
-    :param edge_addition: The edge to be added (node_i, node_j).
-    :return: True if a cycle is introduced, False otherwise.
-    """
-    import networkx as nx
-    
-    # Convert the graph to a NetworkX DiGraph
-    G = nx.DiGraph(graph)
-    
-    # Add the proposed edge
-    G.add_edge(edge_addition[0], edge_addition[1])
-    
-    # Check for cycles
-    return not nx.is_directed_acyclic_graph(G)
-
-def check_for_colliders(graph, edge_addition):
-    """
-    Check if adding the given edge creates a new collider in the graph.
-    :param graph: The current causal graph.
-    :param edge_addition: The edge to be added (node_i, node_j).
-    :return: True if a new collider is created, False otherwise.
-    """
-    import networkx as nx
-    
-    # Convert the graph to a NetworkX DiGraph
-    G = nx.DiGraph(graph)
-    
-    # Add the proposed edge
-    G.add_edge(edge_addition[0], edge_addition[1])
-    
-    # Check for colliders
-    for node in G.nodes():
-        parents = list(G.predecessors(node))
-        if len(parents) > 1:
-            for u in parents:
-                for v in parents:
-                    if u != v and not G.has_edge(u, v) and not G.has_edge(v, u):
-                        return True
-    return False
-
 
 def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_dict, prompt_type, vote_num=3):
     """
@@ -709,105 +455,30 @@ def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_
     def check_node_relationship(main_node):
         # Relationships for main node
         relation_text_dict, relation_text = edges_to_relationship(data, edges_dict, boot_edges_prob)
-        directed_exist_texts_mainnode = ', '.join([text for text in relation_text_dict['certain_edges'] if main_node in text])
+        try:
+            directed_exist_texts_mainnode = ', '.join([text for text in relation_text_dict['certain_edges'] if main_node in text])
+        except:
+            directed_exist_texts_mainnode = 'None'
         try:
             undirected_exist_texts_mainnode = ', '.join([text for text in relation_text_dict['uncertain_edges'] if main_node in text])
         except:
             undirected_exist_texts_mainnode = 'None'
-        # print('directed_exist_texts_mainnode',directed_exist_texts_mainnode)
-        # print('undirected_exist_texts_mainnode',undirected_exist_texts_mainnode)
         
         related_pairs = grouped_dict[main_node]
-        # Basic Prompt: No infos and ask relationships directly
-        prompt_pruning = f"""
-        **Context**: 
-        We want to carry out causal discovery analysis, considering these variables: {data.columns.tolist()}. 
-        """
         # All Pairwise Relationships
         if 'all_relation' in prompt_type:
-            prompt_pruning += f"""
+            relationship = f"""
             We have conducted the statistical causal discovery algorithm to find the following causal relationships from a statistical perspective:
             {relation_text}
             According to the results shown above, it has been determined that {directed_exist_texts_mainnode} and {undirected_exist_texts_mainnode}, but it may not be correct. 
             """
         # Markov Blanket Context
         if 'markov_blanket' in prompt_type:
-            prompt_pruning += f"""
+            relationship = f"""
             We have conducted the statistical causal discovery algorithm to find the following causal relationships from a statistical perspective:
             Edges of node {main_node}:
             {directed_exist_texts_mainnode} and {undirected_exist_texts_mainnode}
             """
-            # Add adjacency matrix context
-        # if 'adj_matrix' in prompt_type:
-        #     adj_matrix = edges_dict_to_adj_matrix(edges_dict, data.columns)
-        #     prompt_pruning += f"""
-        #     This is the adjacency matrix representation of the current causal graph:
-
-        #     **Adjacency Matrix**:
-        #     Variables: {data.columns.tolist()}
-        #     Matrix:
-        #     {adj_matrix.tolist()}
-
-        #     **Definitions of Causal Structures**:
-        #     - **Chain Structure (A → B → C)**:
-        #     - Variable A causes B, and B causes C.
-        #     - **Fork Structure (A ← B → C)**:
-        #     - Variable B causes both A and C.
-        #     - **Collider Structure (A → B ← C)**:
-        #     - Variables A and C both cause B.
-
-        #     **Your Task**:
-        #     1. Analyze the adjacency matrix and identify causal structures such as chains, forks, and colliders.
-        #     2. Reevaluate the relationships involving {main_node} in the context of these structures.
-        #     """
-        if 'new_relationship_prompt' in prompt_type:
-            prompt_pruning += f"""
-            We are conducting a causal discovery analysis on the following variables: {data.columns.tolist()}.
-            Our statistical algorithm has identified a potential causal relationship between the following variables:
-            {relation_text}
-
-            **Important Considerations**:
-            
-            1. **Correlation vs. Causation**:
-                - Remember that statistical correlation does not imply causation. A detected association between variables may not indicate a causal link.
-                - Base your reasoning on domain knowledge and logical inference rather than statistical correlations.
-            2. **Direction of Causation**:
-                - The direction of causation is crucial. Ensure that the proposed causal direction is logical and consistent with established domain knowledge.
-                - Avoid assuming causation without proper justification.
-            
-            **Your Task**:
-             1. **Assess the Causal Relationship**:
-                - Evaluate the potential causal relationship between **{main_node}** and the related variables.
-                - Select the most appropriate option from the following:
-                    - **A**: **{main_node}** is a cause of the related variable.
-                    - **B**: The related variable is a cause of **{main_node}**.
-                    - **C**: There is no causal relationship.
-            2. **Justify Your Choice**:
-                - Provide a concise explanation (1-2 sentences) supporting your selection (A, B, or C).
-                - Your explanation should be based on domain-specific reasoning and established knowledge.
-                - Do **not** rely on statistical correlation or data patterns in your justification.
-            **Response Format**:
-
-            Please present your answer in the following format:
-            - **A**: "Option A: Increased sunlight exposure (**{main_node}**) leads to higher levels of vitamin D production (related variable) in the body."
-            - **B**: "Option B: Higher levels of stress hormones (related variable) can cause elevated blood pressure (**{main_node}**) because stress affects cardiovascular function."
-            - **C**: "Option C: There is no direct causal relationship between **{main_node}** and the related variable; they are influenced independently by other factors."
-
-            **Guidelines to Avoid Common Pitfalls**:
-
-            - **Do Not**:
-                - Conflate correlation with causation.
-                - Use statistical terms such as "correlates with" or "is associated with" in your explanation.
-                - Base your reasoning on data patterns or algorithm outputs.
-            
-            - **Avoid**:
-                - Circular reasoning (e.g., "A causes B because B causes A").
-                - Vague explanations lacking domain-specific details.
-            **Ensure that your response adheres strictly to the format and guidelines provided.**
-
-            """
-
-
             # Relationships for related node
             # Extract tuples containing main node
             tuples_with_mainnode = [t for t in edges_dict['uncertain_edges']+edges_dict['certain_edges'] if main_node in t]
@@ -815,56 +486,32 @@ def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_
             for node in related_nodes:
                 directed_exist_texts_related = ', '.join([text for text in relation_text_dict['certain_edges'] if node in text])
                 undirected_exist_texts_related = ', '.join([text for text in relation_text_dict['uncertain_edges'] if node in text])
-                # print('directed_exist_texts_related',directed_exist_texts_related)
-                # print('undirected_exist_texts_related',undirected_exist_texts_related)
-                prompt_pruning += f"""
+                relationship += f"""
                 Edges of node {node}:
                 {directed_exist_texts_related} and {undirected_exist_texts_related}
                 """
+        # Basic Prompt: No infos and ask relationships directly
+        else: 
+            relationship = ''
 
-        prompt_pruning += f"""
-        **Your Task**:
-        Your task is to double check these causal relationships about node {main_node} from a domain knowledge perspective and determine whether this statistically suggested hypothesis is plausible in the context of the domain.  
-
-        Firstly, determine the causal relationship between
-        """
+        task = f"Firstly, determine the causal relationship between\n"
         for node_i, node_j in related_pairs:
-            prompt_pruning += f" {node_i} and {node_j},"
-        prompt_pruning += f"""\n
-        **Options**
-        - For each node pair, if I intervene the left node, it directly causes changes in the right node, the "result" is 'A'. 
-        - If I intervene the right node, it directly causes changes in the left node, the "result" should be 'B'. 
-        - If you are pretty sure there is no relationship, the "result" is 'C'. 
-        - If you do not know established evidence, the "result" is 'D'.
-        
-        **Important Considerations**:
-
-        1. **Correlation vs. Causation**:
-        - Remember that statistical correlation does not imply causation. A detected association between variables may not indicate a causal link.
-        - Base your reasoning on domain knowledge and logical inference rather than statistical correlations.
-
-        2. **Direction of Causation**:
-        - The direction of causation is crucial. Ensure that the proposed causal direction is logical and consistent with established domain knowledge.
-        - Avoid assuming causation without proper justification.
-
-        Secondly, please provide an explanation of your result, leveraging your expert knowledge on the causal relationship between the left node and the right node, please use only one to two sentences. 
-        Your response should consider the relevant factors and provide a reasoned explanation based on your understanding of the domain.
-        - **Avoid**:
-        - Circular reasoning (e.g., "A causes B because B causes A").
-        - Vague explanations lacking domain-specific details.
-        - Use statistical terms such as "correlates with" or "is associated with" in your explanation.
-        - Base your reasoning on data patterns or algorithm outputs.
-
-        **Response Format**:
-        Response me following the template below. Do not include anything else. explanations should only include one to two sentences. \n
-        Please seperate your answers for each pair with semicolon ;
-        """
+            task += f" {node_i} and {node_j},"
+       
+        format =  ""
         for node_i, node_j in related_pairs:
-            prompt_pruning += f"""
-            ({node_i}, {node_j}): A or B or C or D: explanations ; \n
-        """
-        #print('prompt_pruning: ',prompt_pruning)
-        
+            format += f"({node_i}, {node_j}): A or B or C or D: explanations ; \n"
+        replacement = {              
+            "[COLUMNS]": ', '.join([col for col in data.columns]),
+            "[MAIN_NODE]": main_node,
+            "[RELATIONSHIP]": relationship,
+            "[TASK]": task
+            }
+        with open('postprocess/context/pruning_prompt.txt', 'r') as file:
+            prompt_pruning = file.read()
+            for placeholder, value in replacement.items():
+                prompt_pruning = prompt_pruning.replace(placeholder, value)
+          
         ### Ask with Voting ###
         if vote_num == 1:
             llm_answer = call_llm_new(args, prompt_pruning, prompt_type)
@@ -895,14 +542,12 @@ def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_
                 idx_j, idx_i = data.columns.str.lower().get_loc(var_j.lower()), data.columns.str.lower().get_loc(var_i.lower())
                 if llm_answer[pair]['result'] == 'A':
                     #if (var_j, var_i) not in edges_dict['certain_edges']:
-                    if True:
-                        direct_dict[(idx_j, idx_i)] = ((var_j, var_i), llm_answer[pair]['explanation'])
-                        edges_dict['certain_edges'].append((var_j, var_i))
+                    direct_dict[(idx_j, idx_i)] = ((var_j, var_i), llm_answer[pair]['explanation'])
+                    edges_dict['certain_edges'].append((var_j, var_i))
                 elif llm_answer[pair]['result'] == 'B':
                     #if (var_i, var_j) not in edges_dict['certain_edges']:
-                    if True:
-                        direct_dict[(idx_i, idx_j)] = ((var_i, var_j), llm_answer[pair]['explanation'])
-                        edges_dict['certain_edges'].append((var_i, var_j))
+                    direct_dict[(idx_i, idx_j)] = ((var_i, var_j), llm_answer[pair]['explanation'])
+                    edges_dict['certain_edges'].append((var_i, var_j))
                 elif llm_answer[pair]['result'] == 'C':
                     forbid_dict[(idx_j, idx_i)] = ((var_j, var_i), llm_answer[pair]['explanation'])
                     if (var_j, var_i) in edges_dict['certain_edges']:
@@ -919,266 +564,6 @@ def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_
         check_node_relationship(main_node)    
     #########################
     return direct_dict, forbid_dict
-
-
-def llm_evaluation_new_cycle(data, args, edges_dict, boot_edges_prob, bootstrap_check_dict, prompt_type, vote_num=3):
-    """
-    Here we let LLM double check the result of initial graph, and make edition (determine direction & delete edge)
-    Provided Info:
-    1. Structure of whole graph
-    (ancestor decendant ... relationship?)
-    2. Bootstrap Probability
-    3. Pair relationship in the original graph
-    Return: Result dicts with domain knowledge and explanation
-    """
-
-    ### conbine uncertain edges
-    uncertain_edges_exist = bootstrap_check_dict['middle_prob_edges']['exist']
-    uncertain_edges_nonexist = bootstrap_check_dict['middle_prob_edges']['non-exist']
-    combined_uncertain_edges = uncertain_edges_exist + uncertain_edges_nonexist
-    # Remove duplicate tuples
-    combined_uncertain_edges = list(set(tuple(sorted((i, j))) for (i, j) in combined_uncertain_edges))
-
-    # Convert edges into node group
-    # Initialize an empty dictionary
-    grouped_dict = {}
-    # Iterate over the list of tuples
-    for idx_i, idx_j in combined_uncertain_edges:
-        # Convert the first element to a string for the key
-        key = data.columns[idx_i]
-        # Append the tuple to the corresponding key in the dictionary
-        if key not in grouped_dict:
-            grouped_dict[key] = []  # Create a new list if the key doesn't exist
-        grouped_dict[key].append((data.columns[idx_i], data.columns[idx_j]))
-    print('grouped_dict',grouped_dict)
-
-    direct_dict = {}
-    forbid_dict = {}
-    ##############iteration##################
-    def check_node_relationship(main_node):
-        # Relationships for main node
-        relation_text_dict, relation_text = edges_to_relationship(data, edges_dict, boot_edges_prob)
-        directed_exist_texts_mainnode = ', '.join([text for text in relation_text_dict['certain_edges'] if main_node in text])
-        try:
-            undirected_exist_texts_mainnode = ', '.join([text for text in relation_text_dict['uncertain_edges'] if main_node in text])
-        except:
-            undirected_exist_texts_mainnode = 'None'
-        # print('directed_exist_texts_mainnode',directed_exist_texts_mainnode)
-        # print('undirected_exist_texts_mainnode',undirected_exist_texts_mainnode)
-        
-        related_pairs = grouped_dict[main_node]
-        # Basic Prompt: No infos and ask relationships directly
-        prompt_pruning = f"""
-        **Context**: 
-        We want to carry out causal discovery analysis, considering these variables: {data.columns.tolist()}. 
-        """
-        # All Pairwise Relationships
-        if 'all_relations' in prompt_type:
-            prompt_pruning += f"""
-            We have conducted the statistical causal discovery algorithm to find the following causal relationships from a statistical perspective:
-            {relation_text}
-            According to the results shown above, it has been determined that {directed_exist_texts_mainnode} and {undirected_exist_texts_mainnode}, but it may not be correct. 
-            """
-        # Markov Blanket Context
-        if 'markov_blanket' in prompt_type:
-            prompt_pruning += f"""
-            We have conducted the statistical causal discovery algorithm to find the following causal relationships from a statistical perspective:
-            Edges of node {main_node}:
-            {directed_exist_texts_mainnode} and {undirected_exist_texts_mainnode}
-            """
-            # Add adjacency matrix context
-        # if 'adj_matrix' in prompt_type:
-        #     adj_matrix = edges_dict_to_adj_mat(edges_dict, data.columns)
-        #     prompt_pruning += f"""
-        #     This is the adjacency matrix representation of the current causal graph:
-
-        #     **Adjacency Matrix**:
-        #     Variables: {data.columns.tolist()}
-        #     Matrix:
-        #     {adj_matrix.tolist()}
-
-        #     **Definitions of Causal Structures**:
-        #     - **Chain Structure (A → B → C)**:
-        #     - Variable A causes B, and B causes C.
-        #     - **Fork Structure (A ← B → C)**:
-        #     - Variable B causes both A and C.
-        #     - **Collider Structure (A → B ← C)**:
-        #     - Variables A and C both cause B.
-
-        #     **Your Task**:
-        #     1. Analyze the adjacency matrix and identify causal structures such as chains, forks, and colliders.
-        #     2. Reevaluate the relationships involving {main_node} in the context of these structures.
-        #     """
-        if 'new_relationship_prompt' in prompt_type:
-            prompt_pruning += f"""
-            We are conducting a causal discovery analysis on the following variables: {data.columns.tolist()}.
-            Our statistical algorithm has identified a potential causal relationship between the following variables:
-            {relation_text}
-
-            **Important Considerations**:
-            
-            1. **Correlation vs. Causation**:
-                - Remember that statistical correlation does not imply causation. A detected association between variables may not indicate a causal link.
-                - Base your reasoning on domain knowledge and logical inference rather than statistical correlations.
-            2. **Direction of Causation**:
-                - The direction of causation is crucial. Ensure that the proposed causal direction is logical and consistent with established domain knowledge.
-                - Avoid assuming causation without proper justification.
-            
-            **Your Task**:
-             1. **Assess the Causal Relationship**:
-                - Evaluate the potential causal relationship between **{main_node}** and the related variables.
-                - Select the most appropriate option from the following:
-                    - **A**: **{main_node}** is a cause of the related variable.
-                    - **B**: The related variable is a cause of **{main_node}**.
-                    - **C**: There is no causal relationship.
-            2. **Justify Your Choice**:
-                - Provide a concise explanation (1-2 sentences) supporting your selection (A, B, or C).
-                - Your explanation should be based on domain-specific reasoning and established knowledge.
-                - Do **not** rely on statistical correlation or data patterns in your justification.
-            **Response Format**:
-
-            Please present your answer in the following format:
-            - **A**: "Option A: Increased sunlight exposure (**{main_node}**) leads to higher levels of vitamin D production (related variable) in the body."
-            - **B**: "Option B: Higher levels of stress hormones (related variable) can cause elevated blood pressure (**{main_node}**) because stress affects cardiovascular function."
-            - **C**: "Option C: There is no direct causal relationship between **{main_node}** and the related variable; they are influenced independently by other factors."
-
-            **Guidelines to Avoid Common Pitfalls**:
-
-            - **Do Not**:
-                - Conflate correlation with causation.
-                - Use statistical terms such as "correlates with" or "is associated with" in your explanation.
-                - Base your reasoning on data patterns or algorithm outputs.
-            
-            - **Avoid**:
-                - Circular reasoning (e.g., "A causes B because B causes A").
-                - Vague explanations lacking domain-specific details.
-            **Ensure that your response adheres strictly to the format and guidelines provided.**
-
-            """
-
-
-            # Relationships for related node
-            # Extract tuples containing main node
-            tuples_with_mainnode = [t for t in edges_dict['uncertain_edges']+edges_dict['certain_edges'] if main_node in t]
-            related_nodes = [item for t in tuples_with_mainnode for item in t if item != main_node]
-            for node in related_nodes:
-                directed_exist_texts_related = ', '.join([text for text in relation_text_dict['certain_edges'] if node in text])
-                undirected_exist_texts_related = ', '.join([text for text in relation_text_dict['uncertain_edges'] if node in text])
-                # print('directed_exist_texts_related',directed_exist_texts_related)
-                # print('undirected_exist_texts_related',undirected_exist_texts_related)
-                prompt_pruning += f"""
-                Edges of node {node}:
-                {directed_exist_texts_related} and {undirected_exist_texts_related}
-                """
-
-        prompt_pruning += f"""
-        **Important Considerations**:
-
-        1. **Correlation vs. Causation**:
-        - Remember that statistical correlation does not imply causation. A detected association between variables may not indicate a causal link.
-        - Base your reasoning on domain knowledge and logical inference rather than statistical correlations.
-
-        2. **Direction of Causation**:
-        - The direction of causation is crucial. Ensure that the proposed causal direction is logical and consistent with established domain knowledge.
-        - Avoid assuming causation without proper justification.
-
-        **Your Task**:
-        Your task is to double check these causal relationships about node {main_node} from a domain knowledge perspective and determine whether this statistically suggested hypothesis is plausible in the context of the domain.  
-
-        Firstly, determine the causal relationship between
-        """
-        for node_i, node_j in related_pairs:
-            prompt_pruning += f" {node_i} and {node_j},"
-        prompt_pruning += f"""\n
-        **Options**
-        - For each node pair, if I intervene the left node, it directly causes changes in the right node, the "result" is 'A'. 
-        - If I intervene the right node, it directly causes changes in the left node, the "result" should be 'B'. 
-        - If you are pretty sure there is no relationship, the "result" is 'C'. 
-        - If you do not know established evidence, the "result" is 'D'.
-        
-        **Important Considerations**:
-
-        1. **Correlation vs. Causation**:
-        - Remember that statistical correlation does not imply causation. A detected association between variables may not indicate a causal link.
-        - Base your reasoning on domain knowledge and logical inference rather than statistical correlations.
-
-        2. **Direction of Causation**:
-        - The direction of causation is crucial. Ensure that the proposed causal direction is logical and consistent with established domain knowledge.
-        - Avoid assuming causation without proper justification.
-
-        Secondly, please provide an explanation of your result, leveraging your expert knowledge on the causal relationship between the left node and the right node, please use only one to two sentences. 
-        Your response should consider the relevant factors and provide a reasoned explanation based on your understanding of the domain.
-        - **Avoid**:
-        - Circular reasoning (e.g., "A causes B because B causes A").
-        - Vague explanations lacking domain-specific details.
-        - Use statistical terms such as "correlates with" or "is associated with" in your explanation.
-        - Base your reasoning on data patterns or algorithm outputs.
-
-        **Response Format**:
-        Response me following the template below. Do not include anything else. explanations should only include one to two sentences. \n
-        Please seperate your answers for each pair with semicolon ;
-        """
-        for node_i, node_j in related_pairs:
-            prompt_pruning += f"""
-            ({node_i}, {node_j}): A or B or C or D: explanations ; \n
-        """
-        #print('prompt_pruning: ',prompt_pruning)
-        
-        ### Ask with Voting ###
-        if vote_num == 1:
-            llm_answer = call_llm_new(args, prompt_pruning, prompt_type)
-        else:
-            llm_answer_merge = []
-            llm_answer = {}
-            for i_vote in range(vote_num):
-                llm_answer_i = call_llm_new(args, prompt_pruning, prompt_type)
-                llm_answer_merge.append(llm_answer_i)
-            merged_dict ={}
-            for d in llm_answer_merge:
-                for key, value in d.items():
-                    merged_dict.setdefault(key,[]).append(value)
-            for pair_i in merged_dict.keys():
-                result_list = [single_vote['result'] for single_vote in merged_dict[pair_i]]
-                print('result_list',result_list)
-                explanation_list = [single_vote['explanation'] for single_vote in merged_dict[pair_i]]
-                majority_result = Counter(result_list).most_common(1)[0][0]
-                majority_explanation = explanation_list[result_list.index(majority_result)]
-                llm_answer[pair_i]={'result': majority_result,
-                                    'explanation': majority_explanation}
-        ########### end of voting #################### 
-        print('response: ',llm_answer)
-        print('response: ',llm_answer)
-        # Update revised graph and edge dict
-        for pair in llm_answer.keys():
-            var_j, var_i = tuple(item.strip() for item in pair.strip('()').split(','))
-            idx_j, idx_i = data.columns.get_loc(var_j), data.columns.get_loc(var_i)
-            if llm_answer[pair]['result'] == 'A':
-                #if (var_j, var_i) not in edges_dict['certain_edges'] and no cycles and colliders are present
-                if not check_for_cycles(edges_dict['certain_edges'], (var_j, var_i)) and not check_for_colliders(edges_dict['certain_edges'], (var_j, var_i)):
-                    direct_dict[(idx_j, idx_i)] = ((var_j, var_i), llm_answer[pair]['explanation'])
-                    edges_dict['certain_edges'].append((var_j, var_i))
-            elif llm_answer[pair]['result'] == 'B':
-                #if (var_i, var_j) not in edges_dict['certain_edges'] and no cycles and colliders are present
-                if not check_for_cycles(edges_dict['certain_edges'], (var_i, var_j)) and not check_for_colliders(edges_dict['certain_edges'], (var_i, var_j)):
-                    direct_dict[(idx_i, idx_j)] = ((var_i, var_j), llm_answer[pair]['explanation'])
-                    edges_dict['certain_edges'].append((var_i, var_j))
-            elif llm_answer[pair]['result'] == 'C':
-                forbid_dict[(idx_j, idx_i)] = ((var_j, var_i), llm_answer[pair]['explanation'])
-                if (var_j, var_i) in edges_dict['certain_edges']:
-                    edges_dict['certain_edges'].remove((var_j, var_i))
-                if (var_i, var_j) in edges_dict['certain_edges']:
-                    edges_dict['certain_edges'].remove((var_i, var_j))
-
-    for main_node in  grouped_dict.keys():
-        print(f'edges_dict for {main_node}: ')
-        print('directed edges:',edges_dict['certain_edges'])
-        print('undirected edges:',edges_dict['uncertain_edges'])
-        check_node_relationship(main_node)    
-    #########################
-    return direct_dict, forbid_dict
-
-
-
 
 def kci_pruning(data, revised_graph):
     from causallearn.utils.cit import CIT
@@ -1298,59 +683,3 @@ def check_cycle(args, data, graph):
             graph[ind_i, ind_j] = graph[ind_j, ind_i] = 0
     
     return graph
-
-
-
-
-def LLM_remove_cycles(args, message):
-    client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
-    class VarList(BaseModel):
-        nodes: list[str]
-    
-    completion = client.beta.chat.completions.parse(
-    model="gpt-4o-mini-2024-07-18",
-    messages=[
-        {"role": "system", "content": f"You are a helpful assistant, the following relationships form a cycle, please choose an egde to remove this cycle, and save nodes of this edge in a list. "},
-        {"role": "user", "content": message},
-    ],
-    response_format=VarList,
-    )
-
-    node_list = completion.choices[0].message.parsed.nodes
-    return node_list
-
-def check_cycle(args, data, graph):
-    columns = data.columns
-    graph_copy = graph.copy()
-    # Set symmetric positions to 0
-    ones_indices = np.where(graph == 1)
-    symmetric_indices = (ones_indices[1], ones_indices[0])  # swap row and column indices
-    graph_copy[symmetric_indices] = 0
-    G = nx.from_numpy_array(graph_copy, create_using=nx.DiGraph)
-    G = nx.relabel_nodes(G, dict(enumerate(columns)))
-
-    # Check for cycles in the directed graph
-    acyclic = nx.is_directed_acyclic_graph(G)
-
-    # Output the result
-    if acyclic:
-        print("The graph is acyclic (no cycles).")
-    else:
-        print("The graph has cycles.")
-        cycles = list(nx.simple_cycles(G))
-        for cycle in cycles:
-            print(cycle)
-            prompt = " -> ".join(f"{n}" for n in cycle)
-            prompt +=  f" -> {cycle[0]}"
-            print(prompt)
-            remove_nodes = LLM_remove_cycles(args, prompt)
-            print('remove_nodes',remove_nodes)
-            ind_i = columns.get_loc(remove_nodes[0])
-            ind_j = columns.get_loc(remove_nodes[1])
-            graph[ind_i, ind_j] = graph[ind_j, ind_i] = 0
-    
-    return graph
-
-
-
-    

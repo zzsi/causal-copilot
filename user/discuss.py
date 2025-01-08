@@ -42,7 +42,7 @@ class Discussion(object):
             conversation_history, output = self.interaction(conversation_history, user_query)
             conversation_history.append({"role": "system", "content": output})
 
-            global_state.logging.discussion_conversation.append({
+            global_state.logging.final_discuss.append({
                 "input": user_query,
                 "output": output
             })
