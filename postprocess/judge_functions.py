@@ -486,7 +486,7 @@ def llm_evaluation_new(data, args, edges_dict, boot_edges_prob, bootstrap_check_
             for node in related_nodes:
                 directed_exist_texts_related = ', '.join([text for text in relation_text_dict['certain_edges'] if node in text])
                 undirected_exist_texts_related = ', '.join([text for text in relation_text_dict['uncertain_edges'] if node in text])
-                prompt_pruning += f"""
+                relationship += f"""
                 Edges of node {node}:
                 {directed_exist_texts_related} and {undirected_exist_texts_related}
                 """
