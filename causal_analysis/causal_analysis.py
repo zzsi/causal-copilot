@@ -405,8 +405,8 @@ class Analysis(object):
 
         x = np.arange(len(categories))  # [0, 1]
 
-        plt.bar(x - bar_width / 2, treatment_values, width=bar_width, label='Treatment', color='blue')
-        plt.bar(x + bar_width / 2, response_values, width=bar_width, label='Response', color='orange')
+        plt.bar(x - bar_width / 2, treatment_values, width=bar_width, label= treatment_name, color='blue')
+        plt.bar(x + bar_width / 2, response_values, width=bar_width, label=response_name, color='orange')
 
         plt.ylabel('Values')
         plt.title('Counterfactual Estimation')
