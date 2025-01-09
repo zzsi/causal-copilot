@@ -422,7 +422,7 @@ class Analysis(object):
 
         if not os.path.exists(path):
             os.makedirs(path)
-        print(f"Saving residuals plot to {os.path.join(path, 'counterfactual_est_fig.jpg')}")
+        print(f"Saving counterfactual estimation plot to {os.path.join(path, 'counterfactual_est_fig.jpg')}")
         plt.savefig(os.path.join(path, 'counterfactual_est_fig.jpg'))
 
 
