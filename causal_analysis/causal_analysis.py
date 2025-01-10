@@ -675,26 +675,28 @@ def main(global_state, args):
     print("Welcome to the Causal Analysis Demo using the Auto MPG dataset.\n")
     
     analysis = Analysis(global_state, args)
-    message = "What is the Heterogeneous Treatment Effect of PIP2 on PIP3"
+    message = "What is the Average Treatment Effect of PIP2 on PIP3"
 
-    # EXAMPLE: Test the new DML method
-    dml_estimate, dml_p_value, refutaion, figs = analysis.estimate_causal_effect_dml(
-        treatment='PIP2',
-        outcome='PIP3',
-        target_units='treated'  # e.g., ATT
-    )
-    print("DML Estimate:", dml_estimate.value)
-    print("p-value:", dml_p_value)
+    # # EXAMPLE: Test the new DML method
+    # dml_estimate, dml_p_value, refutaion, figs = analysis.estimate_causal_effect_dml(
+    #     treatment='PIP2',
+    #     outcome='PIP3',
+    #     target_units='treated'  # e.g., ATT
+    # )
+    # print("DML Estimate:", dml_estimate.value)
+    # print("p-value:", dml_p_value)
 
     # EXAMPLE: Compare with linear approach, specifying a different target_units
     lin_estimate, lin_p_value, refutaion, figs = analysis.estimate_causal_effect(
-        treatment='PIP2',
+        treatment='Plcg',
         outcome='PIP3',
-        target_units=lambda df: df[df['PIP2'] > 100].index  # example subgroup
+        #target_units=lambda df: df[df['PIP2'] > 100].index  # example subgroup
+        target_units='ate'
     )
     print("Linear Subgroup Estimate (CATE approach):", lin_estimate.value)
     print("p-value:", lin_p_value)
     # Testing code to check the above functions replace it appropriately
+    return None
 
     
     class InfList(BaseModel):
@@ -797,7 +799,7 @@ if __name__ == '__main__':
         parser.add_argument(
             '--apikey',
             type=str,
-            default=None, 
+            default=None,
             help='API Key'
         )
 

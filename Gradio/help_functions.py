@@ -55,7 +55,7 @@ def sample_size_check(n_row, n_col, chat_history, download_btn, REQUIRED_INFO):
     if 1<= n_row/n_col < 5:
         chat_history.append((None, "Sample Size Check Summary: \n"\
                              "⚠️ The dataset provided do not have enough sample size and may result in unreliable analysis. \n"
-                                "Please upload a larger dataset if you mind that. Otherwise please enter 'continue'"))
+                                "Please upload a larger dataset if you mind that."))
         REQUIRED_INFO["current_stage"] = 'reupload_dataset'
     ## Not enough sample case: must reupload
     elif n_row/n_col < 1:
@@ -66,8 +66,19 @@ def sample_size_check(n_row, n_col, chat_history, download_btn, REQUIRED_INFO):
     else:
         chat_history.append((None, "Sample Size Check Summary: \n"\
                              "✅ The sample size is enough for the following analysis. \n"))
-        REQUIRED_INFO["current_stage"] = 'mode_check'
+        REQUIRED_INFO["current_stage"] = 'important_feature_selection'
     return chat_history, download_btn, REQUIRED_INFO
+
+def parse_reupload_query(message, chat_history, download_btn, REQUIRED_INFO):
+    print('reupload query:', message)
+    if message == 'continue':
+        chat_history.append((message, "📈 Continue the analysis..."))
+        REQUIRED_INFO["current_stage"] = 'important_feature_selection'
+    else:
+        #REQUIRED_INFO['data_uploaded'] = False
+        REQUIRED_INFO['current_stage'] = 'initial_process'
+    return chat_history, download_btn, REQUIRED_INFO
+
 
 def process_initial_query(message, chat_history, download_btn, args, REQUIRED_INFO):
     # TODO: check if the initial query is valid or satisfies the requirements
@@ -258,13 +269,21 @@ def parse_user_postprocess(message, chat_history, download_btn, global_state, RE
         "orient_edges": []
     }
     print('message:', message)
+    #TODO: fix the regex pattern
     # Define regex patterns for each type of edge
-    add_pattern = r"Add Edges:\s*([^\s]+)\s*->\s*([^\s]+)"
-    forbid_pattern = r"Forbid Edges:\s*([^\s]+)\s*->\s*([^\s]+)"
-    orient_pattern = r"Orient Edges:\s*([^\s]+)\s*->\s*([^\s]+)"
+    add_pattern = r"Add Edges:\s*((?:[^;,->]+?\s*->\s*[^;,->]+?\s*[;,]?\s*)+)"
+    forbid_pattern = r"Forbid Edges:\s*((?:[^;,->]+?\s*->\s*[^;,->]+?\s*[;,]?\s*)+)"
+    orient_pattern = r"Orient Edges:\s*((?:[^;,->]+?\s*->\s*[^;,->]+?\s*[;,]?\s*)+)"
     # Function to convert edge strings to tuples
-    def parse_edges(edge_string):
-        return [tuple(edge.strip().split('->')) for edge in edge_string.split(';') if edge.strip()]
+    def parse_edges(full_pattern, edge_string):
+        edge_pattern = r"([^->]+?)\s*->\s*([^;,]+?)\s*[;,]?\s*"
+        # Match the full pattern
+        full_match = re.match(full_pattern, edge_string)
+        # Get edges text
+        edges_text = full_match.group(1)        
+        # Find all edges
+        edges = re.findall(edge_pattern, edges_text)
+        return edges
     try:
         if message == '' or not ('Add Edges' in message or 'Forbid Edges' in message or 'Orient Edges' in message):
              REQUIRED_INFO['current_stage'] = 'retry_algo'
@@ -278,7 +297,7 @@ def parse_user_postprocess(message, chat_history, download_btn, global_state, RE
             # Extract Orient Edges
             edges_dict["orient_edges"] = re.findall(orient_pattern, message)
             # Check whether all these variables exist
-            variables = [item for sublist in edges_dict.values() for pair in sublist for item in pair]
+            variables = [item.strip(' ').strip(';') for sublist in edges_dict.values() for pair in sublist for item in pair]
             missing_vars = [var for var in variables if var not in global_state.user_data.raw_data.columns]
             print(edges_dict)
             print(variables)

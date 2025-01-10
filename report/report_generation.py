@@ -457,7 +457,7 @@ The JSON should be
         1. Please write one paragraph to describe the causal relationship, list your analysis as bullet points clearly.
         2. If variable names have meanings, please integrate background knowledge of these variables in the causal relationship analysis.
         Please use variable names {variables[0]}, {variables[1]}, ... in your description.
-        3. Do not include any Greek Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
+        3. Do not include any  Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
         
         For example:
         The result graph shows the causal relationship among variables clearly. The {variables[1]} causes the {variables[0]}, ...
@@ -860,7 +860,7 @@ The JSON should be
                 prompt_template = prompt_template.replace(placeholder, value)
             for placeholder, value in replacement2.items():
                 prompt_template = prompt_template.replace(placeholder, value)
-            prompt_template = replace_greek_with_latex(prompt_template)
+            prompt_template = replace_unicode_with_latex(prompt_template)
             #print(prompt_template)
             return prompt_template
     

@@ -512,7 +512,7 @@ def gaussian_check(df_raw, global_state):
         col_x_name = df.columns[selected_pair[0]]
         col_y_name = df.columns[selected_pair[1]]
 
-        sm.qqplot(res, line='45', ax=axs[idx])
+        sm.qqplot(res, line='45', ax=axs[idx], markerfacecolor='blue')
         axs[idx].set_title(f'{col_x_name} vs {col_y_name}')
 
     # Hide any unused subplots if less than 4 pairs were tested

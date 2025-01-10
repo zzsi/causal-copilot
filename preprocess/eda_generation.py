@@ -135,21 +135,21 @@ class EDA(object):
         """
         :return: plot path 
         """
-        sns.set_style("dark")
+        #sns.set_style("dark")
 
         orange_black = [
             '#fdc029', '#df861d', '#FF6347', '#aa3d01', '#a30e15', '#800000', '#171820'
         ]
 
         # Setting plot styling.
-        plt.style.use('ggplot') # https://python-charts.com/matplotlib/styles/
+        #plt.style.use('ggplot') # https://python-charts.com/matplotlib/styles/
 
         plt.rcParams['figure.figsize'] = (18, 14)
         plt.rcParams['figure.dpi'] = 300
-        plt.rcParams["axes.grid"] = True
-        plt.rcParams["grid.color"] = '#b6b6d3' #orange_black[0]
-        plt.rcParams["grid.alpha"] = 0.5
-        plt.rcParams["grid.linestyle"] = '--'
+        plt.rcParams["axes.grid"] = False 
+        # plt.rcParams["grid.color"] = '#b6b6d3' #orange_black[0]
+        # plt.rcParams["grid.alpha"] = 0.5
+        # plt.rcParams["grid.linestyle"] = '--'
         plt.rcParams["font.family"] = "monospace"
         plt.rcParams['axes.edgecolor'] = 'black'
         plt.rcParams['figure.frameon'] = False

@@ -113,15 +113,6 @@ def handle_file_upload(file, chatbot, file_upload_btn, download_btn):
         chatbot.append((None, error_message))
         return chatbot, file_upload_btn, download_btn
 
-def parse_reupload_query(message, chat_history, download_btn, REQUIRED_INFO):
-    if message == 'continue':
-        chat_history.append((message, "📈 Continue the analysis..."))
-        REQUIRED_INFO["current_stage"] = 'sparsity_check'
-    else:
-        REQUIRED_INFO['data_uploaded'] = False
-        REQUIRED_INFO['current_stage'] == 'initial_process'
-    return chat_history, download_btn, REQUIRED_INFO
-
 def process_message(message, chat_history, download_btn):
     global target_path, REQUIRED_INFO, global_state, args
     REQUIRED_INFO['processing'] = True
@@ -148,35 +139,37 @@ def process_message(message, chat_history, download_btn):
             if REQUIRED_INFO['data_uploaded'] and REQUIRED_INFO['initial_query']:
                 print('strart analysis')
                 global_state = global_state_initialization(args)
-
                 # Load data
                 global_state.user_data.raw_data = pd.read_csv(target_path)
                 global_state.user_data.processed_data = global_state.user_data.raw_data
                 yield chat_history, download_btn
-                ### important feature selection query#####
-                chat_history.append((None, f"Do you have important features you care about? These are features in your provided dataset:\n"
-                                           f"{', '.join(global_state.user_data.raw_data.columns)}"))
-                REQUIRED_INFO["current_stage"] = 'important_feature_selection'
+
+                # Preprocessing - Step 1: Sample size checking
+                n_row, n_col = global_state.user_data.raw_data.shape
+                chat_history, download_btn, REQUIRED_INFO = sample_size_check(n_row, n_col, chat_history, download_btn, REQUIRED_INFO)
                 yield chat_history, download_btn
-                return chat_history, download_btn
+                print('stage1',REQUIRED_INFO["current_stage"])
+                ### important feature selection query#####
+                if REQUIRED_INFO["current_stage"] == 'important_feature_selection':
+                    chat_history.append((None, f"Do you have important features you care about? These are features in your provided dataset:\n"
+                                            f"{', '.join(global_state.user_data.raw_data.columns)}"))
+                    yield chat_history, download_btn
+                return chat_history, download_btn            
+
+        if REQUIRED_INFO["current_stage"] == 'reupload_dataset':
+            # chat_history, download_btn, REQUIRED_INFO = parse_reupload_query(message, chat_history, download_btn, REQUIRED_INFO)
+            # yield chat_history, download_btn
+            REQUIRED_INFO['current_stage'] = 'initial_process'
+            yield chat_history, download_btn
+            return process_message(message, chat_history, download_btn)
         
         if REQUIRED_INFO["current_stage"] == 'important_feature_selection':
             if message == '' or message.lower() == 'no':
                 var_list = []
-            var_list, chat_history, download_btn, global_state, REQUIRED_INFO = parse_var_selection_query(message, chat_history, download_btn, 'sample_size_check', args, global_state, REQUIRED_INFO)
+            else:
+                print('important_feature_selection')
+                var_list, chat_history, download_btn, global_state, REQUIRED_INFO = parse_var_selection_query(message, chat_history, download_btn, 'mode_check', args, global_state, REQUIRED_INFO)
             global_state.user_data.important_features = var_list
-    
-        if REQUIRED_INFO["current_stage"] == 'sample_size_check':
-            # Preprocessing - Step 1: Sample size checking
-            n_row, n_col = global_state.user_data.raw_data.shape
-            chat_history, download_btn, REQUIRED_INFO = sample_size_check(n_row, n_col, chat_history, download_btn, REQUIRED_INFO)
-            yield chat_history, download_btn
-
-        if REQUIRED_INFO["current_stage"] == 'reupload_dataset':
-            chat_history, download_btn, REQUIRED_INFO = parse_reupload_query(message, chat_history, download_btn, REQUIRED_INFO)
-            if REQUIRED_INFO['current_stage'] == 'initial_process':
-                process_message(message, chat_history, download_btn)
-                return chat_history, download_btn
         
         if REQUIRED_INFO["current_stage"] == 'mode_check':
                 chat_history.append((None, "Do you want to use the interactive mode which allows the interaction with copilot in each step?\n"
@@ -204,6 +197,8 @@ def process_message(message, chat_history, download_btn):
                 REQUIRED_INFO["current_stage"] = 'sparsity_check_2'
         
         if REQUIRED_INFO["current_stage"] == 'sparsity_check_1':
+            chat_history.append((message, None)) 
+            yield chat_history, download_btn
             chat_history, download_btn, REQUIRED_INFO = first_stage_sparsity_check(message, chat_history, download_btn, args, global_state, REQUIRED_INFO)
             yield chat_history, download_btn
         
@@ -402,10 +397,7 @@ def process_message(message, chat_history, download_btn):
                                     """,
                         None))
                 yield chat_history, download_btn
-                if message.lower() == 'no' or message == '':
-                    REQUIRED_INFO["current_stage"] = 'eda_generation'
-                else:
-                    REQUIRED_INFO["current_stage"] = 'check_user_feedback'
+                REQUIRED_INFO["current_stage"] = 'check_user_feedback'
                 return chat_history, download_btn
             else:
                 REQUIRED_INFO["current_stage"] = 'eda_generation'
@@ -414,29 +406,32 @@ def process_message(message, chat_history, download_btn):
         if REQUIRED_INFO["current_stage"] == 'check_user_feedback':
             chat_history.append((message, None))
             yield chat_history, download_btn
-            with open('global_setting/state.py', 'r') as file:
-                file_content = file.read()
-            prompt = f"""
-            I need to update variables in the Statistics class in the provided file according to user's input. 
-            Help me to identify which variables need to be updated and save it in a json.
-            If no changes are required or the input is not valid, return an empty dictionary.
-            The keys in the json should be the variable names, and the values should be the new values. 
-            Only return a json that can be parsed directly, do not include ```json
-            message: {message}
-            file: {file_content}
-            """
-            parsed_response = LLM_parse_query(None, prompt, message, args)
-            try:
-                changes = json.loads(parsed_response)
-                global_state.statistics.update(changes)
-                print(global_state.statistics)
-            except RuntimeError as e:
-                print(e)
-                chat_history.append(None, "That information may not be correct, please try again or type Quit to skip.")
-                return chat_history, download_btn
+            if message.lower() == 'no' or message == '':
+                    REQUIRED_INFO["current_stage"] = 'eda_generation'
+            else:
+                with open('global_setting/state.py', 'r') as file:
+                    file_content = file.read()
+                prompt = f"""
+                I need to update variables in the Statistics class in the provided file according to user's input. 
+                Help me to identify which variables need to be updated and save it in a json.
+                If no changes are required or the input is not valid, return an empty dictionary.
+                The keys in the json should be the variable names, and the values should be the new values. 
+                Only return a json that can be parsed directly, do not include ```json
+                message: {message}
+                file: {file_content}
+                """
+                parsed_response = LLM_parse_query(None, prompt, message, args)
+                try:
+                    changes = json.loads(parsed_response)
+                    global_state.statistics.update(changes)
+                    print(global_state.statistics)
+                except RuntimeError as e:
+                    print(e)
+                    chat_history.append(None, "That information may not be correct, please try again or type Quit to skip.")
+                    return chat_history, download_btn
 
-            REQUIRED_INFO["current_stage"] = 'eda_generation'
-            chat_history.append((None, "✅ Successfully updated the settings according to your need!"))
+                REQUIRED_INFO["current_stage"] = 'eda_generation'
+                chat_history.append((None, "✅ Successfully updated the settings according to your need!"))
             yield chat_history, download_btn
 
         if REQUIRED_INFO["current_stage"] == 'eda_generation':
@@ -603,11 +598,11 @@ def process_message(message, chat_history, download_btn):
             yield chat_history, download_btn
             try:
                 judge = Judge(global_state, args)
-                global_state = judge.forward(global_state, 'markov_blanket', 1)
+                global_state = judge.forward(global_state, 'markov_blanket', 3)
             except Exception as e:
                 print('error during judging:', e)
                 judge = Judge(global_state, args)
-                global_state = judge.forward(global_state, 'markov_blanket', 1) 
+                global_state = judge.forward(global_state, 'markov_blanket', 3) 
             my_visual_revise = Visualization(global_state)
             global_state.results.revised_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.processed_data.columns, global_state.results.revised_graph)
             # Plot Bootstrap Heatmap
@@ -638,7 +633,7 @@ def process_message(message, chat_history, download_btn):
             
             chat_history.append((None, "✅ Causal discovery analysis completed"))
             yield chat_history, download_btn
-            REQUIRED_INFO['current_stage'] == 'user_prune'
+            REQUIRED_INFO['current_stage'] = 'user_prune'
         
         if REQUIRED_INFO["current_stage"] == 'user_prune':
             if REQUIRED_INFO["interactive_mode"]:
@@ -736,12 +731,21 @@ def process_message(message, chat_history, download_btn):
 
         # Report Generation
         if REQUIRED_INFO["current_stage"] == 'report_generation': # empty query or postprocess query parsed successfully
+            ###############
+            
+            import pickle
+            with open(f'{global_state.user_data.output_graph_dir}/global_state.pkl', 'wb') as f:
+                pickle.dump(global_state, f)
+            # with open(f'{global_state.user_data.output_graph_dir}/args.pkl', 'wb') as f:
+            #     pickle.dump(args, f)
             chat_history.append(("📝 Generate comprehensive report and it may take a few minutes, stay tuned...", None))
             yield chat_history, download_btn
+            try_num = 1
             report_path = call_report_generation(output_dir)
-            while not os.path.isfile(report_path):
+            while not os.path.isfile(report_path) and try_num < 3:
                 chat_history.append((None, "❌ An error occurred during the Report Generation, we are trying again and please wait for a few minutes."))
                 yield chat_history, download_btn
+                try_num += 1
                 report_path = call_report_generation(output_dir)
             chat_history.append((None, "🎉 Analysis complete!"))
             chat_history.append((None, "📥 You can now download your detailed report using the download button below."))
@@ -757,6 +761,7 @@ def process_message(message, chat_history, download_btn):
             chat_history.append((None, "🧑‍💻 If you still have any questions, just say it and let me help you! If not, just say No"))
             yield chat_history, download_btn
             REQUIRED_INFO["current_stage"] = 'processing_discussion'
+            return chat_history, download_btn
             
         # User Discussion Rounds
         if REQUIRED_INFO["current_stage"] == 'processing_discussion':

@@ -89,7 +89,7 @@ def load_context(filepath):
         return f.read()
         
 # Function to replace Greek letters in text
-def replace_greek_with_latex( text):
+def replace_unicode_with_latex( text):
     greek_to_latex = {
         "α": r"$\alpha$",
         "β": r"$\beta$",
@@ -115,6 +115,16 @@ def replace_greek_with_latex( text):
         "χ": r"$\chi$",
         "ψ": r"$\psi$",
         "ω": r"$\omega$",
+        '↔': r'$\leftrightarrow$',
+        '→': r'$\rightarrow$',
+        '←': r'$\leftarrow$',
+        '⇔': r'$\Leftrightarrow$',
+        '⇒': r'$\Rightarrow$',
+        '⇐': r'$\Leftarrow$',
+        '↑': r'$\uparrow$',
+        '↓': r'$\downarrow$',
+        '⟶': r'$\longrightarrow$',
+        '⟵': r'$\longleftarrow$'
     }
     # Use regular expressions to find and replace Greek letters
     pattern = "|".join(map(re.escape, greek_to_latex.keys()))
