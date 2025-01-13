@@ -452,6 +452,41 @@ class Analysis(object):
         print(f"Saving simulated dataset {os.path.join(path, 'simulated_shift_intervention.csv')}")
         shift_samples.to_csv(os.path.join(path, 'simulated_shift_intervention.csv'), index=False)
 
+    def evaluate_treatment_effect_metrics(self, true_value, estimations, cis):
+        """
+        Evaluate metrics for Treatment Effect Estimation: Bias, MSE, and CI Coverage Probability.
+
+        Parameters:
+        - true_value (float): The true treatment effect.
+        - estimations (np.ndarray): A 1D array of estimated treatment effects.
+        - cis (list of tuples): A list of confidence intervals, where each element is a tuple (lower_bound, upper_bound).
+
+        Returns:
+        - dict: A dictionary containing Bias, MSE, and Coverage Probability.
+        """
+        # Convert inputs to numpy arrays for vectorized operations
+        estimations = np.array(estimations)
+        cis = np.array(cis)
+
+        # Bias: Mean difference between estimation and true value
+        bias = np.mean(estimations - true_value)
+
+        # MSE: Mean squared error
+        mse = np.mean((estimations - true_value) ** 2)
+
+        # Coverage Probability: Proportion of CIs that contain the true value
+        lower_bounds = cis[:, 0]
+        upper_bounds = cis[:, 1]
+        coverage_count = np.sum((true_value >= lower_bounds) & (true_value <= upper_bounds))
+        coverage_probability = coverage_count / len(cis)
+
+        # Return metrics as a dictionary
+        return {
+            "Bias": bias,
+            "MSE": mse,
+            "Coverage Probability": coverage_probability
+        }
+
 
 
     def sensitivity_analysis(self, target_node, model, estimand, estimate, treatment, outcome):
