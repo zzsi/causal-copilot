@@ -180,7 +180,7 @@ def correlation_check(global_state):
                     continue
 
     # Update global state
-    global_state.user_data.high_corr_drop_features = drop_feature
+    global_state.user_data.high_corr_drop_features = list(set(drop_feature))
     global_state.user_data.selected_features = [element for element in global_state.user_data.selected_features if
                                                 element not in drop_feature]
 

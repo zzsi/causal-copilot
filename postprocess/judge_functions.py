@@ -617,8 +617,8 @@ def edges_to_relationship(data, edges_dict, boot_edges_prob=None):
         edges_list = edges_dict[edge_type]
         for edges in edges_list:
             if boot_edges_prob is not None:
-                idx_j = data.columns.get_loc(edges[0])
-                idx_i = data.columns.get_loc(edges[1])
+                idx_j = data.columns.str.lower().get_loc(edges[0].lower())
+                idx_i = data.columns.str.lower().get_loc(edges[1].lower())
                 prob = boot_edges_prob[edge_type][idx_i, idx_j]
                 result_dict[edge_type].append(f'{edges[0]} {relation_dict[edge_type]} {edges[1]} with bootstrap probability {prob}')
             else:
@@ -679,8 +679,8 @@ def check_cycle(args, data, graph):
             print(prompt)
             remove_nodes = LLM_remove_cycles(args, prompt)
             print('remove_nodes',remove_nodes)
-            ind_i = columns.get_loc(remove_nodes[0])
-            ind_j = columns.get_loc(remove_nodes[1])
+            ind_i = columns.str.lower().get_loc(remove_nodes[0].lower())
+            ind_j = columns.str.lower().get_loc(remove_nodes[1].lower())
             graph[ind_i, ind_j] = graph[ind_j, ind_i] = 0
     
     return graph

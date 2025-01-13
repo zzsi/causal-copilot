@@ -183,15 +183,15 @@ class Judge(object):
         # Add and Orientation
         for add_pair in user_revise_dict['add_edges']+user_revise_dict['orient_edges']:
             bk.add_required_by_pattern(add_pair[0], add_pair[1])
-            idx_j = variables.get_loc(add_pair[0])
-            idx_i = variables.get_loc(add_pair[1])
+            idx_j = variables.str.lower().get_loc(add_pair[0].lower())
+            idx_i = variables.str.lower().get_loc(add_pair[1].lower())
             revised_graph[idx_i, idx_j] = 1
             revised_graph[idx_j, idx_i] = 0
         # Forbid
         for forbid_pair in user_revise_dict['forbid_edges']:
             bk.add_forbidden_by_pattern(forbid_pair[0], forbid_pair[1])
-            idx_j = variables.get_loc(forbid_pair[0])
-            idx_i = variables.get_loc(forbid_pair[1])
+            idx_j = variables.str.lower().get_loc(forbid_pair[0].lower())
+            idx_i = variables.str.lower().get_loc(forbid_pair[1].lower())
             revised_graph[idx_i, idx_j] = revised_graph[idx_j, idx_i] = 0
         # Update Revised Graph
         self.global_state.results.revised_graph = revised_graph 

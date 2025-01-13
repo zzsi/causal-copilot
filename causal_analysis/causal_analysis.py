@@ -199,10 +199,10 @@ class Analysis(object):
             p_value = significance_results['p_value'][0]
             print("Significance Test Results:", p_value)
 
-            # Sensitivity Analysis for the estimation
-            refutation, figs = self.sensitivity_analysis(outcome, model, identified_estimand, causal_estimate, treatment, outcome)
+            # # Sensitivity Analysis for the estimation
+            # refutation, figs = self.sensitivity_analysis(outcome, model, identified_estimand, causal_estimate, treatment, outcome)
+            refutation, figs = None, []
         except Exception as e:
-            print(str(e))
             import traceback
             traceback.print_exc()
             causal_estimate, p_value, refutation, figs = None, None, None, []
@@ -268,9 +268,9 @@ class Analysis(object):
         print("Uses DML with RandomForestRegressor as default for outcome & treatment models.")
         print("============================\n")
 
-        # Sensitivity Analysis for the estimation
-        refutation, figs = self.sensitivity_analysis(outcome, model, identified_estimand, causal_estimate, treatment, outcome)
-
+        # # Sensitivity Analysis for the estimation
+        # refutation, figs = self.sensitivity_analysis(outcome, model, identified_estimand, causal_estimate, treatment, outcome)
+        refutation, figs = None, []
         return causal_estimate, p_value, refutation, figs
 
     def _generate_dowhy_graph(self):
@@ -463,22 +463,23 @@ class Analysis(object):
         # else:
         #      simulation_method = "non-parametric-partial-R2",
 
-        # Use the most important factor as the benchmark_common_causes
-        file_exists = os.path.exists(f'{self.global_state.user_data.output_graph_dir}/shap_df.csv')
-        if not file_exists:
-            self.feature_importance(target_node, visualize=False)
-        shap_df = pd.read_csv(f'{self.global_state.user_data.output_graph_dir}/shap_df.csv')
-        max_col = shap_df.mean().idxmax()
+        # # Use the most important factor as the benchmark_common_causes
+        # file_exists = os.path.exists(f'{self.global_state.user_data.output_graph_dir}/shap_df.csv')
+        # if not file_exists:
+        #     self.feature_importance(target_node, visualize=False)
+        # shap_df = pd.read_csv(f'{self.global_state.user_data.output_graph_dir}/shap_df.csv')
+        # max_col = shap_df.mean().idxmax()
 
-        print('model.get_common_causes',model.get_common_causes())
-        if model.get_common_causes() == [] or model.get_common_causes() is None:
+        #print('model.get_common_causes',model.get_common_causes())
+        common_causes = model.get_common_causes()
+        if common_causes == [] or common_causes is None:
             refute = model.refute_estimate(estimand, estimate, method_name="data_subset_refuter", subset_fraction=0.9)
             figs = []
         else:
             refute = model.refute_estimate(estimand, estimate,
                                 method_name = "add_unobserved_common_cause",
                                 simulation_method = "non-parametric-partial-R2",
-                                benchmark_common_causes = [max_col],
+                                benchmark_common_causes = common_causes,
                                 effect_fraction_on_outcome = [1,2,3]
                                 )
             plt.savefig(f'{self.global_state.user_data.output_graph_dir}/ate_refutation.png')
@@ -672,7 +673,6 @@ def main(global_state, args):
     """
     Modify the main function to call attribute_anomalies and save the results in ./auto_mpg_output.
     """
-    print("Welcome to the Causal Analysis Demo using the Auto MPG dataset.\n")
     
     analysis = Analysis(global_state, args)
     message = "What is the Average Treatment Effect of PIP2 on PIP3"
@@ -848,7 +848,7 @@ if __name__ == '__main__':
         parser.add_argument(
             '--revised_graph',
             type=str,
-            default='postprocess/test_result/sachs_new/cot_all_relation/3_voting/revised_graph.npy',
+            default='postprocess/test_data/sachs/base_graph.npy',
             help='Demo mode'
         )
 

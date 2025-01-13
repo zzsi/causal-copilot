@@ -69,6 +69,16 @@ class Report_generation(object):
         :param global_state: a dict containing global variables and information
         :param args: arguments for the report generation
         """
+        ######## Load the chosen global state and record all global states history ########
+        if global_state.results.report_selected_index is not None:
+            global_state = self.global_state_list[global_state.results.report_selected_index]
+            self.global_state_list = []
+            for algo in global_state.logging.global_state_logging:
+                with open(f'{global_state.user_data.output_graph_dir}/{algo}_global_state.pkl', 'rb') as f:
+                    self.global_state_list.append(pickle.load(f))
+        else:
+            self.global_state_list = [global_state]
+            global_state.logging.global_state_logging = [global_state.algorithm.selected_algorithm]
 
         self.client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
         self.data_mode = args.data_mode
@@ -565,7 +575,6 @@ The JSON should be
         graph_text += """
         \caption{Confidence Heatmap of Different Edges}
         \end{figure}    
-
         """
         ### Generate text illustration
         text_map = {'certain_edges': 'directed edge ($->$)', #(->)
@@ -646,6 +655,64 @@ The JSON should be
             text = ''
         return text 
     
+    def comparision_prompt(self):
+        if len(self.global_state_list) < 2:
+            return "", ""
+        else:
+            graph_text = """
+            \subsection{Result Graph Comparision}
+
+            \\begin{figure}[H]
+                \centering
+            """
+            algos = [state.algorithm.selected_algorithm for state in self.global_state_list]
+            length = round(1/len(self.global_state_list), 2)-0.01
+            for algo in algos:
+                graph_path = f'{self.visual_dir}/{algo}_initial_graph.pdf'
+                caption = f'Result Graph of {algo}'
+                graph_text += f"""
+                \\begin{{subfigure}}{{{length}\\textwidth}}
+                        \centering
+                        \includegraphics[width=\linewidth]{{{graph_path}}}
+                        \\vfill
+                        \caption{{{caption}}}
+                    \end{{subfigure}}"""            
+            graph_text += """
+            \caption{Result Graph Comparision of Different Algorithms}
+            \end{figure}    
+            """
+
+            prompt = f"""
+Help me to write a comparison of the following causal discovery results of different algorithms.
+**You should cover the following points**:
+1. The different edges of different algorithms' causal graphs.
+2. The common edges of different algorithms' causal graphs.
+3. Which edges are more reliable and why.
+**Note**:
+1. Only include your comparison text content in the response. Don't include any other things!
+2. Do not include any titles or subtitles. I only need the comparison text.
+**causal discovery results of different algorithms**:
+"""
+            for state in self.global_state_list:
+                prompt += f"Result of Algorithm {state.algorithm.selected_algorithm}:\n"            
+                relation_text_dict, relation_text = edges_to_relationship(self.data, state.results.raw_edges)
+                prompt += f"{relation_text}\n"
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system",
+                     "content": 
+                     f"""
+                     You are an expert in the causal discovery field and helpful assistant.                    
+                     """},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            response_doc = response.choices[0].message.content
+            response_doc = response_doc.replace("_", r"\_")
+            response_doc = bold_conversion(response_doc)
+            return graph_text, response_doc
+        
     def abstract_prompt(self):
         response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
@@ -663,9 +730,11 @@ The JSON should be
                      Do not include any Greek Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
                      0. Title: {self.title}
                      1. Introduction: {self.intro_info}
-                     2. Discovery Procedure: {self.discover_process},
-                     3. Graph Result Analysis: {self.graph_prompt},
-                     4. Reliability Analysis: {self.reliability_prompt}
+                     2. Selected Algorithm: {self.algo}
+                     3. Discovery Procedure: {self.discover_process},
+                     4. Graph Result Analysis: {self.graph_prompt},
+                     5. Reliability Analysis: {self.reliability_prompt}
+                     6. Comparision of different algorithms: {self.result_comparison}
                      """}
                 ]
             )
@@ -722,7 +791,8 @@ The JSON should be
                      2. Discovery Procedure: {self.discover_process},
                      3. Graph Result Analysis: {self.graph_prompt},
                      4. Graph Revise Procesure: {self.revise_process}
-                     4. Reliability Analysis: {self.reliability_prompt}
+                     5. Reliability Analysis: {self.reliability_prompt}
+                     6. Comparision of different algorithms: {self.result_comparison}
                      """}
                 ]
             )
@@ -810,6 +880,7 @@ The JSON should be
             self.reliability_prompt = self.confidence_analysis_prompts()
             self.confidence_graph_prompt = self.confidence_graph_prompts()
             self.refutation_analysis = self.refutation_analysis_prompts()
+            self.result_comparison_graph_text, self.result_comparison = self.comparision_prompt()
             self.abstract = self.abstract_prompt()
             self.conclusion = self.conclusion_prompt()
             
@@ -841,6 +912,7 @@ The JSON should be
                 "[RELIABILITY_ANALYSIS]": self.reliability_prompt.replace("&", r"\&") or "",
                 "[CONFIDENCE_GRAPH]": self.confidence_graph_prompt or "",
                 "[REFUTATION_GRAPH]": self.refutation_analysis or "",
+                "[RESULT_COMPARISION]": self.result_comparison.replace("&", r"\&") or "",
                 "[CONCLUSION]": self.conclusion.replace("&", r"\&") or ""
             }
             replacement2 = {
@@ -851,9 +923,10 @@ The JSON should be
                 "[CORR_GRAPH]": self.eda_result['plot_path_corr'] or "", 
                 "[ALGO]": self.algo or "",
                 "[RESULT_GRAPH0]": f'{self.visual_dir}/true_graph.pdf',
-                "[RESULT_GRAPH1]": f'{self.visual_dir}/initial_graph.pdf',
-                "[RESULT_GRAPH2]": f'{self.visual_dir}/revised_graph.pdf',
+                "[RESULT_GRAPH1]": f'{self.visual_dir}/{self.algo}_initial_graph.pdf',
+                "[RESULT_GRAPH2]": f'{self.visual_dir}/{self.algo}_revised_graph.pdf',
                 "[RESULT_GRAPH3]": f'{self.visual_dir}/metrics.jpg',
+                "[RESULT_GRAPH_COMPARISION]": self.result_comparison_graph_text
             }
 
             for placeholder, value in replacement1.items():
@@ -916,17 +989,107 @@ def test(args, global_state):
     report = my_report.generation()
     my_report.save_report(report)
 
+import argparse
+def parse_args():
+    parser = argparse.ArgumentParser(description='Causal Learning Tool for Data Analysis')
+
+    # Input data file
+    parser.add_argument(
+        '--data-file',
+        type=str,
+        default="demo_data/20250113_114516/Abalone/Abalone.csv",
+        help='Path to the input dataset file (e.g., CSV format or directory location)'
+    )
+
+    # Output file for results
+    parser.add_argument(
+        '--output-report-dir',
+        type=str,
+        default='demo_data/20250113_114516/Abalone/output_graph',
+        help='Directory to save the output report'
+    )
+
+    # Output directory for graphs
+    parser.add_argument(
+        '--output-graph-dir',
+        type=str,
+        default='/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250113_114516/Abalone/output_report',
+        help='Directory to save the output graph'
+    )
+
+    # OpenAI Settings
+    parser.add_argument(
+        '--organization',
+        type=str,
+        default="org-gw7mBMydjDsOnDlTvNQWXqPL",
+        help='Organization ID'
+    )
+
+    parser.add_argument(
+        '--project',
+        type=str,
+        default="proj_SIDtemBJMHUWG7CPdU7yRjsn",
+        help='Project ID'
+    )
+
+    parser.add_argument(
+        '--apikey',
+        type=str,
+        default=None,
+        help='API Key'
+    )
+
+    parser.add_argument(
+        '--simulation_mode',
+        type=str,
+        default="offline",
+        help='Simulation mode: online or offline'
+    )
+
+    parser.add_argument(
+        '--data_mode',
+        type=str,
+        default="real",
+        help='Data mode: real or simulated'
+    )
+
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        default=True,
+        help='Enable debugging mode'
+    )
+
+    parser.add_argument(
+        '--initial_query',
+        type=str,
+        default="selected algorithm: FGES",
+        help='Initial query for the algorithm'
+    )
+
+    parser.add_argument(
+        '--parallel',
+        type=bool,
+        default=False,
+        help='Parallel computing for bootstrapping.'
+    )
+
+    parser.add_argument(
+        '--demo_mode',
+        type=bool,
+        default=False,
+        help='Demo mode'
+    )
+
+    args = parser.parse_args()
+    return args
+
 import pickle  
 if __name__ == '__main__':
-    with open('args.pkl', 'rb') as file:
-        args = pickle.load(file)
-    with open('global_state.pkl', 'rb') as file:
-        global_state = pickle.load(file)
-    test(args, global_state)
-    # print(global_state.logging.graph_conversion['initial_graph_analysis'])
-    # graph_prompt = list_conversion(global_state.logging.graph_conversion['initial_graph_analysis'])
-    # print('\nlist_conversion',graph_prompt)
-    # # graph_prompt = fix_latex_itemize(graph_prompt)
-    # # print('\nfix_latex_itemize',graph_prompt)
-    # graph_prompt = bold_conversion(graph_prompt)
-    # print(graph_prompt)
+    # args = parse_args()
+    # with open('global_state.pkl', 'rb') as file:
+    #     global_state = pickle.load(file)
+    # test(args, global_state)
+    save_path = 'demo_data/20250113_114516/Abalone/output_report'
+    compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
+    

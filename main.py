@@ -197,7 +197,7 @@ def main(args):
     if global_state.user_data.ground_truth is not None:
         _ = my_visual_initial.plot_pdag(global_state.user_data.ground_truth, 'true_graph.pdf', pos=pos_est)
     # Plot Initial Graph
-    _ = my_visual_initial.plot_pdag(global_state.results.converted_graph, 'initial_graph.pdf', pos=pos_est)
+    _ = my_visual_initial.plot_pdag(global_state.results.converted_graph, f'{global_state.algorithm.selected_algorithm}_initial_graph.pdf', pos=pos_est)
     my_report = Report_generation(global_state, args)
     global_state.results.raw_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.processed_data.columns, global_state.results.converted_graph)
     global_state.logging.graph_conversion['initial_graph_analysis'] = my_report.graph_effect_prompts()

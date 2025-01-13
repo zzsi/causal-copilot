@@ -62,6 +62,7 @@ class Logging:
     graph_conversion: Optional[Dict] = field(default_factory=dict)
     downstream_discuss: List[Dict] = field(default_factory=list)
     final_discuss: List[Dict] = field(default_factory=list)
+    global_state_logging: List[Dict] = field(default_factory=list)
 
 @dataclass
 class Algorithm:
@@ -90,6 +91,7 @@ class Results:
     eda_result: Optional[Dict] = None
     prior_knowledge: Optional[object] = None
     refutation_analysis: Optional[object] = None
+    report_selected_index: Optional[object] = None
 
 @dataclass
 class Inference:

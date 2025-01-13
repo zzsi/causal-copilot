@@ -224,7 +224,7 @@ def first_stage_sparsity_check(message, chat_history, download_btn, args, global
 def parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED_INFO):
     if message == '' or message.lower()=='no':
         chat_history.append((message, "💬 No algorithm is specified, will go to the next step..."))
-        REQUIRED_INFO["current_stage"] = 'inference_analysis_check'      
+        REQUIRED_INFO["current_stage"] = 'report_generation_check'      
     elif message not in ['PC', 'FCI', 'CDNOD', 'GES', 'DirectLiNGAM', 'ICALiNGAM', 'NOTEARS', 'FGES', 'XGES', 'AcceleratedDirectLiNGAM']:
         chat_history.append((message, "❌ The specified algorithm is not correct, please choose from the following: \n"
                                     "PC, FCI, CDNOD, GES, DirectLiNGAM, ICALiNGAM, NOTEARS\n"
@@ -261,43 +261,45 @@ def parse_hyperparameter_query(message, chat_history, download_btn, global_state
                     chat_history.append((None, "❌ The specified parameters are not correct, please follow the template!"))
             return chat_history, download_btn, global_state, REQUIRED_INFO
 
-def parse_user_postprocess(message, chat_history, download_btn, global_state, REQUIRED_INFO):
-    import re 
+def parse_user_postprocess(message, chat_history, download_btn, args, global_state, REQUIRED_INFO):
     edges_dict = {
         "add_edges": [],
         "forbid_edges": [],
         "orient_edges": []
     }
     print('message:', message)
-    #TODO: fix the regex pattern
-    # Define regex patterns for each type of edge
-    add_pattern = r"Add Edges:\s*((?:[^;,->]+?\s*->\s*[^;,->]+?\s*[;,]?\s*)+)"
-    forbid_pattern = r"Forbid Edges:\s*((?:[^;,->]+?\s*->\s*[^;,->]+?\s*[;,]?\s*)+)"
-    orient_pattern = r"Orient Edges:\s*((?:[^;,->]+?\s*->\s*[^;,->]+?\s*[;,]?\s*)+)"
-    # Function to convert edge strings to tuples
-    def parse_edges(full_pattern, edge_string):
-        edge_pattern = r"([^->]+?)\s*->\s*([^;,]+?)\s*[;,]?\s*"
-        # Match the full pattern
-        full_match = re.match(full_pattern, edge_string)
-        # Get edges text
-        edges_text = full_match.group(1)        
-        # Find all edges
-        edges = re.findall(edge_pattern, edges_text)
-        return edges
     try:
         if message == '' or not ('Add Edges' in message or 'Forbid Edges' in message or 'Orient Edges' in message):
              REQUIRED_INFO['current_stage'] = 'retry_algo'
              chat_history.append((None, "💬 No valid query is provided, will go to the next step."))
              return edges_dict, chat_history, download_btn, global_state, REQUIRED_INFO
         else:
-             # Extract Add Edges
-            edges_dict["add_edges"] = re.findall(add_pattern, message)
-            # Extract Forbid Edges
-            edges_dict["forbid_edges"] = re.findall(forbid_pattern, message)
-            # Extract Orient Edges
-            edges_dict["orient_edges"] = re.findall(orient_pattern, message)
+            class EditList(BaseModel):
+                    add_edges: list[str]
+                    forbid_edges: list[str]
+                    orient_edges: list[str]
+            prompt = f""" You are a helpful assistant, please do the following tasks:
+            **Tasks**
+            1. Extract node relationships in Add Edges, Forbid Edges, and Orient Edges 
+            2. For each relationship, save the node pairs as a list of tuples in add_edges, forbid_edges, and orient_edges respectively.
+            For example, Add Edges: Age->Height; Age->Shell Weight; should be save as [(Age, Height), (Age, Shell Weight)] in add_edges.
+            3. Add Edges, Forbid Edges, and Orient Edges may not all exist. If there's no relationship, just return an empty list.
+            4. All node names must be among this list! {global_state.user_data.raw_data.columns}
+            **Example**
+            Add Edges: Age->Height
+            Forbid Edges: Length->Height
+            Orient Edges: Age->Diameter
+            add_edges = [(Age, Height)]
+            forbid_edges = [(Length, Height)]
+            orient_edges = [(Age, Diameter)]
+            """
+            parsed_response = LLM_parse_query(EditList, prompt, message, args)
+            add_edges, forbid_edges, orient_edges = parsed_response.add_edges, parsed_response.forbid_edges, parsed_response.orient_edges
+            edges_dict["add_edges"] = [(pair.split('->')[0].strip(' '), pair.split('->')[1].strip(' ')) for pair in add_edges]
+            edges_dict["forbid_edges"] = [(pair.split('->')[0].strip(' '), pair.split('->')[1].strip(' ')) for pair in forbid_edges]
+            edges_dict["orient_edges"] = [(pair.split('->')[0].strip(' '), pair.split('->')[1].strip(' ')) for pair in orient_edges]
             # Check whether all these variables exist
-            variables = [item.strip(' ').strip(';') for sublist in edges_dict.values() for pair in sublist for item in pair]
+            variables = [item for sublist in edges_dict.values() for pair in sublist for item in pair]
             missing_vars = [var for var in variables if var not in global_state.user_data.raw_data.columns]
             print(edges_dict)
             print(variables)
@@ -312,13 +314,35 @@ def parse_user_postprocess(message, chat_history, download_btn, global_state, RE
         print(str(e))
         traceback.print_exc()
         return edges_dict, chat_history, download_btn, global_state, REQUIRED_INFO
-    
+
+def parse_report_algo_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO):
+    class AlgoList(BaseModel):
+        algorithms: list[str]
+    algos = global_state.logging.global_state_logging
+    prompt = f"""You are a helpful assistant, please do the following tasks:
+    **Tasks**
+    1. Extract the algorithm name as a list in algorithms.
+    2. If there's no algorithm, just return an empty list.
+    3. You can only choose from the following algorithms! {', '.join(algos)}
+    """
+    parsed_response = LLM_parse_query(AlgoList, prompt, message, args)
+    algo_list = parsed_response.algorithms
+    if algo_list == []:
+        chat_history.append((message, "❌ Your algorithm query cannot be parsed, please choose from the following algorithms!\n"
+                             f"{', '.join(algos)}"))
+    elif len(algo_list) > 1:
+        chat_history.append((message, "⚠️ You can only choose one algorithm at a time, please retry!"))
+    else:
+        chat_history.append((message, "✅ Successfully parsed your provided algorithm."))
+        global_state.results.report_selected_index = algos.index(algo_list[0])
+        REQUIRED_INFO["current_stage"] = 'report_generation'
+    return chat_history, download_btn, global_state, REQUIRED_INFO
 
 def parse_inference_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO):
     chat_history.append((message, None))
     if message.lower() == 'no' or message == '':
         chat_history.append((None, "✅ No need for downstream analysis, continue to the next section..."))
-        REQUIRED_INFO["current_stage"] = 'report_generation'
+        REQUIRED_INFO["current_stage"] = 'report_generation_check'
         return None, None, None, None, chat_history, download_btn, global_state, REQUIRED_INFO
     else:
         class InfList(BaseModel):
@@ -376,7 +400,7 @@ def parse_inf_discuss_query(message, chat_history, download_btn, args, global_st
     if message.lower() == 'no' or message == '':
         print('go to report_generation')
         chat_history.append((None, "✅ No need for downstream analysis, continue to the next section..."))
-        REQUIRED_INFO["current_stage"] = 'report_generation'
+        REQUIRED_INFO["current_stage"] = 'report_generation_check'
     else:
         class DiscussList(BaseModel):
                     indicator: bool
