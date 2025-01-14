@@ -153,6 +153,10 @@ def main(args):
     global_state.user_data.visual_selected_features = global_state.user_data.processed_data.columns.tolist()
     global_state.user_data.selected_features = global_state.user_data.processed_data.columns.tolist()
 
+    print("-"*50, "Global State", "-"*50)
+    print(global_state)
+    print("-"*100)
+
     if args.debug:
         # Fake statistics for debugging
         global_state.statistics.sample_size = 853

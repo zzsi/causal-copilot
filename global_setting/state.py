@@ -72,6 +72,7 @@ class Algorithm:
     algorithm_arguments: Optional[Dict] = None
     waiting_minutes: float = 1440.0
     algorithm_arguments_json: Optional[object] = None
+    gpu_available: Optional[bool] = False
 
 @dataclass
 class Results:

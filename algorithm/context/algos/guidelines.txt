@@ -1,6 +1,6 @@
 ## Available Algorithms
 
-Current available algorithms implemented for usage:
+Current algorithms implemented for usage. Note that some algorithms are GPU accelerated and are not be available on current system, current system's GPU availability is [GPU_AVAILABLE]. Do not choose the GPU-accelerated algorithms if the GPU availability is False:
 
 - PC
 - FCI
@@ -8,7 +8,7 @@ Current available algorithms implemented for usage:
 - GES
 - NOTEARS
 - DirectLiNGAM
-- AcceleratedLiNGAM
+- AcceleratedLiNGAM (GPU-accelerated)
 - ICALiNGAM
 - FGES
 - XGES
@@ -54,7 +54,8 @@ Default algorithm ranking for general cases (when data doesn't favor any specifi
 3. FCI: More general than PC but computationally more intensive
 4. NOTEARS: Efficient for high-dimensional data but assumes linear relationships
 5. DirectLiNGAM: Efficient but assumes linear relationships and non-Gaussian noise
-6. ICALiNGAM: More computationally intensive than DirectLiNGAM
-7. CDNOD: Specialized for nonstationary/heterogeneous data, may be overkill for stationary data 
-8. XGES: Fast version of GES, more efficient for larger datasets
-9. FGES: Fast version of GES for sparse larger datasets
+6. AcceleratedLiNGAM: Based on GPU parallelization, very efficient but assumes linear relationships and non-Gaussian noise
+7. ICALiNGAM: More computationally intensive than DirectLiNGAM
+8. CDNOD: Specialized for nonstationary/heterogeneous data, may be overkill for stationary data 
+9. XGES: Fast version of GES, more efficient for larger datasets
+10. FGES: Fast version of GES for sparse larger datasets
