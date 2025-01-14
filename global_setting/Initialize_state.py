@@ -6,6 +6,7 @@ import ast
 import numpy as np
 import os
 import json
+import torch
 from datetime import datetime
 from global_setting.state import GlobalState
 from data.simulation.simulation import SimulationManager
@@ -172,6 +173,9 @@ def global_state_initialization(args: argparse.Namespace = None) -> GlobalState:
     global_state.statistics.heterogeneous = info_extracted["heterogeneous"]
     global_state.statistics.domain_index = info_extracted["domain_index"]
     global_state.algorithm.selected_algorithm = info_extracted["selected_algorithm"]
+
+    # GPU availability
+    global_state.statistics.gpu_available = torch.cuda.is_available()
 
     if info_extracted["waiting_minutes"] is not None:
         global_state.algorithm.waiting_minutes = info_extracted["waiting_minutes"]
