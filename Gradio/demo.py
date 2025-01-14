@@ -9,6 +9,7 @@ from queue import Queue
 import json 
 import time 
 import traceback
+import pickle
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Gradio.demo_config import get_demo_config
@@ -647,6 +648,9 @@ def process_message(message, chat_history, download_btn):
                 yield chat_history, download_btn
                 return chat_history, download_btn
             else:
+                with open(f'{global_state.user_data.output_graph_dir}/{global_state.algorithm.selected_algorithm}_global_state.pkl', 'wb') as f:
+                    pickle.dump(global_state, f)
+                #global_state.logging.global_state_logging.append(global_state.algorithm.selected_algorithm)
                 chat_history.append((None, "Do you want to retry other algorithms? If so, please choose one from the following: \n"
                                             "PC, FCI, CDNOD, GES, DirectLiNGAM, ICALiNGAM, NOTEARS\n"
                                             "Fast Version: FGES, XGES, AcceleratedDirectLiNGAM\n"
@@ -679,6 +683,9 @@ def process_message(message, chat_history, download_btn):
                 return chat_history, download_btn 
             
             if REQUIRED_INFO["current_stage"] == 'retry_algo':
+                with open(f'{global_state.user_data.output_graph_dir}/{global_state.algorithm.selected_algorithm}_global_state.pkl', 'wb') as f:
+                    pickle.dump(global_state, f)
+                #global_state.logging.global_state_logging.append(global_state.algorithm.selected_algorithm)
                 chat_history.append((None, "Do you want to retry other algorithms? If so, please choose one from the following: \n"
                                             "PC, FCI, CDNOD, GES, DirectLiNGAM, ICALiNGAM, NOTEARS\n"
                                             "Fast Version: FGES, XGES, AcceleratedDirectLiNGAM\n"
@@ -687,10 +694,6 @@ def process_message(message, chat_history, download_btn):
                 return chat_history, download_btn
 
         if REQUIRED_INFO["current_stage"] == 'retry_algo': # empty query or postprocess query parsed successfully
-            import pickle
-            with open(f'{global_state.user_data.output_graph_dir}/{global_state.algorithm.selected_algorithm}_global_state.pkl', 'wb') as f:
-                pickle.dump(global_state, f)
-            global_state.logging.global_state_logging.append(global_state.algorithm.selected_algorithm)
             message, chat_history, download_btn, global_state, REQUIRED_INFO = parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED_INFO)
             yield chat_history, download_btn
             if REQUIRED_INFO["current_stage"] == 'algo_selection':
@@ -745,6 +748,13 @@ def process_message(message, chat_history, download_btn):
 
         # Report Generation
         if REQUIRED_INFO["current_stage"] == 'report_generation_check': # empty query or postprocess query parsed successfully
+            import glob
+            global_state_files = glob.glob(f"{global_state.user_data.output_graph_dir}/*_global_state.pkl")
+            global_state.logging.global_state_logging = []
+            for file in global_state_files:
+                with open(file, 'rb') as f:
+                    temp_global_state = pickle.load(f)
+                    global_state.logging.global_state_logging.append(temp_global_state.algorithm.selected_algorithm)
             if len(global_state.logging.global_state_logging) > 1:
                 algos = global_state.logging.global_state_logging
                 chat_history.append((None, "Detailed analysis of which algorithm do you want to be included in the report?\n"

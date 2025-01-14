@@ -118,7 +118,9 @@ def parse_mode_query(message, chat_history, download_btn, REQUIRED_INFO):
 def parse_var_selection_query(message, chat_history, download_btn, next_step, args, global_state, REQUIRED_INFO):
     class VarList(BaseModel):
         variables: list[str]
-    prompt = "You are a helpful assistant, please extract variable names as a list. If you cannot find variable names, just return an empty list."
+    prompt = "You are a helpful assistant, please extract variable names as a list. \n"
+    "If there is only one variable, also save it in list variables"
+    "If you cannot find variable names, just return an empty list."
     parsed_vars = LLM_parse_query(VarList, prompt, message, args)
     var_list = parsed_vars.variables
     if var_list == []:

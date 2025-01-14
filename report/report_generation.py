@@ -1,5 +1,3 @@
-
-
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -12,7 +10,6 @@ import networkx as nx
 from postprocess.visualization import Visualization, convert_to_edges
 from postprocess.judge_functions import edges_to_relationship
 from report.help_functions import *
-import PyPDF2
 import ast
 import json 
 
@@ -71,11 +68,11 @@ class Report_generation(object):
         """
         ######## Load the chosen global state and record all global states history ########
         if global_state.results.report_selected_index is not None:
-            global_state = self.global_state_list[global_state.results.report_selected_index]
             self.global_state_list = []
             for algo in global_state.logging.global_state_logging:
                 with open(f'{global_state.user_data.output_graph_dir}/{algo}_global_state.pkl', 'rb') as f:
                     self.global_state_list.append(pickle.load(f))
+            global_state = self.global_state_list[global_state.results.report_selected_index]
         else:
             self.global_state_list = [global_state]
             global_state.logging.global_state_logging = [global_state.algorithm.selected_algorithm]
@@ -1090,6 +1087,6 @@ if __name__ == '__main__':
     # with open('global_state.pkl', 'rb') as file:
     #     global_state = pickle.load(file)
     # test(args, global_state)
-    save_path = 'demo_data/20250113_114516/Abalone/output_report'
+    save_path = 'demo_data/20250114_001657/Abalone/output_report'
     compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
     
