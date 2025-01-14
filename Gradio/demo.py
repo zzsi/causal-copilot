@@ -670,11 +670,11 @@ def process_message(message, chat_history, download_btn):
                 global_state = judge.user_postprocess(user_revise_dict)
                 my_visual_revise = Visualization(global_state)
                 if global_state.results.revised_graph is not None:
-                    my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.pdf', global_state.results.row_pos)
-                    my_visual_revise.plot_pdag(global_state.results.revised_graph, 'revised_graph.jpg', global_state.results.row_pos)
+                    my_visual_revise.plot_pdag(global_state.results.revised_graph, f'{global_state.algorithm.selected_algorithm}_revised_graph.pdf', global_state.results.row_pos)
+                    my_visual_revise.plot_pdag(global_state.results.revised_graph, f'{global_state.algorithm.selected_algorithm}_revised_graph.jpg', global_state.results.row_pos)
                     chat_history.append((None, f"This is the revised graph according to your instruction."))
                     yield chat_history, download_btn
-                    chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/revised_graph.jpg',)))
+                    chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/{global_state.algorithm.selected_algorithm}_revised_graph.jpg',)))
                     yield chat_history, download_btn
                 REQUIRED_INFO["current_stage"] = 'retry_algo'
             elif REQUIRED_INFO["current_stage"] == 'retry_algo':
