@@ -161,7 +161,10 @@ class Report_generation(object):
             ]
         )
         section1 = response_background.choices[0].message.content
-        section1 = re.sub(r'.*\*\*(.*?)\*\*', r'\\textbf{\1}', section1)
+        section1 = re.sub(r'.*\*\*(.*?)\*\*', r'\\textbf{\1}', section1)       
+        section1 = list_conversion(section1)
+        section1 = fix_latex_itemize(section1)
+        section1 = bold_conversion(section1)
 
         col_names = '\t'.join(self.data.columns)
         prompt = f"""

@@ -61,7 +61,7 @@ def parse_args():
     parser.add_argument(
         '--apikey',
         type=str,
-        default=None,
+        default= None,
         help='API Key'
     )
 
