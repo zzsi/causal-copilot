@@ -135,7 +135,7 @@ def global_state_initialization(args: argparse.Namespace = None) -> GlobalState:
               "Options of value (str): The name of the column that represents the domain index. \n\n"
               "6. Which algorithm the user would like to use to do causal discovery:"
               "Key: 'selected_algorithm'. \n\n"
-              "Options of value (str): 'PC','FCI', 'CDNOD', 'GES', 'NOTEARS', 'DirectLiNGAM', 'ICALiNGAM'. \n\n"
+              "Options of value (str): 'PC', 'FCI', 'CDNOD', 'GES', 'FGES', 'XGES', 'NOTEARS', 'DirectLiNGAM', 'ICALiNGAM', 'AcceleratedLiNGAM'. \n\n"
               "7. How many minutes the user can wait for the causal discovery algorithm:"
               "Key: 'waiting_minutes'. \n\n"
               "Options of value (float): A numeric value that is greater than 0. \n\n"
