@@ -67,7 +67,6 @@ class Analysis(object):
         self.global_state = global_state
         self.args = args
         self.data = global_state.user_data.processed_data
-        #self.data = pd.read_csv('dataset/sachs/sachs.csv')
         #TODO: graph format
         self.graph = convert_adj_mat(global_state.results.revised_graph)
         self.G = nx.from_numpy_array(self.graph, create_using=nx.DiGraph) # convert adj matrix into DiGraph
@@ -122,8 +121,6 @@ class Analysis(object):
 
     def feature_importance(self, target_node, visualize=True):
         print('start feature importance analysis')
-        # parent_relevance, noise_relevance = gcm.parent_relevance(self.causal_model, target_node=target_node)
-        # parent_relevance, noise_relevance
         parent_nodes = list(self.G.predecessors(target_node))
 
         X = self.data.drop(columns=[target_node])
@@ -677,14 +674,16 @@ def main(global_state, args):
     analysis = Analysis(global_state, args)
     message = "What is the Average Treatment Effect of PIP2 on PIP3"
 
-    # # EXAMPLE: Test the new DML method
-    # dml_estimate, dml_p_value, refutaion, figs = analysis.estimate_causal_effect_dml(
-    #     treatment='PIP2',
-    #     outcome='PIP3',
-    #     target_units='treated'  # e.g., ATT
-    # )
-    # print("DML Estimate:", dml_estimate.value)
-    # print("p-value:", dml_p_value)
+    # Example Test HTE Estimation with DML
+    hte, hte_lower, hte_upper, figs = analysis.estimate_hte_effect(outcome='PIP2', treatment='Akt', X_col=['Erk', 'Plcg'], query=message)
+    # EXAMPLE: Test the new DML method
+    dml_estimate, dml_p_value, refutaion, figs = analysis.estimate_causal_effect_dml(
+        treatment='PIP2',
+        outcome='PIP3',
+        target_units='treated'  # e.g., ATT
+    )
+    print("DML Estimate:", dml_estimate.value)
+    print("p-value:", dml_p_value)
 
     # EXAMPLE: Compare with linear approach, specifying a different target_units
     lin_estimate, lin_p_value, refutaion, figs = analysis.estimate_causal_effect(

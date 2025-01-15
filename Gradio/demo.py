@@ -550,8 +550,9 @@ def process_message(message, chat_history, download_btn):
             chat_history.append(("📊 Generate causal graph visualization...", None))
             yield chat_history, download_btn
             my_visual_initial = Visualization(global_state)
-            pos = my_visual_initial.get_pos(global_state.results.converted_graph)
-            global_state.results.row_pos = pos
+            if global_state.results.row_pos is None:
+                pos = my_visual_initial.get_pos(global_state.results.converted_graph)
+                global_state.results.row_pos = pos
             if global_state.user_data.ground_truth is not None:
                 my_visual_initial.plot_pdag(global_state.user_data.ground_truth, f'{global_state.algorithm.selected_algorithm}_true_graph.jpg', global_state.results.row_pos)
                 my_visual_initial.plot_pdag(global_state.user_data.ground_truth, f'{global_state.algorithm.selected_algorithm}_true_graph.pdf', global_state.results.row_pos)

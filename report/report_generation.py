@@ -248,7 +248,7 @@ The JSON should be
             \\begin{{figure}}[H]
             \centering
             \includegraphics[width=0.5\linewidth]{{{relation_path}}}
-            \caption{{\label{{fig:relation}}Possible Causal Relation Graph}}
+            \caption{{\label{{fig:relation}}Possible Causal Relation Graph Suggested by LLM}}
             \end{{figure}}
             """
         else:
@@ -338,22 +338,22 @@ The JSON should be
         response_corr_doc = "\\begin{itemize} \n"
         high_corr_list  = [f'{key[0]} and {key[1]}' for key, value in corr_input.items() if abs(value) > 0.8]
         if len(high_corr_list)>10:
-            response_corr_doc += f"\item Strong Correlated Variables: {', '.join(high_corr_list)}"
+            response_corr_doc += f"\item Strong Correlated Variables ($\geq 0.9$): {', '.join(high_corr_list)}"
             response_corr_doc += ", etc. \n"
         else:
-            response_corr_doc += f"\item Strong Correlated Variables: {', '.join(high_corr_list) if high_corr_list != [] else 'None'} \n"
+            response_corr_doc += f"\item Strong Correlated Variables ($\geq 0.9$): {', '.join(high_corr_list) if high_corr_list != [] else 'None'} \n"
         med_corr_list = [f'{key[0]} and {key[1]}' for key, value in corr_input.items() if (abs(value) <= 0.8 and abs(value) > 0.5)]
         if len(med_corr_list)>10:
-            response_corr_doc += f"\item Moderate Correlated Variables: {', '.join(med_corr_list)}"
+            response_corr_doc += f"\item Moderate Correlated Variables ($0.1-0.9$): {', '.join(med_corr_list)}"
             response_corr_doc += ", etc. \n"
         else:
-            response_corr_doc += f"\item Moderate Correlated Variables: {', '.join(med_corr_list) if med_corr_list != [] else 'None'} \n"
+            response_corr_doc += f"\item Moderate Correlated Variables ($0.1-0.9$): {', '.join(med_corr_list) if med_corr_list != [] else 'None'} \n"
         low_corr_list = [f'{key[0]} and {key[1]}' for key, value in corr_input.items() if abs(value) <= 0.5]
         if len(low_corr_list)>10:
-            response_corr_doc += f"\item Weak Correlated Variables: {', '.join(low_corr_list)}"
+            response_corr_doc += f"\item Weak Correlated Variables ($\leq 0.1$): {', '.join(low_corr_list)}"
             response_corr_doc += ", etc. \n"
         else:
-            response_corr_doc += f"\item Weak Correlated Variables: {', '.join(low_corr_list) if low_corr_list != [] else 'None'} \n"
+            response_corr_doc += f"\item Weak Correlated Variables ($\leq 0.1$): {', '.join(low_corr_list) if low_corr_list != [] else 'None'} \n"
         response_corr_doc += "\end{itemize} \n"
         #print('response_corr_doc: ',response_corr_doc)
         return response_dist_doc, response_corr_doc
@@ -611,7 +611,11 @@ The JSON should be
         
         **Your Task**
         Firstly, briefly describe how we get these probability with 1-2 sentences.
-        Secondly, categorize and these relationships into 3 types and list them out: High Confidence Level, Moderate Confidence Level, Low Confidence Level
+        Secondly, categorize and these relationships into 3 types and list them out: 
+        High Confidence Level (probability>=0.9), 
+        Moderate Confidence Level (probability between 0.1 and 0.9), 
+        Low Confidence Level (probability<=0.1)
+        Do Not include Numerical Numbers in your text!
         
         **Template**
         To evaluate how much confidence we have on each edge, we conducted bootstrapping to calculate the probability of existence for each edge.
@@ -669,7 +673,7 @@ The JSON should be
             length = round(1/len(self.global_state_list), 2)-0.01
             for algo in algos:
                 graph_path = f'{self.visual_dir}/{algo}_initial_graph.pdf'
-                caption = f'Result Graph of {algo}'
+                caption = f'Initial Result Graph of {algo}'
                 graph_text += f"""
                 \\begin{{subfigure}}{{{length}\\textwidth}}
                         \centering
