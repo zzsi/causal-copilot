@@ -1,22 +1,30 @@
 import numpy as np
 import pandas as pd
 import networkx as nx
-from dowhy import gcm, CausalModel
-from dowhy import gcm, CausalModel
+
+# REMOVE or comment out the direct import of CausalModel from DoWhy:
+# from dowhy import gcm, CausalModel
+
+# Keep gcm if you still want anomaly attribution and interventions:
+from dowhy import gcm  
+from hte import *
+# Import econml classes instead of using DoWhy's linear_regression or DML
+from econml.dml import DML, LinearDML, SparseLinearDML, CausalForestDML
+
 import shap
 import sklearn
 import matplotlib.pyplot as plt
 import seaborn as sns
 from openai import OpenAI
 from pydantic import BaseModel
-import os 
-import sys 
+import os
+import sys
 import warnings
 
 from causal_analysis.hte.hte_filter import HTE_Filter
 from causal_analysis.hte.hte_params import HTE_Param_Selector
 from causal_analysis.hte.hte_program import HTE_Programming
-#from hte import *
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from global_setting.Initialize_state import global_state_initialization
 
@@ -159,57 +167,92 @@ class Analysis(object):
             plt.close()
         return parent_nodes, mean_shap_values, figs
     
-    def estimate_causal_effect(self, treatment, outcome, 
-                           control_value=0, treatment_value=1,
-                           target_units='ate'):
+    def estimate_effect_econml(self, treatment, outcome, covariates=None, controls=None):
         """
-        Estimate the causal effect of a treatment on an outcome 
-        using DoWhy (backdoor.linear_regression).
-    
-        :param target_units: 'ate', 'treated', or a callable lambda for a subset (CATE).
+        Estimate ATE, ATT, and CATE (HTE) using an EconML estimator
+        (e.g., CausalForestDML) rather than DoWhy.
         """
         print("\n" + "#"*60)
-        print(f"Estimating Causal Effect of Treatment: {treatment} on Outcome: {outcome}")
-        print(f"Method: backdoor.linear_regression | target_units={target_units}")
+        print(f"Estimating Effects (EconML) of Treatment: {treatment} on Outcome: {outcome}")
         print("#"*60)
-    
-        model = CausalModel(
-            data=self.data,
-            treatment=treatment,
-            outcome=outcome,
-            graph=self.dot_graph
+
+        # 1) Prepare data
+        Y = self.data[outcome].values
+        T = self.data[treatment].values
+
+        # If you want to differentiate effect modifiers (X) from controls (W):
+        if covariates is None:
+            covariates = []
+        X = self.data[covariates].values if len(covariates) > 0 else None
+
+        if controls is None:
+            controls = []
+        W = self.data[controls].values if len(controls) > 0 else None
+
+        # 2) Create an EconML estimator, e.g. CausalForestDML
+        from sklearn.ensemble import RandomForestRegressor
+        model_y = RandomForestRegressor(n_estimators=50, max_depth=5, random_state=42)
+        model_t = RandomForestRegressor(n_estimators=50, max_depth=5, random_state=42)
+
+        est = CausalForestDML(
+            model_y=model_y,
+            model_t=model_t,
+            n_estimators=200,
+            min_samples_leaf=10,
+            random_state=42
         )
-        try:
-            identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
-            print("\nIdentified Estimand:")
-            print(identified_estimand)
-        
-            causal_estimate = model.estimate_effect(
-                identified_estimand,
-                method_name="backdoor.linear_regression",
-                control_value=control_value,
-                treatment_value=treatment_value,
-                target_units=target_units  # <- new parameter
-            )
-        
-            print("\nCausal Estimate:")
-            print(causal_estimate)
-            # Call test_significance with the estimate value
-            significance_results = causal_estimate.estimator.test_significance(self.data,causal_estimate.value)
-            p_value = significance_results['p_value'][0]
-            print("Significance Test Results:", p_value)
 
-            # Sensitivity Analysis for the estimation
-            refutation, figs = self.sensitivity_analysis(outcome, model, identified_estimand, causal_estimate, treatment, outcome)
-        except:
-            causal_estimate, p_value, refutation, figs = None, None, None, []
+        # 3) Fit
+        est.fit(Y, T, X=X, W=W)
+
+        # 4) ATE
+        ate_val = est.ate(X=None)  # ATE over the entire sample
+        lb_ate, ub_ate = est.ate_interval(X=None)
+
+        # 5) ATT
+        att_val = est.att(X=None)
+        lb_att, ub_att = est.att_interval(X=None)
+
+        # 6) CATE (HTE)
+        # if you pass X=None => it can't compute effect for each instance. 
+        # So pass X if you want an array of effects for each row
+        if X is not None:
+            cate_vals = est.effect(X)
+            lb_cate, ub_cate = est.effect_interval(X)
+        else:
+            cate_vals = None
+            lb_cate = None
+            ub_cate = None
+
+        print(f"ATE: {ate_val} [95% CI: ({lb_ate}, {ub_ate})]")
+        print(f"ATT: {att_val} [95% CI: ({lb_att}, {ub_att})]")
+
+        # Optionally print mean of CATE
+        if cate_vals is not None:
+            print(f"Mean CATE: {np.mean(cate_vals)}")
+
+        # Return them or store in some object
+        return {
+            "ATE": (ate_val, (lb_ate, ub_ate)),
+            "ATT": (att_val, (lb_att, ub_att)),
+            "CATE": (cate_vals, (lb_cate, ub_cate))
+        }
+
+    def plot_cate_distribution(self, cate_array, fig_path):
+        """
+        Plot distribution of the CATE (HTE) array and save to fig_path.
+        """
+        plt.figure(figsize=(8,6))
+        sns.histplot(cate_array, bins=30, kde=True, color='skyblue', alpha=0.7)
+        plt.title("Distribution of Estimated CATE")
+        plt.xlabel("CATE Value")
+        plt.ylabel("Frequency")
+        plt.axvline(np.mean(cate_array), color='red', linestyle='--', label='Mean CATE')
+        plt.legend()
+        plt.savefig(fig_path)
+        plt.close()
     
-        print("\n=== Interpretation Hint ===")
-        print("Negative estimate => increasing treatment tends to decrease outcome.")
-        print("============================\n")
-
-        return causal_estimate, p_value, refutation, figs
-
+    
     def estimate_causal_effect_dml(self, treatment, outcome,
                                control_value=0, treatment_value=1,
                                target_units='ate'):
@@ -708,15 +751,36 @@ def main(global_state, args):
     
     analysis = Analysis(global_state, args)
     message = "What is the Heterogeneous Treatment Effect of PIP2 on PIP3"
-
-    # EXAMPLE: Test the new DML method
-    dml_estimate, dml_p_value, refutaion, figs = analysis.estimate_causal_effect_dml(
+    
+    results = analysis.estimate_effect_econml(
         treatment='PIP2',
         outcome='PIP3',
-        target_units='treated'  # e.g., ATT
+        covariates=[],   # or e.g. ["X1","X2"] if you have them
+        controls=[]      # or e.g. ["W1","W2"] if needed
     )
-    print("DML Estimate:", dml_estimate.value)
-    print("p-value:", dml_p_value)
+    
+    ate_val, ate_ci = results["ATE"]
+    att_val, att_ci = results["ATT"]
+    cate_vals, cate_cis = results["CATE"]
+
+    print("EconML ATE:", ate_val, "CI:", ate_ci)
+    print("EconML ATT:", att_val, "CI:", att_ci)
+    if cate_vals is not None:
+        print("Mean CATE:", np.mean(cate_vals))
+
+    # Optional plot the distribution of the CATE:
+    if cate_vals is not None:
+        dist_fig_path = os.path.join(global_state.user_data.output_graph_dir, "cate_dist.png")
+        analysis.plot_cate_distribution(cate_vals, dist_fig_path)
+
+    # # EXAMPLE: Test the new DML method
+    # dml_estimate, dml_p_value, refutaion, figs = analysis.estimate_causal_effect_dml(
+    #     treatment='PIP2',
+    #     outcome='PIP3',
+    #     target_units='treated'  # e.g., ATT
+    # )
+    # print("DML Estimate:", dml_estimate.value)
+    # print("p-value:", dml_p_value)
 
     # EXAMPLE: Compare with linear approach, specifying a different target_units
     lin_estimate, lin_p_value, refutaion, figs = analysis.estimate_causal_effect(
