@@ -34,6 +34,26 @@ class DML(Estimator):
         W = data[self.W_col]
         # Run DML algorithm        
         self.model.fit(y, T, X=X, W=W)
+    
+    def ate(self, data: pd.DataFrame):
+        """
+        Average Treatment Effect (ATE) over the entire dataset, passing X=None by default.
+        """
+        return self.model.ate(X=None)
+
+    def att(self, data: pd.DataFrame):
+        """
+        Average Treatment effect on the Treated (ATT).
+        """
+        return self.model.att(X=None)
+
+    def cate(self, data: pd.DataFrame):
+        """
+        Conditional Average Treatment Effect for each row. 
+        Returns a 1D array with effect per instance.
+        """
+        X = data[self.X_col] if self.X_col else None
+        return self.model.effect(X)
 
     def hte(self, data: pd.DataFrame):
         X = data[self.X_col]
@@ -64,6 +84,17 @@ class LinearDML(Estimator):
         W = data[self.W_col]
         # Run DML algorithm        
         self.model.fit(y, T, X=X, W=W)
+        
+    def ate(self, data: pd.DataFrame):
+        return self.model.ate(X=None)
+
+    def att(self, data: pd.DataFrame):
+        return self.model.att(X=None)
+
+    def cate(self, data: pd.DataFrame):
+        X = data[self.X_col] if self.X_col else None
+        return self.model.effect(X)
+    
 
     def hte(self, data: pd.DataFrame):
         X = data[self.X_col]
@@ -94,6 +125,18 @@ class SparseLinearDML(Estimator):
         W = data[self.W_col]
         # Run DML algorithm        
         self.model.fit(y, T, X=X, W=W)
+        
+    
+    def ate(self, data: pd.DataFrame):
+        return self.model.ate(X=None)
+
+    def att(self, data: pd.DataFrame):
+        return self.model.att(X=None)
+
+    def cate(self, data: pd.DataFrame):
+        X = data[self.X_col] if self.X_col else None
+        return self.model.effect(X)
+
 
     def hte(self, data: pd.DataFrame):
         X = data[self.X_col]
@@ -124,6 +167,16 @@ class CausalForestDML(Estimator):
         W = data[self.W_col]
         # Run DML algorithm        
         self.model.fit(y, T, X=X, W=W)
+    
+    def ate(self, data: pd.DataFrame):
+        return self.model.ate(X=None)
+
+    def att(self, data: pd.DataFrame):
+        return self.model.att(X=None)
+
+    def cate(self, data: pd.DataFrame):
+        X = data[self.X_col] if self.X_col else None
+        return self.model.effect(X)
 
     def hte(self, data: pd.DataFrame):
         X = data[self.X_col]
