@@ -162,6 +162,15 @@ def correlation_check(global_state):
     df = global_state.user_data.raw_data[global_state.user_data.selected_features]
     m = df.shape[1]
 
+    for column in df.columns:
+        col_data = df[column]
+        # Exclude NaN values for type determination
+        non_nan_data = col_data.dropna()
+
+        if not pd.api.types.is_numeric_dtype(non_nan_data):
+            df[column] = pd.Categorical(df[column])
+            df[column] = df[column].cat.codes.replace(-1, np.nan)  # Keep NaN while converting
+
     correlation_matrix = df.corr()
     drop_feature = []
 
