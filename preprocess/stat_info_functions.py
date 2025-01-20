@@ -162,6 +162,15 @@ def correlation_check(global_state):
     df = global_state.user_data.raw_data[global_state.user_data.selected_features]
     m = df.shape[1]
 
+    for column in df.columns:
+        col_data = df[column]
+        # Exclude NaN values for type determination
+        non_nan_data = col_data.dropna()
+
+        if not pd.api.types.is_numeric_dtype(non_nan_data):
+            df[column] = pd.Categorical(df[column])
+            df[column] = df[column].cat.codes.replace(-1, np.nan)  # Keep NaN while converting
+
     correlation_matrix = df.corr()
     drop_feature = []
 
@@ -180,7 +189,7 @@ def correlation_check(global_state):
                     continue
 
     # Update global state
-    global_state.user_data.high_corr_drop_features = list(set(drop_feature))
+    global_state.user_data.high_corr_drop_features = drop_feature
     global_state.user_data.selected_features = [element for element in global_state.user_data.selected_features if
                                                 element not in drop_feature]
 
@@ -512,7 +521,7 @@ def gaussian_check(df_raw, global_state):
         col_x_name = df.columns[selected_pair[0]]
         col_y_name = df.columns[selected_pair[1]]
 
-        sm.qqplot(res, line='45', ax=axs[idx], markerfacecolor='blue')
+        sm.qqplot(res, line='45', ax=axs[idx])
         axs[idx].set_title(f'{col_x_name} vs {col_y_name}')
 
     # Hide any unused subplots if less than 4 pairs were tested

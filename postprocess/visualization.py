@@ -35,7 +35,7 @@ class Visualization(object):
         return pos
 
     def plot_pdag(self, mat, save_path, pos=None, relation=False):
-        #print(mat)
+        print(mat)
         algo = self.global_state.algorithm.selected_algorithm
         path = os.path.join(self.save_dir, save_path)
         edges_dict = convert_to_edges(algo, self.data.columns, mat)

@@ -92,6 +92,7 @@ class Report_generation(object):
         # Result graph matrix
         self.raw_graph = global_state.results.raw_result
         self.graph = global_state.results.converted_graph
+        self.revised_graph = global_state.results.revised_graph
         self.bootstrap_probability = global_state.results.bootstrap_probability
         self.original_metrics = global_state.results.metrics
         self.revised_metrics = global_state.results.revised_metrics
@@ -173,14 +174,12 @@ There are three sections:
 ### 1. Detailed Explanation about the Variables
 ### 2. Possible Causal Relations among These Variables
 ### 3. Other Background Domain Knowledge that may be Helpful for Experts
-
 Please extract all relationships in the second section ### 2. Possible Causal Relations among These Variables, and return in a JSON format
 **Thinking Steps**
 1. Extract all pairwise relationships, for example A causes B because ....; C causes D because ....; Only include relationships between two variables!
 2. Check whether these variables are among {col_names}, please delete contents that include any other variables!
 3. Save the result in json, the key is the tuple of pairs, the value is the explanation. 
 4. Check whether the json result can be parsed directly, if not you should revise it
-
 This is an example:
 You have A causes B because explanation1; C causes D because explanation2
 The JSON should be
@@ -188,12 +187,10 @@ The JSON should be
 "(A, B)": explanation1,
 "(C, D)": explanation2
 }}
-
 **You Must**
 1. Only pairwise relationships can be included
 2. All variables should be among {col_names}, please delete contents that include any other variables!
 3. Only return me a JSON can be parsed directly, DO NOT include anything else like ```!
-
 **Backgroud Knowledge**
 {self.knowledge_docs}
 """
@@ -244,7 +241,6 @@ The JSON should be
         if sum(zero_matrix.flatten())!=0:
             relation_prompt = f"""
             {section2}
-
             \\begin{{figure}}[H]
             \centering
             \includegraphics[width=0.5\linewidth]{{{relation_path}}}
@@ -282,7 +278,6 @@ The JSON should be
         if os.path.isfile(f'{self.visual_dir}/residuals_plot.jpg'):
             preprocess_plot = f"""
             The following are Residual Plots and Q-Q Plots for seleted pair of vairables.
-
             \\begin{{figure}}[H]
                 \centering
                 \\begin{{subfigure}}{{0.45\\textwidth}}
@@ -409,7 +404,6 @@ The JSON should be
         repsonse = f"""
         In this section, we provide a detailed description of the causal discovery process implemented by Causal Copilot. 
         We also provide the chosen algorithms and hyperparameters, along with the justifications for these selections.
-
         \subsection{{Data Preprocessing}}
         In this initial step, we preprocessed the data and examined its statistical characteristics. 
         This involved cleaning the data, handling missing values, and performing exploratory data analysis to understand distributions and relationships between variables.
@@ -419,14 +413,11 @@ The JSON should be
         selecting appropriate algorithms for causal discovery based on the statistical characteristics of the dataset and relevant background knowledge. 
         The top three chosen algorithms, listed in order of suitability, are as follows:   
         {algo_list}
-
         Considering data properties, algorithm capability and user's instruction, the final algorithm we choose is [ALGO].
-
         \subsection{{Hyperparameter Values Proposal assisted with LLM}}
         Once the algorithms were selected, the LLM aided in proposing hyperparameters 
         for the chosen algorithm, which are specified below:
         {param_list}
-
         """
 
         if self.args.data_mode == 'real':
@@ -442,7 +433,6 @@ The JSON should be
             In this step LLM can use background knowledge to add some edges that are neglected by Statistical Methods, delete and redirect some unreasonable relationships.
             Voting techniques are used to enhance the robustness of results given by LLM, and the results given by LLM should not change results given by Bootstrap.
             Finally, we use Kernel-based Independence Test to remove redundant edges added by LLM hallucination.
-
             By integrating insights from both of Bootsratp and LLM to refine the causal graph, we can achieve improvements in graph's accuracy and robustness.
             """
         return repsonse
@@ -455,92 +445,106 @@ The JSON should be
         2. Variable names
         3. Don't include Bootstrap infos here
         """
-        variables = self.data.columns
+        if self.graph.sum() == 0:
+            response_doc =  "⚠️ According to the given dataset, we cannot find any causal relationship among variables. Please provide more samples or check the data quality.\n"
+        else:
+            variables = self.data.columns
+            edges_dict = convert_to_edges(self.algo, variables, self.graph)
+            relation_text_dict, relation_text = edges_to_relationship(self.data, edges_dict)
 
-        edges_dict = convert_to_edges(self.algo, variables, self.graph)
-        relation_text_dict, relation_text = edges_to_relationship(self.data, edges_dict)
-
-        prompt = f"""
-        The following text describes the causal relationship among variables:
-        {relation_text}
-        You are an expert in the causal discovery field and are familiar with background knowledge of these variables: {variables.tolist()}
-        1. Please write one paragraph to describe the causal relationship, list your analysis as bullet points clearly.
-        2. If variable names have meanings, please integrate background knowledge of these variables in the causal relationship analysis.
-        Please use variable names {variables[0]}, {variables[1]}, ... in your description.
-        3. Do not include any  Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
-        
-        For example:
-        The result graph shows the causal relationship among variables clearly. The {variables[1]} causes the {variables[0]}, ...
-        """
-        print("Start to find graph effect")
-        response = self.client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        response_doc = response.choices[0].message.content
+            prompt = f"""
+            The following text describes the causal relationship among variables:
+            {relation_text}
+            You are an expert in the causal discovery field and are familiar with background knowledge of these variables: {variables.tolist()}
+            1. Please write one paragraph to describe the causal relationship, list your analysis as bullet points clearly.
+            2. If variable names have meanings, please integrate background knowledge of these variables in the causal relationship analysis.
+            Please use variable names {variables[0]}, {variables[1]}, ... in your description.
+            3. Do not include any  Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
+            
+            For example:
+            The result graph shows the causal relationship among variables clearly. The {variables[1]} causes the {variables[0]}, ...
+            """
+            print("Start to find graph effect")
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            response_doc = response.choices[0].message.content
         return response_doc
 
     def graph_revise_prompts(self):
-        repsonse = f"""
-        By using the method mentioned in the Section 4.4, we provide a revise graph pruned with Bootstrap and LLM suggestion.
-        Pruning results are as follows.
-        """
-        if self.global_state.results.bootstrap_errors != []:
+        if self.revised_graph:
+            repsonse = f"""
+            By using the method mentioned in the Section 4.4, we provide a revise graph pruned with Bootstrap and LLM suggestion.
+            Pruning results are as follows.
+            """
+            if self.global_state.results.bootstrap_errors != []:
+                    repsonse += f"""
+                    The following are force and forbidden results given by Bootstrap:
+                    
+                    {', '.join(self.global_state.results.bootstrap_errors)}
+                    """
+            else:
                 repsonse += f"""
-                The following are force and forbidden results given by Bootstrap:
+                Bootstrap doesn't force or forbid any edges.
+                """
+            llm_evaluation_json = self.global_state.results.llm_errors
+            direct_record = llm_evaluation_json['direct_record']
+            forbid_record = llm_evaluation_json['forbid_record']
+            
+            if  forbid_record != {} and forbid_record is not None:
+                repsonse += f"""
+                The following relationships are forbidden by LLM:
                 
-                {', '.join(self.global_state.results.bootstrap_errors)}
-                """
-        else:
-            repsonse += f"""
-            Bootstrap doesn't force or forbid any edges.
-            """
-        llm_evaluation_json = self.global_state.results.llm_errors
-        direct_record = llm_evaluation_json['direct_record']
-        forbid_record = llm_evaluation_json['forbid_record']
-        
-        if  forbid_record != {} and forbid_record is not None:
-            repsonse += f"""
-            The following relationships are forbidden by LLM:
-            
-            \\begin{{itemize}}
-            """
-            for item in forbid_record.values():
-                repsonse += f"""
-                \item \\textbf{{{item[0][0]} $\\rightarrow$ {item[0][1]}}}: {item[1]}
-                """
-            repsonse += f"""
-            \end{{itemize}}
-            """     
-        else:
-            repsonse += f"""
-            LLM doesn't forbid any edges.
-            """
-            
-        llm_direction_reason = direct_record  
-        if llm_direction_reason!={} and llm_direction_reason is not None:
-            repsonse += f"""
-                The following are directions confirmed by the LLM:
                 \\begin{{itemize}}
                 """
-            for item in llm_direction_reason.values():
+                for item in forbid_record.values():
+                    repsonse += f"""
+                    \item \\textbf{{{item[0][0]} $\\rightarrow$ {item[0][1]}}}: {item[1]}
+                    """
                 repsonse += f"""
-                \item \\textbf{{{item[0][0]} $\\rightarrow$ {item[0][1]}}}: {item[1]}
+                \end{{itemize}}
+                """     
+            else:
+                repsonse += f"""
+                LLM doesn't forbid any edges.
                 """
-            repsonse += f"""
-            \end{{itemize}}
-            """ 
-        else:
-            repsonse += f"""
-            LLM doesn't decide any direction of edges.
+                
+            llm_direction_reason = direct_record  
+            if llm_direction_reason!={} and llm_direction_reason is not None:
+                repsonse += f"""
+                    The following are directions confirmed by the LLM:
+                    \\begin{{itemize}}
+                    """
+                for item in llm_direction_reason.values():
+                    repsonse += f"""
+                    \item \\textbf{{{item[0][0]} $\\rightarrow$ {item[0][1]}}}: {item[1]}
+                    """
+                repsonse += f"""
+                \end{{itemize}}
+                """ 
+            else:
+                repsonse += f"""
+                LLM doesn't decide any direction of edges.
+                """
+            
+            repsonse += """
+            This structured approach ensures a comprehensive and methodical analysis of the causal relationships within the dataset.
             """
-        
-        repsonse += """
-        This structured approach ensures a comprehensive and methodical analysis of the causal relationships within the dataset.
-        """
+
+            repsonse += fr"""
+            \begin{{figure}}[H]
+            \centering
+            \includegraphics[height=0.3\textheight]{{{self.visual_dir}/{self.algo}_revised_graph.pdf}}
+            \caption{{Revised Graph}}
+            \end{{figure}}
+            """
+
+        else:
+            repsonse = 'You have skipped the Pruning and Reliability Analysis.'
         #print('graph revise prompt: ', repsonse)
         return repsonse
     
@@ -556,92 +560,94 @@ The JSON should be
         graph_text = """
         \\begin{figure}[H]
             \centering
-
         """
-        bootstrap_dict = {k: v for k, v in self.bootstrap_probability.items() if v is not None and sum(v.flatten())>0}
-        zero_graphs = [k for k, v in self.bootstrap_probability.items() if  v is not None and sum(v.flatten())==0]
-        length = round(1/len(bootstrap_dict), 2)-0.01
-        for key in bootstrap_dict.keys():
-            graph_path = f'{self.visual_dir}/{key}_confidence_heatmap.jpg'
-            caption = f'{name_map[key]}'
-            graph_text += f"""
-            \\begin{{subfigure}}{{{length}\\textwidth}}
-                    \centering
-                    \includegraphics[width=\linewidth]{{{graph_path}}}
-                    \\vfill
-                    \caption{{{caption}}}
-                \end{{subfigure}}"""
-        
-        graph_text += """
-        \caption{Confidence Heatmap of Different Edges}
-        \end{figure}    
-        """
-        ### Generate text illustration
-        text_map = {'certain_edges': 'directed edge ($->$)', #(->)
-                    'uncertain_edges': 'undirected edge ($-$)', #(-)
-                    'bi_edges': 'edge with hidden confounders ($<->$)', #(<->)
-                    'half_certain_edges': 'edge of non-ancestor ($o->$)', #(o->)
-                    'half_uncertain_edges': 'edge of non-ancestor ($o-$)', #(o-)
-                    'none_edges': 'egde of no D-Seperation set', #(o-o)
-                    'none_existence':'No Edge'}
-        graph_text += "The above heatmaps show the confidence probability we have on different kinds of edges, including "
-        for k in bootstrap_dict.keys():
-            graph_text += f"{text_map[k]}, "
-        zero_graphs = [k.replace("_", "-") for k in zero_graphs]
-        graph_text += "The heatmap of " + ', '.join(zero_graphs) + " is not shown because probabilities of all edges are 0. "
-    
+        if self.bootstrap_probability is not None:
+            bootstrap_dict = {k: v for k, v in self.bootstrap_probability.items() if v is not None and sum(v.flatten())>0}
+            zero_graphs = [k for k, v in self.bootstrap_probability.items() if  v is not None and sum(v.flatten())==0]
+            length = round(1/len(bootstrap_dict), 2)-0.01
+            for key in bootstrap_dict.keys():
+                graph_path = f'{self.visual_dir}/{key}_confidence_heatmap.jpg'
+                caption = f'{name_map[key]}'
+                graph_text += f"""
+                \\begin{{subfigure}}{{{length}\\textwidth}}
+                        \centering
+                        \includegraphics[width=\linewidth]{{{graph_path}}}
+                        \\vfill
+                        \caption{{{caption}}}
+                    \end{{subfigure}}"""
+            
+            graph_text += """
+            \caption{Confidence Heatmap of Different Edges}
+            \end{figure}    
+            """
+            ### Generate text illustration
+            text_map = {'certain_edges': 'directed edge ($->$)', #(->)
+                        'uncertain_edges': 'undirected edge ($-$)', #(-)
+                        'bi_edges': 'edge with hidden confounders ($<->$)', #(<->)
+                        'half_certain_edges': 'edge of non-ancestor ($o->$)', #(o->)
+                        'half_uncertain_edges': 'edge of non-ancestor ($o-$)', #(o-)
+                        'none_edges': 'egde of no D-Seperation set', #(o-o)
+                        'none_existence':'No Edge'}
+            graph_text += "The above heatmaps show the confidence probability we have on different kinds of edges, including "
+            for k in bootstrap_dict.keys():
+                graph_text += f"{text_map[k]}, "
+            zero_graphs = [k.replace("_", "-") for k in zero_graphs]
+            graph_text += "The heatmap of " + ', '.join(zero_graphs) + " is not shown because probabilities of all edges are 0. "
+        else:
+            graph_text = 'You have skipped the Pruning and Reliability Analysis.'
         return graph_text
         
 
     def confidence_analysis_prompts(self):
-        edges_dict = self.global_state.results.raw_edges
-        relation_text_dict, relation_text = edges_to_relationship(self.data, edges_dict, self.bootstrap_probability)
-        #relation_prob = self.graph_effect_prompts()
+        if self.bootstrap_probability is not None:
+            edges_dict = self.global_state.results.raw_edges
+            relation_text_dict, relation_text = edges_to_relationship(self.data, edges_dict, self.bootstrap_probability)
+            #relation_prob = self.graph_effect_prompts()
 
-        variables = '\t'.join(self.data.columns)
-        prompt = f"""
-        The following text describes the causal relationship among variables from a statisical perspective:
-        {relation_text}
-        We use traditional causal discovery algorithm to find this relationship, and the probability is calculated with bootstrapping.
-        This result is solely from statistical perspective, so it is not reliable enough.
-        You are an expert in the causal discovery field and are familiar with background knowledge of these variables: {variables}
-
-        Based on this statistical confidence result, and background knowledge about these variables,
-        Please write a paragraph to analyze the reliability of this causal relationship graph. 
-        
-        **Your Task**
-        Firstly, briefly describe how we get these probability with 1-2 sentences.
-        Secondly, categorize and these relationships into 3 types and list them out: 
-        High Confidence Level (probability>=0.9), 
-        Moderate Confidence Level (probability between 0.1 and 0.9), 
-        Low Confidence Level (probability<=0.1)
-        Do Not include Numerical Numbers in your text!
-        
-        **Template**
-        To evaluate how much confidence we have on each edge, we conducted bootstrapping to calculate the probability of existence for each edge.
-        From the Statistics perspective, we can categorize the edges' probability of existence into three types:
-        \\begin{{itemize}}
-        \item \\textbf{{High Confidence Edges}}: ...
-        \item \\textbf{{Moderate Confidence Edges}}: ...
-        \item \\textbf{{Low Confidence Edges}}: ...
-        \end{{itemize}}
-
-        **You Must**
-        1. Follow the template above, do not include anything else like  ```
-        2. Write in a professional and concise way, and include all relationships provided.
-        3. The list must be in latex format
-        """
-        print("Start to analyze graph reliability")
-        response = self.client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        response_doc = response.choices[0].message.content
-        response_doc = response_doc.replace('%', '\%')
-        #print('reliability analysis:',response_doc)
+            variables = '\t'.join(self.data.columns)
+            prompt = f"""
+            The following text describes the causal relationship among variables from a statisical perspective:
+            {relation_text}
+            We use traditional causal discovery algorithm to find this relationship, and the probability is calculated with bootstrapping.
+            This result is solely from statistical perspective, so it is not reliable enough.
+            You are an expert in the causal discovery field and are familiar with background knowledge of these variables: {variables}
+            Based on this statistical confidence result, and background knowledge about these variables,
+            Please write a paragraph to analyze the reliability of this causal relationship graph. 
+            
+            **Your Task**
+            Firstly, briefly describe how we get these probability with 1-2 sentences.
+            Secondly, categorize and these relationships into 3 types and list them out: 
+            High Confidence Level (probability>=0.9), 
+            Moderate Confidence Level (probability between 0.1 and 0.9), 
+            Low Confidence Level (probability<=0.1)
+            Do Not include Numerical Numbers in your text!
+            
+            **Template**
+            To evaluate how much confidence we have on each edge, we conducted bootstrapping to calculate the probability of existence for each edge.
+            From the Statistics perspective, we can categorize the edges' probability of existence into three types:
+            \\begin{{itemize}}
+            \item \\textbf{{High Confidence Edges}}: ...
+            \item \\textbf{{Moderate Confidence Edges}}: ...
+            \item \\textbf{{Low Confidence Edges}}: ...
+            \end{{itemize}}
+            **You Must**
+            1. Follow the template above, do not include anything else like  ```
+            2. Write in a professional and concise way, and include all relationships provided.
+            3. The list must be in latex format
+            """
+            print("Start to analyze graph reliability")
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            response_doc = response.choices[0].message.content
+            response_doc = response_doc.replace('%', '\%')
+            #print('reliability analysis:',response_doc)
+        else:
+            response_doc = ''
         return response_doc
 
     def refutation_analysis_prompts(self):
@@ -665,7 +671,6 @@ The JSON should be
         else:
             graph_text = """
             \subsection{Result Graph Comparision}
-
             \\begin{figure}[H]
                 \centering
             """
@@ -928,7 +933,6 @@ Help me to write a comparison of the following causal discovery results of diffe
                 "[ALGO]": self.algo or "",
                 "[RESULT_GRAPH0]": f'{self.visual_dir}/true_graph.pdf',
                 "[RESULT_GRAPH1]": f'{self.visual_dir}/{self.algo}_initial_graph.pdf',
-                "[RESULT_GRAPH2]": f'{self.visual_dir}/{self.algo}_revised_graph.pdf',
                 "[RESULT_GRAPH3]": f'{self.visual_dir}/metrics.jpg',
                 "[RESULT_GRAPH_COMPARISION]": self.result_comparison_graph_text
             }
