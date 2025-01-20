@@ -20,6 +20,10 @@ from pydantic import BaseModel
 import os
 import sys
 import warnings
+from CEM_LinearInf.cem import cem
+from CEM_LinearInf.balance import balance
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import NearestNeighbors
 
 from causal_analysis.hte.hte_filter import HTE_Filter
 from causal_analysis.hte.hte_params import HTE_Param_Selector
@@ -313,6 +317,253 @@ class Analysis(object):
 
         return causal_estimate, p_value, refutation, figs
 
+    def _propensity_score_matching(self, treatment, outcome):
+        """
+        Perform Propensity Score Matching (PSM) using sklearn.
+        :param treatment: The treatment variable.
+        :param outcome: The outcome variable.
+        :return: Matched data after PSM.
+        """
+        # Debug: Print treatment variable
+        print(f"Treatment variable ({treatment}):\n{self.data[treatment].head()}")
+        print(f"Unique values in treatment variable: {self.data[treatment].unique()}")
+
+        # Ensure the treatment variable is binary
+        if len(self.data[treatment].unique()) > 2:
+            # Binarize the treatment variable using a threshold (e.g., median)
+            threshold = self.data[treatment].median()
+            self.data[treatment] = (self.data[treatment] > threshold).astype(int)
+            print(f"Treatment variable binarized using threshold {threshold}.")
+
+        # Debug: Print binarized treatment variable
+        print(f"Binarized treatment variable:\n{self.data[treatment].head()}")
+
+        # Ensure the treatment variable is a 1-dimensional array
+        treatment_values = self.data[treatment].values
+        print(f"Shape of treatment values: {treatment_values.shape}")
+        if treatment_values.ndim != 1:
+            raise ValueError(f"Treatment variable must be 1-dimensional. Got shape {treatment_values.shape}.")
+
+        # Step 1: Calculate propensity scores using LogisticRegression
+        confounders = self.data.drop(columns=[treatment, outcome])  # Features (confounders)
+        
+        # Debug: Print confounders
+        print(f"Confounders:\n{confounders.head()}")
+        print(f"Shape of confounders: {confounders.shape}")
+
+        # Ensure confounders are not empty
+        if confounders.empty:
+            raise ValueError("No confounders found. Ensure the dataset contains valid confounders.")
+
+        # Fit logistic regression model
+        propensity_model = LogisticRegression(solver='liblinear', max_iter=1000)
+        propensity_model.fit(confounders, treatment_values)
+        
+        # Add propensity scores to the data
+        self.data['propensity_score'] = propensity_model.predict_proba(confounders)[:, 1]
+
+        # Step 2: Separate treated and control groups
+        treated = self.data[self.data[treatment] == 1]
+        control = self.data[self.data[treatment] == 0]
+
+        # Step 3: Perform nearest neighbor matching using sklearn
+        nbrs = NearestNeighbors(n_neighbors=1).fit(control[['propensity_score']])
+        distances, indices = nbrs.kneighbors(treated[['propensity_score']])
+
+        # Step 4: Create matched data
+        matched_control = control.iloc[indices.flatten()]
+        matched_data = pd.concat([treated, matched_control])
+
+        return matched_data
+                
+    def _coarsened_exact_matching(self,confounders,cont_confounder, treatment, outcome):
+        """
+        Perform Coarsened Exact Matching (CEM).
+        """
+        # Initialize CEM
+        my_cem = cem(self.data, confounder_cols = confounders, cont_confounder_cols = cont_confounder,  col_t = treatment, col_y = outcome)
+        matched_data = my_cem.match()
+        return matched_data
+
+
+    def _identify_confounders(self, treatment, outcome):
+        """
+        Identify confounders for the treatment and outcome using the causal graph.
+        If the graph is not available, use the LLM to suggest confounders.
+        """
+        # Validate that treatment and outcome are valid nodes in the graph
+        if treatment not in self.G.nodes or outcome not in self.G.nodes:
+            raise ValueError(f"Invalid treatment or outcome variable in the graph: {treatment}, {outcome}")
+
+        # Use the causal graph to identify confounders
+        confounders = list(set(self.G.predecessors(treatment)) & set(self.G.predecessors(outcome)))
+        return confounders
+    
+    def coarsen_continuous_variables(self, data, cont_confounders, bins=5):
+        """
+        Coarsen continuous variables into bins for CEM.
+        
+        :param data: The dataset.
+        :param cont_confounders: List of continuous confounder column names.
+        :param bins: Number of bins to create for each continuous variable.
+        :return: Dataset with coarsened columns.
+        """
+        for col in cont_confounders:
+            if col in data.columns:
+                coarsened_col = f'coarsen_{col}'
+                data[coarsened_col] = pd.cut(data[col], bins=bins, labels=False)
+        return data
+    
+    def _check_balance(self, data, matched_data, treatment, outcome, confounders, cont_confounders, title):
+        """
+        Check balance of confounders between treated and control groups using density and KS plots.
+        
+        :param data: The original dataset (before matching).
+        :param matched_data: The matched dataset (after matching).
+        :param treatment: The treatment variable column name.
+        :param outcome: The outcome variable column name.
+        :param confounders: List of confounder column names.
+        :param cont_confounders: List of continuous confounder column names.
+        :param title: Title for the balance checking (e.g., "Before Matching" or "After Matching").
+        """
+        # Ensure the confounders and continuous confounders are valid columns
+        valid_confounders = [col for col in confounders if col in matched_data.columns]
+        valid_cont_confounders = [col for col in cont_confounders if col in matched_data.columns]
+
+        if not valid_confounders:
+            raise ValueError("No valid confounders found in the matched data.")
+        if not valid_cont_confounders:
+            print("Warning: No valid continuous confounders found in the matched data.")
+
+        # Loop through each confounder and generate density and KS plots
+        for confounder in valid_confounders:
+            # Density Plot
+            plt.figure(figsize=(10, 6))
+            sns.kdeplot(
+                data[data[treatment] == 1][confounder], 
+                label='Treated (Unmatched)', 
+                color='blue', 
+                linestyle='--'  # Use dashed line for unmatched data
+            )
+            sns.kdeplot(
+                data[data[treatment] == 0][confounder], 
+                label='Control (Unmatched)', 
+                color='orange', 
+                linestyle='--'  # Use dashed line for unmatched data
+            )
+            sns.kdeplot(
+                matched_data[matched_data[treatment] == 1][confounder], 
+                label='Treated (Matched)', 
+                color='blue', 
+                linestyle='-'  # Use solid line for matched data
+            )
+            sns.kdeplot(
+                matched_data[matched_data[treatment] == 0][confounder], 
+                label='Control (Matched)', 
+                color='orange', 
+                linestyle='-'  # Use solid line for matched data
+            )
+            plt.title(f'Density Plot: {confounder} ({title})')
+            plt.xlabel(confounder)
+            plt.ylabel('Density')
+            plt.legend()  # Add legend with labels
+            plt.grid(True)
+
+            # Save the density plot
+            density_plot_filename = f'density_plot_{confounder}_{title.lower().replace(" ", "_")}.png'
+            density_plot_path = os.path.join(self.global_state.user_data.output_graph_dir, density_plot_filename)
+            plt.savefig(density_plot_path, bbox_inches='tight')
+            plt.close()
+
+            # KS Plot
+            plt.figure(figsize=(10, 6))
+            sns.kdeplot(
+                data[data[treatment] == 1][confounder], 
+                label='Treated (Unmatched)', 
+                color='blue', 
+                linestyle='--'  # Use dashed line for unmatched data
+            )
+            sns.kdeplot(
+                data[data[treatment] == 0][confounder], 
+                label='Control (Unmatched)', 
+                color='orange', 
+                linestyle='--'  # Use dashed line for unmatched data
+            )
+            sns.kdeplot(
+                matched_data[matched_data[treatment] == 1][confounder], 
+                label='Treated (Matched)', 
+                color='blue', 
+                linestyle='-'  # Use solid line for matched data
+            )
+            sns.kdeplot(
+                matched_data[matched_data[treatment] == 0][confounder], 
+                label='Control (Matched)', 
+                color='orange', 
+                linestyle='-'  # Use solid line for matched data
+            )
+            plt.title(f'KS Plot: {confounder} ({title})')
+            plt.xlabel(confounder)
+            plt.ylabel('Density')
+            plt.legend()  # Add legend with labels
+            plt.grid(True)
+
+            # Save the KS plot
+            ks_plot_filename = f'ks_plot_{confounder}_{title.lower().replace(" ", "_")}.png'
+            ks_plot_path = os.path.join(self.global_state.user_data.output_graph_dir, ks_plot_filename)
+            plt.savefig(ks_plot_path, bbox_inches='tight')
+            plt.close()
+
+    def estimate_causal_effect_matching(self, treatment, outcome, confounders, cont_confounders, method="propensity_score", visualize=True):
+        """
+        Estimate the causal effect using matching methods.
+        
+        :param treatment: The treatment variable.
+        :param outcome: The outcome variable.
+        :param confounders: List of confounder column names.
+        :param cont_confounders: List of continuous confounder column names.
+        :param method: Matching method ("propensity_score" or "cem").
+        :param visualize: Whether to visualize balance before and after matching.
+        :return: Causal estimate, matched data, and balance plots.
+        """
+        print("\n" + "#" * 60)
+        print(f"Estimating Causal Effect using Matching: {method}")
+        print(f"Treatment: {treatment} | Outcome: {outcome}")
+        print("#" * 60)
+
+        # Step 1: Perform Matching
+        if method == "propensity_score":
+            matched_data = self._propensity_score_matching(treatment, outcome)
+        elif method == "cem":
+            # Pass confounders and continuous confounders to CEM
+            matched_data = self._coarsened_exact_matching(confounders, cont_confounders, treatment, outcome)
+        else:
+            raise ValueError(f"Unsupported matching method: {method}")
+        
+        # Step 2: Coarsen continuous variables for balance checking
+        if method == "cem":
+            matched_data = self.coarsen_continuous_variables(matched_data, cont_confounders)
+
+        # Step 3: Balance Checking (After Matching)
+        if visualize:
+            self._check_balance(
+                data=self.data,  # Original dataframe (before matching)
+                matched_data=matched_data,  # Matched dataframe (after matching)
+                treatment=treatment,
+                outcome=outcome,
+                confounders=confounders,
+                cont_confounders=cont_confounders,
+                title="Balance Checking"
+            )
+
+        # Step 4: Estimate Treatment Effect
+        treated_mean = matched_data[matched_data[treatment] == 1][outcome].mean()
+        control_mean = matched_data[matched_data[treatment] == 0][outcome].mean()
+        ate = treated_mean - control_mean
+
+        print(f"\nAverage Treatment Effect (ATE) using {method}: {ate}")
+        return ate, matched_data
+
+
     def _generate_dowhy_graph(self):
         """
         Generate a causal graph in DOT format for DoWhy.
@@ -377,6 +628,111 @@ class Analysis(object):
         figs = ['attribution_plot.png']
         # plt.show()  # Show the plot in the notebook or script
         # plt.close()
+        return df, figs
+    
+    def attribute_distributional_changes(self, target_node, data_old, data_new, method='distribution_change', confidence_level=0.95):
+        """
+        Perform distributional change attribution to identify which causal mechanisms changed between two datasets assuming to get the old data fom the user
+        Parameters:
+        - target_node: The target node whose distribution change we want to explain.
+        - data_old: DataFrame representing the system before the change.
+        - data_new: DataFrame representing the system after the change.
+        - method: distribution_change' (default) or 'distribution_change_robust'.
+        - confidence_level: Confidence level for confidence intervals (default: 0.95).
+
+        Returns:
+        - DataFrame with attribution scores for each node.
+        - List of file paths to the saved plots.
+        """
+        print("\n" + "#"*60)
+        print(f"Performing Distributional Change Attribution for target node: {target_node}")
+        print(f"Method: {method}")
+        print("#"*60)
+
+        # Define the path where the plot will be saved
+        path = self.global_state.user_data.output_graph_dir
+
+        # Performs distributional change attribution
+        # distribution_change explain how the entire distribution of a target variable changed between two datasets.
+        if method == 'distribution_change':
+            attributions = gcm.distribution_change(
+                causal_model=self.causal_model,
+                old_data=data_old,
+                new_data=data_new,
+                target_node=target_node
+            )
+        # distribution_change_robust explains how the average of a target variable changed between two datasets
+        elif method == 'distribution_change_robust':
+            attributions = gcm.distribution_change_robust(
+                causal_model=self.causal_model,
+                data_old=data_old,
+                data_new=data_new,
+                target_node=target_node
+            )
+        else:
+            raise ValueError("Invalid method. Choose 'distribution_change' or 'distribution_change_robust'.")
+
+        # Convert results to a DataFrame
+        rows = []
+        for node, score in attributions.items():
+            rows.append({
+                "Node": node,
+                "AttributionScore": score
+            })
+
+        df = pd.DataFrame(rows).sort_values("AttributionScore", ascending=False)
+
+        # Extract info for plotting
+        nodes = df["Node"]
+        scores = df["AttributionScore"]
+
+        # Create figure
+        plt.figure(figsize=(10, 6))  
+        plt.bar(nodes, scores, align='center', color='skyblue')
+        plt.xlabel("Nodes")
+        plt.ylabel("Attribution Score")
+        plt.title(f"Distributional Change Attribution for {target_node}")
+        plt.xticks(rotation=45) 
+        plt.tight_layout()
+
+        # Save bar plot
+        try:
+            if not os.path.exists(path):
+                os.makedirs(path)
+            plot_filename = 'distribution_change_attribution_bar_plot.png'
+            plot_path = os.path.join(path, plot_filename)
+            print(f"Saving bar plot to {plot_path}")
+            plt.savefig(plot_path)
+        except Exception as e:
+            print(f"Error saving bar plot: {e}")
+        finally:
+            plt.close()
+
+        # Create violin plot
+        plt.figure(figsize=(10, 6))  
+        sns.violinplot(x=nodes, y=scores, inner="quartile", scale="width")
+        plt.xlabel("Nodes")
+        plt.ylabel("Attribution Score")
+        plt.title(f"Distributional Change Attribution for {target_node}")
+        plt.xticks(rotation=45) 
+        plt.tight_layout()
+
+        # Save violin plot
+        try:
+            if not os.path.exists(path):
+                os.makedirs(path)
+            plot_filename = 'distribution_change_attribution_violin_plot.png'
+            plot_path = os.path.join(path, plot_filename)
+            print(f"Saving violin plot to {plot_path}")
+            plt.savefig(plot_path)
+        except Exception as e:
+            print(f"Error saving violin plot: {e}")
+        finally:
+            plt.close()
+
+        # Define figs as a list containing the file paths of the saved plots
+        figs = ['distribution_change_attribution_bar_plot.png', 'distribution_change_attribution_violin_plot.png']
+
         return df, figs
 
     def estimate_hte_effect(self, outcome, treatment, X_col, query):
@@ -713,12 +1069,92 @@ class Analysis(object):
             response = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
             return response, figs
         
+                
+        elif task == 'Distributional Change Attribution':
+            # Split the dataset into two subsets (data_old and data_new)
+            # For demonstration, we split the dataset into two halves
+            data_old = self.data.iloc[:len(self.data)//2]  # First half as "old" data
+            data_new = self.data.iloc[len(self.data)//2:]  # Second half as "new" data
+
+            # Perform distributional change attribution
+            df, figs = self.attribute_distributional_changes(target_node=key_node, data_old=data_old, data_new=data_new)
+
+            # Generate a response using the LLM
+            prompt = f"""
+            I'm doing the Distributional Change Attribution analysis and please help me to write a brief analysis in bullet points.
+            Here are some informations:
+            **Target Variable we care about**: {key_node}
+            **Attribution Scores**: 
+            {df.to_markdown()}
+            **Description from User**: {desc}
+            **Methods to calculate Distributional Change Attribution**
+            We compared two datasets (old and new) to identify which nodes in the causal graph contributed most to the change in the distribution of the target variable.
+            """
+            response = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
+            return response, figs
+        
+        elif task == 'Matching-Based Effect Estimation':
+            # Parse treatment and outcome from the description
+            prompt = f"""
+            I'm doing the Matching-Based Effect Estimation analysis, please identify the Treatment Variable and Outcome Variable in this description:
+            {desc}
+            The variable names must be among these variables: {self.data.columns}.
+            Only return me with the variable names, do not include anything else.
+            """
+            response = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
+            # Extract treatment and outcome from the LLM response
+            try:
+                # Split the response by colon and extract the treatment and outcome variables
+                parts = response.split(":")
+                if len(parts) < 2:
+                    raise ValueError("LLM response does not contain a colon.")
+                
+                treatment = parts[1].split()[0].strip()  # Extracts the first word after the colon
+                outcome = parts[2].split()[0].strip()    # Extracts the first word after the second colon
+                # Validate that treatment and outcome are valid column names
+                if treatment not in self.data.columns or outcome not in self.data.columns:
+                    raise ValueError(f"Invalid treatment or outcome variable: {treatment}, {outcome}")
+            except (IndexError, ValueError) as e:
+                print(f"Error parsing LLM response: {e}")
+                print(f"LLM response: {response}")
+                return "Error: Unable to parse treatment and outcome variables from the LLM response.", []
+            # Identify confounders
+            confounders = self._identify_confounders(treatment, outcome)
+            cont_confounders = [col for col in confounders if self.data[col].nunique() > 10]  # Continuous confounders
+            # Suggest matching method based on dataset characteristics
+            if len(confounders) - len(cont_confounders) > 5:  # If more than 5 discrete confounders
+                method = "cem"
+            else:
+                method = "propensity_score"
+
+            # Perform matching-based estimation
+            ate, matched_data = self.estimate_causal_effect_matching(
+                treatment=treatment,
+                outcome=outcome,
+                confounders=confounders,
+                cont_confounders=cont_confounders,
+                method=method,
+                visualize=True
+            )
+
+            # Generate a response using the LLM
+            prompt = f"""
+            I'm doing the Matching-Based Effect Estimation analysis and please help me to write a brief analysis in bullet points.
+            Here are some informations:
+            **Treatment Variable**: {treatment}
+            **Outcome Variable**: {outcome}
+            **Matching Method**: {method}
+            **Confounders**: {confounders}
+            **Average Treatment Effect (ATE)**: {ate}
+            **Description from User**: {desc}
+            """
+            response = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
+            return response, []
+        
         else:
             return None, None
 
-
-    
-
+            
 ##############
 def LLM_parse_query(args, format, prompt, message):
     client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
@@ -747,7 +1183,7 @@ def main(global_state, args):
     """
     Modify the main function to call attribute_anomalies and save the results in ./auto_mpg_output.
     """
-    print("Welcome to the Causal Analysis Demo using the Auto MPG dataset.\n")
+    print("Welcome to the Causal Analysis Demo using the sacchs dataset.\n")
     
     analysis = Analysis(global_state, args)
     message = "What is the Heterogeneous Treatment Effect of PIP2 on PIP3"
@@ -791,6 +1227,30 @@ def main(global_state, args):
     print("Linear Subgroup Estimate (CATE approach):", lin_estimate.value)
     print("p-value:", lin_p_value)
     # Testing code to check the above functions replace it appropriately
+    # Perform Matching-Based Effect Estimation
+    response, figs = analysis.forward(
+        task='Matching-Based Effect Estimation',
+        desc='Analyze the effect of PIP2 on PIP3 using matching.',
+        key_node='PIP3'
+    )
+    print(response)
+    
+    # Example: Run CEM for treatment 'PIP2' and outcome 'PIP3'
+    treatment = 'PIP2'
+    outcome = 'PIP3'
+    confounders = analysis._identify_confounders(treatment, outcome)
+    cont_confounders = [col for col in confounders if analysis.data[col].nunique() > 10]  # Continuous confounders
+    
+    ate, matched_data = analysis.estimate_causal_effect_matching(
+        treatment=treatment,
+        outcome=outcome,
+        confounders=confounders,
+        cont_confounders=cont_confounders,
+        method="cem",
+        visualize=True
+    )
+    
+    print(f"Average Treatment Effect (ATE) using CEM: {ate}")
 
     
     class InfList(BaseModel):
