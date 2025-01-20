@@ -84,14 +84,12 @@ def missing_ratio_table(global_state):
     table.set_fontsize(10)
     table.auto_set_column_width(col=list(range(len(ratio_record_df.columns))))
 
-    plt.savefig("missing_ratios_table.png", bbox_inches='tight', dpi=300)
-
     save_path = global_state.user_data.output_graph_dir
 
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     print(f"Saving missingness ratio table to {os.path.join(save_path, 'missing_ratios_table.jpg')}")
-    plt.savefig(os.path.join(save_path, 'missing_ratios_table.jpg'))
+    plt.savefig(os.path.join(save_path, 'missing_ratios_table.jpg', bbox_inches='tight', dpi=300))
 
     if sum(ratio_record.values()) == 0:
         global_state.statistics.missingness = False

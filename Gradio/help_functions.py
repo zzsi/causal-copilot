@@ -226,7 +226,7 @@ def first_stage_sparsity_check(message, chat_history, download_btn, args, global
             CURRENT_STAGE = 'sparsity_check_2'
         else:
             chat_history.append((None, "❌ We cannot find the NA value you specified in the dataset, please retry!"))
-    return chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE
+    return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
 def parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
     if message == '' or message.lower()=='no':

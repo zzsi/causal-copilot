@@ -251,7 +251,7 @@ def process_message(message, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_hi
         if CURRENT_STAGE == 'sparsity_check_1':
             chat_history.append((message, None)) 
             yield global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-            chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE = first_stage_sparsity_check(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE)
+            chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = first_stage_sparsity_check(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE)
             yield global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
         
         if CURRENT_STAGE == 'sparsity_check_2':
@@ -269,7 +269,7 @@ def process_message(message, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_hi
                                                 f"{', '.join(sparsity_dict['moderate'])}\n"
                                                 "⚠️ Please note that variables you want to drop may be confounders, please be cautious in selection.\n"
                                                 "Please seperate all variables with a semicolon ; and provide your answer following the template below: \n"
-                                                "Templete: PKA; Jnk; PIP2; PIP3; Mek",
+                                                "Templete: PKA; Jnk; PIP2; PIP3; Mek"
                                                 "If you want LLM help you to decide, please enter 'LLM'."
                                                 ))
                     yield global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -283,7 +283,7 @@ def process_message(message, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_hi
                 CURRENT_STAGE = "sparsity_drop_done"
                 print("sparsity_drop_done")
         if CURRENT_STAGE == 'sparsity_drop':
-            chat_history, download_btn, global_state, REQUIRED_INFO = parse_sparsity_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO)
+            chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_sparsity_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO)
             yield global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             if CURRENT_STAGE != "sparsity_drop_done":
                 return global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
