@@ -7,7 +7,6 @@ import networkx as nx
 
 # Keep gcm if you still want anomaly attribution and interventions:
 from dowhy import gcm  
-from hte import *
 # Import econml classes instead of using DoWhy's linear_regression or DML
 from econml.dml import DML, LinearDML, SparseLinearDML, CausalForestDML
 
@@ -25,50 +24,13 @@ from CEM_LinearInf.balance import balance
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import NearestNeighbors
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from causal_analysis.hte.hte_filter import HTE_Filter
 from causal_analysis.hte.hte_params import HTE_Param_Selector
 from causal_analysis.hte.hte_program import HTE_Programming
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from causal_analysis.help_functions import *
+from causal_analysis.analysis import *
 from global_setting.Initialize_state import global_state_initialization
-
-def convert_adj_mat(mat):
-    # In downstream analysis, we only keep direct edges and ignore all undirected edges
-    mat = np.array(mat)
-    mat = (mat == 1).astype(int)
-    G = mat.T
-    return G
-
-def plot_hte_dist(hte, fig_path):
-    plt.figure(figsize=(8, 6))
-    sns.histplot(hte['hte'], bins=30, kde=True, color='skyblue', alpha=0.7)
-    plt.axvline(hte['hte'].mean(), color='firebrick', linestyle='--', label='Mean HTE')
-    plt.xlabel("Heterogeneous Treatment Effect (HTE)")
-    plt.ylabel("Frequency")
-    plt.title("Distribution of Heterogeneous Treatment Effects")
-    # Save figure
-    plt.savefig(fig_path)
-
-def plot_cate_violin(data, hte, group_cols, fig_path):
-    data = pd.concat([data, hte], axis=1)
-    num_groups = len(group_cols)
-    fig, axes = plt.subplots(num_groups, 1, figsize=(10, 6 * num_groups), sharex=False)
-    if num_groups == 1:
-        axes = [axes]  # Ensure axes is always a list for consistency
-
-    for ax, group_col in zip(axes, group_cols):
-        sns.violinplot(
-            x=group_col, y='hte', data=data, ax=ax, inner="quartile", scale="width"
-        )
-        # Customize the subplot
-        ax.set_title(f"CATE Distribution by {group_col.capitalize()}")
-        ax.set_xlabel(group_col.capitalize())
-        ax.set_ylabel("CATE")
-        ax.grid(True)
-
-    # Adjust layout to prevent overlap
-    plt.tight_layout()
-    plt.savefig(fig_path)
 
 class Analysis(object):
     def __init__(self, global_state, args):
@@ -79,17 +41,15 @@ class Analysis(object):
         self.global_state = global_state
         self.args = args
         self.data = global_state.user_data.processed_data
-        #self.data = pd.read_csv('dataset/sachs/sachs.csv')
         #TODO: graph format
         self.graph = convert_adj_mat(global_state.results.revised_graph)
         self.G = nx.from_numpy_array(self.graph, create_using=nx.DiGraph) # convert adj matrix into DiGraph
         self.G = nx.relabel_nodes(self.G, {i: name for i, name in enumerate(self.data.columns)})
-        print(self.G)
         self.dot_graph = self._generate_dowhy_graph()
         # Construct Causal Model via dowhy/gcm
         self.causal_model = gcm.InvertibleStructuralCausalModel(self.G)
-        gcm.auto.assign_causal_mechanisms(self.causal_model, self.data)
-        gcm.fit(self.causal_model, self.data)
+        # gcm.auto.assign_causal_mechanisms(self.causal_model, self.data)
+        # gcm.fit(self.causal_model, self.data)
 
     def _print_data_disclaimer(self):
         """
@@ -157,165 +117,15 @@ class Analysis(object):
             # 1st SHAP Plot beeswarm
             ax = shap.plots.beeswarm(shap_values_linear, plot_size=(8,6), show=False)
             plt.savefig(f'{self.global_state.user_data.output_graph_dir}/shap_beeswarm_plot.png', bbox_inches='tight')  # Save as PNG
-            #plt.savefig(f'shap_beeswarm_plot.png', bbox_inches='tight') 
             figs.append("shap_beeswarm_plot.png")
-            # plt.show()
 
             # 2nd SHAP Plot Bar
             fig, ax = plt.subplots(figsize=(8, 6))
             ax = shap.plots.bar(shap_values_linear, ax=ax, show=False)
             plt.savefig(f'{self.global_state.user_data.output_graph_dir}/shap_bar_plot.png', bbox_inches='tight')  # Save as PNG
-            #plt.savefig(f'shap_bar_plot.png', bbox_inches='tight') 
             figs.append("shap_bar_plot.png")
-            #plt.show()
             plt.close()
         return parent_nodes, mean_shap_values, figs
-    
-    def estimate_effect_econml(self, treatment, outcome, covariates=None, controls=None):
-        """
-        Estimate ATE, ATT, and CATE (HTE) using an EconML estimator
-        (e.g., CausalForestDML) rather than DoWhy.
-        """
-        print("\n" + "#"*60)
-        print(f"Estimating Effects (EconML) of Treatment: {treatment} on Outcome: {outcome}")
-        print("#"*60)
-
-        # 1) Prepare data
-        Y = self.data[outcome].values
-        T = self.data[treatment].values
-
-        # If you want to differentiate effect modifiers (X) from controls (W):
-        if covariates is None:
-            covariates = []
-        X = self.data[covariates].values if len(covariates) > 0 else None
-
-        if controls is None:
-            controls = []
-        W = self.data[controls].values if len(controls) > 0 else None
-
-        # 2) Create an EconML estimator, e.g. CausalForestDML
-        from sklearn.ensemble import RandomForestRegressor
-        model_y = RandomForestRegressor(n_estimators=50, max_depth=5, random_state=42)
-        model_t = RandomForestRegressor(n_estimators=50, max_depth=5, random_state=42)
-
-        est = CausalForestDML(
-            model_y=model_y,
-            model_t=model_t,
-            n_estimators=200,
-            min_samples_leaf=10,
-            random_state=42
-        )
-
-        # 3) Fit
-        est.fit(Y, T, X=X, W=W)
-
-        # 4) ATE
-        ate_val = est.ate(X=None)  # ATE over the entire sample
-        lb_ate, ub_ate = est.ate_interval(X=None)
-
-        # 5) ATT
-        att_val = est.att(X=None)
-        lb_att, ub_att = est.att_interval(X=None)
-
-        # 6) CATE (HTE)
-        # if you pass X=None => it can't compute effect for each instance. 
-        # So pass X if you want an array of effects for each row
-        if X is not None:
-            cate_vals = est.effect(X)
-            lb_cate, ub_cate = est.effect_interval(X)
-        else:
-            cate_vals = None
-            lb_cate = None
-            ub_cate = None
-
-        print(f"ATE: {ate_val} [95% CI: ({lb_ate}, {ub_ate})]")
-        print(f"ATT: {att_val} [95% CI: ({lb_att}, {ub_att})]")
-
-        # Optionally print mean of CATE
-        if cate_vals is not None:
-            print(f"Mean CATE: {np.mean(cate_vals)}")
-
-        # Return them or store in some object
-        return {
-            "ATE": (ate_val, (lb_ate, ub_ate)),
-            "ATT": (att_val, (lb_att, ub_att)),
-            "CATE": (cate_vals, (lb_cate, ub_cate))
-        }
-
-    def plot_cate_distribution(self, cate_array, fig_path):
-        """
-        Plot distribution of the CATE (HTE) array and save to fig_path.
-        """
-        plt.figure(figsize=(8,6))
-        sns.histplot(cate_array, bins=30, kde=True, color='skyblue', alpha=0.7)
-        plt.title("Distribution of Estimated CATE")
-        plt.xlabel("CATE Value")
-        plt.ylabel("Frequency")
-        plt.axvline(np.mean(cate_array), color='red', linestyle='--', label='Mean CATE')
-        plt.legend()
-        plt.savefig(fig_path)
-        plt.close()
-    
-    
-    def estimate_causal_effect_dml(self, treatment, outcome,
-                               control_value=0, treatment_value=1,
-                               target_units='ate'):
-        """
-        Estimate the causal effect (DML) of a treatment on an outcome,
-        specifying target_units for ATE, ATT, or a custom subset (CATE).
-        """
-        print("\n" + "#"*60)
-        print(f"Estimating Causal Effect (DML) of Treatment: {treatment} on Outcome: {outcome}")
-        print(f"Method: backdoor.dml | target_units={target_units}")
-        print("#"*60)
-    
-        model = CausalModel(
-            data=self.data,
-            treatment=treatment,
-            outcome=outcome,
-            graph=self.dot_graph
-        )
-    
-        identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
-        print("\nIdentified Estimand (DML):")
-        print(identified_estimand)
-
-    
-        # Example default regressors I hard-coded for now.
-        #
-        from sklearn.ensemble import RandomForestRegressor
-        outcome_model = RandomForestRegressor(n_estimators=10, max_depth=5, random_state=42)
-        treatment_model = RandomForestRegressor(n_estimators=10, max_depth=5, random_state=42)
-        final_model = RandomForestRegressor(n_estimators=10, max_depth=5, random_state=42)
-
-        warnings.filterwarnings('ignore')
-        causal_estimate = model.estimate_effect(
-            identified_estimand,
-            method_name="backdoor.econml.dml.DML",
-            method_params={
-                "init_params":{
-                "model_y": outcome_model,
-                "model_t": treatment_model,
-                "model_final": final_model
-                },
-                "fit_params":{}
-            },
-            control_value=control_value,
-            treatment_value=treatment_value,
-            target_units=target_units  # <- here
-        )
-    
-        # significance test (similar to linear_regression approach)
-        p_value = None
-    
-        print("\n=== Interpretation Hint ===")
-        print("Uses DML with RandomForestRegressor as default for outcome & treatment models.")
-        print("============================\n")
-
-        # Sensitivity Analysis for the estimation
-        refutation, figs = self.sensitivity_analysis(outcome, model, identified_estimand, causal_estimate, treatment, outcome)
-
-        return causal_estimate, p_value, refutation, figs
 
     def _propensity_score_matching(self, treatment, outcome):
         """
@@ -385,7 +195,6 @@ class Analysis(object):
         matched_data = my_cem.match()
         return matched_data
 
-
     def _identify_confounders(self, treatment, outcome):
         """
         Identify confounders for the treatment and outcome using the causal graph.
@@ -396,23 +205,10 @@ class Analysis(object):
             raise ValueError(f"Invalid treatment or outcome variable in the graph: {treatment}, {outcome}")
 
         # Use the causal graph to identify confounders
+        print(set(self.G.predecessors(treatment)))
+        print(set(self.G.predecessors(outcome)))
         confounders = list(set(self.G.predecessors(treatment)) & set(self.G.predecessors(outcome)))
-        return confounders
-    
-    def coarsen_continuous_variables(self, data, cont_confounders, bins=5):
-        """
-        Coarsen continuous variables into bins for CEM.
-        
-        :param data: The dataset.
-        :param cont_confounders: List of continuous confounder column names.
-        :param bins: Number of bins to create for each continuous variable.
-        :return: Dataset with coarsened columns.
-        """
-        for col in cont_confounders:
-            if col in data.columns:
-                coarsened_col = f'coarsen_{col}'
-                data[coarsened_col] = pd.cut(data[col], bins=bins, labels=False)
-        return data
+        return confounders 
     
     def _check_balance(self, data, matched_data, treatment, outcome, confounders, cont_confounders, title):
         """
@@ -541,7 +337,7 @@ class Analysis(object):
         
         # Step 2: Coarsen continuous variables for balance checking
         if method == "cem":
-            matched_data = self.coarsen_continuous_variables(matched_data, cont_confounders)
+            matched_data = coarsen_continuous_variables(matched_data, cont_confounders)
 
         # Step 3: Balance Checking (After Matching)
         if visualize:
@@ -735,43 +531,29 @@ class Analysis(object):
 
         return df, figs
 
-    def estimate_hte_effect(self, outcome, treatment, X_col, query):
-        print("\nCreating Causal Model...")
-        model = CausalModel(
-            data=self.data,
-            treatment=treatment,
-            outcome=outcome,
-            graph=self.dot_graph
-        )
-        identified_estimand = model.identify_effect()
-        W_col = identified_estimand.get_backdoor_variables()
+    def estimate_effect_dml(self, outcome, treatment, T0, T1, X_col, W_col, query):
         if len(W_col) == 0:
             W_col = ['W']
             W = pd.DataFrame(np.zeros((len(self.data), 1)), columns=W_col)
             self.data = pd.concat([self.data, W], axis=1)
             self.global_state.user_data.processed_data = self.data
         # Algorithm selection and deliberation
-        filter = HTE_Filter(args)
+        filter = HTE_Filter(self.args)
         self.global_state = filter.forward(self.global_state, query)
-
         reranker = HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
         self.global_state = reranker.forward(self.global_state)
-
-        programmer = HTE_Programming(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
+        programmer = HTE_Programming(self.args, y_col=outcome, T_col=treatment, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
+        # Estimate ate, att, hte
+        ate, ate_lower, ate_upper = programmer.forward(self.global_state, task='ate')
+        att, att_lower, att_upper = programmer.forward(self.global_state, task='att')
         hte, hte_lower, hte_upper = programmer.forward(self.global_state, task='hte')
         hte = pd.DataFrame({'hte': hte.flatten()})
         hte.to_csv(f'{self.global_state.user_data.output_graph_dir}/hte.csv', index=False)
 
-        dist_fig_path = f'{self.global_state.user_data.output_graph_dir}/hte_dist.png'
-        plot_hte_dist(hte, dist_fig_path)
-        figs = ['hte_dist.png']
-        cate_fig_path = f'{self.global_state.user_data.output_graph_dir}/cate_dist.png'
-        visual_X_col = [col for col in X_col if self.global_state.statistics.data_type_column[col]!='continuous']
-        if visual_X_col != []:
-            plot_cate_violin(self.data, hte, X_col, cate_fig_path)
-            figs.append('cate_dist.png')
-
-        return hte, hte_lower, hte_upper, figs
+        result = {'ate': [ate, ate_lower, ate_upper],
+                  'att': [att, att_lower, att_upper],
+                  'hte': [hte, hte_lower, hte_upper]}
+        return result
 
     def counterfactual_estimation(self, treatment_name, response_name, observed_val = None, intervened_treatment = None):
         # observed_val should be a df as the processed data
@@ -823,7 +605,6 @@ class Analysis(object):
             os.makedirs(path)
         print(f"Saving counterfactual estimation plot to {os.path.join(path, 'counterfactual_est_fig.jpg')}")
         plt.savefig(os.path.join(path, 'counterfactual_est_fig.jpg'))
-
 
     def simulate_intervention(self, treatment_name, shift_intervention = None, atomic_intervention = None):
         if atomic_intervention is None:
@@ -886,8 +667,6 @@ class Analysis(object):
             "Coverage Probability": coverage_probability
         }
 
-
-
     def sensitivity_analysis(self, target_node, model, estimand, estimate, treatment, outcome):
         # if self.global_state.statistics.linearity:
         #      simulation_method = "linear-partial-R2"
@@ -919,157 +698,70 @@ class Analysis(object):
 
         return refute, figs 
 
-    def call_LLM(self, format, prompt, message):
-        client = OpenAI(organization=self.args.organization, project=self.args.project, api_key=self.args.apikey)
-        if format:
-            completion = client.beta.chat.completions.parse(
-            model="gpt-4o-mini-2024-07-18",
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": message},
-            ],
-            response_format=format,
-            )
-            parsed_response = completion.choices[0].message.parsed
-        else: 
-            completion = client.beta.chat.completions.parse(
-            model="gpt-4o-mini-2024-07-18",
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": message},
-            ],
-            )
-            parsed_response = completion.choices[0].message.content
-        return parsed_response
-
+    
     def forward(self, task, desc, key_node):
         if task == 'Feature Importance':
             parent_nodes, mean_shap_values, figs = self.feature_importance(key_node, visualize=True)
-            prompt = f"""
-            I'm doing the feature importance analysis and please help me to write a brief analysis in bullet points.
-            Here are some informations:
-            **Result Variable we care about**: {key_node}
-            **Parent Nodes of the Result Variable**: {parent_nodes}
-            **Mean of Shapley Values**: {mean_shap_values}
-            ""Description from User**: {desc}
-            """
-            response = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
+            response = generate_analysis_feature_importance(key_node, parent_nodes, mean_shap_values, desc)
             return response, figs 
         
-        elif task == 'Average Treatment Effect Estimation':
+        elif task == 'Treatment Effect Estimation':
             prompt = f"""
             I'm doing the Treatment Effect Estimation analysis, please identify the Treatment Variable in this description:
             {desc}
             The variable name must be among these variables: {self.data.columns}
             Only return me with the variable name, do not include anything else.
             """
-            treatment = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
-            causal_estimate, p_value, refutation, figs = self.estimate_causal_effect(treatment=treatment, outcome=key_node, control_value=0, treatment_value=1)
+            ### Check Treatment
+            treatment = LLM_parse_query(None, 'You are an expert in Causal Discovery.', prompt)
+            is_binary, treat, control = check_binary(self.data[treatment])
+            while not is_binary:
+                treatment_message = input(f"Your treatment column is not binary, please specify another variable name!")
+                is_binary, treat, control = check_binary(self.data[treatment_message.strip()])
+            treatment_message = input(f"Your treatment column is binary with treatment={treat} and control={control}\n"
+                                        "Is there anything you want to correct?")
+            ### Check Confounder
             parent_nodes = list(self.G.predecessors(key_node))
-            if causal_estimate is not None:
-                # Analysis for Effect Estimation
-                prompt = f"""
-                I'm doing the Treatment Effect Estimation analysis and please help me to write a brief analysis in bullet points.
-                Here are some informations:
-                **Result Variable we care about**: {key_node}
-                **Treatment Variable**: {treatment}
-                **Parent Nodes of the Result Variable**: {parent_nodes}
-                **Causal Estimate Result**: {causal_estimate.value}
-                **P-value of Significance Test for Causal Estimate**: {p_value}
-                **Description from User**: {desc}
-                """
-                response1 = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
-                # Analysis for Refutation Analysis
-                prompt = f"""
-                I'm doing the refutation analysis for my treatment effect estimation, please help me to write a brief analysis in bullet points.
-                **Contents you need to incode**
-                1. Brief Introduction of the refutation analysis method we use
-                2. Summary of the refutation analysis result
-                3. Brief Interpretation of the plot
-                4. Conclude whether the treatment effect estimation is reliable or not based on the refutation analysis result
-                Here are some informations:
-                **Result Variable we care about**: {key_node}
-                **Causal Estimate Result**: {causal_estimate}
-                """
-                if figs == []:
-                    prompt += f"""
-                **Refutation Result**: 
-                {str(refutation)}
-                **Method We Use**: Use Data Subsampling to answer Does the estimated effect change significantly when we replace the given dataset with a randomly selected subset?
-                """
-                else:
-                    prompt += f"""
-                **Sensitivity Analysis Result**: 
-                {str(refutation)}
-                **Method We Use**:
-                Sensitivity analysis helps us study how robust an estimated effect is when the assumption of no unobserved confounding is violated. That is, how much bias does our estimate have due to omitting an (unobserved) confounder? Known as the omitted variable bias (OVB), it gives us a measure of how the inclusion of an omitted common cause (confounder) would have changed the estimated effect.
-                **Information in the plot**: 
-                a. The x-axis shows hypothetical partial R2 values of unobserved confounder(s) with the treatment. The y-axis shows hypothetical partial R2 of unobserved confounder(s) with the outcome. 
-                b. At <x=0,y=0>, the black diamond shows the original estimate (theta_s) without considering the unobserved confounders.
-                c. The contour levels represent adjusted estimate of the effect, which would be obtained if the unobserved confounder(s) had been included in the estimation model. 
-                d. The red contour line is the critical threshold where the adjusted effect goes to zero. Thus, confounders with such strength or stronger are sufficient to reverse the sign of the estimated effect and invalidate the estimate’s conclusions. 
-                e. The red triangle shows the estimated effect when the unobserved covariate has 1 or 2 or 3 times partial-R^2 of a chosen benchmark observed covariate with the outcome.
-                **Description from User**: {desc}
-                """
-                response2 = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
-                response = response1 + '\n' + response2
+            confounders = self._identify_confounders(treatment, key_node)
+            cont_confounders = [col for col in confounders if global_state.statistics.data_type_column[col]=='continuous']
+            add_confounder = input(f"These are Confounders between treatment {treatment} and outcome {key_node}: \n"
+                  f",".join(confounders),
+                  "Do you want to add any variables as confounders in your dataset? Please choose from the following:\n"
+                  f",".join(self.data.columns))
+            
+            ### Suggest method based on dataset characteristics
+            if len(confounders) > 5:
+                method = "dml"
+            if len(confounders) - len(cont_confounders) > len(cont_confounders):  # If more than half discrete confounders
+                method = "cem"
             else:
-                response = "We cannot identify a valid treatment effect estimand for your query, please adjust your query based on the causal graph and retry."
-                figs = []
+                method = "propensity_score"
 
-            return response, figs
-        
-        elif task == 'Heterogeneous Treatment Effect Estimation':
-            message = desc
-            class VarList(BaseModel):
-                treatment: str
-                confounders: list[str]
-            prompt = f"""You are a helpful assistant, please do the following tasks:
-            Firstly, identify the Treatment Variable in user's query and save it in treatment as a string
-            Secondly, identify a list of heterogeneous confounders and save it in confounders as a list of string, the list SHOULD NOT be empty
-            The variable name must be among these variables: {self.data.columns}
-            The outcome Y is {key_node}
-            """
-            parsed_response = self.call_LLM(VarList, prompt, message)
-            treatment = parsed_response.treatment
-            confounders = parsed_response.confounders
-            hte, hte_lower, hte_upper, figs = self.estimate_hte_effect(outcome=key_node, treatment=treatment, X_col=confounders, query=desc)
-            parent_nodes = list(self.G.predecessors(key_node))
-
-            prompt = f"""
-            I'm doing the Heterogeneous Treatment Effect Estimation and please help me to write a brief analysis in bullet points.
-            Here are some informations:
-            **Result Variable we care about**: {key_node}
-            **Treatment Variable**: {treatment}
-            **Heterogeneous Confounders we coutrol**: {confounders}
-            **Method we use**: 
-            Double Machine Learning, algorithm {self.global_state.inference.hte_algo_json['name']} with model_y={self.global_state.inference.hte_model_param['model_y']}, model_t={self.global_state.inference.hte_model_param['model_t']}
-            **Upper and Lower Bound of Confidence Inferval with P-value=0.05**: {hte_upper}, {hte_lower}
-            **Information in the plot**: Distribution of the HTE; Violin plot of the CATE grouped by: {confounders}
-            **Description from User**: {desc}
-            """
-            response = self.call_LLM(None, 'You are an expert in Causal Discovery.',prompt)
-            return response, figs
+            ### Run algorithm
+            if method == "dml":
+                ### Check Heterogeneous Variable
+                hte_variable = input("Is there any heterogeneous variables you care about? If no, we can suggest some variables with LLM.")
+                result = self.estimate_effect_dml(outcome=key_node, treatment=treatment, T0=control, T1=treat,
+                                                        X_col=hte_variable, W_col=confounders, query=desc)
+                response_ate, response_hte, figs = generate_analysis_econml(self.global_state, key_node, treatment, parent_nodes, hte_variable, confounders, result, desc)
+            elif method in ["cem", "propensity_score"]:
+                # Perform matching-based estimation
+                ate, matched_data, figs = self.estimate_causal_effect_matching(
+                    treatment=treatment,
+                    outcome=key_node,
+                    confounders=confounders,
+                    cont_confounders=cont_confounders,
+                    method=method,
+                    visualize=True
+                )
+                resonse = generate_analysis_matching(treatment, key_node, method, confounders, ate, desc)
         
         elif task == 'Anormaly Attribution':
             df, figs = self.attribute_anomalies(target_node=key_node, anomaly_samples=self.data, confidence_level=0.95)
             parent_nodes = list(self.G.predecessors(key_node))
-            prompt = f"""
-            I'm doing the Anormaly Attribution analysis and please help me to write a brief analysis in bullet points.
-            Here are some informations:
-            **Abnormal Variable we care about**: {key_node}
-            **Parent Nodes of the Abnormal Variable**: {parent_nodes}
-            **Anormaly Attribution Result Table**: 
-            {df.to_markdown()}
-            **Description from User**: {desc}
-            **Methods to calculate Anormaly Attribution Score**
-            We estimated the contribution of the ancestors of {key_node}, including {key_node} itself, to the observed anomaly.
-            In this method, we use invertible causal mechanisms to reconstruct and modify the noise leading to a certain observation. We then ask, “If the noise value of a specific node was from its ‘normal’ distribution, would we still have observed an anomalous value in the target node?”. The change in the severity of the anomaly in the target node after altering an upstream noise variable’s value, based on its learned distribution, indicates the node’s contribution to the anomaly. The advantage of using the noise value over the actual node value is that we measure only the influence originating from the node and not inherited from its parents.
-            """
-            response = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
+            response = generate_analysis_anormaly(df, key_node, parent_nodes, desc)
             return response, figs
-        
-                
+                       
         elif task == 'Distributional Change Attribution':
             # Split the dataset into two subsets (data_old and data_new)
             # For demonstration, we split the dataset into two halves
@@ -1078,116 +770,13 @@ class Analysis(object):
 
             # Perform distributional change attribution
             df, figs = self.attribute_distributional_changes(target_node=key_node, data_old=data_old, data_new=data_new)
-
-            # Generate a response using the LLM
-            prompt = f"""
-            I'm doing the Distributional Change Attribution analysis and please help me to write a brief analysis in bullet points.
-            Here are some informations:
-            **Target Variable we care about**: {key_node}
-            **Attribution Scores**: 
-            {df.to_markdown()}
-            **Description from User**: {desc}
-            **Methods to calculate Distributional Change Attribution**
-            We compared two datasets (old and new) to identify which nodes in the causal graph contributed most to the change in the distribution of the target variable.
-            """
-            response = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
+            response = generate_analysis_anormaly_dist(df, key_node, desc)
             return response, figs
-        
-        elif task == 'Matching-Based Effect Estimation':
-            # Parse treatment and outcome from the description
-            prompt = f"""
-            I'm doing the Matching-Based Effect Estimation analysis, please identify the Treatment Variable and Outcome Variable in this description:
-            {desc}
-            The variable names must be among these variables: {self.data.columns}.
-            Only return me with the variable names, do not include anything else.
-            """
-            response = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
-            # Extract treatment and outcome from the LLM response
-            try:
-                # Split the response by colon and extract the treatment and outcome variables
-                parts = response.split(":")
-                if len(parts) < 2:
-                    raise ValueError("LLM response does not contain a colon.")
-                
-                treatment = parts[1].split()[0].strip()  # Extracts the first word after the colon
-                outcome = parts[2].split()[0].strip()    # Extracts the first word after the second colon
-                # Validate that treatment and outcome are valid column names
-                if treatment not in self.data.columns or outcome not in self.data.columns:
-                    raise ValueError(f"Invalid treatment or outcome variable: {treatment}, {outcome}")
-            except (IndexError, ValueError) as e:
-                print(f"Error parsing LLM response: {e}")
-                print(f"LLM response: {response}")
-                return "Error: Unable to parse treatment and outcome variables from the LLM response.", []
-            # Identify confounders
-            confounders = self._identify_confounders(treatment, outcome)
-            cont_confounders = [col for col in confounders if self.data[col].nunique() > 10]  # Continuous confounders
-            # Suggest matching method based on dataset characteristics
-            if len(confounders) - len(cont_confounders) > 5:  # If more than 5 discrete confounders
-                method = "cem"
-            else:
-                method = "propensity_score"
-
-            # Perform matching-based estimation
-            ate, matched_data = self.estimate_causal_effect_matching(
-                treatment=treatment,
-                outcome=outcome,
-                confounders=confounders,
-                cont_confounders=cont_confounders,
-                method=method,
-                visualize=True
-            )
-
-            # Generate a response using the LLM
-            prompt = f"""
-            I'm doing the Matching-Based Effect Estimation analysis and please help me to write a brief analysis in bullet points.
-            Here are some informations:
-            **Treatment Variable**: {treatment}
-            **Outcome Variable**: {outcome}
-            **Matching Method**: {method}
-            **Confounders**: {confounders}
-            **Average Treatment Effect (ATE)**: {ate}
-            **Description from User**: {desc}
-            """
-            response = self.call_LLM(None, 'You are an expert in Causal Discovery.', prompt)
-            return response, []
         
         else:
             return None, None
 
-            
-##############
-def LLM_parse_query(args, format, prompt, message):
-    client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
-    if format:
-        completion = client.beta.chat.completions.parse(
-        model="gpt-4o-mini-2024-07-18",
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": message},
-        ],
-        response_format=format,
-        )
-        parsed_response = completion.choices[0].message.parsed
-    else: 
-        completion = client.beta.chat.completions.parse(
-        model="gpt-4o-mini-2024-07-18",
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": message},
-        ],
-        )
-        parsed_response = completion.choices[0].message.content
-    return parsed_response
-
-def main(global_state, args):
-    """
-    Modify the main function to call attribute_anomalies and save the results in ./auto_mpg_output.
-    """
-    print("Welcome to the Causal Analysis Demo using the sacchs dataset.\n")
-    
-    analysis = Analysis(global_state, args)
-    message = "What is the Heterogeneous Treatment Effect of PIP2 on PIP3"
-    
+def main(analysis, global_state):           
     results = analysis.estimate_effect_econml(
         treatment='PIP2',
         outcome='PIP3',
@@ -1209,14 +798,6 @@ def main(global_state, args):
         dist_fig_path = os.path.join(global_state.user_data.output_graph_dir, "cate_dist.png")
         analysis.plot_cate_distribution(cate_vals, dist_fig_path)
 
-    # # EXAMPLE: Test the new DML method
-    # dml_estimate, dml_p_value, refutaion, figs = analysis.estimate_causal_effect_dml(
-    #     treatment='PIP2',
-    #     outcome='PIP3',
-    #     target_units='treated'  # e.g., ATT
-    # )
-    # print("DML Estimate:", dml_estimate.value)
-    # print("p-value:", dml_p_value)
 
     # EXAMPLE: Compare with linear approach, specifying a different target_units
     lin_estimate, lin_p_value, refutaion, figs = analysis.estimate_causal_effect(
@@ -1252,62 +833,10 @@ def main(global_state, args):
     
     print(f"Average Treatment Effect (ATE) using CEM: {ate}")
 
-    
-    class InfList(BaseModel):
-                tasks: list[str]
-                descriptions: list[str]
-                key_node: list[str]
-    prompt = f"""You are a helpful assistant, please do the following tasks:
-            **Tasks*
-            Firstly please identify what tasks the user want to do and save them as a list in tasks.
-            Please choose among the following causal tasks, if there's no matched task just return an empty list 
-            You can only choose from the following tasks: 
-            1. Average Treatment Effect Estimation; 2. Heterogeneous Treatment Effect Estimation 3. Anormaly Attribution; 4. Feature Importance
-            Secondly, save user's description for their tasks as a list in descriptions, the length of description list must be the same with task list
-            Thirdly, save the key result variable user care about as a list, each task must have a key result variable and they can be the same, the length of result variable list must be the same with task list
-            key result variable must be among this list!
-            {global_state.user_data.processed_data.columns}
-            **Question Examples**
-            1. Average Treatment Effect Estimation:
-            What is the causal effect of introducing coding classes in schools on students' future career prospects?
-            What is the average treatment effect of a minimum wage increase on employment rates?
-            How much does the availability of free internet in rural areas improve educational outcomes?
-            How does access to affordable childcare affect women’s labor force participation?
-            What is the impact of reforestation programs on air quality in urban areas?
-            2. Heterogeneous Treatment Effect Estimation:
-            What is the heterogeneity in the impact of reforestation programs on air quality across neighborhoods with varying traffic density?
-            How does the introduction of mental health support programs in schools impact academic performance differently for students with varying levels of pre-existing stress?
-            Which demographic groups benefit most from telemedicine adoption in terms of reduced healthcare costs and improved health outcomes?
-            How does the effectiveness of renewable energy subsidies vary for households with different income levels or geographic locations?
-            3. Anormaly Attribution
-            How can we attribute a sudden increase in stock market volatility to specific economic events or market sectors?
-            Which variables (e.g., transaction amount, location, time) explain anomalies in loan repayment behavior?
-            What factors explain unexpected delays in surgery schedules or patient discharge times?
-            What are the root causes of deviations in supply chain delivery times?
-            What factors contribute most to unexpected drops in product sales during a specific period?
-            4. Feature Importance
-            What are the most influential factors driving credit score predictions?
-            What are the key factors influencing the effectiveness of a specific treatment or medication?
-            Which product attributes (e.g., price, brand, reviews) are the most influential in predicting online sales?
-            Which environmental variables (e.g., humidity, temperature, CO2 levels) are most important for predicting weather patterns?
-            What customer behaviors (e.g., browsing time, cart size) contribute most to predicting cart abandonment?
-            """
-    global_state.logging.downstream_discuss.append({"role": "user", "content": message})
-    parsed_response = LLM_parse_query(args, InfList, prompt, message)
-    tasks_list, descs_list, key_node_list = parsed_response.tasks, parsed_response.descriptions, parsed_response.key_node
-    print(tasks_list, descs_list, key_node_list)
-    #tasks_list, descs_list, key_node_list = ['Treatment Effect Estimation'], ['Analyze the treatment effect of PIP2 to PIP3.'], ['PIP3']
-    import matplotlib.image as mpimg
-    for i, (task, desc, key_node) in enumerate(zip(tasks_list, descs_list, key_node_list)):
-        print(task, desc, key_node)
-        response, figs = analysis.forward(task, desc, key_node)
-        print(response)
-        for file_name in figs:
-            img = mpimg.imread(f'{global_state.user_data.output_graph_dir}/{file_name}')  # Read the image
-            plt.imshow(img)  
 
 if __name__ == '__main__':
     import argparse
+    import pickle
     def parse_args():
         parser = argparse.ArgumentParser(description='Causal Learning Tool for Data Analysis')
 
@@ -1353,7 +882,7 @@ if __name__ == '__main__':
         parser.add_argument(
             '--apikey',
             type=str,
-            default=None, 
+            default=None,
             help='API Key'
         )
 
@@ -1402,19 +931,15 @@ if __name__ == '__main__':
         parser.add_argument(
             '--revised_graph',
             type=str,
-            default='postprocess/test_result/sachs_new/cot_all_relation/3_voting/revised_graph.npy',
+            default='dataset/sachs/base_graph.npy',
             help='Demo mode'
         )
 
         args = parser.parse_args()
         return args
-    args = parse_args()
-    global_state = global_state_initialization(args)
-    global_state.user_data.raw_data = pd.read_csv(args.data_file)
-    global_state.user_data.processed_data = global_state.user_data.raw_data
-    global_state.results.revised_graph = np.load(args.revised_graph)
-    global_state.user_data.output_graph_dir = args.output_graph_dir
-    global_state.statistics.description = 'Continuous Nonlinear dataset with 11 columns'
-    global_state.statistics.data_type_column = {key: 'continuous' for key in global_state.user_data.processed_data.columns}
+    with open('report/test/args.pkl', 'rb') as file:
+        args = pickle.load(file)
+    with open('report/test/global_state.pkl', 'rb') as file:
+        global_state = pickle.load(file)
 
     main(global_state, args)

@@ -13,7 +13,6 @@ from .base import Estimator
 # - LinearDML
 # - SparseLinearDML
 # - CausalForestDML
-# - metalearners
 
 class DML(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None):
@@ -36,29 +35,23 @@ class DML(Estimator):
         self.model.fit(y, T, X=X, W=W)
     
     def ate(self, data: pd.DataFrame):
-        """
-        Average Treatment Effect (ATE) over the entire dataset, passing X=None by default.
-        """
-        return self.model.ate(X=None)
+        ate = self.model.ate(X=None, T0=self.T0, T1=self.T1)
+        ate_lower, ate_upper = self.model.ate_interval(T0=self.T0, T1=self.T1)
+        return ate, ate_lower, ate_upper
 
     def att(self, data: pd.DataFrame):
-        """
-        Average Treatment effect on the Treated (ATT).
-        """
-        return self.model.att(X=None)
-
-    def cate(self, data: pd.DataFrame):
-        """
-        Conditional Average Treatment Effect for each row. 
-        Returns a 1D array with effect per instance.
-        """
-        X = data[self.X_col] if self.X_col else None
-        return self.model.effect(X)
+        X = data[self.X_col]
+        treated_indices = (data[self.T_col] == 1)
+        treated_effects = self.model.effect(X[treated_indices], T0=self.T0, T1=self.T1)
+        lower_bound, upper_bound = self.model.effect_interval(X[treated_indices], T0=self.T0, T1=self.T1)
+        att = np.mean(treated_effects)
+        att_lower, att_upper = np.mean(lower_bound), np.mean(upper_bound)
+        return att, att_lower, att_upper
 
     def hte(self, data: pd.DataFrame):
         X = data[self.X_col]
-        hte = self.model.effect(X)
-        hte_lower, hte_upper = self.model.effect_interval(X)
+        hte = self.model.effect(X, T0=self.T0, T1=self.T1)
+        hte_lower, hte_upper = self.model.effect_interval(X, T0=self.T0, T1=self.T1)
         return hte, hte_lower, hte_upper
 
     def test_algorithm(self):
@@ -86,20 +79,23 @@ class LinearDML(Estimator):
         self.model.fit(y, T, X=X, W=W)
         
     def ate(self, data: pd.DataFrame):
-        return self.model.ate(X=None)
+        ate = self.model.ate(X=None, T0=self.T0, T1=self.T1)
+        ate_lower, ate_upper = self.model.ate_interval(T0=self.T0, T1=self.T1)
+        return ate, ate_lower, ate_upper
 
     def att(self, data: pd.DataFrame):
-        return self.model.att(X=None)
-
-    def cate(self, data: pd.DataFrame):
-        X = data[self.X_col] if self.X_col else None
-        return self.model.effect(X)
-    
+        X = data[self.X_col]
+        treated_indices = (data[self.T_col] == 1)
+        treated_effects = self.model.effect(X[treated_indices], T0=self.T0, T1=self.T1)
+        lower_bound, upper_bound = self.model.effect_interval(X[treated_indices], T0=self.T0, T1=self.T1)
+        att = np.mean(treated_effects)
+        att_lower, att_upper = np.mean(lower_bound), np.mean(upper_bound)
+        return att, att_lower, att_upper
 
     def hte(self, data: pd.DataFrame):
         X = data[self.X_col]
-        hte = self.model.effect(X)
-        hte_lower, hte_upper = self.model.effect_interval(X)
+        hte = self.model.effect(X, T0=self.T0, T1=self.T1)
+        hte_lower, hte_upper = self.model.effect_interval(X, T0=self.T0, T1=self.T1)
         return hte, hte_lower, hte_upper
 
     def test_algorithm(self):
@@ -125,23 +121,25 @@ class SparseLinearDML(Estimator):
         W = data[self.W_col]
         # Run DML algorithm        
         self.model.fit(y, T, X=X, W=W)
-        
-    
+           
     def ate(self, data: pd.DataFrame):
-        return self.model.ate(X=None)
+        ate = self.model.ate(X=None, T0=self.T0, T1=self.T1)
+        ate_lower, ate_upper = self.model.ate_interval(T0=self.T0, T1=self.T1)
+        return ate, ate_lower, ate_upper
 
     def att(self, data: pd.DataFrame):
-        return self.model.att(X=None)
-
-    def cate(self, data: pd.DataFrame):
-        X = data[self.X_col] if self.X_col else None
-        return self.model.effect(X)
-
+        X = data[self.X_col]
+        treated_indices = (data[self.T_col] == 1)
+        treated_effects = self.model.effect(X[treated_indices], T0=self.T0, T1=self.T1)
+        lower_bound, upper_bound = self.model.effect_interval(X[treated_indices], T0=self.T0, T1=self.T1)
+        att = np.mean(treated_effects)
+        att_lower, att_upper = np.mean(lower_bound), np.mean(upper_bound)
+        return att, att_lower, att_upper
 
     def hte(self, data: pd.DataFrame):
         X = data[self.X_col]
-        hte = self.model.effect(X)
-        hte_lower, hte_upper = self.model.effect_interval(X)
+        hte = self.model.effect(X, T0=self.T0, T1=self.T1)
+        hte_lower, hte_upper = self.model.effect_interval(X, T0=self.T0, T1=self.T1)
         return hte, hte_lower, hte_upper
 
     def test_algorithm(self):
@@ -169,19 +167,23 @@ class CausalForestDML(Estimator):
         self.model.fit(y, T, X=X, W=W)
     
     def ate(self, data: pd.DataFrame):
-        return self.model.ate(X=None)
+        ate = self.model.ate(X=None, T0=self.T0, T1=self.T1)
+        ate_lower, ate_upper = self.model.ate_interval(T0=self.T0, T1=self.T1)
+        return ate, ate_lower, ate_upper
 
     def att(self, data: pd.DataFrame):
-        return self.model.att(X=None)
-
-    def cate(self, data: pd.DataFrame):
-        X = data[self.X_col] if self.X_col else None
-        return self.model.effect(X)
+        X = data[self.X_col]
+        treated_indices = (data[self.T_col] == 1)
+        treated_effects = self.model.effect(X[treated_indices], T0=self.T0, T1=self.T1)
+        lower_bound, upper_bound = self.model.effect_interval(X[treated_indices], T0=self.T0, T1=self.T1)
+        att = np.mean(treated_effects)
+        att_lower, att_upper = np.mean(lower_bound), np.mean(upper_bound)
+        return att, att_lower, att_upper
 
     def hte(self, data: pd.DataFrame):
         X = data[self.X_col]
-        hte = self.model.effect(X)
-        hte_lower, hte_upper = self.model.effect_interval(X)
+        hte = self.model.effect(X, T0=self.T0, T1=self.T1)
+        hte_lower, hte_upper = self.model.effect_interval(X, T0=self.T0, T1=self.T1)
         return hte, hte_lower, hte_upper
 
     def test_algorithm(self):
