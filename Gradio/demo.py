@@ -37,9 +37,12 @@ def init_latex():
     except Exception as e:
         print(f"LaTeX setup failed: {e}")
 
-# # Run initialization before importing plumbum
-# init_latex()
-# init_graphviz()
+def init_causallearn():
+    subprocess.run("git submodule update --recursive", shell=True, check=True)
+# Run initialization before importing plumbum
+init_latex()
+init_graphviz()
+init_causallearn()
 
 import gradio as gr
 import pandas as pd
@@ -206,7 +209,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             return process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn)
         
         if CURRENT_STAGE == 'important_feature_selection':
-            if (message == '') or ('no' in message.lower()):
+            if (message == '') or (' no ' in message.lower()) or ('none' in message.lower()):
                 chat_history.append((message, None))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn 
                 var_list = []
@@ -364,9 +367,11 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                         yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 else: # Only visualize variables user care about
                     chat_history.append((None, "Dimension Checking Summary:\n"\
-                                         "💡 Because of the high dimensionality, We will only visualize variables you care about."))
+                                         "💡 Because of the high dimensionality, We will only visualize 10 variables and include variables you care about."))
+                    other_variables = list(set(global_state.user_data.processed_data.columns) - (set(global_state.user_data.processed_data.columns)&set(global_state.user_data.important_features)))
+                    remaining_num = 10 - len(global_state.user_data.important_features)
+                    global_state.user_data.visual_selected_features = global_state.user_data.important_features+other_variables[:remaining_num+1]
                     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                    global_state.user_data.visual_selected_features = global_state.user_data.important_features
                     if REQUIRED_INFO["interactive_mode"]:
                         CURRENT_STAGE = 'stat_analysis'
                         yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -385,18 +390,18 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
         if CURRENT_STAGE == 'variable_selection':
+            print('select variable')
             if REQUIRED_INFO["interactive_mode"]:
                 var_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_var_selection_query(message, chat_history, download_btn, 'stat_analysis', args, global_state, REQUIRED_INFO, CURRENT_STAGE)
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 # Update the selected variables
                 global_state.user_data.visual_selected_features = var_list
             else: 
+                CURRENT_STAGE = 'ts_check_done'
                 try:
                     global_state.user_data.visual_selected_features = global_state.user_data.important_features[:10]
                 except:
-                    global_state.user_data.visual_selected_features = global_state.processed_data.columns[:10]
-                CURRENT_STAGE = 'ts_check_done'
-
+                    global_state.user_data.visual_selected_features = global_state.processed_data.columns[:10]             
         
         if CURRENT_STAGE == 'stat_analysis':
             # Statistical Analysis: Time Series
@@ -617,7 +622,8 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             my_visual_initial = Visualization(global_state)
             if global_state.results.raw_pos is None:
-                pos = my_visual_initial.get_pos(global_state.results.converted_graph)
+                data_idx = [global_state.user_data.processed_data.columns.get_loc(var) for var in global_state.user_data.visual_selected_features]
+                pos = my_visual_initial.get_pos(global_state.results.converted_graph[data_idx, :][:, data_idx])
                 global_state.results.raw_pos = pos
             if global_state.user_data.ground_truth is not None:
                 my_visual_initial.plot_pdag(global_state.user_data.ground_truth, f'{global_state.algorithm.selected_algorithm}_true_graph.jpg', global_state.results.raw_pos)

@@ -477,7 +477,7 @@ The JSON should be
         return response_doc
 
     def graph_revise_prompts(self):
-        if self.revised_graph:
+        if self.revised_graph is not None:
             repsonse = f"""
             By using the method mentioned in the Section 4.4, we provide a revise graph pruned with Bootstrap and LLM suggestion.
             Pruning results are as follows.

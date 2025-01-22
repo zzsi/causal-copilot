@@ -38,6 +38,8 @@ class Visualization(object):
         print(mat)
         algo = self.global_state.algorithm.selected_algorithm
         path = os.path.join(self.save_dir, save_path)
+        data_idx = [self.global_state.user_data.processed_data.columns.get_loc(var) for var in self.global_state.user_data.visual_selected_features]
+        mat = mat[data_idx, :][:, data_idx]
         edges_dict = convert_to_edges(algo, self.data.columns, mat)
         pag = PAG()
         for edge in edges_dict['certain_edges']:

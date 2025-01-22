@@ -31,9 +31,10 @@ class EDA(object):
 
         # Number of features and set the number of plots per row
         num_features = len(df.columns)
+        print(num_features)
         plots_per_row = 5
         num_rows = (num_features + plots_per_row - 1) // plots_per_row  # Calculate number of rows needed
-
+        print(num_rows)
         # Create a grid of subplots
         #plt.rcParams['font.family'] = 'Times New Roman'
         fig, axes = plt.subplots(nrows=num_rows, ncols=plots_per_row, figsize=(plots_per_row * 5, num_rows * 4))
