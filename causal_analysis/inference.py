@@ -225,62 +225,67 @@ class Analysis(object):
 
         # Generate density plot
         self._generate_density_plot(data, matched_data, treatment, valid_confounders, title)
-        # Generate KS scatter plot
-        self._generate_ks_scatter_plot(data, matched_data, treatment, valid_confounders, title)
-        # Generate ECDF plot
-        self._generate_ecdf_plot(data, matched_data, treatment, valid_confounders, title)
 
     def _generate_density_plot(self, data, matched_data, treatment, confounders, title):
         """
         Generate a single density plot with subplots for different confounders.
-        
-        :param data: The original dataset (before matching).
-        :param matched_data: The matched dataset (after matching).
-        :param treatment: The treatment variable column name.
-        :param confounders: List of confounder column names.
-        :param title: Title for the plot.
+        Each row corresponds to a confounder, with treated and control groups in separate subplots.
         """
+        sns.set_style("darkgrid")  
         num_confounders = len(confounders)
-        fig, axes = plt.subplots(nrows=num_confounders, ncols=1, figsize=(10, 6 * num_confounders))
+        fig, axes = plt.subplots(nrows=num_confounders, ncols=2, figsize=(20, 6 * num_confounders))
         
         if num_confounders == 1:
-            axes = [axes]  # Ensure axes is a list even if there's only one confounder
+            axes = [axes]  
 
         for i, confounder in enumerate(confounders):
-            ax = axes[i]
+            # Treated group (left subplot)
+            ax_treated = axes[i][0]
             sns.kdeplot(
                 data[data[treatment] == 1][confounder], 
                 label='Treated (Unmatched)', 
                 color='blue', 
-                linestyle='--',  # Use dashed line for unmatched data
-                ax=ax
-            )
-            sns.kdeplot(
-                data[data[treatment] == 0][confounder], 
-                label='Control (Unmatched)', 
-                color='orange', 
-                linestyle='--',  # Use dashed line for unmatched data
-                ax=ax
+                fill=True, 
+                alpha=0.3, 
+                ax=ax_treated
             )
             sns.kdeplot(
                 matched_data[matched_data[treatment] == 1][confounder], 
                 label='Treated (Matched)', 
+                color='orange', 
+                fill=True,  
+                alpha=0.3,  
+                ax=ax_treated
+            )
+            ax_treated.set_title(f'Treated Group: {confounder} ({title})')
+            ax_treated.set_xlabel(confounder)
+            ax_treated.set_ylabel('Density')
+            ax_treated.legend()
+            ax_treated.grid(True)
+
+            # Control group (right subplot)
+            ax_control = axes[i][1]
+            sns.kdeplot(
+                data[data[treatment] == 0][confounder], 
+                label='Control (Unmatched)', 
                 color='blue', 
-                linestyle='-',  # Use solid line for matched data
-                ax=ax
+                fill=True,  
+                alpha=0.3,  
+                ax=ax_control
             )
             sns.kdeplot(
                 matched_data[matched_data[treatment] == 0][confounder], 
                 label='Control (Matched)', 
                 color='orange', 
-                linestyle='-',  # Use solid line for matched data
-                ax=ax
+                fill=True, 
+                alpha=0.3,  
+                ax=ax_control
             )
-            ax.set_title(f'Density Plot: {confounder} ({title})')
-            ax.set_xlabel(confounder)
-            ax.set_ylabel('Density')
-            ax.legend()  # Add legend with labels
-            ax.grid(True)
+            ax_control.set_title(f'Control Group: {confounder} ({title})')
+            ax_control.set_xlabel(confounder)
+            ax_control.set_ylabel('Density')
+            ax_control.legend()
+            ax_control.grid(True)
 
         plt.tight_layout()
 
@@ -290,122 +295,7 @@ class Analysis(object):
         plt.savefig(density_plot_path, bbox_inches='tight')
         plt.close()
 
-    def _generate_ks_scatter_plot(self, data, matched_data, treatment, confounders, title):
-        """
-        Generate a scatter plot comparing KS statistics before and after matching.
-        """
-        # Lists to store KS statistics
-        ks_unmatched = []
-        ks_matched = []
-
-        for confounder in confounders:
-            # Compute ECDF for unmatched data
-            treated_unmatched = data[data[treatment] == 1][confounder].sort_values()
-            control_unmatched = data[data[treatment] == 0][confounder].sort_values()
-            
-            # Create a common grid for interpolation
-            grid = np.linspace(min(min(treated_unmatched), min(control_unmatched)), 
-                            max(max(treated_unmatched), max(control_unmatched)), 
-                            num=1000)
-            
-            # Compute ECDF values on the common grid
-            treated_unmatched_ecdf = np.searchsorted(treated_unmatched, grid, side='right') / len(treated_unmatched)
-            control_unmatched_ecdf = np.searchsorted(control_unmatched, grid, side='right') / len(control_unmatched)
-
-            # Compute ECDF for matched data
-            treated_matched = matched_data[matched_data[treatment] == 1][confounder].sort_values()
-            control_matched = matched_data[matched_data[treatment] == 0][confounder].sort_values()
-
-            # Ensure equal sample sizes by trimming the larger group
-            min_length = min(len(treated_matched), len(control_matched))
-            treated_matched = treated_matched[:min_length]
-            control_matched = control_matched[:min_length]
-
-            # Compute ECDF values on the common grid
-            treated_matched_ecdf = np.searchsorted(treated_matched, grid, side='right') / len(treated_matched)
-            control_matched_ecdf = np.searchsorted(control_matched, grid, side='right') / len(control_matched)
-
-            # Calculate the KS statistic (maximum vertical distance between CDFs)
-            ks_unmatched.append(np.max(np.abs(treated_unmatched_ecdf - control_unmatched_ecdf)))
-            ks_matched.append(np.max(np.abs(treated_matched_ecdf - control_matched_ecdf)))
-
-        # Create scatter plot
-        plt.figure(figsize=(8, 6))
-        plt.scatter(ks_unmatched, ks_matched, color='blue', alpha=0.6)
-
-        # Add labels for each confounder
-        for i, confounder in enumerate(confounders):
-            plt.text(ks_unmatched[i], ks_matched[i], confounder, fontsize=9, ha='right')
-
-        # Add reference line (y = x)
-        plt.plot([0, 1], [0, 1], color='red', linestyle='--', label='No Change (y = x)')
-
-        # Add labels and title
-        plt.xlabel('KS Statistic (Before Matching)')
-        plt.ylabel('KS Statistic (After Matching)')
-        plt.title(f'KS Statistic Comparison: {title}')
-        plt.legend()
-        plt.grid(True)
-
-        # Save the plot
-        scatter_plot_filename = f'ks_scatter_plot_{title.lower().replace(" ", "_")}.png'
-        scatter_plot_path = os.path.join(self.global_state.user_data.output_graph_dir, scatter_plot_filename)
-        plt.savefig(scatter_plot_path, bbox_inches='tight')
-        plt.close()
-
-    def _generate_ecdf_plot(self, data, matched_data, treatment, confounders, title):
-        """
-        Generate ECDF plots for each confounder before and after matching.
-        """
-        num_confounders = len(confounders)
-        fig, axes = plt.subplots(nrows=num_confounders, ncols=1, figsize=(10, 6 * num_confounders))
-        
-        if num_confounders == 1:
-            axes = [axes]  # Ensure axes is a list even if there's only one confounder
-
-        for i, confounder in enumerate(confounders):
-            ax = axes[i]
-            
-            # Compute ECDF for unmatched data
-            treated_unmatched = data[data[treatment] == 1][confounder].sort_values()
-            control_unmatched = data[data[treatment] == 0][confounder].sort_values()
-            treated_unmatched_ecdf = np.arange(1, len(treated_unmatched) + 1) / len(treated_unmatched)
-            control_unmatched_ecdf = np.arange(1, len(control_unmatched) + 1) / len(control_unmatched)
-
-            # Compute ECDF for matched data
-            treated_matched = matched_data[matched_data[treatment] == 1][confounder].sort_values()
-            control_matched = matched_data[matched_data[treatment] == 0][confounder].sort_values()
-
-            # Ensure equal sample sizes by trimming the larger group
-            min_length = min(len(treated_matched), len(control_matched))
-            treated_matched = treated_matched[:min_length]
-            control_matched = control_matched[:min_length]
-
-            treated_matched_ecdf = np.arange(1, len(treated_matched) + 1) / len(treated_matched)
-            control_matched_ecdf = np.arange(1, len(control_matched) + 1) / len(control_matched)
-
-            # Plot ECDFs for unmatched data
-            ax.plot(treated_unmatched, treated_unmatched_ecdf, label='Treated (Unmatched)', color='blue', linestyle='--')
-            ax.plot(control_unmatched, control_unmatched_ecdf, label='Control (Unmatched)', color='orange', linestyle='--')
-
-            # Plot ECDFs for matched data
-            ax.plot(treated_matched, treated_matched_ecdf, label='Treated (Matched)', color='blue', linestyle='-')
-            ax.plot(control_matched, control_matched_ecdf, label='Control (Matched)', color='orange', linestyle='-')
-
-            ax.set_title(f'ECDF Plot: {confounder} ({title})')
-            ax.set_xlabel(confounder)
-            ax.set_ylabel('Cumulative Probability')
-            ax.legend()
-            ax.grid(True)
-
-        plt.tight_layout()
-
-        # Save the ECDF plot
-        ecdf_plot_filename = f'ecdf_plot_{title.lower().replace(" ", "_")}.png'
-        ecdf_plot_path = os.path.join(self.global_state.user_data.output_graph_dir, ecdf_plot_filename)
-        plt.savefig(ecdf_plot_path, bbox_inches='tight')
-        plt.close()
-
+    
     def estimate_causal_effect_matching(self, treatment, outcome, confounders, cont_confounders, method="propensity_score", visualize=True):
         """
         Estimate the causal effect using matching methods.
