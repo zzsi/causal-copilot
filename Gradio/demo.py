@@ -857,12 +857,12 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             chat_history.append(("📝 Generate comprehensive report and it may take a few minutes, stay tuned...", None))
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             try_num = 1
-            report_path = call_report_generation(global_state, REQUIRED_INFO['output_dir'])
+            report_path = call_report_generation(global_state, args, REQUIRED_INFO['output_dir'])
             while not os.path.isfile(report_path) and try_num < 3:
                 chat_history.append((None, "❌ An error occurred during the Report Generation, we are trying again and please wait for a few minutes."))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 try_num += 1
-                report_path = call_report_generation(global_state, REQUIRED_INFO['output_dir'])
+                report_path = call_report_generation(global_state, args, REQUIRED_INFO['output_dir'])
             chat_history.append((None, "🎉 Analysis complete!"))
             chat_history.append((None, "📥 You can now download your detailed report using the download button below."))
             download_btn = gr.DownloadButton(
@@ -920,7 +920,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
         yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
         return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
     
-def call_report_generation(global_state, output_dir):
+def call_report_generation(global_state, args, output_dir):
     report_gen = Report_generation(global_state, args)
     report = report_gen.generation(debug=False)
     report_gen.save_report(report)
