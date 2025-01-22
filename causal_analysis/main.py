@@ -141,6 +141,7 @@ if __name__ == '__main__':
 
         args = parser.parse_args()
         return args
+    
     with open('report/test/args.pkl', 'rb') as file:
         args = pickle.load(file)
     with open('report/test/global_state.pkl', 'rb') as file:

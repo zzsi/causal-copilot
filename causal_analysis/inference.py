@@ -25,9 +25,9 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import NearestNeighbors
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from causal_analysis.hte.hte_filter import HTE_Filter
-from causal_analysis.hte.hte_params import HTE_Param_Selector
-from causal_analysis.hte.hte_program import HTE_Programming
+from causal_analysis.DML.dml_filter import HTE_Filter
+from causal_analysis.DML.dml_params import HTE_Param_Selector
+from causal_analysis.DML.dml_program import HTE_Programming
 from causal_analysis.help_functions import *
 from causal_analysis.analysis import *
 from global_setting.Initialize_state import global_state_initialization

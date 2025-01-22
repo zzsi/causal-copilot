@@ -20,7 +20,7 @@ from algorithm.program import Programming
 from algorithm.rerank import Reranker
 from postprocess.judge import Judge
 from postprocess.visualization import Visualization, convert_to_edges
-from causal_analysis.causal_analysis import Analysis
+from causal_analysis.inference import Analysis
 from postprocess.report_generation import Report_generation
 from user.discuss import Discussion
 from openai import OpenAI
