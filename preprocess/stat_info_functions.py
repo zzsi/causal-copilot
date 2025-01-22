@@ -89,7 +89,7 @@ def missing_ratio_table(global_state):
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     print(f"Saving missingness ratio table to {os.path.join(save_path, 'missing_ratios_table.jpg')}")
-    plt.savefig(os.path.join(save_path, 'missing_ratios_table.jpg', bbox_inches='tight', dpi=300))
+    plt.savefig(os.path.join(save_path, 'missing_ratios_table.jpg'), bbox_inches='tight', dpi=300)
 
     if sum(ratio_record.values()) == 0:
         global_state.statistics.missingness = False

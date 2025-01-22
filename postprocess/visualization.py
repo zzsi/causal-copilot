@@ -41,7 +41,10 @@ class Visualization(object):
         edges_dict = convert_to_edges(algo, self.data.columns, mat)
         pag = PAG()
         for edge in edges_dict['certain_edges']:
-            pag.add_edge(edge[0], edge[1], pag.directed_edge_name)
+            try:
+                pag.add_edge(edge[0], edge[1], pag.directed_edge_name)
+            except:
+                pass
         for edge in edges_dict['uncertain_edges']:
             pag.add_edge(edge[0], edge[1], pag.undirected_edge_name)
         for edge in edges_dict['bi_edges']:

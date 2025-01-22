@@ -459,7 +459,8 @@ The JSON should be
             1. Please write one paragraph to describe the causal relationship, list your analysis as bullet points clearly.
             2. If variable names have meanings, please integrate background knowledge of these variables in the causal relationship analysis.
             Please use variable names {variables[0]}, {variables[1]}, ... in your description.
-            3. Do not include any  Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
+            3. Do not simply list out all relationships! You should summarize them and give some conclusions.
+            4. Do not include any Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
             
             For example:
             The result graph shows the causal relationship among variables clearly. The {variables[1]} causes the {variables[0]}, ...

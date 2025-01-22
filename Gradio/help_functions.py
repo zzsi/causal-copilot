@@ -6,6 +6,7 @@ import traceback
 from preprocess.stat_info_functions import *
 from openai import OpenAI
 from pydantic import BaseModel
+import torch 
 
 def try_numeric(value):
     """Convert string to int or float if possible, otherwise return string"""
@@ -18,7 +19,8 @@ def try_numeric(value):
 
 def generate_hyperparameter_text(global_state):
     hyperparameter_text = ""
-    for param, details in global_state.algorithm.algorithm_arguments_json['hyperparameters'].items():
+    for param in global_state.algorithm.algorithm_arguments.keys():
+        details = global_state.algorithm.algorithm_arguments_json['hyperparameters'][param]
         value = details['value']
         explanation = details['explanation']
         hyperparameter_text += f"  Parameter: {param}\n"
@@ -127,8 +129,8 @@ def parse_var_selection_query(message, chat_history, download_btn, next_step, ar
     parsed_vars = LLM_parse_query(VarList, prompt, message, args)
     var_list = parsed_vars.variables
     if var_list == []:
-        chat_history.append((message, "Your variable selection query cannot be parsed, please follow the templete below and retry. \n"
-                                        "Templete: PKA, Jnk, PIP2, PIP3, Mek"))
+        chat_history.append((message, "❌ Your variable selection query cannot be parsed, please make sure variables are among your dataset features and retry. \n"
+                             ))
         return var_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
     else:
         print('var_list:', var_list)
@@ -233,9 +235,14 @@ def parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED
         chat_history.append((message, "💬 No algorithm is specified, will go to the next step..."))
         CURRENT_STAGE = 'report_generation_check'      
     elif message not in ['PC', 'FCI', 'CDNOD', 'GES', 'DirectLiNGAM', 'ICALiNGAM', 'NOTEARS', 'FGES', 'XGES', 'AcceleratedDirectLiNGAM']:
-        chat_history.append((message, "❌ The specified algorithm is not correct, please choose from the following: \n"
-                                    "PC, FCI, CDNOD, GES, DirectLiNGAM, ICALiNGAM, NOTEARS\n"
-                                    "Fast Version: FGES, XGES, AcceleratedDirectLiNGAM"))       
+        if torch.cuda.is_available():
+            chat_history.append((message, "❌ The specified algorithm is not correct, please choose from the following: \n"
+                                        "PC, FCI, CDNOD, GES, DirectLiNGAM, ICALiNGAM, NOTEARS\n"
+                                        "Fast Version: FGES, XGES, AcceleratedDirectLiNGAM"))   
+        else:    
+            chat_history.append((message, "❌ The specified algorithm is not correct, please choose from the following: \n"
+                                        "PC, FCI, CDNOD, GES, DirectLiNGAM, ICALiNGAM, NOTEARS\n"
+                                        "Fast Version: FGES, XGES."))   
     else:  
         global_state.algorithm.selected_algorithm = message
         chat_history.append((message, f"✅ We will rerun the Causal Discovery Procedure with the Selected algorithm: {global_state.algorithm.selected_algorithm}\n"
@@ -252,14 +259,23 @@ def parse_hyperparameter_query(message, chat_history, download_btn, global_state
             else:
                 try:
                     specified_params = {line.split(':')[0].strip(): line.split(':')[1].strip() for line in message.strip().split('\n')}
-                    original_params = global_state.algorithm.algorithm_arguments_json['hyperparameters']
+                    print('specified_params',specified_params)
+                    original_params = global_state.algorithm.algorithm_arguments
+                    print('original_params',original_params)
                     common_keys = original_params.keys() & specified_params.keys()
+                    if len(common_keys)==0:
+                        print(1)
+                        chat_history.append((None, "❌ The specified parameters are not correct, please follow the template!"))
+                        return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
+
                     for key in common_keys:
                         global_state.algorithm.algorithm_arguments_json['hyperparameters'][key]['value'] = try_numeric(specified_params[key])
                         global_state.algorithm.algorithm_arguments_json['hyperparameters'][key]['explanation'] = 'User specified'
-                    print(global_state.algorithm.algorithm_arguments_json['hyperparameters'])
+                        global_state.algorithm.algorithm_arguments[key] = try_numeric(specified_params[key])
+                    print(global_state.algorithm.algorithm_arguments)
                     hyperparameter_text, global_state = generate_hyperparameter_text(global_state) 
-                    chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Specified parameters: {hyperparameter_text}\n"))
+                    chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Specified parameters: \n"
+                                         f"{hyperparameter_text}"))
                     CURRENT_STAGE = 'algo_running' 
                 except Exception as e:
                     print(e)
@@ -439,3 +455,4 @@ def parse_inf_discuss_query(message, chat_history, download_btn, args, global_st
             tasks_list, descs_list, key_node_list, reasons, chat_history, download_btn, global_state, REQUIRED_INFO = parse_inference_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO)                   
     return chat_history, download_btn, global_state, REQUIRED_INFO            
                 
+
