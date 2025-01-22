@@ -3,7 +3,7 @@ import pandas as pd
 from typing import Union, Dict, List, Tuple
 
 class Estimator:
-    def __init__(self, params: Dict, y_col: str, T_col: str, X_col: list, W_col: list=None):
+    def __init__(self, params: Dict, y_col: str, T_col: str, T0: int, T1: int, X_col: list, W_col: list=None):
         self._params = {}
         self._params.update(params)
         self.model = None 
@@ -11,6 +11,8 @@ class Estimator:
         self.T_col = T_col
         self.X_col = X_col
         self.W_col = W_col
+        self.T0 = T0 
+        self.T1 = T1
 
     def get_params(self):
         raise NotImplementedError("This method should be implemented by subclasses")
