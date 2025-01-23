@@ -18,11 +18,11 @@ class HTE_Param_Selector(object):
         node_type = global_state.statistics.data_type_column[target_node]
 
         if node_type =='continuous':
-            prompt_path = 'causal_analysis/hte/context/regressor_select_prompt.txt'
-            algo_text_path = 'causal_analysis/hte/context/regressor.txt'
+            prompt_path = 'causal_analysis/DRL/context/regressor_select_prompt.txt'
+            algo_text_path = 'causal_analysis/DRL/context/regressor.txt'
         else:
-            prompt_path = 'causal_analysis/hte/context/classifier_select_prompt.txt'
-            algo_text_path = 'causal_analysis/hte/context/classifier.txt'
+            prompt_path = 'causal_analysis/DRL/context/classifier_select_prompt.txt'
+            algo_text_path = 'causal_analysis/DRL/context/classifier.txt'
         prompt = open(prompt_path, "r").read()
         algo_text = open(algo_text_path, "r").read()
         
@@ -75,11 +75,11 @@ class HTE_Param_Selector(object):
         # Set up the Hyperparameters
         # Load hyperparameters prompt template
         import json
-        import hte.wrappers as wrappers
+        import DRL.wrappers as wrappers
 
         y_prompt = self.prompt_generation(self.y_col, global_state)
         T_prompt = self.prompt_generation(self.T_col, global_state)
-        final_prompt = open('causal_analysis/hte/context/final_stage_select_prompt.txt', "r").read()
+        final_prompt = open('causal_analysis/DRL/context/final_stage_select_prompt.txt', "r").read()
 
         global_state.inference.hte_model_y_json = None
         while not global_state.inference.hte_model_y_json:

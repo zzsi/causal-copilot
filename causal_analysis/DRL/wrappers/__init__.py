@@ -1,6 +1,6 @@
 from .estimator import *
 
-__all__ = ['DML', 'LinearDML', 'SparseLinearDML', 'CausalForestDML', 'metalearners']
+__all__ = ['DRL', 'LinearDRL', 'SparseLinearDRL', 'ForestDRL', 'metalearners']
 
 
 
