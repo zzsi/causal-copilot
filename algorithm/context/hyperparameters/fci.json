@@ -9,16 +9,18 @@
     },
     "reasoning": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
   },
-  "independence_test_method": {
+  "indep_test": {
     "meaning": "Independence test method",
     "suggested_values": {
       "default": "fisherz",
       "continuous": "fisherz",
       "discrete": "chisq",
-      "mixed": "gsq"
+      "mixed": "gsq",
+      "robust_nonlinear": "kci",
+      "fast_robust_nonlinear": "fastkci",
+      "approximate_nonlinear": "rcit"
     },
-    "reasoning": "Choose based on data type: 'fisherz' for continuous, 'chisq' for discrete, 'gsq' for mixed data types.",
-    "context_file": "algorithm/context/tools/independence_test.txt"
+    "reasoning": "Choose based on data type: 'fisherz' for linear continuous, 'chisq' for discrete, 'gsq' for simplied mixed data types., 'kci' for general nonlinear data, 'fastkci' is a fast version of kci for nonlinear data, 'rcit' is a fast version of kci approximation for nonlinear data."
   },
   "depth": {
     "meaning": "Maximum depth for fast adjacency search",

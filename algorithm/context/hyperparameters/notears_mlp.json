@@ -1,0 +1,100 @@
+{
+  "algorithm_name": "NOTEARSNonlinear",
+  "lambda1": {
+    "meaning": "L1 regularization parameter for sparsity",
+    "suggested_values": {
+      "default": 0.01,
+      "sparse": 0.1,
+      "dense": 0.001
+    },
+    "reasoning": "Higher values promote sparser graphs, lower values allow more connections."
+  },
+  "lambda2": {
+    "meaning": "L2 regularization parameter for weights",
+    "suggested_values": {
+      "default": 0.01,
+      "strong": 0.1,
+      "weak": 0.001
+    },
+    "reasoning": "Controls overfitting of neural network weights."
+  },
+  "max_iter": {
+    "meaning": "Maximum number of dual ascent steps during optimization",
+    "suggested_values": {
+      "default": 100,
+      "quick": 50,
+      "thorough": 200
+    },
+    "reasoning": "Increase for more complex graphs or if convergence is slow."
+  },
+  "h_tol": {
+    "meaning": "Exit tolerance for h(W) during optimization",
+    "suggested_values": {
+      "default": 1e-8,
+      "strict": 1e-10,
+      "relaxed": 1e-6
+    },
+    "reasoning": "Lower values enforce stricter acyclicity. Use lower values for more accurate results."
+  },
+  "rho_max": {
+    "meaning": "Maximum value for rho in augmented Lagrangian",
+    "suggested_values": {
+      "default": 1e+16,
+      "conservative": 1e+12,
+      "aggressive": 1e+20
+    },
+    "reasoning": "Upper bound for optimization penalty parameter. Increase if convergence is difficult."
+  },
+  "w_threshold": {
+    "meaning": "Threshold for edge weights in adjacency matrix",
+    "suggested_values": {
+      "default": 0.3,
+      "conservative": 0.5,
+      "liberal": 0.1
+    },
+    "reasoning": "Higher values lead to sparser graphs by pruning weak connections."
+  },
+  "hidden_layers": {
+    "meaning": "Architecture of hidden layers in MLP (last element must be 1)",
+    "suggested_values": {
+      "default": [10, 1],
+      "simple": [5, 1],
+      "complex": [20, 10, 1],
+      "deep": [10, 10, 5, 1]
+    },
+    "reasoning": "Deeper/wider networks for more complex relationships, but risk overfitting."
+  },
+  "model_type": {
+    "meaning": "Type of nonlinear model to use",
+    "suggested_values": {
+      "default": "mlp",
+      "alternative": "sob"
+    },
+    "reasoning": "MLP for general nonlinear relationships, Sobolev for smoother functions."
+  },
+  "bias": {
+    "meaning": "Whether to include bias terms in the model",
+    "suggested_values": {
+      "default": true,
+      "no_bias": false
+    },
+    "reasoning": "Include bias for more flexible function approximation."
+  },
+  "expansions": {
+    "meaning": "Number of basis expansions for Sobolev model",
+    "suggested_values": {
+      "default": 10,
+      "simple": 5,
+      "complex": 20
+    },
+    "reasoning": "Only used when model_type='sob'. More expansions for more complex functions."
+  },
+  "device_type": {
+    "meaning": "Device to use for computation",
+    "suggested_values": {
+      "default": "cpu",
+      "gpu": "gpu"
+    },
+    "reasoning": "Use GPU if available and data size is large enough to benefit from parallelization."
+  }
+} 

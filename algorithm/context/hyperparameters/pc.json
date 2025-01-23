@@ -15,10 +15,12 @@
       "default": "fisherz",
       "continuous": "fisherz",
       "discrete": "chisq",
-      "mixed": "gsq"
+      "mixed": "gsq",
+      "robust_nonlinear": "kci",
+      "fast_robust_nonlinear": "fastkci",
+      "approximate_nonlinear": "rcit"
     },
-    "reasoning": "Choose based on data type: 'fisherz' for continuous, 'chisq' for discrete, 'gsq' for mixed data types.",
-    "context_file": "algorithm/context/tools/independence_test.txt"
+    "reasoning": "Choose based on data type: 'fisherz' for linear continuous, 'chisq' for discrete, 'gsq' for simplied mixed data types., 'kci' for general nonlinear data, 'fastkci' is a fast version of kci for nonlinear data, 'rcit' is a fast version of kci approximation for nonlinear data."
   },
   "depth": {
     "meaning": "Maximum depth for fast adjacency search",

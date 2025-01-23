@@ -1121,6 +1121,8 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
         ])
         return updates
 
+  
+
 
     def enable_all_inputs(all_demo_buttons):
         """Re-enable all interactive elements"""

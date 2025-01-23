@@ -1,0 +1,27 @@
+### MBOR (Markov Blanket and Optimal Reinsertion)
+
+- **Description**: MBOR is a hybrid Markov Blanket discovery algorithm that combines traditional MB learning with an optimal reinsertion phase. It first identifies a candidate MB and then optimally reinserts potentially missed variables.
+
+- **Assumptions**
+    - **Faithfulness**: The independence relationships in the data correspond to the graph structure
+    - **Causal Sufficiency**: No hidden confounders exist in the system
+    - **Correct CI Tests**: The conditional independence tests are reliable
+    - **DAG Structure**: The underlying causal structure is a directed acyclic graph
+
+- **Advantages**
+    - More robust to false negatives through reinsertion phase
+    - Better handles complex dependency structures
+    - Reduces the impact of early mistakes in MB discovery
+    - Generally achieves better recall than traditional MB algorithms
+
+- **Limitations**
+    - Higher computational cost due to reinsertion phase
+    - May be sensitive to the choice of independence test
+    - Requires larger sample sizes for reliable reinsertion decisions
+    - Can be affected by local optimality in the reinsertion phase
+
+- **Suitable Cases**
+    - Applications where missing important variables is costly
+    - Datasets with complex dependency structures
+    - Scenarios where high recall is more important than computational speed
+    - Cases where traditional MB methods miss important variables 

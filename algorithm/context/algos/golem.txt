@@ -1,0 +1,25 @@
+### GOLEM (Gradient-based Optimization of Local score with Enhanced Memory)
+
+- **Description**: An efficient variant of NOTEARS that improves convergence speed and memory efficiency while maintaining similar accuracy in causal discovery.
+
+- **Assumptions**:
+    - **Acyclicity**: The underlying causal structure is a DAG.
+    - **Linearity**: Assumes linear relationships between variables.
+    - **Noise Model**: Supports both equal and non-equal variance assumptions.
+    - **No Hidden Confounders**: All relevant variables are observed.
+
+- **Advantages**:
+    - **Efficiency**: Faster convergence than original NOTEARS.
+    - **Memory Efficient**: Better memory utilization for large-scale problems.
+    - **Flexible Noise Modeling**: Supports both equal and non-equal variance assumptions.
+    - **Stability**: More stable optimization process.
+
+- **Limitations**:
+    - **Linear Relationships**: Base version assumes linear relationships.
+    - **Sensitivity to Parameters**: Performance can depend on hyperparameter choices.
+    - **Local Optima**: May converge to local optima.
+
+- **Suitable Cases**:
+    - **Large-scale Problems**: Especially effective for high-dimensional data.
+    - **Memory-constrained Environments**: Better memory efficiency than NOTEARS.
+    - **Linear Causal Relationships**: When relationships are approximately linear. 

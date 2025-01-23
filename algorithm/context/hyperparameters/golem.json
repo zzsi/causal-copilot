@@ -1,0 +1,48 @@
+{
+  "algorithm_name": "GOLEM",
+  "lambda_1": {
+    "meaning": "L1 regularization parameter",
+    "suggested_values": {
+      "default": 0.02,
+      "sparse": 0.05,
+      "very_sparse": 0.1,
+      "dense": 0.01
+    },
+    "reasoning": "Controls sparsity of the graph structure. Higher values lead to sparser graphs."
+  },
+  "lambda_2": {
+    "meaning": "DAG constraint parameter",
+    "suggested_values": {
+      "default": 5.0,
+      "strict": 10.0,
+      "relaxed": 2.0
+    },
+    "reasoning": "Controls strength of DAG constraint. Higher values enforce stricter acyclicity."
+  },
+  "learning_rate": {
+    "meaning": "Learning rate for optimization",
+    "suggested_values": {
+      "default": 0.001,
+      "slow": 0.0001,
+      "fast": 0.01
+    },
+    "reasoning": "Controls optimization step size. Lower values for stability, higher for faster convergence."
+  },
+  "num_iter": {
+    "meaning": "Number of optimization iterations",
+    "suggested_values": {
+      "default": 100000,
+      "quick": 50000,
+      "thorough": 200000
+    },
+    "reasoning": "More iterations may improve results but increase computation time."
+  },
+  "equal_variances": {
+    "meaning": "Whether to assume equal noise variances",
+    "suggested_values": {
+      "default": true,
+      "alternative": false
+    },
+    "reasoning": "True for simpler model, False for more flexible noise modeling."
+  }
+} 

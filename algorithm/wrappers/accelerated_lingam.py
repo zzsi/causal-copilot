@@ -2,10 +2,15 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Tuple
 
+# use the local causal-learn package
 import sys
-sys.path.append('algorithm')
+import os
+root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+algorithm_dir = os.path.join(root_dir, 'algorithm')
+sys.path.append(root_dir)
+sys.path.append(algorithm_dir)
 
-from .base import CausalDiscoveryAlgorithm
+from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 
 from algorithm.evaluation.evaluator import GraphEvaluator
 from culingam.directlingam import DirectLiNGAM as AcDirectLiNGAM

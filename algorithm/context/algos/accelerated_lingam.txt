@@ -1,0 +1,18 @@
+### AcceleratedLiNGAM
+
+- **Description**: The AcceleratedLiNGAM algorithm is a GPU-accelerated version of LiNGAM that performs linear non-Gaussian acyclic model estimation in parallel on GPU.
+
+- **Advantages**
+    - Significantly faster than standard LiNGAM implementations due to parallel processing of matrix operations on GPU
+    - Maintains the unique identification properties of LiNGAM
+    - Efficient for large-scale datasets with many variables
+
+- **Limitations**
+    - GPU memory constraints limit the maximum size of input data
+    - Still requires the core LiNGAM assumptions of linearity and non-Gaussianity
+    - Matrix operations precision may be affected by GPU floating point arithmetic
+
+- **Suitable Cases**:
+    - Large-scale causal discovery problems in econometrics, neuroscience, and finance
+    - Scenarios with many variables where computational speed is crucial
+    - Applications with known non-Gaussian noise distributions requiring fast processing

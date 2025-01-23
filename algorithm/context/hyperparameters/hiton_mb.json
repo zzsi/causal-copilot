@@ -1,0 +1,23 @@
+{
+  "algorithm_name": "HITON_MB",
+  "alpha": {
+    "meaning": "Significance level for conditional independence tests",
+    "suggested_values": {
+      "default": 0.05,
+      "small_sample": 0.1,
+      "large_sample": 0.01,
+      "conservative": 0.001
+    },
+    "reasoning": "Use 0.1 for small samples (<500) to maintain statistical power. Use 0.05 for moderate samples (500-10000). Use 0.01 for large samples (>10000). Use 0.001 for very conservative testing when false positives must be minimized."
+  },
+  "is_discrete": {
+    "meaning": "Whether the data contains discrete variables",
+    "suggested_values": {
+      "default": true,
+      "continuous_data": false,
+      "discrete_data": true,
+      "mixed_data": true
+    },
+    "reasoning": "Set to true when working with discrete or mixed data types to use appropriate independence tests. Set to false for purely continuous data to optimize test selection."
+  }
+} 

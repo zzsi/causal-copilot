@@ -4,14 +4,16 @@ from typing import Dict, Tuple
 
 # use the local causal-learn package
 import sys
+import os
+root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+algorithm_dir = os.path.join(root_dir, 'algorithm')
+sys.path.append(root_dir)
+sys.path.append(algorithm_dir)
 
-sys.path.insert(0, 'causal-learn')
-sys.path.append('algorithm')
+from externals.acceleration.fges.fges import FGES as Fges
+from externals.acceleration.fges.SEMScore import SEMBicScore
 
-from acceleration.fges.fges import FGES as Fges
-from acceleration.fges.SEMScore import SEMBicScore
-
-from .base import CausalDiscoveryAlgorithm
+from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
 
 

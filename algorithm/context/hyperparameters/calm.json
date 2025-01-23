@@ -1,0 +1,56 @@
+{
+  "algorithm_name": "CALM",
+  "lambda1": {
+    "meaning": "Coefficient for the L0 penalty, which encourages sparsity in the learned graph",
+    "suggested_values": {
+      "default": 0.005,
+      "sparse_graph": 0.01,
+      "dense_graph": 0.001
+    },
+    "reasoning": "Controls the sparsity of the learned graph. Higher values lead to sparser graphs. Use larger values for sparse graphs and smaller values for dense graphs."
+  },
+  "alpha": {
+    "meaning": "Significance level for moral graph estimation using IAMB",
+    "suggested_values": {
+      "default": 0.01,
+      "small_sample": 0.05,
+      "large_sample": 0.001
+    },
+    "reasoning": "Controls the significance level for independence tests in moral graph estimation. Use larger values for small samples to avoid missing edges, and smaller values for large samples to maintain precision."
+  },
+  "tau": {
+    "meaning": "Temperature parameter for the Gumbel-Sigmoid approximation",
+    "suggested_values": {
+      "default": 0.5,
+      "high_precision": 0.2,
+      "high_recall": 0.8
+    },
+    "reasoning": "Controls the sharpness of the Gumbel-Sigmoid approximation. Lower values make it closer to a hard threshold but may make optimization harder."
+  },
+  "rho_init": {
+    "meaning": "Initial value of the penalty parameter for the acyclicity constraint",
+    "suggested_values": {
+      "default": 1e-5,
+      "small_graph": 1e-4,
+      "large_graph": 1e-6
+    },
+    "reasoning": "Starting value for the penalty parameter in the quadratic penalty method. Should be small enough to allow initial exploration but not too small to slow convergence."
+  },
+  "rho_mult": {
+    "meaning": "Multiplication factor for increasing rho in each iteration",
+    "suggested_values": {
+      "default": 3,
+      "aggressive": 5,
+      "conservative": 2
+    },
+    "reasoning": "Controls how quickly the penalty parameter increases. Larger values lead to faster convergence but may miss better solutions."
+  },
+  "standardize": {
+    "meaning": "Whether to standardize the input data",
+    "suggested_values": {
+      "default": true,
+      "no_standardization": false
+    },
+    "reasoning": "Standardization is recommended in most cases as it helps with numerical stability and improves performance. Only set to false if there's a specific reason to preserve the original scale."
+  }
+} 

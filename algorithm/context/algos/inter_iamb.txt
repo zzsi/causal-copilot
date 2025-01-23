@@ -1,0 +1,27 @@
+### InterIAMB (Interleaved Incremental Association Markov Blanket)
+
+- **Description**: InterIAMB is an improved version of the IAMB algorithm that interleaves the growing and shrinking phases of MB discovery. It uses a forward-backward strategy with interleaved steps to identify the Markov Blanket more efficiently.
+
+- **Assumptions**
+    - **Faithfulness**: The probability distribution is faithful to the underlying DAG
+    - **Causal Sufficiency**: All relevant variables are measured
+    - **Reliability**: The conditional independence tests are reliable
+    - **Markov Condition**: Each variable is conditionally independent of its non-descendants given its parents
+
+- **Advantages**
+    - More efficient than standard IAMB due to interleaved phases
+    - Reduces the number of false positives during the growing phase
+    - Generally requires fewer conditional independence tests
+    - Better handles datasets with strong dependencies
+
+- **Limitations**
+    - Still sensitive to the reliability of independence tests
+    - Performance depends on the ordering of variables
+    - May struggle with weak dependencies
+    - Requires sufficient sample size for reliable testing
+
+- **Suitable Cases**
+    - Large datasets where computational efficiency is important
+    - Cases where false positives need to be minimized
+    - Applications requiring reliable MB discovery
+    - Scenarios with strong variable dependencies 

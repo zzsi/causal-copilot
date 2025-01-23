@@ -4,13 +4,17 @@ from typing import Dict, Tuple
 
 # use the local causal-learn package
 import sys
+import os
+root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+algorithm_dir = os.path.join(root_dir, 'algorithm')
+sys.path.append(root_dir)
+sys.path.append(algorithm_dir)
 
-sys.path.append('algorithm')
+from externals.acceleration.pc.pc import pc
 
-from acceleration.pc.pc import pc
-
-from .base import PC
+from algorithm.wrappers.pc import PC
 from algorithm.evaluation.evaluator import GraphEvaluator
+from causallearn.graph.GraphClass import CausalGraph, GeneralGraph
 
 class AcceleratedPC(PC):
     def __init__(self, params: Dict = {}):

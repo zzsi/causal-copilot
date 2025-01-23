@@ -1,0 +1,10 @@
+### AcceleratedPC
+
+- **Description**: The AcceleratedPC algorithm is a GPU-accelerated constraint-based method that conduct the conditional independence test in parallel on GPU.
+- **Advantages**
+    - Extremely efficient for large-scale datasets due to its ability to parallely run massive conditional independence tests.
+- **Limitations**
+    - The GPU usage is limited by the GPU memory size. The memory usage is proportional to the number of variables and the sample size.
+- **Suitable Cases**:
+    - Large datasets where computational efficiency is crucial.
+    - Scenarios where all relevant variables are observed and the underlying causal structure is assumed to be acyclic. 
