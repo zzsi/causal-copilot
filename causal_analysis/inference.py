@@ -25,9 +25,12 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import NearestNeighbors
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from causal_analysis.hte.hte_filter import HTE_Filter
-from causal_analysis.hte.hte_params import HTE_Param_Selector
-from causal_analysis.hte.hte_program import HTE_Programming
+from causal_analysis.DML.hte_filter import HTE_Filter as DML_HTE_Filter# Ask whether we should rename these because we changed the directory name for uniformity
+from causal_analysis.DML.hte_params import HTE_Param_Selector as DML_HTE_Param_Selector
+from causal_analysis.DML.hte_program import HTE_Programming as DML_HTE_Programming
+from causal_analysis.DRL.hte_filter import HTE_Filter as DRL_HTE_Filter
+from causal_analysis.DRL.hte_params import HTE_Param_Selector as DRL_Param_Selector
+from causal_analysis.DRL.hte_program import HTE_Programming as DRL_HTE_Programming
 from causal_analysis.help_functions import *
 from causal_analysis.analysis import *
 from global_setting.Initialize_state import global_state_initialization
@@ -525,11 +528,11 @@ class Analysis(object):
             self.data = pd.concat([self.data, W], axis=1)
             self.global_state.user_data.processed_data = self.data
         # Algorithm selection and deliberation
-        filter = HTE_Filter(self.args)
+        filter = DML_HTE_Filter(self.args)
         self.global_state = filter.forward(self.global_state, query)
-        reranker = HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
+        reranker = DML_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
         self.global_state = reranker.forward(self.global_state)
-        programmer = HTE_Programming(self.args, y_col=outcome, T_col=treatment, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
+        programmer = DML_HTE_Programming(self.args, y_col=outcome, T_col=treatment, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
         # Estimate ate, att, hte
         ate, ate_lower, ate_upper = programmer.forward(self.global_state, task='ate')
         att, att_lower, att_upper = programmer.forward(self.global_state, task='att')
@@ -541,7 +544,7 @@ class Analysis(object):
                   'att': [att, att_lower, att_upper],
                   'hte': [hte, hte_lower, hte_upper]}
         return result
-
+# TODO: Add estimate_effect_drl function here and add to the forward logic. Context What do we change. 
     def counterfactual_estimation(self, treatment_name, response_name, observed_val = None, intervened_treatment = None):
         # observed_val should be a df as the processed data
         if observed_val is None:
@@ -716,9 +719,9 @@ class Analysis(object):
                   "Do you want to add any variables as confounders in your dataset? Please choose from the following:\n"
                   f",".join(self.data.columns))
             
-            ### Suggest method based on dataset characteristics
+            ### Suggest method based on dataset characteristics TODO: How to add DML or DRL do we make an LLM call to select??
             if len(confounders) > 5:
-                method = "dml"
+                method = "dml" # Add drl here
             if len(confounders) - len(cont_confounders) > len(cont_confounders):  # If more than half discrete confounders
                 method = "cem"
             else:
