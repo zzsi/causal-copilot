@@ -17,12 +17,14 @@ class HTE_Param_Selector(object):
     def prompt_generation(self, target_node, global_state):
         node_type = global_state.statistics.data_type_column[target_node]
 
-        if node_type =='continuous':
+        if node_type =='Continuous':
             prompt_path = 'causal_analysis/DML/context/regressor_select_prompt.txt'
             algo_text_path = 'causal_analysis/DML/context/regressor.txt'
+            discrete = False
         else:
             prompt_path = 'causal_analysis/DML/context/classifier_select_prompt.txt'
             algo_text_path = 'causal_analysis/DML/context/classifier.txt'
+            discrete = True
         prompt = open(prompt_path, "r").read()
         algo_text = open(algo_text_path, "r").read()
         
@@ -34,7 +36,7 @@ class HTE_Param_Selector(object):
                 }
         for placeholder, value in replacement.items():
             prompt = prompt.replace(placeholder, value)
-        return prompt
+        return prompt, discrete
     
     def model_suggestion(self, client, prompt):
         response = client.chat.completions.create(
@@ -77,8 +79,8 @@ class HTE_Param_Selector(object):
         import json
         import DML.wrappers as wrappers
 
-        y_prompt = self.prompt_generation(self.y_col, global_state)
-        T_prompt = self.prompt_generation(self.T_col, global_state)
+        y_prompt, discrete_y = self.prompt_generation(self.y_col, global_state)
+        T_prompt, discrete_T = self.prompt_generation(self.T_col, global_state)
         final_prompt = open('causal_analysis/DML/context/final_stage_select_prompt.txt', "r").read()
 
         global_state.inference.hte_model_y_json = None
@@ -104,5 +106,9 @@ class HTE_Param_Selector(object):
             'model_t': T_model, 
             'model_final': final_model
         }
+        if discrete_y:
+            global_state.inference.hte_model_param['discrete_outcome'] = True 
+        if discrete_T:
+            global_state.inference.hte_model_param['discrete_treatment'] = True
 
         return global_state
