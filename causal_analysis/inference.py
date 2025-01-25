@@ -243,6 +243,24 @@ class Analysis(object):
         for i, confounder in enumerate(confounders):
             # Treated group (left subplot)
             ax_treated = axes[i][0]
+        # Generate density plot
+        self._generate_density_plot(data, matched_data, treatment, valid_confounders, title)
+
+    def _generate_density_plot(self, data, matched_data, treatment, confounders, title):
+        """
+        Generate a single density plot with subplots for different confounders.
+        Each row corresponds to a confounder, with treated and control groups in separate subplots.
+        """
+        sns.set_style("darkgrid")  
+        num_confounders = len(confounders)
+        fig, axes = plt.subplots(nrows=num_confounders, ncols=2, figsize=(20, 6 * num_confounders))
+        
+        if num_confounders == 1:
+            axes = [axes]  
+
+        for i, confounder in enumerate(confounders):
+            # Treated group (left subplot)
+            ax_treated = axes[i][0]
             sns.kdeplot(
                 data[data[treatment] == 1][confounder], 
                 label='Treated (Unmatched)', 
@@ -533,7 +551,7 @@ class Analysis(object):
         self.global_state = filter.forward(self.global_state, query)
         reranker = DML_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
         self.global_state = reranker.forward(self.global_state)
-        programmer = HTE_Programming(self.args, y_col=outcome, T_col=treatment, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
+        programmer = DML_HTE_Programming(self.args, y_col=outcome, T_col=treatment, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
         programmer.fit_model(self.global_state)
         # Estimate ate, att, hte
         ate, ate_lower, ate_upper = programmer.forward(self.global_state, task='ate')
