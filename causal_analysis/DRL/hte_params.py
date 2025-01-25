@@ -20,9 +20,11 @@ class HTE_Param_Selector(object):
         if node_type =='continuous':
             prompt_path = 'causal_analysis/DRL/context/regressor_select_prompt.txt'
             algo_text_path = 'causal_analysis/DRL/context/regressor.txt'
+            discrete = False
         else:
             prompt_path = 'causal_analysis/DRL/context/classifier_select_prompt.txt'
             algo_text_path = 'causal_analysis/DRL/context/classifier.txt'
+            discrete = True
         prompt = open(prompt_path, "r").read()
         algo_text = open(algo_text_path, "r").read()
         
@@ -34,7 +36,7 @@ class HTE_Param_Selector(object):
                 }
         for placeholder, value in replacement.items():
             prompt = prompt.replace(placeholder, value)
-        return prompt
+        return prompt, discrete
     
     def model_suggestion(self, client, prompt):
         response = client.chat.completions.create(
