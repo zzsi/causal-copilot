@@ -25,11 +25,11 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import NearestNeighbors
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from causal_analysis.DML.hte_filter import HTE_Filter as DML_HTE_Filter# Ask whether we should rename these because we changed the directory name for uniformity
+from causal_analysis.DML.hte_filter import HTE_Filter as DML_HTE_Filter
 from causal_analysis.DML.hte_params import HTE_Param_Selector as DML_HTE_Param_Selector
 from causal_analysis.DML.hte_program import HTE_Programming as DML_HTE_Programming
 from causal_analysis.DRL.hte_filter import HTE_Filter as DRL_HTE_Filter
-from causal_analysis.DRL.hte_params import HTE_Param_Selector as DRL_Param_Selector
+from causal_analysis.DRL.hte_params import HTE_Param_Selector as DRL_HTE_Param_Selector
 from causal_analysis.DRL.hte_program import HTE_Programming as DRL_HTE_Programming
 from causal_analysis.help_functions import *
 from causal_analysis.analysis import *
@@ -564,7 +564,31 @@ class Analysis(object):
                   'att': [att, att_lower, att_upper],
                   'hte': [hte, hte_lower, hte_upper]}
         return result
-# TODO: Add estimate_effect_drl function here and add to the forward logic. Context What do we change. 
+    
+    def estimate_effect_drl(self, outcome, treatment, T0, T1, X_col, W_col, query):
+        if len(W_col) == 0:
+            W_col = ['W']
+            W = pd.DataFrame(np.zeros((len(self.data), 1)), columns=W_col)
+            self.data = pd.concat([self.data, W], axis=1)
+            self.global_state.user_data.processed_data = self.data
+        # Algorithm selection and deliberation
+        filter = DRL_HTE_Filter(self.args)
+        self.global_state = filter.forward(self.global_state, query)
+        reranker = DRL_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
+        self.global_state = reranker.forward(self.global_state)
+        programmer = DRL_HTE_Programming(self.args, y_col=outcome, T_col=treatment, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
+        # Estimate ate, att, hte
+        ate, ate_lower, ate_upper = programmer.forward(self.global_state, task='ate')
+        att, att_lower, att_upper = programmer.forward(self.global_state, task='att')
+        hte, hte_lower, hte_upper = programmer.forward(self.global_state, task='hte')
+        hte = pd.DataFrame({'hte': hte.flatten()})
+        hte.to_csv(f'{self.global_state.user_data.output_graph_dir}/hte.csv', index=False)
+
+        result = {'ate': [ate, ate_lower, ate_upper],
+                  'att': [att, att_lower, att_upper],
+                  'hte': [hte, hte_lower, hte_upper]}
+        return result
+    
     def counterfactual_estimation(self, treatment_name, response_name, observed_val = None, intervened_treatment = None):
         # observed_val should be a df as the processed data
         if observed_val is None:
@@ -762,6 +786,16 @@ class Analysis(object):
                 result = self.estimate_effect_dml(outcome=key_node, treatment=treatment, T0=control, T1=treat,
                                                         X_col=hte_variable, W_col=confounders, query=desc)
                 response, figs = generate_analysis_econml(self.args, self.global_state, key_node, treatment, parent_nodes, hte_variable, confounders, result, desc)
+
+            if method == "dml":
+                ### Check Heterogeneous Variable
+                hte_variable = input("Is there any heterogeneous variables you care about? If no, we can suggest some variables with LLM.\n")
+                #TODO: Add LLM variable selection
+                hte_variable = [var.strip() for var in hte_variable.split(',') if var.strip() in self.data.columns]
+                result = self.estimate_effect_drl(outcome=key_node, treatment=treatment, T0=control, T1=treat,
+                                                        X_col=hte_variable, W_col=confounders, query=desc)
+                response, figs = generate_analysis_econml(self.args, self.global_state, key_node, treatment, parent_nodes, hte_variable, confounders, result, desc)
+
             elif method in ["cem", "propensity_score"]:
                 # Perform matching-based estimation
                 ate, matched_data, figs = self.estimate_causal_effect_matching(
