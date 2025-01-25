@@ -1,6 +1,6 @@
 from causal_analysis.help_functions import *
 
-def generate_analysis_econml(global_state, key_node, treatment, parent_nodes, X_col, W_col, result, query):
+def generate_analysis_econml(args, global_state, key_node, treatment, parent_nodes, X_col, W_col, result, query):
     # Analysis for Effect Estimation
     ate, ate_lower, ate_upper = result['ate']
     att, att_lower, att_upper = result['att']
@@ -17,7 +17,7 @@ def generate_analysis_econml(global_state, key_node, treatment, parent_nodes, X_
     Average Treatment Effect: {ate}, Confidence Interval: ({ate_lower}, {ate_upper})
     Average Treatment Effect on Treated: {att}, Confidence Interval: ({att_lower}, {att_upper})
     """
-    response_ate = LLM_parse_query(None, 'You are an expert in Causal Discovery.', prompt_ate)
+    response_ate = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt_ate)
 
     prompt_hte = f"""
     I'm doing the Heterogeneous Treatment Effect Estimation and please help me to write a brief analysis in bullet points.
@@ -28,20 +28,19 @@ def generate_analysis_econml(global_state, key_node, treatment, parent_nodes, X_
     **Description from User**: {query}
     **Information in the plot**: Distribution of the HTE; Violin plot of the CATE grouped by: {X_col}
     """
-    response_hte = LLM_parse_query(None, 'You are an expert in Causal Discovery.', prompt_hte)
+    response_hte = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt_hte)
     
-    figs = {'hte_dist': None,
-            'cate_dist': None}
+    figs = []
     dist_fig_path = f'{global_state.user_data.output_graph_dir}/hte_dist.png'
     plot_hte_dist(hte, dist_fig_path)
-    figs['hte_dist'] = dist_fig_path
+    figs.append(dist_fig_path)
     cate_fig_path = f'{global_state.user_data.output_graph_dir}/cate_dist.png'
     plot_cate_violin(global_state, hte, X_col, cate_fig_path)
-    figs['cate_dist'] = cate_fig_path
+    figs.append(cate_fig_path)
 
-    return 
+    return response_ate+'\n'+response_hte, figs
 
-def generate_analysis_matching(treatment, outcome, method, W_col, ate, query):
+def generate_analysis_matching(args, treatment, outcome, method, W_col, ate, query):
     # Generate a response using the LLM
     prompt = f"""
     I'm doing the Matching-Based Effect Estimation analysis and please help me to write a brief analysis in bullet points.
@@ -53,7 +52,7 @@ def generate_analysis_matching(treatment, outcome, method, W_col, ate, query):
     **Average Treatment Effect (ATE)**: {ate}
     **Description from User**: {query}
     """
-    response = LLM_parse_query(None, 'You are an expert in Causal Discovery.', prompt)
+    response = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt)
     return response
         
     # # Analysis for Refutation Analysis
@@ -88,10 +87,10 @@ def generate_analysis_matching(treatment, outcome, method, W_col, ate, query):
     # e. The red triangle shows the estimated effect when the unobserved covariate has 1 or 2 or 3 times partial-R^2 of a chosen benchmark observed covariate with the outcome.
     # **Description from User**: {desc}
     # """
-    # response2 = LLM_parse_query(None, 'You are an expert in Causal Discovery.', prompt)
+    # response2 = LLM_parse_query(self.args, None, 'You are an expert in Causal Discovery.', prompt)
     # response = response1 + '\n' + response2
 
-def generate_analysis_feature_importance(key_node, parent_nodes, mean_shap_values, desc):
+def generate_analysis_feature_importance(args, key_node, parent_nodes, mean_shap_values, desc):
     prompt = f"""
     I'm doing the feature importance analysis and please help me to write a brief analysis in bullet points.
     Here are some informations:
@@ -100,9 +99,10 @@ def generate_analysis_feature_importance(key_node, parent_nodes, mean_shap_value
     ""Description from User**: {desc}
     **Mean of Shapley Values**: {mean_shap_values}
     """
-    response = LLM_parse_query(None, 'You are an expert in Causal Discovery.', prompt)
+    response = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt)
+    return response
 
-def generate_analysis_anormaly(df, key_node, parent_nodes, desc):
+def generate_analysis_anormaly(args, df, key_node, parent_nodes, desc):
     prompt = f"""
     I'm doing the Anormaly Attribution analysis and please help me to write a brief analysis in bullet points.
     Here are some informations:
@@ -115,10 +115,10 @@ def generate_analysis_anormaly(df, key_node, parent_nodes, desc):
     We estimated the contribution of the ancestors of {key_node}, including {key_node} itself, to the observed anomaly.
     In this method, we use invertible causal mechanisms to reconstruct and modify the noise leading to a certain observation. We then ask, “If the noise value of a specific node was from its ‘normal’ distribution, would we still have observed an anomalous value in the target node?”. The change in the severity of the anomaly in the target node after altering an upstream noise variable’s value, based on its learned distribution, indicates the node’s contribution to the anomaly. The advantage of using the noise value over the actual node value is that we measure only the influence originating from the node and not inherited from its parents.
     """
-    response = LLM_parse_query(None, 'You are an expert in Causal Discovery.', prompt)
+    response = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt)
     return response
 
-def generate_analysis_anormaly_dist(df, key_node, desc):
+def generate_analysis_anormaly_dist(args, df, key_node, desc):
     # Generate a response using the LLM
     prompt = f"""
     I'm doing the Distributional Change Attribution analysis and please help me to write a brief analysis in bullet points.
@@ -130,5 +130,5 @@ def generate_analysis_anormaly_dist(df, key_node, desc):
     **Methods to calculate Distributional Change Attribution**
     We compared two datasets (old and new) to identify which nodes in the causal graph contributed most to the change in the distribution of the target variable.
     """
-    response = LLM_parse_query(None, 'You are an expert in Causal Discovery.', prompt)
+    response = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt)
     return response
