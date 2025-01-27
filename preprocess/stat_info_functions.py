@@ -24,7 +24,6 @@ from openai import OpenAI
 # from Gradio.demo import global_state
 
 # new package
-from scipy.interpolate import UnivariateSpline
 from sympy.codegen.ast import Return
 
 
@@ -198,20 +197,18 @@ def correlation_check(global_state):
     return global_state
 
 # TIME SERIES PROCESSING ###############################################################################################
-def spline_imputation(df: pd.DataFrame):
-    for col in df.columns:
-        x_non_missing = np.array(df.index[df[col].notna()].astype(np.int64) // 10 ** 9)  # convert to time stamp
-        y_non_missing = df[col].dropna().values
+def impute_time_series(df: pd.DataFrame) -> pd.DataFrame:
 
-        spline = UnivariateSpline(x_non_missing, y_non_missing, s=0)
+    if not np.issubdtype(df.index, np.datetime64):
+        try:
+            df.index = pd.to_datetime(df.index)
+        except Exception as e:
+            raise ValueError(f"Cannot convert data index to time index: {e}")
 
-        x_missing = np.array(df.index[df[col].isna()].astype(np.int64) // 10 ** 9)
-        df.loc[df[col].isna(), col] = spline(x_missing)
+    for column in df.columns:
+        df[column] = pd.DataFrame(df[column], index=df.index).interpolate(method='time')
 
     return df
-
-# imput = spline_imputation(data)
-# print(imput)
 
 
 def series_lag_est(time_series, nlags = 50):
@@ -325,10 +322,7 @@ def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
             df[column] = imputer_cat.fit_transform(df[[column]]).ravel()
 
     if ts:
-        # imputer = IterativeImputer(max_iter=10, random_state=0)
-        # imputed_data = imputer.fit_transform(df)
-        # df = pd.DataFrame(imputed_data, columns=df.columns)
-        df = spline_imputation(df)
+        df = impute_time_series(df)
 
     # Z-score normalization
     scaler = StandardScaler()
