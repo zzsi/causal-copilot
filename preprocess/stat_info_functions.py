@@ -197,18 +197,43 @@ def correlation_check(global_state):
     return global_state
 
 # TIME SERIES PROCESSING ###############################################################################################
-def impute_time_series(df: pd.DataFrame) -> pd.DataFrame:
+def impute_time_series(df: pd.DataFrame, time_index_feature: str = None) -> pd.DataFrame:
+    """
+    Impute missing values in a time series DataFrame using time-based interpolation.
 
-    if not np.issubdtype(df.index, np.datetime64):
-        try:
-            df.index = pd.to_datetime(df.index)
-        except Exception as e:
-            raise ValueError(f"Cannot convert data index to time index: {e}")
+    Parameters:
+        df (pd.DataFrame): The DataFrame containing the time series data.
+        time_index_feature (str): Optional. The column to use as the time index.
 
-    for column in df.columns:
-        df[column] = pd.DataFrame(df[column], index=df.index).interpolate(method='time')
+    Returns:
+        pd.DataFrame: A new DataFrame with missing values imputed.
+    """
+    # Work on a copy to preserve the original DataFrame
+    df_copy = df.copy()
 
-    return df
+    # Determine the time index
+    if time_index_feature is None:
+        if not np.issubdtype(df_copy.index, np.datetime64):
+            try:
+                time_index = pd.to_datetime(df_copy.index)
+            except Exception as e:
+                raise ValueError(f"Cannot convert data index to time index: {e}")
+        else:
+            time_index = df_copy.index
+    else:
+        if time_index_feature not in df_copy.columns:
+            raise ValueError(f"Column '{time_index_feature}' not found in DataFrame.")
+        time_index = pd.to_datetime(df_copy[time_index_feature])
+
+    # Perform interpolation on numeric columns
+    for column in df_copy.columns:
+        if column != time_index_feature and pd.api.types.is_numeric_dtype(df_copy[column]):
+            df_copy[column] = pd.DataFrame(
+                df_copy[column].values, index=time_index
+            ).interpolate(method='time', limit_direction= 'both').values
+
+    return df_copy
+
 
 
 def series_lag_est(time_series, nlags = 50):
