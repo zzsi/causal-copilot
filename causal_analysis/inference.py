@@ -640,31 +640,101 @@ class Analysis(object):
         print(f"Saving counterfactual estimation plot to {os.path.join(path, 'counterfactual_est_fig.jpg')}")
         plt.savefig(os.path.join(path, 'counterfactual_est_fig.jpg'))
 
-    def simulate_intervention(self, treatment_name, shift_intervention = None, atomic_intervention = None):
-        if atomic_intervention is None:
-            atomic_intervention_val = self.data[treatment_name].min() + 1.0
 
-        if shift_intervention is None:
+    def simulate_intervention(self, treatment_name, response_name,
+                              shift_intervention_val = None):
+    # def simulate_intervention(self, treatment_name, response_name,
+    #                             atomic_intervention_org_val=None, atomic_intervention_new_val=None,
+    #                             shift_intervention_val=None):
+        '''
+            shift_intervention: a numeric value indicating how much shift of interventions have on original observations.
+            atomic_intervention_org: the initial observed value of treatment for atomic intervention
+            atomic_intervention_new: the value of new intervention on the treatment for atomic intervention
+        '''
+        # Atomic Intervention
+        # if atomic_intervention_org_val is None:
+        #     atomic_intervention_org_val = self.data[treatment_name].min()
+        #
+        # if atomic_intervention_new_val is None:
+        #     atomic_intervention_new_val = atomic_intervention_org_val + 1
+        #
+        # atomic_samples_org = gcm.interventional_samples(self.causal_model,
+        #                                             {treatment_name: lambda x: atomic_intervention_org_val},
+        #                                             num_samples_to_draw=1000)
+        # atomic_samples_new = gcm.interventional_samples(self.causal_model,
+        #                                             {treatment_name: lambda x: atomic_intervention_new_val},
+        #                                             num_samples_to_draw=1000)
+        #
+        # plt.figure(figsize=(12, 6))
+        #
+        # # Histogram for atomic_samples_org
+        # plt.subplot(1, 2, 1)
+        # plt.hist(atomic_samples_org[response_name], bins=30, color='blue', alpha=0.7)
+        # plt.title(f'Original Atomic Samples: {response_name}')
+        # plt.xlabel(response_name)
+        # plt.ylabel('Frequency')
+        #
+        # # Histogram for atomic_samples_new
+        # plt.subplot(1, 2, 2)
+        # plt.hist(atomic_samples_new[response_name], bins=30, color='orange', alpha=0.7)
+        # plt.title(f'New Atomic Samples: {response_name}')
+        # plt.xlabel(response_name)
+        # plt.ylabel('Frequency')
+        #
+        # plt.tight_layout()
+        # # plt.show()
+        #
+        # path = self.global_state.user_data.output_graph_dir
+        # if not os.path.exists(path):
+        #     os.makedirs(path)
+        #
+        # print(f"Saving atomic intervention comparison plot to {os.path.join(path, 'atomic_intervention.jpg')}")
+        # plt.savefig(os.path.join(path, 'atomic_intervention.jpg'))
+
+        # Shift Intervention
+        if shift_intervention_val is None:
             shift_intervention_val = 1
-
-        atomic_samples = gcm.interventional_samples(self.causal_model,
-                                             {treatment_name: lambda x: atomic_intervention_val},
-                                             num_samples_to_draw=1000)
 
         shift_samples = gcm.interventional_samples(self.causal_model,
                                                     {treatment_name: lambda x: x + shift_intervention_val},
                                                     num_samples_to_draw=1000)
 
-        path = self.global_state.user_data.output_graph_dir
+        plt.figure(figsize=(12, 6))
 
+        # Histogram for atomic_samples_org
+        plt.subplot(1, 2, 1)
+        plt.hist(self.data[response_name], bins=30, color='blue', alpha=0.7)
+        plt.title(f'Observed Data: {response_name}')
+        plt.xlabel(response_name)
+        plt.ylabel('Frequency')
+
+        # Histogram for atomic_samples_new
+        plt.subplot(1, 2, 2)
+        plt.hist(shift_samples[response_name], bins=30, color='orange', alpha=0.7)
+        plt.title(f'Shift Intervention: {response_name}')
+        plt.xlabel(response_name)
+        plt.ylabel('Frequency')
+
+        plt.tight_layout()
+        # plt.show()
+
+        path = self.global_state.user_data.output_graph_dir
         if not os.path.exists(path):
             os.makedirs(path)
 
-        print(f"Saving simulated dataset {os.path.join(path, 'simulated_atomic_intervention.csv')}")
-        atomic_samples.to_csv(os.path.join(path, 'simulated_atomic_intervention.csv'), index=False)
+        print(f"Saving shift intervention comparison plot to {os.path.join(path, 'shift_intervention.jpg')}")
+        plt.savefig(os.path.join(path, 'shift_intervention.jpg'))
+
+        # Save dataset
+        # print(f"Saving simulated dataset {os.path.join(path, 'simulated_atomic_intervention_org.csv')}")
+        # atomic_samples_org.to_csv(os.path.join(path, 'simulated_atomic_intervention_org.csv'), index=False)
+        #
+        # print(f"Saving simulated dataset {os.path.join(path, 'simulated_atomic_intervention_new.csv')}")
+        # atomic_samples_new.to_csv(os.path.join(path, 'simulated_atomic_intervention_new.csv'), index=False)
 
         print(f"Saving simulated dataset {os.path.join(path, 'simulated_shift_intervention.csv')}")
         shift_samples.to_csv(os.path.join(path, 'simulated_shift_intervention.csv'), index=False)
+
 
     def evaluate_treatment_effect_metrics(self, true_value, estimations, cis):
         """
@@ -825,6 +895,24 @@ class Analysis(object):
             df, figs = self.attribute_distributional_changes(target_node=key_node, data_old=data_old, data_new=data_new)
             response = generate_analysis_anormaly_dist(self.args, df, key_node, desc)
             return response, figs
+
+        elif task == 'Counterfactual Estimation':
+            prompt = f"""
+                        I'm doing the Treatment Effect Estimation analysis, please identify the Treatment Variable in this description:
+                        {desc}
+                        The variable name must be among these variables: {self.data.columns}
+                        Only return me with the variable name, do not include anything else.
+                        """
+            treatment = LLM_parse_query(self.args, None, 'You are an expert in Causal Discovery.', prompt)
+            shift_intervention_val = input(f"""
+                In this simulation, we are applying a 'shift intervention' to study how changes in the {treatment} 
+                impact the {key_node}. A shift intervention involves modifying the value of a variable by a fixed
+                amount (the 'shift value') while keeping other variables unchanged.\n
+                For example, if we are studying the effect of increasing income on health outcomes, we might apply a
+                shift intervention where the income variable is increased by a fixed amount, such as $500, for all individuals.\n
+                Please enter the shift value:
+            """)
+            self.simulate_intervention(treatment_name = treatment, response_name = key_node, shift_intervention_val = shift_intervention_val)
         
         else:
             return None, None
