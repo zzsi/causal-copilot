@@ -7,7 +7,7 @@ Given a dataset with the following properties:
 We want to conduct the following Heterogeneous Effect Estimation task:
 [QUESTION]
 
-Please analyze the dataset characteristics and the task description, and recommend the most suitable one HTE estimation algorithm. Use the following context information to inform your recommendations:
+Please analyze the dataset characteristics and the task description, and recommend the most suitable one HTE (Heterogeneous Treatment Effect) estimation algorithm in a Doubly Robust Learning (DRL) framework. Use the following context information to inform your recommendations:
 
 Algorithms:
 [ALGO_CONTEXT]
