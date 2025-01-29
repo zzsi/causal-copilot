@@ -589,6 +589,7 @@ class Analysis(object):
                   'hte': [hte, hte_lower, hte_upper]}
         return result
     
+    # TODO: Add def estimate_effect_iv()
     def counterfactual_estimation(self, treatment_name, response_name, observed_val = None, intervened_treatment = None):
         # observed_val should be a df as the processed data
         if observed_val is None:
@@ -846,7 +847,7 @@ class Analysis(object):
                 method = "propensity_score"
             print("According to the characteristics of your data, we recommend you to use this Treatment Effect Estimation Method:\n"
                   f"{method}.")
-
+            # TODO: Add logic for IV
             ### Run algorithm
             if method == "dml":
                 ### Check Heterogeneous Variable
@@ -857,7 +858,7 @@ class Analysis(object):
                                                         X_col=hte_variable, W_col=confounders, query=desc)
                 response, figs = generate_analysis_econml(self.args, self.global_state, key_node, treatment, parent_nodes, hte_variable, confounders, result, desc)
 
-            if method == "dml":
+            if method == "drl":
                 ### Check Heterogeneous Variable
                 hte_variable = input("Is there any heterogeneous variables you care about? If no, we can suggest some variables with LLM.\n")
                 #TODO: Add LLM variable selection
