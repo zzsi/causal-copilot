@@ -115,6 +115,7 @@ class Report_generation(object):
             ]
         )
         dataset = response_title.choices[0].message.content
+        dataset = dataset.replace('_', ' ')
         title = f'Causal Discovery Report on {dataset.capitalize()}'
         return title, dataset
     
@@ -224,7 +225,7 @@ The JSON should be
                     ind1 = variables.str.lower().get_loc(pair[0].lower())
                     ind2 = variables.str.lower().get_loc(pair[1].lower())
                     zero_matrix[ind2, ind1] = 1
-                    section2 += f"\item \\textbf{{{pair[0]} $\\rightarrow$ {pair[1]}}}: {explanation} \n"
+                    section2 += f"\item \\textbf{{{pair[0].replace('_', ' ')} $\\rightarrow$ {pair[1].replace('_', ' ')}}}: {explanation} \n"
             section2 += "\end{itemize}"
         else:
             section2 = ""
@@ -477,7 +478,7 @@ The JSON should be
         return response_doc
 
     def graph_revise_prompts(self):
-        if self.revised_graph is not None:
+        if self.bootstrap_probability is not None:
             repsonse = f"""
             By using the method mentioned in the Section 4.4, we provide a revise graph pruned with Bootstrap and LLM suggestion.
             Pruning results are as follows.
@@ -663,7 +664,7 @@ The JSON should be
             text += self.global_state.results.refutation_analysis
             text = text.replace('%', '\%')
         else:
-            text = ''
+            text = 'You have skipped the refutation analysis step.'
         return text 
     
     def comparision_prompt(self):
@@ -1006,7 +1007,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="demo_data/20250113_114516/Abalone/Abalone.csv",
+        default="demo_data/20250130_130622/house_price/house_price.csv",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -1014,7 +1015,7 @@ def parse_args():
     parser.add_argument(
         '--output-report-dir',
         type=str,
-        default='demo_data/20250113_114516/Abalone/output_graph',
+        default='demo_data/20250130_130622/house_price/output_report',
         help='Directory to save the output report'
     )
 
@@ -1022,7 +1023,7 @@ def parse_args():
     parser.add_argument(
         '--output-graph-dir',
         type=str,
-        default='/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250113_114516/Abalone/output_report',
+        default='demo_data/20250130_130622/house_price/output_graphreport',
         help='Directory to save the output graph'
     )
 
@@ -1095,10 +1096,10 @@ def parse_args():
 
 import pickle  
 if __name__ == '__main__':
-    # args = parse_args()
-    # with open('global_state.pkl', 'rb') as file:
-    #     global_state = pickle.load(file)
-    # test(args, global_state)
-    save_path = 'demo_data/20250114_001657/Abalone/output_report'
-    compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
+    args = parse_args()
+    with open('demo_data/20250130_142051/hotel_booking_cancellation/output_graph/PC_global_state.pkl', 'rb') as file:
+        global_state = pickle.load(file)
+    test(args, global_state)
+    # save_path = 'demo_data/20250130_130622/house_price/output_report'
+    # compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
     

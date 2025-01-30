@@ -167,7 +167,7 @@ def parse_ts_query(message, chat_history, download_btn, global_state, REQUIRED_I
             chat_history.append((None, f"❌ We cannot parse your query, please follow the template and retry."))
     return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
-def parse_sparsity_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO):
+def parse_sparsity_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE):
     # Select features based on LLM
     if message == 'LLM' or '':
         try:
@@ -175,10 +175,10 @@ def parse_sparsity_query(message, chat_history, download_btn, args, global_state
         except:
             global_state = llm_select_dropped_features(global_state=global_state, args=args)
         if message == 'LLM':
-            chat_history.append((message, "The following sparse variables suggested by LLM will be dropped: \n"
+            chat_history.append((None, "The following sparse variables suggested by LLM will be dropped: \n"
                                             ", ".join(global_state.user_data.llm_drop_features)))
         elif message == '':
-            chat_history.append((message, "You do not choose any variables to drop, we will drop the following variables suggested by LLM: \n"
+            chat_history.append((None, "You do not choose any variables to drop, we will drop the following variables suggested by LLM: \n"
                                             ", ".join(global_state.user_data.llm_drop_features)))
         global_state = drop_greater_miss_between_30_50_feature(global_state)
         CURRENT_STAGE = "sparsity_drop_done"
@@ -187,18 +187,22 @@ def parse_sparsity_query(message, chat_history, download_btn, args, global_state
     else:
         class VarList(BaseModel):
             variables: list[str]
-        prompt = "You are a helpful assistant, please extract variable names as a list. . If you cannot find variable names, just return an empty list."
-        parsed_vars = LLM_parse_query(VarList, prompt, message)
+        prompt = "You are a helpful assistant, please extract variable names as a list. \n"
+        "If there is only one variable, also save it in list variables"
+        f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
+        "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
+        "If you cannot find variable names, just return an empty list."
+        parsed_vars = LLM_parse_query(VarList, prompt, message, args)
         var_list = parsed_vars.variables
         if var_list == []:
-            chat_history.append((message, "⚠️ Your sparse variable dropping query cannot be parsed, Please follow the templete below and retry. \n"
+            chat_history.append((None, "⚠️ Your sparse variable dropping query cannot be parsed, Please follow the templete below and retry. \n"
                                             "Templete: PKA, Jnk, PIP2, PIP3, Mek"))
         else:
             missing_vars = [var for var in var_list if var not in global_state.user_data.raw_data.columns]
             if missing_vars != []:
-                chat_history.append((message, "❌ Variables " + ", ".join(missing_vars) + " are not in the dataset, please check it and retry."))
+                chat_history.append((None, "❌ Variables " + ", ".join(missing_vars) + " are not in the dataset, please check it and retry."))
             else:
-                chat_history.append((message, "✅ Successfully parsed your provided variables. These sparse variables you provided will be dropped."))
+                chat_history.append((None, "✅ Successfully parsed your provided variables. These sparse variables you provided will be dropped."))
                 global_state.user_data.user_drop_features = var_list
                 global_state = drop_greater_miss_between_30_50_feature(global_state)
                 CURRENT_STAGE = "sparsity_drop_done"

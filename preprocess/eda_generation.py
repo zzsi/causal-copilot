@@ -84,6 +84,7 @@ class EDA(object):
         numerical_analysis = {}
 
         for feature in df.select_dtypes(include='number').columns:
+            feature = feature.replace('_', ' ')
             numerical_analysis[feature] = {
                 'mean': numerical_stats.loc['mean', feature],
                 'median': numerical_stats.loc['50%', feature],
@@ -129,6 +130,7 @@ class EDA(object):
             for j in range(i):
                 if abs(correlation_matrix.iloc[i, j]) > threshold:
                     var_i, var_j = correlation_matrix.columns[i], correlation_matrix.columns[j]
+                    var_i, var_j = var_i.replace('_', ' '), var_j.replace('_', ' ')
                     correlation_summary[(var_i, var_j)] = correlation_matrix.iloc[i, j]
         return correlation_summary
 
