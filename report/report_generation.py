@@ -115,6 +115,7 @@ class Report_generation(object):
             ]
         )
         dataset = response_title.choices[0].message.content
+        dataset = dataset.replace('_', ' ')
         title = f'Causal Discovery Report on {dataset.capitalize()}'
         return title, dataset
     
@@ -224,7 +225,7 @@ The JSON should be
                     ind1 = variables.str.lower().get_loc(pair[0].lower())
                     ind2 = variables.str.lower().get_loc(pair[1].lower())
                     zero_matrix[ind2, ind1] = 1
-                    section2 += f"\item \\textbf{{{pair[0]} $\\rightarrow$ {pair[1]}}}: {explanation} \n"
+                    section2 += f"\item \\textbf{{{pair[0].replace('_', ' ')} $\\rightarrow$ {pair[1].replace('_', ' ')}}}: {explanation} \n"
             section2 += "\end{itemize}"
         else:
             section2 = ""
@@ -313,11 +314,11 @@ The JSON should be
             symmetric_list = []
             for feature in dist_input_num.keys():
                 if dist_input_num[feature]['mean']<dist_input_num[feature]['median']:
-                    left_skew_list.append(feature)
+                    left_skew_list.append(feature.replace('_', '\_'))
                 elif dist_input_num[feature]['mean']>dist_input_num[feature]['median']:
-                    right_skew_list.append(feature)
+                    right_skew_list.append(feature.replace('_', '\_'))
                 else:
-                    symmetric_list.append(feature)
+                    symmetric_list.append(feature.replace('_', '\_'))
             response_dist_doc += f"\item Slight left skew distributed variables: {', '.join(left_skew_list) if left_skew_list != [] else 'None'} \n"
             response_dist_doc += f"\item Slight right skew distributed variables: {', '.join(right_skew_list) if right_skew_list != [] else 'None'} \n"
             response_dist_doc += f"\item Symmetric distributed variables: {', '.join(symmetric_list) if symmetric_list != [] else 'None'} \n"
@@ -331,19 +332,19 @@ The JSON should be
         #print('response_dist_doc: ', response_dist_doc)
         # Description of Correlation
         response_corr_doc = "\\begin{itemize} \n"
-        high_corr_list  = [f'{key[0]} and {key[1]}' for key, value in corr_input.items() if abs(value) > 0.8]
+        high_corr_list = [f"{key[0]}".replace('_', '\\_') + " and " + f"{key[1]}".replace('_', '\\_') for key, value in corr_input.items() if abs(value) > 0.8]
         if len(high_corr_list)>10:
             response_corr_doc += f"\item Strong Correlated Variables ($\geq 0.9$): {', '.join(high_corr_list)}"
             response_corr_doc += ", etc. \n"
         else:
             response_corr_doc += f"\item Strong Correlated Variables ($\geq 0.9$): {', '.join(high_corr_list) if high_corr_list != [] else 'None'} \n"
-        med_corr_list = [f'{key[0]} and {key[1]}' for key, value in corr_input.items() if (abs(value) <= 0.8 and abs(value) > 0.5)]
+        med_corr_list = [f"{key[0]}".replace('_', '\\_') + " and " + f"{key[1]}".replace('_', '\\_') for key, value in corr_input.items() if (abs(value) <= 0.8 and abs(value) > 0.5)]
         if len(med_corr_list)>10:
             response_corr_doc += f"\item Moderate Correlated Variables ($0.1-0.9$): {', '.join(med_corr_list)}"
             response_corr_doc += ", etc. \n"
         else:
             response_corr_doc += f"\item Moderate Correlated Variables ($0.1-0.9$): {', '.join(med_corr_list) if med_corr_list != [] else 'None'} \n"
-        low_corr_list = [f'{key[0]} and {key[1]}' for key, value in corr_input.items() if abs(value) <= 0.5]
+        low_corr_list = [f"{key[0]}".replace('_', '\\_') + " and " + f"{key[1]}".replace('_', '\\_') for key, value in corr_input.items() if abs(value) <= 0.5]
         if len(low_corr_list)>10:
             response_corr_doc += f"\item Weak Correlated Variables ($\leq 0.1$): {', '.join(low_corr_list)}"
             response_corr_doc += ", etc. \n"
@@ -401,7 +402,7 @@ The JSON should be
         algo_list = self.algo_selection_prompt()
         param_list = self.param_selection_prompt()
 
-        repsonse = f"""
+        response = f"""
         In this section, we provide a detailed description of the causal discovery process implemented by Causal Copilot. 
         We also provide the chosen algorithms and hyperparameters, along with the justifications for these selections.
         \subsection{{Data Preprocessing}}
@@ -421,7 +422,7 @@ The JSON should be
         """
 
         if self.args.data_mode == 'real':
-            repsonse += f"""
+            response += f"""
             \subsection{{Graph Tuning with Bootstrap and LLM Suggestion}}
             In the final step, we performed graph tuning with suggestions provided by the Bootstrap and LLM.
             
@@ -435,7 +436,7 @@ The JSON should be
             Finally, we use Kernel-based Independence Test to remove redundant edges added by LLM hallucination.
             By integrating insights from both of Bootsratp and LLM to refine the causal graph, we can achieve improvements in graph's accuracy and robustness.
             """
-        return repsonse
+        return response
     
     def graph_effect_prompts(self):
         """
@@ -474,22 +475,23 @@ The JSON should be
                 ]
             )
             response_doc = response.choices[0].message.content
+            response_doc = response_doc.replace('_', '\_')
         return response_doc
 
     def graph_revise_prompts(self):
-        if self.revised_graph is not None:
-            repsonse = f"""
+        if self.bootstrap_probability is not None:
+            response = f"""
             By using the method mentioned in the Section 4.4, we provide a revise graph pruned with Bootstrap and LLM suggestion.
             Pruning results are as follows.
             """
             if self.global_state.results.bootstrap_errors != []:
-                    repsonse += f"""
+                    response += f"""
                     The following are force and forbidden results given by Bootstrap:
                     
                     {', '.join(self.global_state.results.bootstrap_errors)}
                     """
             else:
-                repsonse += f"""
+                response += f"""
                 Bootstrap doesn't force or forbid any edges.
                 """
             llm_evaluation_json = self.global_state.results.llm_errors
@@ -497,46 +499,46 @@ The JSON should be
             forbid_record = llm_evaluation_json['forbid_record']
             
             if  forbid_record != {} and forbid_record is not None:
-                repsonse += f"""
+                response += f"""
                 The following relationships are forbidden by LLM:
                 
                 \\begin{{itemize}}
                 """
                 for item in forbid_record.values():
-                    repsonse += f"""
+                    response += f"""
                     \item \\textbf{{{item[0][0]} $\\rightarrow$ {item[0][1]}}}: {item[1]}
                     """
-                repsonse += f"""
+                response += f"""
                 \end{{itemize}}
                 """     
             else:
-                repsonse += f"""
+                response += f"""
                 LLM doesn't forbid any edges.
                 """
                 
             llm_direction_reason = direct_record  
             if llm_direction_reason!={} and llm_direction_reason is not None:
-                repsonse += f"""
+                response += f"""
                     The following are directions confirmed by the LLM:
                     \\begin{{itemize}}
                     """
                 for item in llm_direction_reason.values():
-                    repsonse += f"""
+                    response += f"""
                     \item \\textbf{{{item[0][0]} $\\rightarrow$ {item[0][1]}}}: {item[1]}
                     """
-                repsonse += f"""
+                response += f"""
                 \end{{itemize}}
                 """ 
             else:
-                repsonse += f"""
+                response += f"""
                 LLM doesn't decide any direction of edges.
                 """
-            
-            repsonse += """
+            response = response.replace('_', '\_')
+            response += """
             This structured approach ensures a comprehensive and methodical analysis of the causal relationships within the dataset.
             """
 
-            repsonse += fr"""
+            response += fr"""
             \begin{{figure}}[H]
             \centering
             \includegraphics[height=0.3\textheight]{{{self.visual_dir}/{self.algo}_revised_graph.pdf}}
@@ -545,9 +547,9 @@ The JSON should be
             """
 
         else:
-            repsonse = 'You have skipped the Pruning and Reliability Analysis.'
-        #print('graph revise prompt: ', repsonse)
-        return repsonse
+            response = 'You have skipped the Pruning and Reliability Analysis.'
+        #print('graph revise prompt: ', response)
+        return response
     
     def confidence_graph_prompts(self):
         ### generate graph layout ###
@@ -603,7 +605,6 @@ The JSON should be
         if self.bootstrap_probability is not None:
             edges_dict = self.global_state.results.raw_edges
             relation_text_dict, relation_text = edges_to_relationship(self.data, edges_dict, self.bootstrap_probability)
-            #relation_prob = self.graph_effect_prompts()
 
             variables = '\t'.join(self.data.columns)
             prompt = f"""
@@ -646,6 +647,7 @@ The JSON should be
             )
             response_doc = response.choices[0].message.content
             response_doc = response_doc.replace('%', '\%')
+            response_doc = response_doc.replace('_', '\_')
             #print('reliability analysis:',response_doc)
         else:
             response_doc = ''
@@ -660,10 +662,10 @@ The JSON should be
                         \caption{{Refutation Graph}}
                     \end{{figure}} \n
                     """
-            text += self.global_state.results.refutation_analysis
+            text += self.global_state.results.refutation_analysis.replace('_', '\_')
             text = text.replace('%', '\%')
         else:
-            text = ''
+            text = 'You have skipped the refutation analysis step.'
         return text 
     
     def comparision_prompt(self):
@@ -915,7 +917,7 @@ Help me to write a comparison of the following causal discovery results of diffe
                 "[DATA_PROP_TABLE]": data_prop_table or "",
                 "[DIST_INFO]": dist_info or "",
                 "[CORR_INFO]": corr_info or "",
-                "[RESULT_ANALYSIS]": self.graph_prompt.replace("&", r"\&") or "",
+                "[RESULT_ANALYSIS]": self.graph_prompt.replace("&", r"\&").replace("_", r"\_") or "",
                 "[DISCOVER_PROCESS]": self.discover_process.replace("&", r"\&") or "",
                 "[PREPROCESS_GRAPH]": self.preprocess_plot or "",
                 "[REVISE_PROCESS]": self.revise_process.replace("&", r"\&") or "",
@@ -1006,7 +1008,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="demo_data/20250113_114516/Abalone/Abalone.csv",
+        default="demo_data/20250130_183915/2021online_shop/2021online_shop.csv",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -1014,7 +1016,7 @@ def parse_args():
     parser.add_argument(
         '--output-report-dir',
         type=str,
-        default='demo_data/20250113_114516/Abalone/output_graph',
+        default='demo_data/20250130_183915/2021online_shop/output_report',
         help='Directory to save the output report'
     )
 
@@ -1022,7 +1024,7 @@ def parse_args():
     parser.add_argument(
         '--output-graph-dir',
         type=str,
-        default='/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250113_114516/Abalone/output_report',
+        default='demo_data/20250130_183915/2021online_shop/output_graph',
         help='Directory to save the output graph'
     )
 
@@ -1095,10 +1097,10 @@ def parse_args():
 
 import pickle  
 if __name__ == '__main__':
-    # args = parse_args()
-    # with open('global_state.pkl', 'rb') as file:
-    #     global_state = pickle.load(file)
-    # test(args, global_state)
-    save_path = 'demo_data/20250114_001657/Abalone/output_report'
-    compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
+    args = parse_args()
+    with open('demo_data/20250130_183915/2021online_shop/output_graph/PC_global_state.pkl', 'rb') as file:
+        global_state = pickle.load(file)
+    test(args, global_state)
+    # save_path = 'demo_data/20250130_130622/house_price/output_report'
+    # compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
     

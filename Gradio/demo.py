@@ -40,9 +40,9 @@ def init_latex():
 def init_causallearn():
     subprocess.run("git submodule update --recursive", shell=True, check=True)
 # Run initialization before importing plumbum
-init_latex()
-init_graphviz()
-init_causallearn()
+# init_latex()
+# init_graphviz()
+# init_causallearn()
 
 import gradio as gr
 import pandas as pd
@@ -254,17 +254,17 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
         
         if CURRENT_STAGE == 'sparsity_check_2':
             global_state = missing_ratio_table(global_state) # Update missingness indicator in global state and generate missingness ratio table
-            sparsity_dict = sparsity_check(df=global_state.user_data.processed_data)
+            global_state.statistics.sparsity_dict = sparsity_check(df=global_state.user_data.processed_data)
             chat_history.append((None, "Missing Ratio Summary: \n"\
-                                 f"1️⃣ High Missing Ratio Variables (>0.5): {', '.join(sparsity_dict['high']) if sparsity_dict['high']!=[] else 'None'} \n"\
-                                 f"2️⃣ Moderate Missing Ratio Variables: {', '.join(sparsity_dict['moderate']) if sparsity_dict['moderate']!=[] else 'None'} \n"\
-                                 f"3️⃣ Low Missing Ratio Variables (<0.3): {', '.join(sparsity_dict['low']) if sparsity_dict['low']!=[] else 'None'}"))
+                                 f"1️⃣ High Missing Ratio Variables (>0.5): {', '.join(global_state.statistics.sparsity_dict['high']) if global_state.statistics.sparsity_dict['high']!=[] else 'None'} \n"\
+                                 f"2️⃣ Moderate Missing Ratio Variables: {', '.join(global_state.statistics.sparsity_dict['moderate']) if global_state.statistics.sparsity_dict['moderate']!=[] else 'None'} \n"\
+                                 f"3️⃣ Low Missing Ratio Variables (<0.3): {', '.join(global_state.statistics.sparsity_dict['low']) if global_state.statistics.sparsity_dict['low']!=[] else 'None'}"))
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-            if sparsity_dict['moderate'] != []:
+            if global_state.statistics.sparsity_dict['moderate'] != []:
                 CURRENT_STAGE = "sparsity_drop"
                 if REQUIRED_INFO["interactive_mode"]:
-                    chat_history.append((None, "📍 The missing ratios of the following variables are greater than 0.3 and smaller than 0.5, please decide which variables you want to drop. \n"
-                                                f"{', '.join(sparsity_dict['moderate'])}\n"
+                    chat_history.append((None, "📍 The missing ratios of the following variables are greater than 0.3 and smaller than 0.5, please decide which variables you want to drop: \n"
+                                                f"{', '.join(global_state.statistics.sparsity_dict['moderate'])}\n"
                                                 "⚠️ Please note that variables you want to drop may be confounders, please be cautious in selection.\n"
                                                 "Please seperate all variables with a semicolon ; and provide your answer following the template below: \n"
                                                 "Templete: PKA; Jnk; PIP2; PIP3; Mek\n"
@@ -274,29 +274,32 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                     return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 else:
                     chat_history.append((None, f"📍 The missing ratios of the following variables are greater than 0.3 and smaller than 0.5, we will use LLM to decide which variables to drop. \n"
-                                               f"{', '.join(sparsity_dict['moderate'])}"))
+                                               f"{', '.join(global_state.statistics.sparsity_dict['moderate'])}"))
                     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                     message = 'LLM'
             else:
                 CURRENT_STAGE = "sparsity_drop_done"
                 print("sparsity_drop_done")
         if CURRENT_STAGE == 'sparsity_drop':
-            chat_history, download_btn, global_state, REQUIRED_INFO = parse_sparsity_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO)
+            if REQUIRED_INFO["interactive_mode"]:
+                chat_history.append((message, None))
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_sparsity_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             if CURRENT_STAGE != "sparsity_drop_done":
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
         
         if CURRENT_STAGE == "sparsity_drop_done":
-            if sparsity_dict['high'] != []:
+            if global_state.statistics.sparsity_dict['high'] != []:
                 chat_history.append((None, f"📍 The missing ratios of the following variables are greater than 0.5, we will drop them: \n"
-                                        f"{', '.join(sparsity_dict['high'])}"))
+                                        f"{', '.join(global_state.statistics.sparsity_dict['high'])}"))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 ####### update variable list
-                global_state.user_data.system_drop_features = [var for var in global_state.user_data.system_drop_features if var in global_state.user_data.raw_data.columns]
-            if sparsity_dict['low'] != []:
+                global_state = drop_greater_miss_50_feature(global_state)
+            if global_state.statistics.sparsity_dict['low'] != []:
                 # impute variables with sparsity<0.3 in the following
                 chat_history.append((None, f"📍 The missing ratios of the following variables are smaller than 0.3, we will impute them: \n" \
-                                    f"{', '.join(sparsity_dict['low'])}"))
+                                    f"{', '.join(global_state.statistics.sparsity_dict['low'])}"))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             CURRENT_STAGE = 'reupload_dataset_done'
                        
@@ -589,11 +592,18 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
 
             if REQUIRED_INFO["interactive_mode"]:
                 CURRENT_STAGE = 'user_param_selection'
-                chat_history.append((None, "Do you want to specify values for parameters instead of the selected one? If so, please specify your parameter following the template below: \n"
-                                        "parameter name1: value\n"
-                                        "parameter name2: value\n"
-                                        "......\n"
-                                        "Otherwise please reply NO."))
+                with open('Gradio/param_context.json', 'r') as f:
+                    param_hint = json.load(f)[global_state.algorithm.selected_algorithm]
+                instruction = "Do you want to specify values for parameters instead of the selected one? If so, please specify your parameter following the template below: \n"
+                for key in param_hint.keys():
+                    instruction += f"{key}: value\n"
+                instruction += "Otherwise please reply NO."
+                chat_history.append((None, instruction))
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                hint = "Here are instructions for hyper-parameter tuning:\n"
+                for key, value in param_hint.items():
+                    hint += f"- {key}: \n{value};\n "
+                chat_history.append((None, hint))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             else:           

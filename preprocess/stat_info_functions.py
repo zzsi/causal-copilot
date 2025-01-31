@@ -152,7 +152,7 @@ def drop_greater_miss_between_30_50_feature(global_state):
         global_state.user_data.selected_features = [element for element in global_state.user_data.selected_features if
                                                      element not in global_state.user_data.llm_drop_features]
 
-        return global_state
+    return global_state
 
 
 # Correlation checking #################################################################################################
