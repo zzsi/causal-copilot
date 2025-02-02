@@ -1,6 +1,6 @@
 \documentclass{article}
 
-\usepackage{postprocess/context/arxiv}
+\usepackage{report/context/arxiv}
 
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage{amsmath}
@@ -20,10 +20,11 @@
 % \usepackage{wrapfig}
 
 
+
 \title{[TITLE]}
 
 
-\author{ \href{https://orcid.org/0000-0000-0000-0000}{\includegraphics[scale=0.06]{asset/logo.png}}}
+\author{ \href{https://orcid.org/0000-0000-0000-0000}{\includegraphics[scale=0.06]{asset/logo.png}} }
 	
 
 \renewcommand{\headeright}{Technical Report}
@@ -59,7 +60,6 @@ in the Figure 1. Please note that only variables in our dataset are included in 
 
 [BACKGROUND_INFO2]
 
-
 \section{Dataset Descriptions and EDA}
 The following is a preview of our original dataset. Please note that if the column number is greater than 20,
 we randomly choose 20 columns to be shown there.
@@ -84,8 +84,8 @@ If the dataset was found to satisfy the linearity assumption, we fitted an OLS m
 If the dataset did not satisfy the linearity assumption, we employed a flexible non-parametric method, locally weighted scatterplot smoothing (LOWESS), to fit the model and obtain the residuals. 
 Again, we used the Benjamini and Yekutieli procedure to correct for multiple testing results. 
 
-[PREPROCESS_GRAPH]
 
+[PREPROCESS_GRAPH]
 
 Properties of the dataset we analyzed are listed below.
 
@@ -133,25 +133,8 @@ and the black line represents the median. Variables are categorized into three t
 
 \begin{figure}[H]
     \centering
-    \begin{subfigure}{0.45\textwidth}
-        \centering
-        \vspace{-0.5cm}
-        \includegraphics[width=0.3\textheight]{[RESULT_GRAPH0]}
-        \vfill
-        \caption{True Graph}
-        \label{fig:sub1}
-    \end{subfigure}
-    \hspace{0.04\textwidth}0.3\textheight0.3\textheight0.3\textheight
-    \begin{subfigure}{0.45\textwidth}
-        \centering
-        \vspace{-0.5cm}
-        \includegraphics[width=height=0.3\textheight]{[RESULT_GRAPH1]}
-        \vfill
-        \caption{Initial Graph}
-        \label{fig:sub2}
-    \end{subfigure}
-    \label{fig:main}
-    \caption{Graphs Comparision of [ALGO]}
+    \includegraphics[height=0.3\textheight]{[RESULT_GRAPH1]}
+    \caption{Initial Graph}
 \end{figure}
 
 The above is the initial result graph produced by our algorithm.
@@ -163,18 +146,11 @@ The above is the initial result graph produced by our algorithm.
 \subsection{Revised Graph}
 
 \subsubsection{Bootstrap Probability}
-
 [CONFIDENCE_GRAPH]
 
 [RELIABILITY_ANALYSIS]
 
 \subsubsection{LLM Pruning}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[height=0.3\textheight]{[RESULT_GRAPH2]}
-    \caption{Revised Graph}
-\end{figure}
 
 [REVISE_PROCESS]
 
@@ -182,6 +158,9 @@ The above is the initial result graph produced by our algorithm.
 \subsection{Graph Reliability Analysis}
 
 [REFUTATION_GRAPH]
+
+[RESULT_GRAPH_COMPARISION]
+[RESULT_COMPARISION]
 
 \subsection{Conclusion}
 [CONCLUSION]

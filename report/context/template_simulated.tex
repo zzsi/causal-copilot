@@ -1,6 +1,6 @@
 \documentclass{article}
 
-\usepackage{postprocess/context/arxiv}
+\usepackage{report/context/arxiv}
 
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
@@ -73,7 +73,6 @@ Again, we used the Benjamini and Yekutieli procedure to correct for multiple tes
 
 [PREPROCESS_GRAPH]
 
-
 Properties of the dataset we analyzed are listed below.
 
 \begin{table}[H]
@@ -120,8 +119,25 @@ and the black line represents the median. Variables are categorized into three t
 
 \begin{figure}[H]
     \centering
-    \includegraphics[height=0.3\textheight]{[RESULT_GRAPH1]}
-    \caption{Initial Graph}
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \vspace{-0.5cm}
+        \includegraphics[width=\linewidth]{[RESULT_GRAPH0]}
+        \vfill
+        \caption{True Graph}
+        \label{fig:sub1}
+    \end{subfigure}
+    \hspace{0.04\textwidth}
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \vspace{-0.5cm}
+        \includegraphics[height=0.3\textheight]{[RESULT_GRAPH1]}
+        \vfill
+        \caption{Initial Graph}
+        \label{fig:sub2}
+    \end{subfigure}
+    \label{fig:main}
+    \caption{Graphs Comparision of [ALGO]}
 \end{figure}
 
 The above is the initial result graph produced by our algorithm.
@@ -137,7 +153,11 @@ The above is the initial result graph produced by our algorithm.
 \subsubsection{Refutation Analysis}
 [REFUTATION_GRAPH]
 
+[RESULT_GRAPH_COMPARISION]
+[RESULT_COMPARISION]
+
 \subsection{Conclusion}
 [CONCLUSION]
+
 
 \end{document}

@@ -40,10 +40,12 @@ def numeric_str_nan_detect(global_state):
 
     # missing value is represented as in the int format
     if nan_value.isdigit():
-        global_state.user_data.raw_data = data.replace(int(nan_value), np.nan, inplace=True)
+        data.replace(int(nan_value), np.nan, inplace=True)
+        global_state.user_data.raw_data = data
     # missing value is represented as in the str format
     elif data.isin([nan_value]).any().any():
-        global_state.user_data.raw_data = data.replace(nan_value, np.nan, inplace=True)
+        data.replace(nan_value, np.nan, inplace=True)
+        global_state.user_data.raw_data = data
     else:
         nan_detect = False
 
@@ -52,7 +54,6 @@ def numeric_str_nan_detect(global_state):
 
 # Missingness Checking #################################################################################################
 def missing_ratio_table(global_state):
-
     data = global_state.user_data.raw_data
 
     if global_state.statistics.heterogeneous and global_state.statistics.domain_index is not None:
@@ -152,8 +153,7 @@ def drop_greater_miss_between_30_50_feature(global_state):
     else:
         global_state.user_data.selected_features = [element for element in global_state.user_data.selected_features if
                                                      element not in global_state.user_data.llm_drop_features]
-
-        return global_state
+    return global_state
 
 
 # Correlation checking #################################################################################################
@@ -323,7 +323,7 @@ def data_preprocess (clean_df: pd.DataFrame, ts: bool = False):
 # column_type, overall_type = data_preprocess(clean_df = df, ts = False)
 # print(column_type)
 
-def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
+def imputation(df: pd.DataFrame, column_type: dict, ts: bool = False):
     '''
     :param df: cleaned and converted data in Pandas DataFrame format.
     :param column_type: data type of each column.

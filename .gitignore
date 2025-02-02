@@ -135,9 +135,12 @@ dmypy.json
 # data/simulation/dummy
 data/simulation/simulated_data
 preprocess/result
+postprocess/test_result
+causal_analysis/test_result
 simulated_data
 simulated_data/
 gradio_output/
+Gradio/test_for_demo
 demo_data/
 output/
 .vscode
@@ -146,4 +149,6 @@ sftp.json
 test_result/
 postprocess/test_data/
 test_for_demo/
-causal_analysis/hte/hte_params.py
+report/test
+causal_analysis/test_data
+
