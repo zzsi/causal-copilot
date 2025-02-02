@@ -605,7 +605,6 @@ The JSON should be
         if self.bootstrap_probability is not None:
             edges_dict = self.global_state.results.raw_edges
             relation_text_dict, relation_text = edges_to_relationship(self.data, edges_dict, self.bootstrap_probability)
-
             variables = '\t'.join(self.data.columns)
             prompt = f"""
             The following text describes the causal relationship among variables from a statisical perspective:

@@ -1,10 +1,12 @@
 import os
 import numpy as np
 import pandas as pd 
-from causal_analysis.inference import Analysis
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 from pydantic import BaseModel
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from causal_analysis.inference import Analysis
 from causal_analysis.help_functions import LLM_parse_query
 
 def main(global_state, args):
@@ -22,7 +24,7 @@ def main(global_state, args):
     columns = global_state.user_data.processed_data.columns
     with open('causal_analysis/context/query_prompt.txt', 'r') as file:
         query_prompt = file.read()
-        query_prompt = query_prompt.replace('[COLUMNS]', columns)
+        query_prompt = query_prompt.replace('[COLUMNS]', f",".join(columns))
     
     global_state.logging.downstream_discuss.append({"role": "user", "content": message})
     parsed_response = LLM_parse_query(args, InfList, query_prompt, message)
@@ -32,10 +34,12 @@ def main(global_state, args):
     for i, (task, desc, key_node) in enumerate(zip(tasks_list, descs_list, key_node_list)):
         print(task, desc, key_node)
         response, figs = analysis.forward(task, desc, key_node)
+        print("#"*10+"Result Analysis"+"#"*10)
         print(response)
         for file_name in figs:
-            img = mpimg.imread(f'{global_state.user_data.output_graph_dir}/{file_name}')  # Read the image
+            img = mpimg.imread(f'{file_name}')  # Read the image
             plt.imshow(img)  
+            plt.show()
     
     
 if __name__ == '__main__':
@@ -48,7 +52,7 @@ if __name__ == '__main__':
         parser.add_argument(
             '--data-file',
             type=str,
-            default="dataset/sachs/sachs.csv",
+            default="demo_data/20250121_223113/lalonde/lalonde.csv",
             help='Path to the input dataset file (e.g., CSV format or directory location)'
         )
 
@@ -117,34 +121,11 @@ if __name__ == '__main__':
             default="selected algorithm: PC",
             help='Initial query for the algorithm'
         )
-
-        parser.add_argument(
-            '--parallel',
-            type=bool,
-            default=False,
-            help='Parallel computing for bootstrapping.'
-        )
-
-        parser.add_argument(
-            '--demo_mode',
-            type=bool,
-            default=False,
-            help='Demo mode'
-        )
-
-        parser.add_argument(
-            '--revised_graph',
-            type=str,
-            default='dataset/sachs/base_graph.npy',
-            help='Demo mode'
-        )
-
         args = parser.parse_args()
         return args
     
-    with open('report/test/args.pkl', 'rb') as file:
-        args = pickle.load(file)
-    with open('report/test/global_state.pkl', 'rb') as file:
+    args = parse_args()
+    with open('demo_data/20250121_223113/lalonde/output_graph/PC_global_state.pkl', 'rb') as file:
         global_state = pickle.load(file)
 
     main(global_state, args)
