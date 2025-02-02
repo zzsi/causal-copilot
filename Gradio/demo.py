@@ -221,9 +221,10 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
         
         if CURRENT_STAGE == 'mode_check':
             print(CURRENT_STAGE)
-            chat_history.append((None, "Do you want to use the interactive mode which allows the interaction with copilot in each step?\n"
-                                    "If not, the whole procedure will be conducted automatically with suggested optimal settings.\n"
-                                    "Please answer with 'Yes' or 'NO'."))
+            chat_history.append((None, "Would you like to enable interactive mode, allowing step-by-step interaction with Copilot?\n"
+                                    "This mode lets you provide background information, identify missing values, and more.\n"
+                                    "If you choose not to enable it, the entire procedure will run automatically with the suggested optimal settings.\n"
+                                    "Please respond with 'Yes' or 'No'."))
             CURRENT_STAGE = 'mode_setting'
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -309,7 +310,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             global_state = correlation_check(global_state)
             if global_state.user_data.high_corr_drop_features:
                 chat_history.append((None, "Correlation Check Summary: \n"\
-                                     f"We will drop {', '.join(global_state.user_data.high_corr_drop_features)} due to the fact that they are highly correlated with other features."))
+                                     f"We will drop {', '.join(list(set(global_state.user_data.high_corr_drop_features)))} due to the fact that they are highly correlated with other features."))
             else:
                 chat_history.append((None, "Correlation Check Summary: \n"\
                                         "No variables are highly correlated with each other."))

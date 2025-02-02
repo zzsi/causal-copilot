@@ -880,9 +880,9 @@ Help me to write a comparison of the following causal discovery results of diffe
             self.discover_process = self.procedure_prompt()
             self.preprocess_plot = self.preprocess_plot_prompt()
             # Graph effect info
-            self.graph_prompt = list_conversion(self.global_state.logging.graph_conversion['initial_graph_analysis'])
+            self.graph_prompt = bold_conversion(self.global_state.logging.graph_conversion['initial_graph_analysis'])
+            self.graph_prompt = list_conversion(self.graph_prompt)
             self.graph_prompt = fix_latex_itemize(self.graph_prompt)
-            self.graph_prompt = bold_conversion(self.graph_prompt)
             # Graph Revise info
             if self.data_mode == 'real':
                 self.revise_process = self.graph_revise_prompts()
@@ -917,7 +917,7 @@ Help me to write a comparison of the following causal discovery results of diffe
                 "[DATA_PROP_TABLE]": data_prop_table or "",
                 "[DIST_INFO]": dist_info or "",
                 "[CORR_INFO]": corr_info or "",
-                "[RESULT_ANALYSIS]": self.graph_prompt.replace("&", r"\&").replace("_", r"\_") or "",
+                "[RESULT_ANALYSIS]": self.graph_prompt.replace("&", r"\&") or "",
                 "[DISCOVER_PROCESS]": self.discover_process.replace("&", r"\&") or "",
                 "[PREPROCESS_GRAPH]": self.preprocess_plot or "",
                 "[REVISE_PROCESS]": self.revise_process.replace("&", r"\&") or "",
@@ -1098,7 +1098,7 @@ def parse_args():
 import pickle  
 if __name__ == '__main__':
     args = parse_args()
-    with open('demo_data/20250130_183915/2021online_shop/output_graph/PC_global_state.pkl', 'rb') as file:
+    with open('demo_data/20250201_151758/heart disease/output_graph/PC_global_state.pkl', 'rb') as file:
         global_state = pickle.load(file)
     test(args, global_state)
     # save_path = 'demo_data/20250130_130622/house_price/output_report'

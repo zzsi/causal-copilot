@@ -169,12 +169,12 @@ def parse_ts_query(message, chat_history, download_btn, global_state, REQUIRED_I
 
 def parse_sparsity_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE):
     # Select features based on LLM
-    if message == 'LLM' or '':
+    if message.upper() == 'LLM' or message == '':
         try:
             global_state = llm_select_dropped_features(global_state=global_state, args=args)
         except:
             global_state = llm_select_dropped_features(global_state=global_state, args=args)
-        if message == 'LLM':
+        if message.upper() == 'LLM':
             chat_history.append((None, "The following sparse variables suggested by LLM will be dropped: \n"
                                             ", ".join(global_state.user_data.llm_drop_features)))
         elif message == '':
@@ -217,7 +217,9 @@ def first_stage_sparsity_check(message, chat_history, download_btn, args, global
     We ask the user: We do not detect NA values in your dataset, do you have the specific value that represents NA? If so, please provide here. Otherwise please input 'NO'.
     Now we need to parse the user's input.
     **Task**
-    Firstly, identify whether user answer 'no' or something like that, and save the boolean result in indicator. If user answers 'no' or something like that, the boolean should be True.
+    Firstly, identify whether user answer 'no' or something like that, and save the boolean result in indicator. 
+    If user answers 'no' or something like that, the boolean should be **True!**
+    If the user provide the na_indicator, the boolean should be **False!**
     Secondly if user provide the na_indicator, identify the indicator user specified in the query, and save the string result in na_indicator. """
     parsed_response = LLM_parse_query(NA_Indicator, prompt, message, args)
     indicator, na_indicator = parsed_response.indicator, parsed_response.na_indicator

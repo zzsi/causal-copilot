@@ -46,7 +46,8 @@ class Visualization(object):
             try:
                 pag.add_edge(edge[0], edge[1], pag.directed_edge_name)
             except:
-                pass
+                pag.remove_edge(edge[1], edge[0], pag.directed_edge_name)
+                pag.add_edge(edge[0], edge[1], pag.bidirected_edge_name)
         for edge in edges_dict['uncertain_edges']:
             pag.add_edge(edge[0], edge[1], pag.undirected_edge_name)
         for edge in edges_dict['bi_edges']:
