@@ -2,46 +2,45 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Tuple
 
-from econml.dml import DML as Econ_DML
-from econml.dml import LinearDML as Econ_LinearDML
-from econml.dml import SparseLinearDML as Econ_SparseLinearDML
-from econml.dml import CausalForestDML as Econ_CausalForestDML
+from econml.dr import DRLearner as Econ_DRL
+from econml.dr import LinearDRLearner as Econ_LinearDRL
+from econml.dr import SparseLinearDRLearner as Econ_SparseLinearDRL
+from econml.dr import ForestDRLearner as Econ_ForestDRL
 
 from .base import Estimator
 
-# - DML 
-# - LinearDML
-# - SparseLinearDML
-# - CausalForestDML
+# - DRL
+# - LinearDRL
+# - SparseLinearDRLL
+# - ForestDRL
 
-class DML(Estimator):
+class DRL(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None):
         super().__init__(params, y_col, T_col, X_col, W_col)
-        self.model = Econ_DML(**self._params)
+        self.model = Econ_DRL(**self._params)
 
     @property
     def name(self):
-        return "DML"
+        return "DRL"
 
     def get_params(self):
         return self._params
 
     def fit(self, data: pd.DataFrame):
-        y = data[[self.y_col]].values.ravel()
+        y = data[[self.y_col]]
         T = data[[self.T_col]]
-        X = data[self.X_col]
-        W = data[self.W_col]
-        # Run DML algorithm        
-        self.model.fit(y, T, X=X, W=W)
-    
+        X = data[self.X_col] if self.X_col else None
+        W = data[self.W_col] if self.W_col else None
+        # Run DRL algorithm        
+        self.model.fit(Y=y, T=T, X=X, W=W)
+            
     def ate(self, data: pd.DataFrame):
-        X = data[self.X_col]
-        ate = self.model.ate(X=X, T0=self.T0, T1=self.T1)
-        ate_lower, ate_upper = self.model.ate_interval(X=X, T0=self.T0, T1=self.T1)
+        ate = self.model.ate(X=None, T0=self.T0, T1=self.T1)
+        ate_lower, ate_upper = self.model.ate_interval(X=None, T0=self.T0, T1=self.T1)
         return ate, ate_lower, ate_upper
 
     def att(self, data: pd.DataFrame):
-        X = data[self.X_col]
+        X = data[self.X_col] if self.X_col else None
         treated_indices = (data[self.T_col] == 1)
         treated_effects = self.model.effect(X[treated_indices], T0=self.T0, T1=self.T1)
         lower_bound, upper_bound = self.model.effect_interval(X[treated_indices], T0=self.T0, T1=self.T1)
@@ -58,31 +57,31 @@ class DML(Estimator):
     def test_algorithm(self):
         pass
 
-class LinearDML(Estimator):
+
+class LinearDRL(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None):
         del params['model_final']
         super().__init__(params, y_col, T_col, X_col, W_col)
-        self.model = Econ_LinearDML(**self._params)
+        self.model = Econ_LinearDRL(**self._params)
 
     @property
     def name(self):
-        return "LinearDML"
+        return "LinearDRL"
 
     def get_params(self):
         return self._params
 
     def fit(self, data: pd.DataFrame):
-        y = data[[self.y_col]].values.ravel()
+        y = data[[self.y_col]]
         T = data[[self.T_col]]
-        X = data[self.X_col]
-        W = data[self.W_col]
-        # Run DML algorithm        
+        X = data[self.X_col] if self.X_col else None
+        W = data[self.W_col] if self.W_col else None
+        # Run DRL algorithm        
         self.model.fit(y, T, X=X, W=W)
         
     def ate(self, data: pd.DataFrame):
-        X = data[self.X_col]
-        ate = self.model.ate(X=X, T0=self.T0, T1=self.T1)
-        ate_lower, ate_upper = self.model.ate_interval(X=X, T0=self.T0, T1=self.T1)
+        ate = self.model.ate(X=None, T0=self.T0, T1=self.T1)
+        ate_lower, ate_upper = self.model.ate_interval(X=None, T0=self.T0, T1=self.T1)
         return ate, ate_lower, ate_upper
 
     def att(self, data: pd.DataFrame):
@@ -103,31 +102,30 @@ class LinearDML(Estimator):
     def test_algorithm(self):
         pass
 
-class SparseLinearDML(Estimator):
+class SparseLinearDRL(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None):
         del params['model_final']
         super().__init__(params, y_col, T_col, X_col, W_col)
-        self.model = Econ_SparseLinearDML(**self._params)
+        self.model = Econ_SparseLinearDRL(**self._params)
 
     @property
     def name(self):
-        return "SparseLinearDML"
+        return "SparseLinearDRL"
 
     def get_params(self):
         return self._params
 
     def fit(self, data: pd.DataFrame):
-        y = data[[self.y_col]].values.ravel()
+        y = data[[self.y_col]]
         T = data[[self.T_col]]
-        X = data[self.X_col]
-        W = data[self.W_col]
-        # Run DML algorithm        
+        X = data[self.X_col] if self.X_col else None
+        W = data[self.W_col] if self.W_col else None
+        # Run DRL algorithm        
         self.model.fit(y, T, X=X, W=W)
            
     def ate(self, data: pd.DataFrame):
-        X = data[self.X_col]
-        ate = self.model.ate(X=X, T0=self.T0, T1=self.T1)
-        ate_lower, ate_upper = self.model.ate_interval(X=X, T0=self.T0, T1=self.T1)
+        ate = self.model.ate(X=None, T0=self.T0, T1=self.T1)
+        ate_lower, ate_upper = self.model.ate_interval(X=None, T0=self.T0, T1=self.T1)
         return ate, ate_lower, ate_upper
 
     def att(self, data: pd.DataFrame):
@@ -148,35 +146,34 @@ class SparseLinearDML(Estimator):
     def test_algorithm(self):
         pass
 
-class CausalForestDML(Estimator):
-    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int = 0, T1: int = 1):
+class ForestDRL(Estimator):
+    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None):
         del params['model_final']
-        super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
-        self.model = Econ_CausalForestDML(**self._params)
+        super().__init__(params, y_col, T_col, X_col, W_col)
+        self.model = Econ_ForestDRL(**self._params)
 
     @property
     def name(self):
-        return "CausalForestDML"
+        return "CausalForestDRL"
 
     def get_params(self):
         return self._params
 
     def fit(self, data: pd.DataFrame):
-        y = data[[self.y_col]].values.ravel()
+        y = data[[self.y_col]]
         T = data[[self.T_col]]
-        X = data[self.X_col]
-        W = data[self.W_col]
-        # Run DML algorithm        
+        X = data[self.X_col] if self.X_col else None
+        W = data[self.W_col] if self.W_col else None
+        # Run DRL algorithm        
         self.model.fit(y, T, X=X, W=W)
     
     def ate(self, data: pd.DataFrame):
-        X = data[self.X_col]
-        ate = self.model.ate(X=X, T0=self.T0, T1=self.T1)
-        ate_lower, ate_upper = self.model.ate_interval(X=X, T0=self.T0, T1=self.T1)
+        ate = self.model.ate(X=None, T0=self.T0, T1=self.T1)
+        ate_lower, ate_upper = self.model.ate_interval(X=None,T0=self.T0, T1=self.T1)
         return ate, ate_lower, ate_upper
 
     def att(self, data: pd.DataFrame):
-        X = data[self.X_col]
+        X = data[self.X_col] if self.X_col else None
         treated_indices = (data[self.T_col] == 1)
         treated_effects = self.model.effect(X[treated_indices], T0=self.T0, T1=self.T1)
         lower_bound, upper_bound = self.model.effect_interval(X[treated_indices], T0=self.T0, T1=self.T1)
@@ -195,5 +192,5 @@ class CausalForestDML(Estimator):
 
 
 if __name__ == "__main__":
-    pc_algo = DML(y_col='', T_col='', X_col='')
+    pc_algo = DRL(y_col='', T_col='', X_col='')
     pc_algo.test_algorithm() 

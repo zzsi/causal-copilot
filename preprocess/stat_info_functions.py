@@ -24,7 +24,6 @@ from openai import OpenAI
 # from Gradio.demo import global_state
 
 # new package
-from scipy.interpolate import UnivariateSpline
 from sympy.codegen.ast import Return
 
 
@@ -41,10 +40,12 @@ def numeric_str_nan_detect(global_state):
 
     # missing value is represented as in the int format
     if nan_value.isdigit():
-        global_state.user_data.raw_data = data.replace(int(nan_value), np.nan, inplace=True)
+        data.replace(int(nan_value), np.nan, inplace=True)
+        global_state.user_data.raw_data = data
     # missing value is represented as in the str format
     elif data.isin([nan_value]).any().any():
-        global_state.user_data.raw_data = data.replace(nan_value, np.nan, inplace=True)
+        data.replace(nan_value, np.nan, inplace=True)
+        global_state.user_data.raw_data = data
     else:
         nan_detect = False
 
@@ -53,7 +54,6 @@ def numeric_str_nan_detect(global_state):
 
 # Missingness Checking #################################################################################################
 def missing_ratio_table(global_state):
-
     data = global_state.user_data.raw_data
 
     if global_state.statistics.heterogeneous and global_state.statistics.domain_index is not None:
@@ -84,12 +84,14 @@ def missing_ratio_table(global_state):
     table.set_fontsize(10)
     table.auto_set_column_width(col=list(range(len(ratio_record_df.columns))))
 
+    plt.savefig("missing_ratios_table.png", bbox_inches='tight', dpi=300)
+
     save_path = global_state.user_data.output_graph_dir
 
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     print(f"Saving missingness ratio table to {os.path.join(save_path, 'missing_ratios_table.jpg')}")
-    plt.savefig(os.path.join(save_path, 'missing_ratios_table.jpg'), bbox_inches='tight', dpi=300)
+    plt.savefig(os.path.join(save_path, 'missing_ratios_table.jpg'))
 
     if sum(ratio_record.values()) == 0:
         global_state.statistics.missingness = False
@@ -151,7 +153,6 @@ def drop_greater_miss_between_30_50_feature(global_state):
     else:
         global_state.user_data.selected_features = [element for element in global_state.user_data.selected_features if
                                                      element not in global_state.user_data.llm_drop_features]
-
     return global_state
 
 
@@ -196,20 +197,43 @@ def correlation_check(global_state):
     return global_state
 
 # TIME SERIES PROCESSING ###############################################################################################
-def spline_imputation(df: pd.DataFrame):
-    for col in df.columns:
-        x_non_missing = np.array(df.index[df[col].notna()].astype(np.int64) // 10 ** 9)  # convert to time stamp
-        y_non_missing = df[col].dropna().values
+def impute_time_series(df: pd.DataFrame, time_index_feature: str = None) -> pd.DataFrame:
+    """
+    Impute missing values in a time series DataFrame using time-based interpolation.
 
-        spline = UnivariateSpline(x_non_missing, y_non_missing, s=0)
+    Parameters:
+        df (pd.DataFrame): The DataFrame containing the time series data.
+        time_index_feature (str): Optional. The column to use as the time index.
 
-        x_missing = np.array(df.index[df[col].isna()].astype(np.int64) // 10 ** 9)
-        df.loc[df[col].isna(), col] = spline(x_missing)
+    Returns:
+        pd.DataFrame: A new DataFrame with missing values imputed.
+    """
+    # Work on a copy to preserve the original DataFrame
+    df_copy = df.copy()
 
-    return df
+    # Determine the time index
+    if time_index_feature is None:
+        if not np.issubdtype(df_copy.index, np.datetime64):
+            try:
+                time_index = pd.to_datetime(df_copy.index)
+            except Exception as e:
+                raise ValueError(f"Cannot convert data index to time index: {e}")
+        else:
+            time_index = df_copy.index
+    else:
+        if time_index_feature not in df_copy.columns:
+            raise ValueError(f"Column '{time_index_feature}' not found in DataFrame.")
+        time_index = pd.to_datetime(df_copy[time_index_feature])
 
-# imput = spline_imputation(data)
-# print(imput)
+    # Perform interpolation on numeric columns
+    for column in df_copy.columns:
+        if column != time_index_feature and pd.api.types.is_numeric_dtype(df_copy[column]):
+            df_copy[column] = pd.DataFrame(
+                df_copy[column].values, index=time_index
+            ).interpolate(method='time', limit_direction= 'both').values
+
+    return df_copy
+
 
 
 def series_lag_est(time_series, nlags = 50):
@@ -299,7 +323,7 @@ def data_preprocess (clean_df: pd.DataFrame, ts: bool = False):
 # column_type, overall_type = data_preprocess(clean_df = df, ts = False)
 # print(column_type)
 
-def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
+def imputation(df: pd.DataFrame, column_type: dict, ts: bool = False):
     '''
     :param df: cleaned and converted data in Pandas DataFrame format.
     :param column_type: data type of each column.
@@ -323,10 +347,7 @@ def imputation (df: pd.DataFrame, column_type: dict, ts: bool = False):
             df[column] = imputer_cat.fit_transform(df[[column]]).ravel()
 
     if ts:
-        # imputer = IterativeImputer(max_iter=10, random_state=0)
-        # imputed_data = imputer.fit_transform(df)
-        # df = pd.DataFrame(imputed_data, columns=df.columns)
-        df = spline_imputation(df)
+        df = impute_time_series(df)
 
     # Z-score normalization
     scaler = StandardScaler()

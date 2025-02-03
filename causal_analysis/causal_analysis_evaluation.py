@@ -31,7 +31,8 @@ class DataSimulator:
         """Simulate heterogeneous effect: Y = β_0 + β_T(X) * T + β_X * X + ε"""
         X = np.random.normal(0, 1, self.num_samples)  # Confounder
         T = np.random.binomial(1, 0.5, self.num_samples)
-        beta_T_X = 0.5 + 2 * X  # Heterogeneous treatment effect depending on X
+
+        beta_T_X = 0.5 + 2 * np.cos(X)  # Heterogeneous treatment effect depending on X
         epsilon = np.random.normal(0, noise_std, self.num_samples)
         Y = beta_0 + beta_T_X * T + beta_X * X + epsilon
         data = pd.DataFrame({"Confounder": X, "Treatment": T, "Outcome": Y})
