@@ -36,10 +36,13 @@ class CORL(CausalDiscoveryAlgorithm):
             'alpha': 0.99,
             'init_baseline': -1.0,
             'random_seed': 0,
-            'device_type': 'cpu',
+            'device_type': 'auto',
             'device_ids': None
         }
         self._params.update(params)
+        # Automatically decide device_type if set to 'auto'
+        if self._params.get('device_type', 'cpu') == 'auto':
+            self._params['device_type'] = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     @property
     def name(self):
@@ -49,16 +52,17 @@ class CORL(CausalDiscoveryAlgorithm):
         return self._params
 
     def get_primary_params(self):
-        self._primary_param_keys = ['batch_size', 'embed_dim', 'reward_mode', 
-                                  'reward_score_type', 'iteration', 'actor_lr', 'critic_lr']
+        self._primary_param_keys = ['batch_size', 'iteration']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def get_secondary_params(self):
-        self._secondary_param_keys = ['input_dim', 'normalize', 'encoder_name', 
-                                    'encoder_heads', 'encoder_blocks', 'encoder_dropout_rate',
-                                    'decoder_name', 'reward_regression_type', 'reward_gpr_alpha',
-                                    'lambda_iter_num', 'alpha', 'init_baseline', 'random_seed',
-                                    'device_type', 'device_ids']
+        self._secondary_param_keys = ['embed_dim', 'reward_mode', 'reward_score_type', 
+                                      'actor_lr', 'critic_lr', 'input_dim', 'normalize', 
+                                      'encoder_name', 'encoder_heads', 'encoder_blocks', 
+                                      'encoder_dropout_rate', 'decoder_name', 
+                                      'reward_regression_type', 'reward_gpr_alpha',
+                                      'lambda_iter_num', 'alpha', 'init_baseline', 
+                                      'random_seed', 'device_type', 'device_ids']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, None]:

@@ -11,19 +11,18 @@ sys.path.append(algorithm_dir)
 
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
+from castle.algorithms import Notears
 
 class NOTEARSLinear(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
         self._params = {
+            'lambda1': 0.1,
+            'loss_type': 'l2',
             'max_iter': 100,
             'h_tol': 1e-8,
-            'w_threshold': 0.0,
-            'tabu_edges': None,
-            'tabu_parent_nodes': None,
-            'tabu_child_nodes': None,
-            'beta': 0.1,
-            'sparse': True
+            'rho_max': 1e+16,
+            'w_threshold': 0.3
         }
         self._params.update(params)
 
@@ -35,41 +34,46 @@ class NOTEARSLinear(CausalDiscoveryAlgorithm):
         return self._params
     
     def get_primary_params(self):
-        self._primary_param_keys = ['max_iter', 'sparse', 'beta']
+        self._primary_param_keys = ['lambda1', 'max_iter']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
     
     def get_secondary_params(self):
-        self._secondary_param_keys = ['h_tol', 'w_threshold', 'tabu_edges', 
-                                    'tabu_parent_nodes', 'tabu_child_nodes']
+        self._secondary_param_keys = ['loss_type', 'h_tol', 'rho_max', 'w_threshold']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: Union[pd.DataFrame, np.ndarray]) -> Tuple[np.ndarray, Dict]:
-        sparse = self._params.pop('sparse', False)
         if isinstance(data, pd.DataFrame):
             node_names = list(data.columns)
+            data = data.values
         else:
             node_names = [f"X{i}" for i in range(data.shape[1])]
-            data = pd.DataFrame(data, columns=node_names)
+            data = np.array(data)
 
-        if sparse:
-            sm = from_pandas_lasso(data, **self.get_primary_params(), **self.get_secondary_params())
-        else:
-            secondary_params = self.get_secondary_params()
-            secondary_params.pop('beta', None)
-            sm = from_pandas(data, **self.get_primary_params(), **secondary_params)
+        # Initialize NOTEARS from Castle
+        model = Notears(
+            lambda1=self._params['lambda1'],
+            loss_type=self._params['loss_type'],
+            max_iter=self._params['max_iter'],
+            h_tol=self._params['h_tol'],
+            rho_max=self._params['rho_max'],
+            w_threshold=self._params['w_threshold']
+        )
         
-        # Add the 'sparse' parameter back
-        self._params['sparse'] = sparse 
-
-        # Convert the StructureModel to adjacency matrix
-        adj_matrix = self.convert_to_adjacency_matrix(sm, node_names)
+        # Fit the model
+        model.learn(data)
+        
+        # Get the adjacency matrix
+        adj_matrix = model.causal_matrix
+        if isinstance(adj_matrix, pd.DataFrame):
+            adj_matrix = adj_matrix.values
 
         # Prepare additional information
         info = {
-            'structure_model': sm,
+            'model': model,
+            'weight_causal_matrix': model.weight_causal_matrix
         }
 
-        return adj_matrix, info, sm
+        return adj_matrix, info, model
     
     def convert_to_adjacency_matrix(self, sm, node_names: List[str]) -> np.ndarray:
         """
@@ -106,14 +110,12 @@ class NOTEARSLinear(CausalDiscoveryAlgorithm):
 
         print("Testing NOTEARS algorithm with pandas DataFrame:")
         params = {
+            'lambda1': 0.1,
+            'loss_type': 'l2',
             'max_iter': 100,
             'h_tol': 1e-8,
-            'w_threshold': 0.0,
-            'sparse': True
+            'w_threshold': 0.3
         }
-        adj_matrix, info, _ = self.fit(df)
-        print("Adjacency Matrix:")
-        print(adj_matrix)
 
         # Ground truth graph
         gt_graph = np.array([
@@ -124,16 +126,38 @@ class NOTEARSLinear(CausalDiscoveryAlgorithm):
             [0, 0, 1, 1, 0]
         ])
 
-        # Use GraphEvaluator to compute metrics
-        evaluator = GraphEvaluator()
-        metrics = evaluator.compute_metrics(gt_graph, adj_matrix)
+        # Initialize lists to store metrics
+        f1_scores = []
+        precisions = []
+        recalls = []
+        shds = []
 
-        print("\nMetrics:")
-        print(f"F1 Score: {metrics['f1']:.4f}")
-        print(f"Precision: {metrics['precision']:.4f}")
-        print(f"Recall: {metrics['recall']:.4f}")
-        print(f"SHD: {metrics['shd']:.4f}")
+        # Run the algorithm 10 times
+        for _ in range(10):
+            adj_matrix, info, _ = self.fit(df)
+            evaluator = GraphEvaluator()
+            metrics = evaluator.compute_metrics(gt_graph, adj_matrix)
+            f1_scores.append(metrics['f1'])
+            precisions.append(metrics['precision'])
+            recalls.append(metrics['recall'])
+            shds.append(metrics['shd'])
+
+        # Calculate average and standard deviation
+        avg_f1 = np.mean(f1_scores)
+        std_f1 = np.std(f1_scores)
+        avg_precision = np.mean(precisions)
+        std_precision = np.std(precisions)
+        avg_recall = np.mean(recalls)
+        std_recall = np.std(recalls)
+        avg_shd = np.mean(shds)
+        std_shd = np.std(shds)
+
+        print("\nAverage Metrics over 10 runs:")
+        print(f"F1 Score: {avg_f1:.4f} ± {std_f1:.4f}")
+        print(f"Precision: {avg_precision:.4f} ± {std_precision:.4f}")
+        print(f"Recall: {avg_recall:.4f} ± {std_recall:.4f}")
+        print(f"SHD: {avg_shd:.4f} ± {std_shd:.4f}")
 
 if __name__ == "__main__":
-    notears_algo = NOTEARS({})
+    notears_algo = NOTEARSLinear({})
     notears_algo.test_algorithm() 

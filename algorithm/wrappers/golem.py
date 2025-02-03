@@ -5,29 +5,29 @@ from typing import Dict, Tuple, Union, List
 import sys
 import os
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+algorithm_dir = os.path.join(root_dir, 'algorithm')
 sys.path.append(root_dir)
+sys.path.append(algorithm_dir)
 
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
-from externals.trustworthyAI.gcastle.castle.algorithms import NotearsNonlinear
+from castle.algorithms import GOLEM as golem
 
-class NOTEARSNonlinear(CausalDiscoveryAlgorithm):
+class GOLEM(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
         self._params = {
-            'lambda1': 0.01,  # L1 regularization parameter
-            'lambda2': 0.01,  # L2 regularization parameter
-            'max_iter': 100,
-            'h_tol': 1e-8,
-            'rho_max': 1e+16,
-            'w_threshold': 0.3,
-            'hidden_layers': (10, 1),  # Default architecture with one hidden layer
-            'bias': True,
-            'model_type': 'mlp',  # 'mlp' or 'sob'
-            'device_type': 'auto',  # Device type ('cpu', 'gpu', or 'auto')
-            'device_ids': None,
-            # Additional parameters for Sobolev model
-            'expansions': 10  # Only used when model_type='sob'
+            'lambda1': 2e-2,  # L1 penalty coefficient
+            'lambda2': 5.0,  # DAG penalty coefficient
+            'equal_variances': True,  # Whether to assume equal noise variances
+            'non_equal_variances': True,  # Whether to assume non-equal noise variances
+            'learning_rate': 1e-3,  # Learning rate for Adam optimizer
+            'max_iter': 1e5,  # Number of training iterations
+            'checkpoint_iter': 5000,  # Iterations between checkpoints
+            'seed': 1,  # Random seed
+            'graph_thres': 0.3,  # Threshold for weighted matrix
+            'device_type': 'auto',  # Device type ('cpu' or 'gpu' or 'auto')
+            'device_ids': None  # GPU device IDs to use
         }
         self._params.update(params)
         # Automatically decide device_type if set to 'auto'
@@ -40,7 +40,7 @@ class NOTEARSNonlinear(CausalDiscoveryAlgorithm):
 
     @property
     def name(self):
-        return "NOTEARS-MLP"
+        return "GOLEM"
 
     def get_params(self):
         return self._params
@@ -50,58 +50,43 @@ class NOTEARSNonlinear(CausalDiscoveryAlgorithm):
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
     
     def get_secondary_params(self):
-        self._secondary_param_keys = ['hidden_layers', 'model_type', 'device_type',
-                                      'h_tol', 'rho_max', 'w_threshold', 'bias', 
-                                      'device_ids', 'expansions']
+        self._secondary_param_keys = ['learning_rate', 'equal_variances', 'non_equal_variances', 
+                                      'checkpoint_iter', 'seed', 'graph_thres', 'device_type', 'device_ids']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: Union[pd.DataFrame, np.ndarray]) -> Tuple[np.ndarray, Dict]:
-        """
-        Fit the NOTEARS-MLP algorithm to data.
-        
-        Args:
-            data: Data matrix as numpy array or pandas DataFrame
-            
-        Returns:
-            adj_matrix: Estimated adjacency matrix
-            info: Additional information from the algorithm
-            model: Fitted model object
-        """
         if isinstance(data, pd.DataFrame):
             node_names = list(data.columns)
             data = data.values
         else:
             node_names = [f"X{i}" for i in range(data.shape[1])]
-            data = np.array(data)
 
-        # Initialize NOTEARS-MLP from Castle
-        model = NotearsNonlinear(
-            lambda1=self._params['lambda1'],
-            lambda2=self._params['lambda2'],
-            max_iter=self._params['max_iter'],
-            h_tol=self._params['h_tol'],
-            rho_max=self._params['rho_max'],
-            w_threshold=self._params['w_threshold'],
-        )
-        
-        # Fit the model
+        model = golem(lambda_1=self._params['lambda1'],
+                     lambda_2=self._params['lambda2'],
+                     equal_variances=self._params['equal_variances'],
+                     non_equal_variances=self._params['non_equal_variances'],
+                     learning_rate=self._params['learning_rate'],
+                     num_iter=self._params['max_iter'],
+                     checkpoint_iter=self._params['checkpoint_iter'],
+                     seed=self._params['seed'],
+                     graph_thres=self._params['graph_thres'],
+                     device_type=self._params['device_type'],
+                     device_ids=self._params['device_ids'])
+
         model.learn(data)
         
-        # Get the adjacency matrix
+        # GOLEM returns transposed matrix compared to our convention
         adj_matrix = model.causal_matrix
-        if isinstance(adj_matrix, pd.DataFrame):
-            adj_matrix = adj_matrix.values
 
-        # Prepare additional information
         info = {
             'model': model,
-            'weight_causal_matrix': model.weight_causal_matrix
+            'node_names': node_names
         }
 
-        return adj_matrix, info, model
+        return adj_matrix, info
 
     def test_algorithm(self):
-        # Generate some sample data
+        # Generate sample data
         np.random.seed(42)
         n_samples = 1000
         X1 = np.random.normal(0, 1, n_samples)
@@ -112,17 +97,7 @@ class NOTEARSNonlinear(CausalDiscoveryAlgorithm):
         
         df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
 
-        print("Testing NOTEARS-MLP algorithm with pandas DataFrame:")
-        params = {
-            'lambda1': 0.01,
-            'lambda2': 0.01,
-            'max_iter': 100,
-            'h_tol': 1e-8,
-            'w_threshold': 0.3,
-            'hidden_layers': (10, 1),
-            'model_type': 'mlp',
-            'device_type': 'gpu'
-        }
+        print("Testing GOLEM algorithm with pandas DataFrame:")
 
         # Ground truth graph
         gt_graph = np.array([
@@ -141,7 +116,7 @@ class NOTEARSNonlinear(CausalDiscoveryAlgorithm):
 
         # Run the algorithm 10 times
         for _ in range(10):
-            adj_matrix, info, _ = self.fit(df)
+            adj_matrix, info = self.fit(df)
             evaluator = GraphEvaluator()
             metrics = evaluator.compute_metrics(gt_graph, adj_matrix)
             f1_scores.append(metrics['f1'])
@@ -166,5 +141,5 @@ class NOTEARSNonlinear(CausalDiscoveryAlgorithm):
         print(f"SHD: {avg_shd:.4f} ± {std_shd:.4f}")
 
 if __name__ == "__main__":
-    notears_mlp = NOTEARSNonlinear()
-    notears_mlp.test_algorithm()
+    golem_algo = GOLEM({})
+    golem_algo.test_algorithm()

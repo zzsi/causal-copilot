@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from typing import Dict, Tuple
-
+import torch
 # use the local causal-learn package
 import sys
 import os
@@ -27,11 +27,14 @@ class CALM(CausalDiscoveryAlgorithm):
             'rho_init': 1e-5,  # Initial penalty parameter
             'rho_mult': 3,     # Multiplication factor for rho
             'htol': 1e-8,      # Tolerance for acyclicity
-            'subproblem_iter': 10000,  # Number of iterations for subproblem
+            'subproblem_iter': 40000,  # Number of iterations for subproblem
             'standardize': True,  # Whether to standardize data
-            'device': 'cuda'     # Device for computation
+            'device': 'auto'     # Device for computation
         }
         self._params.update(params)
+        # Automatically decide device_type if set to 'auto'
+        if self._params.get('device', 'cpu') == 'auto':
+            self._params['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     @property
     def name(self):
@@ -41,11 +44,11 @@ class CALM(CausalDiscoveryAlgorithm):
         return self._params
 
     def get_primary_params(self):
-        self._primary_param_keys = ['lambda1', 'alpha', 'tau']
+        self._primary_param_keys = ['lambda1', 'alpha', 'subproblem_iter']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def get_secondary_params(self):
-        self._secondary_param_keys = ['rho_init', 'rho_mult', 'htol', 'subproblem_iter', 
+        self._secondary_param_keys = [ 'tau', 'rho_init', 'rho_mult', 'htol', 'subproblem_iter', 
                                     'standardize', 'device']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
