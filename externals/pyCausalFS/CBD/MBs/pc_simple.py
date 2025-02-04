@@ -9,7 +9,7 @@ from CBD.MBs.common.condition_independence_test import cond_indep_test
 from CBD.MBs.common.subsets import subsets
 
 
-def pc_simple(data, target, alaph, isdiscrete):
+def pc_simple(data, target, alpha, isdiscrete):
     number, kVar = np.shape(data)
     ciTest = 0
     k = 0
@@ -31,7 +31,7 @@ def pc_simple(data, target, alaph, isdiscrete):
                     # make x and target CI,x removed
                     pval, dep = cond_indep_test(data, x, target, s, isdiscrete)
                     ciTest += 1
-                    if pval > alaph:
+                    if pval > alpha:
 
                         PC.remove(x)
                         break  # end circulate of s
@@ -43,6 +43,6 @@ def pc_simple(data, target, alaph, isdiscrete):
 # use demo to test pc_simple
 # data = pd.read_csv("C:\pythonProject\pyCausalFS\CBD\data\Child_s500_v1.csv")
 # target=12
-# alaph=0.01
-# pc=pc_simple(data,target,alaph, True)
+# alpha=0.01
+# pc=pc_simple(data,target,alpha, True)
 # print(pc)

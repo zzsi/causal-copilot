@@ -110,9 +110,9 @@ def MMPC(data, target, alpha, is_discrete):
 # print("the file read")
 #
 # target = 3
-# alaph = 0.05
+# alpha = 0.05
 #
-# MBs,sepset=MMPC(data,target,alaph)
+# MBs,sepset=MMPC(data,target,alpha)
 # print(MBs)
 # print(sepset)
 
@@ -124,13 +124,13 @@ def MMPC(data, target, alpha, is_discrete):
 # print("the file read")
 # import numpy as np
 # num1, kvar = np.shape(data)
-# alaph = 0.01
+# alpha = 0.01
 #
 # import time
 # start_time = time.process_time()
 # for target in range(kvar):
 #     print("target is: ", target)
-#     PC,sepset,ntest = MMPC(data, target, alaph, True)
+#     PC,sepset,ntest = MMPC(data, target, alpha, True)
 #
 # end_time = time.process_time()
 #

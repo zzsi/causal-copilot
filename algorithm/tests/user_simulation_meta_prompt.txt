@@ -1,0 +1,51 @@
+Dynamic Simulation Prompt for Causal Inquiry:
+
+Imagine you're interacting with a state-of-the-art causal analysis platform. Whether you’re a beginner or a seasoned expert from another field, craft a query that truly captures your investigative intent.
+
+Consider the points below to guide your simulation:
+
+I. User Profile:
+- Who are you? (e.g., academic researcher, data scientist, system engineer, etc.)
+- What field do you represent? (e.g., healthcare, economics, sociology, etc.)
+- How familiar are you with causal inference methods?
+- What are the common causal questions or challenges in your area?
+
+II. Investigation Details:
+- Which causal links or effects are you aiming to explore?
+- Why is uncovering these relationships crucial for your work?
+- Do you have any initial hypotheses or theories regarding potential causal mechanisms?
+
+III. Dataset Characteristics:
+- What kind of data are you working with?
+- Specify the sample size and the number of variables.
+- How was the data obtained or measured?
+- Are there any known biases, confounders, or selection issues?
+
+IV. Analytical Objectives:
+- What specific aspects of causality are you interested in (e.g., direct effects, indirect effects, or both)?
+- Is there a need to account for latent variables?
+- What assumptions are you making about the data generation process?
+- What domain knowledge do you have about the data?
+
+Your answer should reflect a varied and realistic user perspective in terms of language and dataset nuances. Provide your response solely as a JSON object, and enclose it within <json>[json]</json> tags with no additional commentary.
+
+Ensure your JSON object conforms to the structure below:
+
+<json>
+{
+  "user_description": "<a detailed description of the user's role, background, and expertise>",
+  "dataset_description": "<a detailed description of the dataset, including the sample size, number of variables, and how the data was obtained or measured>",
+  "analytical_objectives": "<a detailed description of the specific aspects of causality the user is interested in, including whether they are interested in direct effects, indirect effects, or both, and whether they are interested in accounting for latent variables>",
+  "initial_query": "<a detailed user query string describing the need for causal discovery and the specific aspects of causality the user is interested in>",
+  "statistics": {
+      "linearity": <boolean, true if you assume linear relationships>,
+      "gaussian_error": <boolean, true if you assume Gaussian error terms>,
+      "heterogeneous": <boolean, true if the dataset is considered heterogeneous>,
+      "domain_index": "<a string or null, representing the domain index column if applicable>",
+      "sample_size": <integer specifying the number of samples>,
+      "feature_number": <integer specifying the number of features>,
+      "data_type": "<string: 'Continuous', 'Category', or 'Time-series'>",
+      "domain_knowledge": "<a string or null, representing the domain knowledge of the user about the data>"
+  }
+}
+</json>

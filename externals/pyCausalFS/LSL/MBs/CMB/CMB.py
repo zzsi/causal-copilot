@@ -7,7 +7,7 @@ from LSL.MBs.common.Meek import Meek
 from LSL.MBs.CMB.CMB_subroutine import CMB_subroutine
 
 
-def CMB(Data, T, alaph, is_discrete=True):
+def CMB(Data, T, alpha, is_discrete=True):
     n, p = np.shape(Data)
     DAG = np.zeros((p, p))
     pdag = np.zeros((p, p))
@@ -34,7 +34,7 @@ def CMB(Data, T, alaph, is_discrete=True):
             Tmp.append(A)
         if already_calculated[A]:
             IDT, all_idT3[A], all_idT3_count[A], pctemp, n_c  = CMB_subroutine(
-                Data, A, alaph, IDT, already_calculated_MB, all_MB, is_discrete)
+                Data, A, alpha, IDT, already_calculated_MB, all_MB, is_discrete)
             num_ci += n_c
             already_calculated[A] = 0
         IDT_A_3 = [index for index, i in enumerate(IDT[A]) if i == 3]
@@ -81,7 +81,7 @@ def CMB(Data, T, alaph, is_discrete=True):
             Q.append(X)
             if already_calculated[X]:
                 IDT, all_idT3[X], all_idT3_count[X], pctemp, n_c2 = CMB_subroutine(
-                    Data, X, alaph, IDT, already_calculated_MB, all_MB, is_discrete)
+                    Data, X, alpha, IDT, already_calculated_MB, all_MB, is_discrete)
                 already_calculated[X] = 0
                 num_ci += n_c2
             # update IDT according to IDX

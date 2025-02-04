@@ -6,73 +6,80 @@ desc:
 """
 
 import numpy as np
-from CBD.MBs.common.condition_independence_test import cond_indep_test
+import os
+import sys
 
-def inter_IAMB(data, target, alaph, is_discrete=True):
+causal_learn_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), 'causal-learn')
+sys.path.append(causal_learn_dir)
+
+import causallearn.utils.cit as cit
+from joblib import Parallel, delayed
+
+# Change signature: remove is_discrete, add indep_test and n_jobs
+def inter_IAMB(data, target, alpha, indep_test='fisherz', n_jobs=1):
     number, kVar = np.shape(data)
     ci_number = 0
-    MB=[]
+    MB = []
     circulateFlag = True
     removeSet = []
     rmNumberSet = [0 for i in range(kVar)]
+    
+    # Initialize CIT
+    cond_indep_test = cit.CIT(data, indep_test)
+    
     while circulateFlag:
-        circulateFlag =False
-        # print("MBs is:" + str(MBs))
-        dep_temp = - float("inf")
+        circulateFlag = False
+        dep_temp = -float("inf")
         pval_temp = 1
         max_s = None
 
-        # remove target element from set before test
-        variables =[i for i in range(kVar) if i != target and i not in MB and i not in removeSet]
+        variables = [i for i in range(kVar) if i != target and i not in MB and i not in removeSet]
 
-        # growing phase
-        for s in variables:
-            ci_number += 1
-            # print(numberOfCirculate)
+        # Growing phase: if n_jobs>1 run the tests in parallel.
+        if n_jobs > 1 and variables:
+            results = Parallel(n_jobs=n_jobs)(
+                delayed(cond_indep_test)(target, s, MB) for s in variables
+            )
+            for s, pval_gp in zip(variables, results):
+                ci_number += 1
+                dep_gp = -pval_gp
+                if dep_gp > dep_temp:
+                    dep_temp = dep_gp
+                    max_s = s
+                    pval_temp = pval_gp
+        else:
+            for s in variables:
+                ci_number += 1
+                pval_gp = cond_indep_test(target, s, MB)
+                dep_gp = -pval_gp
+                if dep_gp > dep_temp:
+                    dep_temp = dep_gp
+                    max_s = s
+                    pval_temp = pval_gp
 
-            pval_gp, dep_gp = cond_indep_test(data, target,s, MB, is_discrete)
-
-            if dep_gp > dep_temp:
-                dep_temp = dep_gp
-                max_s = s
-                pval_temp = pval_gp
-
-        if pval_temp <= alaph:
-            # if any changes ,circulate should be continue
+        if pval_temp <= alpha:
             circulateFlag = True
             MB.append(max_s)
-            # print("BT append vari is:" + str(max_s))
 
-        # if not append any variables to BT before this,the shirnking phase must not delete any variables.
-        # save time
-        if circulateFlag == False:
+        if not circulateFlag:
             break
 
-
-        # print("----> shrinking phase")
-        # use mb_index ,to be pointer
+        # Shrinking phase
         mb_index = len(MB)
-        # 逆序
-        while mb_index >= 0:
+        while mb_index > 0:
             mb_index -= 1
             x = MB[mb_index]
-
             ci_number += 1
-
             subsets_Variables = [i for i in MB if i != x]
-            pval_sp, dep_sp = cond_indep_test(data, target, x, subsets_Variables, is_discrete)
-            if pval_sp > alaph:
+            pval_sp = cond_indep_test(target, x, subsets_Variables)
+            dep_sp = -pval_sp
+            if pval_sp > alpha:
                 MB.remove(x)
-                # remove the variables while have be append to MBs just,lead to circulation break
                 if x == max_s:
                     break
-
                 rmNumberSet[x] += 1
                 if rmNumberSet[x] > 10:
                     removeSet.append(x)
-                # print("BT remove vari is: "+ str(x) + " ,rmNumberSet[x] is:" + str(rmNumberSet[x]))
-                # if any changes,circulate should be contine
-                # circulateFlag = True
 
     return list(set(MB)), ci_number
 
@@ -81,9 +88,9 @@ def inter_IAMB(data, target, alaph, is_discrete=True):
 # print("the file read")
 #
 # target = 4
-# alaph = 0.05
+# alpha = 0.05
 #
-# CMB=inter_IAMB(data,target,alaph)
+# CMB=inter_IAMB(data,target,alpha)
 #
 # print(CMB)
 

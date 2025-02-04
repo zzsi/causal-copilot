@@ -7,7 +7,7 @@
 import numpy as np
 from CBD.MBs.common.condition_independence_test import cond_indep_test
 
-def one_run(data, target, S, alaph, is_discrete):
+def one_run(data, target, S, alpha, is_discrete):
     ci_number = 0
     number, kVar = np.shape(data)
     R = [i for i in range(kVar) if i not in S and i != target]
@@ -17,7 +17,7 @@ def one_run(data, target, S, alaph, is_discrete):
             ci_number += 1
             pval, dep = cond_indep_test(data, target, x, S, is_discrete)
             # print("x is: " + str(x) + " ,S is: " + str(S) + " ,pval is: " + str(pval) + " ,dep is: " + str(dep))
-            if pval <= alaph:
+            if pval <= alpha:
                 vari_dep_set.append([x, dep])
         vari_dep_set = sorted(vari_dep_set, key=lambda x:x[1], reverse=True)
         # print("varidepset have: "  + str(vari_dep_set))
@@ -32,7 +32,7 @@ def one_run(data, target, S, alaph, is_discrete):
     return S, ci_number
 
 
-def FBED(data, target, k, alaph, is_discrete=True):
+def FBED(data, target, k, alpha, is_discrete=True):
     S = []
     k_cur = 0
     s_change_flag = True
@@ -41,7 +41,7 @@ def FBED(data, target, k, alaph, is_discrete=True):
     # Forward phase
     while k_cur <= k and s_change_flag == True:
         S_last = S.copy()
-        S, ci_num = one_run(data, target, S, alaph, is_discrete)
+        S, ci_num = one_run(data, target, S, alpha, is_discrete)
         k_cur += 1
         ci_number += ci_num
 
@@ -56,7 +56,7 @@ def FBED(data, target, k, alaph, is_discrete=True):
         ci_number += 1
         pval, _ = cond_indep_test(data, target, x, condition_set, is_discrete)
         # print("x is: " + str(x) + " ,conditionset is:" + str(condition_set))
-        if pval > alaph:
+        if pval > alpha:
             S.remove(x)
 
     return list(set(S)), ci_number
@@ -68,9 +68,9 @@ def FBED(data, target, k, alaph, is_discrete=True):
 #
 # target = 19
 # k=1
-# alaph = 0.01
+# alpha = 0.01
 #
-# MB, ci_number = FBED(data, target, k, alaph)
+# MB, ci_number = FBED(data, target, k, alpha)
 # print("MBs is: "+ str(MB) + ", " + str(ci_number))
 
 # 500

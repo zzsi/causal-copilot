@@ -10,7 +10,7 @@ def CausalSearch(
         PCT,
         Z,
         IDT,
-        alaph,
+        alpha,
         idT3,
         idT3_count,
         idT4,
@@ -37,10 +37,10 @@ def CausalSearch(
                 condition_vars = sorted(set(condition_vars))
                 pval2, _ = cond_indep_test(Data, x, y, condition_vars, is_discrete)
                 num_ci += 1
-                if pval > alaph and pval2 <= alaph:
+                if pval > alpha and pval2 <= alpha:
                     IDT[T, x] = 1
                     IDT[T, y] = 1
-                elif pval <= alaph and pval2 > alaph:
+                elif pval <= alpha and pval2 > alpha:
                     if IDT[T, x] == 1:
                         IDT[T, y] = 2
                     elif IDT[T, y] != 2:

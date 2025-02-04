@@ -4,33 +4,53 @@
 date: 2019/7/17 17:00
 desc:
 """
-from CBD.MBs.common.condition_independence_test import cond_indep_test
+import os
+import sys
+
+causal_learn_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))), 'causal-learn')
+sys.path.append(causal_learn_dir)
+
+
+import causallearn.utils.cit as cit
 from CBD.MBs.HITON.HITON_PC import HITON_PC
+from joblib import Parallel, delayed
 
 
-def HITON_MB(data, target, alaph, is_discrete=True):
+def HITON_MB(data, target, alpha, indep_test='fisherz', n_jobs=1):
 
-    PC, sepset, ci_number = HITON_PC(data, target, alaph, is_discrete)
-    # print("PC is:" + str(PC))
+    cond_indep_test = cit.CIT(data, indep_test)
+    PC, sepset, ci_number = HITON_PC(data, target, alpha, indep_test)
     currentMB = PC.copy()
-    for x in PC:
-        # print("x is: " + str(x))
-        PCofPC, _, ci_num2 = HITON_PC(data, x, alaph, is_discrete)
-        ci_number += ci_num2
-        # print("PCofPC is " + str(PCofPC))
-        for y in PCofPC:
-            # print("y is " + str(y))
-            if y != target and y not in PC:
-                conditions_Set = [i for i in sepset[y]]
-                conditions_Set.append(x)
-                conditions_Set = list(set(conditions_Set))
-                ci_number += 1
-                pval, dep = cond_indep_test(
-                    data, target, y, conditions_Set, is_discrete)
-                if pval <= alaph:
-                    # print("append is: " + str(y))
-                    currentMB.append(y)
-                    break
+    if n_jobs > 1:
+        results = Parallel(n_jobs=n_jobs)(
+            delayed(HITON_PC)(data, x, alpha, indep_test) for x in PC
+        )
+        for (PCofPC, _, ci_num2), x in zip(results, PC):
+            ci_number += ci_num2
+            for y in PCofPC:
+                if y != target and y not in PC:
+                    conditions_Set = list(sepset[y])
+                    conditions_Set.append(x)
+                    conditions_Set = list(set(conditions_Set))
+                    ci_number += 1
+                    pval = cond_indep_test(target, y, conditions_Set)
+                    if pval <= alpha:
+                        currentMB.append(y)
+                        break
+    else:
+        for x in PC:
+            PCofPC, _, ci_num2 = HITON_PC(data, x, alpha, indep_test)
+            ci_number += ci_num2
+            for y in PCofPC:
+                if y != target and y not in PC:
+                    conditions_Set = list(sepset[y])
+                    conditions_Set.append(x)
+                    conditions_Set = list(set(conditions_Set))
+                    ci_number += 1
+                    pval = cond_indep_test(target, y, conditions_Set)
+                    if pval <= alpha:
+                        currentMB.append(y)
+                        break
 
     return list(set(currentMB)), ci_number
 
@@ -52,7 +72,7 @@ def HITON_MB(data, target, alaph, is_discrete=True):
 # print("the file read")
 #
 # target = 4
-# alaph = 0.05
+# alpha = 0.05
 #
-# MBs=HITON_MB(data,target,alaph)
+# MBs=HITON_MB(data,target,alpha)
 # print("MBs is: "+str(MBs))

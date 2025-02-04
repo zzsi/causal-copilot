@@ -10,7 +10,7 @@ from CBD.MBs.MMMB.MMPC import MMPC
 from LSL.MBs.common.Meek import Meek
 
 
-def PCDbyPCD(data, target, alaph, is_discrete=True):
+def PCDbyPCD(data, target, alpha, is_discrete=True):
     _, kVar = np.shape(data)
     DAG = np.zeros((kVar, kVar))
     pDAG = DAG.copy()
@@ -35,13 +35,13 @@ def PCDbyPCD(data, target, alaph, is_discrete=True):
 
         #Get PC(A)
         if PCD_set_all[A] == []:
-            PCD_set_all[A], sepset_all[A], n_c = MMPC(data, A, alaph, is_discrete)
+            PCD_set_all[A], sepset_all[A], n_c = MMPC(data, A, alpha, is_discrete)
             num_ci += n_c
         for B in PCD_set_all[A]:
             # print("B is: " + str(B))
             Q.append(B)
             # if PCD_set_all[B] == []:
-            #      PCD_set_all[B], sepset_all[B], _ = MMPC(data, B, alaph)
+            #      PCD_set_all[B], sepset_all[B], _ = MMPC(data, B, alpha)
             if A not in PCD_set_all[B]:
                 continue
 
@@ -56,7 +56,7 @@ def PCDbyPCD(data, target, alaph, is_discrete=True):
 
             for C in PCD_set_all[B]:
                 # if PCD_set_all[C] == []:
-                #     PCD_set_all[C], sepset_all[C], _ = MMPC(data, C, alaph)
+                #     PCD_set_all[C], sepset_all[C], _ = MMPC(data, C, alpha)
 
                 # if B not in PCD_set_all[C]:
                 #      continue
@@ -114,9 +114,9 @@ def PCDbyPCD(data, target, alaph, is_discrete=True):
 # print("the file read")
 #
 # target = 1
-# alaph = 0.01
+# alpha = 0.01
 #
-# parents, children, undirected = PCDbyPCD(data,  target, alaph)
+# parents, children, undirected = PCDbyPCD(data,  target, alpha)
 # print("\nparents is: " + str(parents))
 # print("children is: " + str(children))
 # print("undirected is: " + str(undirected))

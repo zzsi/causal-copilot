@@ -23,7 +23,9 @@ class IAMBnPC(CausalDiscoveryAlgorithm):
         super().__init__(params)
         self._params = {
             'alpha': 0.05,
-            'is_discrete': False,
+            'indep_test': 'fisherz',
+            'n_jobs': 4,
+            'n_subjobs': 4,
         }
         self._params.update(params)
 
@@ -35,7 +37,7 @@ class IAMBnPC(CausalDiscoveryAlgorithm):
         return self._params
 
     def get_primary_params(self):
-        self._primary_param_keys = ['alpha', 'is_discrete']
+        self._primary_param_keys = ['alpha', 'indep_test', 'n_jobs']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def get_secondary_params(self):
@@ -53,27 +55,25 @@ class IAMBnPC(CausalDiscoveryAlgorithm):
             - adj_matrix: numpy array representing the adjacency matrix with edge type 2 for MB
             - info: dictionary with additional information
         """
+        from joblib import Parallel, delayed
         n_vars = data.shape[1]
-        adj_matrix = np.zeros((n_vars, n_vars))
-        
         params = self.get_primary_params()
+        results = Parallel(n_jobs=params['n_jobs'])(
+            delayed(Iambnpc)(
+                data=data.values, 
+                target=target, 
+                alpha=params['alpha'],
+                indep_test=params['indep_test'],
+                n_jobs=params['n_subjobs']
+            ) for target in range(n_vars)
+        )
         total_ci_tests = 0
-        
-        # Run IAMBnPC for each target variable
         mb_dict = {}
-        for target in range(n_vars):
-            mb, ci_num = Iambnpc(
-                data=data,
-                target=target,
-                alaph=params['alpha'],
-                is_discrete=params['is_discrete']
-            )
-                
+        for target, (mb, ci_num) in enumerate(results):
             total_ci_tests += ci_num
             mb_dict[target] = mb
-        print(mb_dict)
 
-        adj_matrix = MB2CPDAG(data, mb_dict, params['is_discrete'], params['alpha'])
+        adj_matrix = MB2CPDAG(data, mb_dict, params['indep_test'], params['alpha'], n_jobs=params['n_jobs'])
 
         info = {
             'total_ci_tests': total_ci_tests,

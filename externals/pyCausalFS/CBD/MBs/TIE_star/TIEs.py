@@ -12,7 +12,7 @@ from CBD.MBs.TIE_star.eva_classifier import eva_classifier
 import numpy as np
 
 
-def TIE(data, target, alaph, is_discrete=True):
+def TIE(data, target, alpha, is_discrete=True):
     number, kVar = np.shape(data)
     M = []
     G = []
@@ -20,7 +20,7 @@ def TIE(data, target, alaph, is_discrete=True):
     not_in_set = []
     possible_subests = []
     variable = [i for i in range(kVar)]
-    MB, _ = IAMB(data, target, alaph, variable, is_discrete)
+    MB, _ = IAMB(data, target, alpha, variable, is_discrete)
     M.append(MB)
     G.append([])
     index = 0
@@ -55,14 +55,14 @@ def TIE(data, target, alaph, is_discrete=True):
 
 
         variable_new = [i for i in range(kVar) if i not in excpet_varis_set]
-        MB_new, _ = IAMB(data, target, alaph, variable_new, is_discrete)
+        MB_new, _ = IAMB(data, target, alpha, variable_new, is_discrete)
         different_set = list(set(MB).difference(set(MB_new)))
         if different_set == [] or MB_new == []:
             continue
         break_Flag = False
         for x in different_set:
             pval, _ = cond_indep_test(data, target, x, MB_new, is_discrete)
-            if pval <= alaph:
+            if pval <= alpha:
                 break_Flag = True
                 not_in_set.append(excpet_varis_set)
                 possible_subests_temp = possible_subests.copy()
@@ -78,7 +78,7 @@ def TIE(data, target, alaph, is_discrete=True):
     return MB_new_set
 
 
-def TIE_p(data, target, alaph, isdiscrete):
+def TIE_p(data, target, alpha, isdiscrete):
     number, kVar = np.shape(data)
     M = []
     G = []
@@ -86,7 +86,7 @@ def TIE_p(data, target, alaph, isdiscrete):
     not_in_set = []
     possible_subests = []
     variable = [i for i in range(kVar)]
-    MB, _ = IAMB(data, target, alaph, variable, isdiscrete)
+    MB, _ = IAMB(data, target, alpha, variable, isdiscrete)
 
     accurary_MB = eva_classifier(data, target, MB)
     M.append(MB)
@@ -126,7 +126,7 @@ def TIE_p(data, target, alaph, isdiscrete):
 
 
         variable_new = [i for i in range(kVar) if i not in excpet_varis_set]
-        MB_new, _ = IAMB(data, target, alaph, variable_new, isdiscrete)
+        MB_new, _ = IAMB(data, target, alpha, variable_new, isdiscrete)
         if MB_new == [] or MB_new in MB_new_set:
             continue
 
@@ -145,9 +145,9 @@ def TIE_p(data, target, alaph, isdiscrete):
 # print("the file read")
 #
 # target = 4
-# alaph = 0.01
+# alpha = 0.01
 #
-# MB = TIE(data, target, alaph, False)
+# MB = TIE(data, target, alpha, False)
 # print("MBs is: " + str(MB))
 
 

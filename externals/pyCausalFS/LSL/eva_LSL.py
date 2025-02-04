@@ -19,7 +19,7 @@ def evaluation_nocache(method,
                real_graph_path,
                is_discrete,
                filenumber=10,
-               alaph=0.01,
+               alpha=0.01,
                ):
     # pre_set variables is zero
     length_target_list = len(target_list)
@@ -38,15 +38,15 @@ def evaluation_nocache(method,
         for i, target in enumerate(target_list):
             if method == "PCDbyPCD":
                 start_time = time.process_time()
-                parents, children, PC, undirected, n_c = PCDbyPCD(data, target, alaph, is_discrete)
+                parents, children, PC, undirected, n_c = PCDbyPCD(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             elif method == "MBbyMB":
                 start_time = time.process_time()
-                parents, children, PC, undirected, n_c = MBbyMB(data, target, alaph, is_discrete)
+                parents, children, PC, undirected, n_c = MBbyMB(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             elif method == "CMB":
                 start_time = time.process_time()
-                parents, children, PC, undirected, n_c = CMB(data, target, alaph, is_discrete)
+                parents, children, PC, undirected, n_c = CMB(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             else:
                 raise Exception("method input error!")

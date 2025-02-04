@@ -7,7 +7,7 @@
 from CBD.MBs.common.condition_independence_test import cond_indep_test
 
 
-def IAMB(data, target, alaph, attribute, is_discrete):
+def IAMB(data, target, alpha, attribute, is_discrete):
     CMB = []
     ci_number = 0
 
@@ -25,7 +25,7 @@ def IAMB(data, target, alaph, attribute, is_discrete):
             pival, dep = cond_indep_test(data, target, x, CMB, is_discrete)
 
             # chose maxsize of f(X:T|CMB)
-            if pival <= alaph:
+            if pival <= alpha:
                 if dep > temp_dep:
                     temp_dep = dep
                     y = x
@@ -42,7 +42,7 @@ def IAMB(data, target, alaph, attribute, is_discrete):
         condition_Variables=[i for i in CMB if i != x]
         ci_number += 1
         pval, dep = cond_indep_test(data, target, x, condition_Variables, is_discrete)
-        if pval > alaph:
+        if pval > alpha:
             CMB.remove(x)
 
     return sorted(CMB), ci_number

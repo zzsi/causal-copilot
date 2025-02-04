@@ -11,7 +11,7 @@ import pandas as pd
 from scipy import stats
 
 
-def chi_square_test(df, var1, var2, condition_vars=None, alaph=0.01, **kwargs):
+def chi_square_test(df, var1, var2, condition_vars=None, alpha=0.01, **kwargs):
     """
     Test for the independence condition (var1 _|_ var2 | condition_vars) in df.
 
@@ -82,7 +82,7 @@ def chi_square_test(df, var1, var2, condition_vars=None, alaph=0.01, **kwargs):
     if math.isnan(p_value):
         chi_stat = 1.0
         dep = 2.0 + chi_stat / num_params
-    elif p_value > alaph:
+    elif p_value > alpha:
         dep = -2.0 - chi_stat / num_params
     else:
         dep = 2.0 + chi_stat / num_params
@@ -91,7 +91,7 @@ def chi_square_test(df, var1, var2, condition_vars=None, alaph=0.01, **kwargs):
     # rmsea = sqrt((chi_stat / dof - 1) / (n - 1))
 
     p_value = round(p_value, 6)
-    # if p_value > alaph:
+    # if p_value > alpha:
     #     p_valueX, p_valueY = str(p_value).split('.')
     #     p_value = float(p_valueX + '.' + p_valueY[0:2])
 

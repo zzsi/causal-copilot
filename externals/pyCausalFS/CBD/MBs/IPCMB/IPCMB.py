@@ -9,18 +9,18 @@ from CBD.MBs.IPCMB.RecognizePC import RecognizePC
 import numpy as np
 
 
-def IPC_MB(data, target, alaph, is_discrete=True):
+def IPC_MB(data, target, alpha, is_discrete=True):
     number, kVar = np.shape(data)
     CanADJT = [i for i in range(kVar) if i != target]
     PC, sepset, ci_number = RecognizePC(
-        data, target, CanADJT, alaph, is_discrete)
+        data, target, CanADJT, alpha, is_discrete)
     # print("pc is: " + str(PC))
     # print("sepset is: " + str(sepset))
     MB = PC.copy()
 
     for x in PC:
         CanADJT_X = [i for i in range(kVar) if i != x]
-        CanSP, _, ci_num2 = RecognizePC(data, x, CanADJT_X, alaph, is_discrete)
+        CanSP, _, ci_num2 = RecognizePC(data, x, CanADJT_X, alpha, is_discrete)
         ci_number += ci_num2
         # print("CanSP:" + str(CanSP))
         if target not in CanSP:
@@ -34,7 +34,7 @@ def IPC_MB(data, target, alaph, is_discrete=True):
                 ci_number += 1
                 pval, dep = cond_indep_test(
                     data, target, y, conditionsSet, is_discrete)
-                if pval <= alaph:
+                if pval <= alpha:
                     # print("append is:" + str(y)+" conditinSet: " + str(conditionsSet))
                     MB.append(y)
 
@@ -45,9 +45,9 @@ def IPC_MB(data, target, alaph, is_discrete=True):
 # print("the file read")
 #
 # target = 6
-# alaph = 0.05
+# alpha = 0.05
 #
-# MBs=IPC_MB(data,target,alaph)
+# MBs=IPC_MB(data,target,alpha)
 # print("MBs is: "+str(MBs))
 
 

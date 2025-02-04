@@ -6,7 +6,7 @@ from CBD.MBs.common.subsets import subsets
 import numpy as np
 import pandas as pd
 
-def interIAMBnPC(data,target,alaph):
+def interIAMBnPC(data,target,alpha):
     n,p=np.shape(data)
     BT=[]
     ntest=0
@@ -30,7 +30,7 @@ def interIAMBnPC(data,target,alaph):
                 depmax=dep
                 feature=X
                 pval_temp=pval
-        if pval_temp<=alaph:
+        if pval_temp<=alpha:
             BT.append(feature)
 
          #shrinking phase
@@ -44,7 +44,7 @@ def interIAMBnPC(data,target,alaph):
 
             conditionvars= [i for i in BT if i != x]
             pval_sp, dep_sp = chi_square_test(data, target, x, conditionvars)
-            if pval_sp > alaph:
+            if pval_sp > alpha:
                 BT.remove(x)
                 # remove the variables while have be append to MBs just,lead to circulation break
                 if x == feature:
@@ -74,7 +74,7 @@ def interIAMBnPC(data,target,alaph):
                 condtionVari = [TestMB[i] for i in S]
                 ntest += 1
                 pval, _ = chi_square_test(data, target, TestMB[y], condtionVari)
-                if pval > alaph:
+                if pval > alpha:
                     DAG[0, y] = 0
                     break
         size += 1

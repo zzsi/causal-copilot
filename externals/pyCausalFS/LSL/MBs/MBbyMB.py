@@ -129,8 +129,8 @@ def MBbyMB(data, target, alpha, is_discrete=True):
 # print("the file read")
 # import numpy as np
 # num1, kvar = np.shape(data)
-# alaph = 0.01
+# alpha = 0.01
 #
 # for target in range(kvar):
-#     P, C, PC, und = MBbyMB(data, target, alaph, True)
+#     P, C, PC, und = MBbyMB(data, target, alpha, True)
 #     print(target," -P: ", P, " ,C: ", C, " ,PC: ", PC, " ,undire: ",und)

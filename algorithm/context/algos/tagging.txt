@@ -1,0 +1,57 @@
+# Causal Discovery Algorithm Selection Prompt
+
+This guide is designed to provide a straightforward framework for LLMs (or users) to perform an initial selection of causal discovery algorithms. Use the following key perspectives and tags as clear criteria when evaluating and choosing an algorithm based on your specific data characteristics and application requirements.
+
+## Key Perspectives for Algorithm Selection
+
+1. Method Type:
+   - Determine if the algorithm is based on constraint methods (using conditional independence tests), score-based search strategies, LiNGAM approaches (leveraging non-Gaussianity in linear models), optimization formulations, hybrid techniques, or Markov Blanket discovery.
+
+2. Data & Functional Form:
+   - Assess whether the assumed relationships are Linear or Nonlinear.
+   - Identify if your data is Continuous, Mixed, or TimeSeries.
+   - Consider the flexibility of the algorithm in handling diverse data types.
+
+3. Noise & Latent Variables:
+   - Evaluate the noise assumptions: Gaussian versus NonGaussian distributions.
+   - Check if the algorithm assumes NoLatent confounders or is capable of HandlingLatent variables.
+   - Consider if it can manage Heterogeneous data scenarios.
+
+4. Scalability & Scope:
+   - Choose between Global full graph search and Local feature or Markov Blanket discovery methods.
+   - Factor in whether the method is Scalable to large datasets, Fast in execution, or suitable for ModerateDim settings.
+
+5. Additional Considerations:
+   - Interpretability: How clearly can the results be understood and communicated?
+   - Computational Complexity: What are the algorithm’s resource and runtime requirements?
+   - Domain-Specific Alignment: Does the algorithm meet the specific needs and assumptions of your application area?
+
+## Algorithm Tagging
+
+### Constraint-based Methods
+- PC: {Constraint, Global, Linear, NoLatent}
+- FCI: {Constraint, Global, Linear, HandlesLatent}
+- CDNOD: {Invariance, Global, Heterogeneous, RegimeShift}
+
+### Score-based Methods
+- GES: {Score, Global, Linear, Gaussian, NoLatent, ModerateDim}
+- FGES: {Score, Global, Linear, Gaussian, NoLatent, Scalable}
+- XGES: {ScoreVariant, Global, Flexible, Tunable}
+
+### LiNGAM Family
+- DirectLiNGAM: {LiNGAM, Global, Linear, NonGaussian, NoLatent}
+- AcceleratedDirectLiNGAM: {LiNGAM, Global, Linear, NonGaussian, NoLatent, Fast}
+- ICALiNGAM: {LiNGAM, Global, Linear, NonGaussian, ICA}
+
+### Optimization-based Methods
+- NOTEARS: {Optimization, Global, Continuous, Linear, Scalable}
+
+### Hybrid Methods
+- Hybrid: {Hybrid, Global, Flexible, ModerateDim}
+
+### Markov Blanket Based Methods
+- InterIAMB: {MB, Local, Fast}
+- BAMB: {MB, Local, Robust}
+- HitonMB: {MB, Local, Efficient}
+- IAMBnPC: {Hybrid (MB+PC), Global, HighDim}
+- MBOR: {MB, Local-to-Global, Efficient}

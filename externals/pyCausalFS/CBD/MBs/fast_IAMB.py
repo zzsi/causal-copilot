@@ -18,7 +18,7 @@ def ns(data, MB):
     return qi
 
 
-def fast_IAMB(data, target, alaph, is_discrete=True):
+def fast_IAMB(data, target, alpha, is_discrete=True):
     number, kVar = np.shape(data)
     ci_number = 0
 
@@ -34,7 +34,7 @@ def fast_IAMB(data, target, alaph, is_discrete=True):
     for x in MBvariables:
         ci_number += 0
         pval, dep = cond_indep_test(data, target, x, MB, is_discrete)
-        if(pval <= alaph):
+        if(pval <= alpha):
             S_variables.append([x,dep])
     BT_temp = -1
 
@@ -116,7 +116,7 @@ def fast_IAMB(data, target, alaph, is_discrete=True):
             ci_number += 1
             pval_sp, dep_sp = cond_indep_test(data, target, x, subsets_BT, is_discrete)
 
-            if pval_sp > alaph:
+            if pval_sp > alpha:
                 MB.remove(x)
                 if flag_repeat_set[x] == True:
                     repeat_in_set[x] += 1
@@ -139,7 +139,7 @@ def fast_IAMB(data, target, alaph, is_discrete=True):
             for x in BTT_variables:
                 ci_number += 1
                 pval, dep = cond_indep_test(data, target, x, MB, is_discrete)
-                if pval <= alaph:
+                if pval <= alpha:
                     # print([x,dep])
                     S_variables.append([x,dep])
                     # print("sv is: " + str(S_variables))
@@ -152,9 +152,9 @@ def fast_IAMB(data, target, alaph, is_discrete=True):
 # print("the file read")
 #
 # target = 15
-# alaph = 0.01
+# alpha = 0.01
 #
-# MBs=fast_IAMB(data,target,alaph)
+# MBs=fast_IAMB(data,target,alpha)
 # print(MBs)
 
 

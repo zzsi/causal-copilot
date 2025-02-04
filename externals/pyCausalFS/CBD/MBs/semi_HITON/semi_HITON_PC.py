@@ -4,7 +4,7 @@ from CBD.MBs.common.condition_independence_test import cond_indep_test
 import numpy as np
 
 
-def semi_HITON_PC(data, target, alaph, is_disrete=True):
+def semi_HITON_PC(data, target, alpha, is_disrete=True):
     n, p = np.shape(data)
     ci_number = 0
     candidate_pc = []
@@ -15,7 +15,7 @@ def semi_HITON_PC(data, target, alaph, is_disrete=True):
     for x in con:
         ci_number += 1
         pval, dep = cond_indep_test(data, target, x, [], is_disrete)
-        if pval <= alaph:
+        if pval <= alpha:
             S.append([x, dep])
 
     depset = sorted(S, key=lambda x: x[1], reverse=True)
@@ -36,7 +36,7 @@ def semi_HITON_PC(data, target, alaph, is_disrete=True):
             for s in SS:
                 ci_number += 1
                 pval, _ = cond_indep_test(data, x, target, s, is_disrete)
-                if pval > alaph:
+                if pval > alpha:
                     sep[x] = [i for i in s]
                     current_pc.remove(x)
                     breakflag = True
@@ -64,7 +64,7 @@ def semi_HITON_PC(data, target, alaph, is_disrete=True):
             for s in SS:
                 ci_number += 1
                 pval, _ = cond_indep_test(data, x, target, s, is_disrete)
-                if pval > alaph:
+                if pval > alpha:
                     current_pc.remove(x)
                     sep[x] = [i for i in s]
                     flag = True

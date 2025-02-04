@@ -40,7 +40,7 @@ def evaluation(
         real_graph_path,
         is_discrete,
         filenumber=10,
-        alaph=0.01,
+        alpha=0.01,
         k=1):
 
     # pre_set variables is zero
@@ -62,71 +62,71 @@ def evaluation(
             # print("target is: " + str(target))
             if method == "MMMB":
                 start_time = time.process_time()
-                MB, ci_num = MMMB(data, target, alaph, is_discrete)
+                MB, ci_num = MMMB(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             elif method == "IAMB":
                 start_time = time.process_time()
-                MB, ci_num = IAMB(data, target, alaph, is_discrete)
+                MB, ci_num = IAMB(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             elif method == "KIAMB":
                 start_time = time.process_time()
-                MB, ci_num = KIAMB(data, target, alaph, k, is_discrete)
+                MB, ci_num = KIAMB(data, target, alpha, k, is_discrete)
                 end_time = time.process_time()
             elif method == "IAMBnPC":
                 start_time = time.process_time()
-                MB, ci_num = IAMBnPC(data, target, alaph, is_discrete)
+                MB, ci_num = IAMBnPC(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             elif method == "inter_IAMB":
                 start_time = time.process_time()
-                MB, ci_num = inter_IAMB(data, target, alaph, is_discrete)
+                MB, ci_num = inter_IAMB(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             elif method == "interIAMBnPC":
                 start_time = time.process_time()
-                MB, ci_num = interIAMBnPC(data, target, alaph, is_discrete)
+                MB, ci_num = interIAMBnPC(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             elif method == "fast_IAMB":
                 start_time = time.process_time()
-                MB, ci_num = fast_IAMB(data, target, alaph, is_discrete)
+                MB, ci_num = fast_IAMB(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             elif method == "GSMB":
                 start_time = time.process_time()
-                MB, ci_num = GSMB(data, target, alaph, is_discrete)
+                MB, ci_num = GSMB(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             elif method == "HITON_MB":
                 start_time = time.process_time()
-                MB, ci_num = HITON_MB(data, target, alaph, is_discrete)
+                MB, ci_num = HITON_MB(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             elif method == "PCMB":
                 start_time = time.process_time()
-                MB, ci_num = PCMB(data, target, alaph, is_discrete)
+                MB, ci_num = PCMB(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             elif method == "IPCMB":
                 start_time = time.process_time()
-                MB, ci_num = IPC_MB(data, target, alaph, is_discrete)
+                MB, ci_num = IPC_MB(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             elif method == "STMB":
                 start_time = time.process_time()
-                MB, ci_num = STMB(data, target, alaph, is_discrete)
+                MB, ci_num = STMB(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             elif method == "IAMBnPC":
                 start_time = time.process_time()
-                MB, ci_num = IAMBnPC(data, target, alaph, is_discrete)
+                MB, ci_num = IAMBnPC(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             elif method == "BAMB":
                 start_time = time.process_time()
-                MB, ci_num = BAMB(data, target, alaph, is_discrete)
+                MB, ci_num = BAMB(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             elif method == "FBEDk":
                 start_time = time.process_time()
-                MB, ci_num = FBED(data, target, k, alaph, is_discrete)
+                MB, ci_num = FBED(data, target, k, alpha, is_discrete)
                 end_time = time.process_time()
             elif method == "MBOR":
                 start_time = time.process_time()
-                MB, ci_num = MBOR(data, target, alaph, is_discrete)
+                MB, ci_num = MBOR(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             elif method == "LRH":
                 start_time = time.process_time()
-                MB, ci_num = LRH(data, target, alaph, is_discrete)
+                MB, ci_num = LRH(data, target, alpha, is_discrete)
                 end_time = time.process_time()
             else:
                 raise Exception("method input error!")

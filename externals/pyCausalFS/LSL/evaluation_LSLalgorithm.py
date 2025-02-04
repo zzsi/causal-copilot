@@ -19,7 +19,7 @@ def evaluation(method,
                real_graph_path,
                is_discrete,
                filenumber=10,
-               alaph=0.01,
+               alpha=0.01,
                ):
     # pre_set variables is zero
     length_target_list = len(target_list)
@@ -34,11 +34,11 @@ def evaluation(method,
         print(get_p)
         for i, target in enumerate(target_list):
             if method == "PCDbyPCD":
-                P, c, undirected[i] = PCDbyPCD(data, target, alaph, is_discrete)
+                P, c, undirected[i] = PCDbyPCD(data, target, alpha, is_discrete)
             elif method == "MBbyMB":
-                P, c, undirected[i] = MBbyMB(data, target, alaph, is_discrete)
+                P, c, undirected[i] = MBbyMB(data, target, alpha, is_discrete)
             elif method == "CMB":
-                P, c, undirected[i] = CMB(data, target, alaph, is_discrete)
+                P, c, undirected[i] = CMB(data, target, alpha, is_discrete)
             else:
                 raise Exception("method input error!")
             get_p[i] = P

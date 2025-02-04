@@ -12,7 +12,6 @@ if not os.path.exists(pycausalfs_dir):
 sys.path.append(pycausalfs_dir)
 sys.path.append(root_dir)
 
-
 from CBD.MBs.inter_IAMB import inter_IAMB
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.wrappers.utils.conversion import MB2CPDAG
@@ -23,7 +22,9 @@ class InterIAMB(CausalDiscoveryAlgorithm):
         super().__init__(params)
         self._params = {
             'alpha': 0.05,
-            'is_discrete': False,
+            'indep_test': 'fisherz',
+            'n_jobs': 4,
+            'n_subjobs': 4,
         }
         self._params.update(params)
 
@@ -35,7 +36,7 @@ class InterIAMB(CausalDiscoveryAlgorithm):
         return self._params
 
     def get_primary_params(self):
-        self._primary_param_keys = ['alpha', 'is_discrete']
+        self._primary_param_keys = ['alpha', 'indep_test', 'n_jobs', 'n_subjobs']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def get_secondary_params(self):
@@ -53,21 +54,24 @@ class InterIAMB(CausalDiscoveryAlgorithm):
             - adj_matrix: numpy array representing the adjacency matrix
             - info: dictionary with additional information
         """
+        from joblib import Parallel, delayed
         n_vars = data.shape[1]
         mb_dict = {}  # Dictionary to store MB results
         
         params = self.get_primary_params()
         total_ci_tests = 0
         
-        # Run InterIAMB for each target variable
-        for target in range(n_vars):
-            mb, ci_num = inter_IAMB(
-                data=data,
+        results = Parallel(n_jobs=params['n_jobs'])(
+            delayed(inter_IAMB)(
+                data=data.values,
                 target=target,
-                alaph=params['alpha'],
-                is_discrete=params['is_discrete']
-            )
-            
+                alpha=params['alpha'],
+                indep_test=params['indep_test'],
+                n_jobs=params['n_subjobs']
+            ) for target in range(n_vars)
+        )
+        
+        for target, (mb, ci_num) in enumerate(results):
             mb_dict[target] = list(mb)
             total_ci_tests += ci_num
 
@@ -75,8 +79,9 @@ class InterIAMB(CausalDiscoveryAlgorithm):
         adj_matrix = MB2CPDAG(
             data=data,
             mb_dict=mb_dict,
-            is_discrete=params['is_discrete'],
-            alpha=params['alpha']
+            indep_test=params['indep_test'],
+            alpha=params['alpha'],
+            n_jobs=params['n_jobs']
         )
 
         info = {

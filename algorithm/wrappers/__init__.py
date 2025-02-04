@@ -1,4 +1,5 @@
 import torch
+
 # constraint-based algorithms
 # PC based algorithms
 from .pc import PC
@@ -16,6 +17,12 @@ from .mbor import MBOR
 from .ges import GES
 from .fges import FGES
 from .x_ges import XGES
+## Continuous optimization based algorithms
+from .notears_linear import NOTEARSLinear
+from .notears_mlp import NOTEARSNonlinear
+from .corl import CORL
+from .calm import CALM
+from .golem import GOLEM
 ## permutation based algorithms
 from .grasp import GRaSP
 
@@ -28,7 +35,7 @@ from .hybrid import Hybrid
 
 
 constraint_based_algorithms = ['PC', 'FCI', 'CDNOD', 'InterIAMB', 'BAMB', 'HitonMB', 'IAMBnPC', 'MBOR']
-score_based_algorithms = ['GES', 'FGES', 'XGES']
+score_based_algorithms = ['GES', 'FGES', 'XGES', 'NOTEARSLinear', 'NOTEARSNonlinear', 'CORL', 'CALM', 'GOLEM']
 functional_model_based_algorithms = ['DirectLiNGAM', 'ICALiNGAM']
 permutation_based_algorithms = ['GRaSP']
 hybrid_algorithms = ['Hybrid']
@@ -39,13 +46,8 @@ if torch.cuda.is_available():
     from .accelerated_lingam import AcceleratedDirectLiNGAM 
     from .accelerated_pc import AcceleratedPC
     accelerated_algorithms = ['AcceleratedDirectLiNGAM', 'AcceleratedPC']
-    # If GPU is available, use continous optimization based algorithms
-    from .notears_linear import NOTEARSLinear
-    from .notears_mlp import NOTEARSNonlinear
-    from .corl import CORL
-    from .calm import CALM
-    continuous_optimization_based_algorithms = ['NOTEARSLinear', 'NOTEARSNonlinear', 'CORL', 'CALM']
+    # If GPU is available, the continuous optimization based algorithms will use GPU instead of CPU
 
-    __all__ = constraint_based_algorithms + score_based_algorithms + functional_model_based_algorithms + permutation_based_algorithms + hybrid_algorithms + accelerated_algorithms + continuous_optimization_based_algorithms
+    __all__ = constraint_based_algorithms + score_based_algorithms + functional_model_based_algorithms + permutation_based_algorithms + hybrid_algorithms + accelerated_algorithms
 else:
     __all__ = constraint_based_algorithms + score_based_algorithms + functional_model_based_algorithms + permutation_based_algorithms + hybrid_algorithms

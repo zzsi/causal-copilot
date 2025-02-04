@@ -11,11 +11,11 @@ from CBD.MBs.common.subsets import subsets
 from CBD.MBs.IPCMB.RecognizePC import RecognizePC
 
 
-def STMB(data, target, alaph, is_discrete=True):
+def STMB(data, target, alpha, is_discrete=True):
     number, kVar = np.shape(data)
     ci_number = 0
     PCT = [i for i in range(kVar) if i != target]
-    PCT, sepset, ci_num2 = RecognizePC(data, target, PCT, alaph, is_discrete)
+    PCT, sepset, ci_num2 = RecognizePC(data, target, PCT, alpha, is_discrete)
     ci_number += ci_num2
 
     spouse = [[] for i in range(kVar)]
@@ -33,7 +33,7 @@ def STMB(data, target, alaph, is_discrete=True):
             pval_xt, dep_xt = cond_indep_test(
                 data, target, x, conditionsSet, is_discrete)
             # print("x is: " + str(x) + " conditionSet is: " + str(conditionsSet) + "pval_xt is: " + str(pval_xt))
-            if pval_xt <= alaph:
+            if pval_xt <= alpha:
                 Zset = [i for i in PCT]
                 Zset.append(x)
                 Zset = list(set(Zset))
@@ -51,7 +51,7 @@ def STMB(data, target, alaph, is_discrete=True):
                         ci_number += 1
                         pval_yt, dep_yt = cond_indep_test(
                             data, target, y, Z, is_discrete)
-                        if pval_yt > alaph:
+                        if pval_yt > alpha:
                             # print("remove append is: " + str(y))
                             remove.append(y)
                             breakFlag = True
@@ -79,7 +79,7 @@ def STMB(data, target, alaph, is_discrete=True):
                 ci_number += 1
                 pval_xt_testset, _ = cond_indep_test(
                     data, target, x, testSet, is_discrete)
-                if pval_xt_testset > alaph:
+                if pval_xt_testset > alpha:
                     # print("spouse[y] had: " + str(spouse[y]))
                     spouse[y].remove(x)
                     # print("spouse[y] now has: " + str(spouse[y]))
@@ -96,7 +96,7 @@ def STMB(data, target, alaph, is_discrete=True):
         ci_number += 1
         pval_final, _ = cond_indep_test(
             data, target, x, conditionsVariSet, is_discrete)
-        if pval_final > alaph:
+        if pval_final > alpha:
             PCT.remove(x)
 
     spouse = [i for j in range(len(spouse)) for i in spouse[j]]
@@ -110,9 +110,9 @@ def STMB(data, target, alaph, is_discrete=True):
 # print("the file read")
 #
 # target = 11
-# alaph = 0.05
+# alpha = 0.05
 #
-# MBs=STMB(data, target, alaph, is_discrete=False)
+# MBs=STMB(data, target, alpha, is_discrete=False)
 # print("MBs is: "+str(MBs))
 
 # F1 is: 0.7526467421467425

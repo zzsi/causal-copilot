@@ -10,7 +10,7 @@ from CBD.MBs.common.condition_independence_test import cond_indep_test
 from CBD.MBs.common.subsets import subsets
 
 
-def getPCD(data, target, alaph, is_discrete):
+def getPCD(data, target, alpha, is_discrete):
     number, kVar = np.shape(data)
     max_k = 3
     PCD = []
@@ -41,7 +41,7 @@ def getPCD(data, target, alaph, is_discrete):
                     ci_number += 1
                     pval_gp, dep_gp = cond_indep_test(data, target, vari, S, is_discrete)
 
-                    if pval_gp > alaph:
+                    if pval_gp > alpha:
                         vari_min = -1
                         CanPCD.remove(vari)
                         sepset[vari] = [i for i in S]
@@ -84,7 +84,7 @@ def getPCD(data, target, alaph, is_discrete):
                         ci_number += 1
                         pval_sp, dep_sp = cond_indep_test(data, target, x, S, is_discrete)
 
-                        if pval_sp > alaph:
+                        if pval_sp > alpha:
 
                             PCD.remove(x)
                             if x == y:
@@ -103,13 +103,13 @@ def getPCD(data, target, alaph, is_discrete):
     return list(set(PCD)), sepset, ci_number
 
 
-def getPC(data, target, alaph, is_discrete):
+def getPC(data, target, alpha, is_discrete):
     ci_number = 0
     PC = []
-    PCD, sepset, ci_num2 = getPCD(data, target, alaph, is_discrete)
+    PCD, sepset, ci_num2 = getPCD(data, target, alpha, is_discrete)
     ci_number += ci_num2
     for x in PCD:
-        variSet, _, ci_num3 = getPCD(data, x, alaph, is_discrete)
+        variSet, _, ci_num3 = getPCD(data, x, alpha, is_discrete)
         ci_number += ci_num3
         # PC of target ,whose PC also has the target, must be True PC
         if target in variSet:

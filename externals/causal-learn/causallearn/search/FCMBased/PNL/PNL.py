@@ -40,12 +40,12 @@ class MLP(nn.Module):
         self.n_units = n_units
 
         # create layers
-        layers = [nn.Linear(n_inputs, n_units)]
+        layers = [nn.Linear(n_inputs, n_units, dtype=torch.float32)]
         for _ in range(n_layers):
             layers.append(nn.ReLU())
-            layers.append(nn.Linear(n_units, n_units))
+            layers.append(nn.Linear(n_units, n_units, dtype=torch.float32))
         layers.append(nn.ReLU())
-        layers.append(nn.Linear(n_units, n_outputs))
+        layers.append(nn.Linear(n_units, n_outputs, dtype=torch.float32))
         self.layers = nn.Sequential(*layers)
 
     def forward(self, x):

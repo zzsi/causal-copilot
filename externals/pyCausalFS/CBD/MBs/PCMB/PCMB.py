@@ -9,16 +9,16 @@ from CBD.MBs.PCMB.getPC import getPC
 from CBD.MBs.common.condition_independence_test import cond_indep_test
 
 
-def PCMB(data, target, alaph, is_discrete=True):
+def PCMB(data, target, alpha, is_discrete=True):
     ci_number = 0
-    PC, sepset, ci_num2 = getPC(data, target, alaph, is_discrete)
+    PC, sepset, ci_num2 = getPC(data, target, alpha, is_discrete)
     ci_number += ci_num2
     # print(PC)
     # print(sepset)
     MB = PC.copy()
 
     for x in PC:
-        PCofPC_temp, _, ci_num3 = getPC(data, x, alaph, is_discrete)
+        PCofPC_temp, _, ci_num3 = getPC(data, x, alpha, is_discrete)
         ci_number += ci_num3
         # print(" pc of pc_temp is: " + str(PCofPC_temp))
         PCofPC = [i for i in PCofPC_temp if i != target and i not in MB]
@@ -30,7 +30,7 @@ def PCMB(data, target, alaph, is_discrete=True):
             ci_number += 1
             pval, dep = cond_indep_test(
                 data, target, y, conditionSet, is_discrete)
-            if pval <= alaph:
+            if pval <= alpha:
                 MB.append(y)
                 break
     return list(set(MB)), ci_number
@@ -41,9 +41,9 @@ def PCMB(data, target, alaph, is_discrete=True):
 # print("the file read")
 #
 # target = 19
-# alaph = 0.05
+# alpha = 0.05
 #
-# MBs=PCMB(data,target,alaph)
+# MBs=PCMB(data,target,alpha)
 # print("MBs is: "+str(MBs))
 
 # 500

@@ -9,7 +9,7 @@ sys.path.append(root_dir)
 
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
-from externals.trustworthyAI.gcastle.castle.algorithms import NotearsNonlinear
+from castle.algorithms import NotearsNonlinear
 
 class NOTEARSNonlinear(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):

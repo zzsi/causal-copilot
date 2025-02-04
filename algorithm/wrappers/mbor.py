@@ -14,13 +14,17 @@ sys.path.append(root_dir)
 
 from CBD.MBs.MBOR import MBOR as Mbor
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
+from algorithm.evaluation.evaluator import GraphEvaluator
+from utils.conversion import MB2CPDAG
 
 class MBOR(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
         self._params = {
             'alpha': 0.05,
-            'is_discrete': True,
+            'indep_test': 'fisherz',
+            'n_jobs': 4,
+            'n_subjobs': 4,
         }
         self._params.update(params)
 
@@ -32,7 +36,7 @@ class MBOR(CausalDiscoveryAlgorithm):
         return self._params
 
     def get_primary_params(self):
-        self._primary_param_keys = ['alpha', 'is_discrete']
+        self._primary_param_keys = ['alpha', 'indep_test', 'n_jobs']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def get_secondary_params(self):
@@ -56,20 +60,30 @@ class MBOR(CausalDiscoveryAlgorithm):
         params = self.get_primary_params()
         total_ci_tests = 0
         
-        # Run MBOR for each target variable
-        for target in range(n_vars):
-            mb, ci_num = Mbor(
-                data=data,
+        from joblib import Parallel, delayed
+        results = Parallel(n_jobs=params['n_jobs'])(
+            delayed(Mbor)(
+                data=data.values,
                 target=target,
                 alpha=params['alpha'],
-                is_discrete=params['is_discrete']
-            )
-            
-            # Update adjacency matrix with Markov blanket using edge type 2 (undirected)
-            for node in mb:
-                adj_matrix[target, node] = 2
-                
+                indep_test=params['indep_test'],
+                n_jobs=params['n_jobs']
+            ) for target in range(n_vars)
+        )
+
+        mb_dict = {}
+        for target, (mb, ci_num) in enumerate(results):
+            mb_dict[target] = list(mb)
             total_ci_tests += ci_num
+
+        # Convert MB results to CPDAG
+        adj_matrix = MB2CPDAG(
+            data=data,
+            mb_dict=mb_dict,
+            indep_test=params['indep_test'],
+            alpha=params['alpha'],
+            n_jobs=params['n_subjobs']
+        )
 
         info = {
             'total_ci_tests': total_ci_tests,
@@ -79,7 +93,7 @@ class MBOR(CausalDiscoveryAlgorithm):
 
     def test_algorithm(self):
         """Run a simple test of the algorithm on synthetic data."""
-        # Generate sample data
+        # Generate sample data with linear relationships
         np.random.seed(42)
         n_samples = 1000
         X1 = np.random.normal(0, 1, n_samples)
@@ -88,11 +102,9 @@ class MBOR(CausalDiscoveryAlgorithm):
         X4 = 0.6 * X2 + np.random.normal(0, 0.4, n_samples)
         X5 = 0.4 * X3 + 0.5 * X4 + np.random.normal(0, 0.2, n_samples)
         
-        df = pd.DataFrame({
-            'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5
-        })
+        df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
 
-        print("Testing MBOR algorithm with synthetic data:")
+        print("Testing InterIAMB algorithm with synthetic data:")
         adj_matrix, info = self.fit(df)
         
         print("\nAdjacency Matrix:")
@@ -100,22 +112,25 @@ class MBOR(CausalDiscoveryAlgorithm):
         print("\nAdditional Info:")
         print(f"Total CI tests: {info['total_ci_tests']}")
 
-        # Ground truth adjacency matrix (using edge type 2 for undirected edges)
-        gt_matrix = np.array([
-            [0, 2, 2, 0, 0],
-            [2, 0, 2, 2, 0],
-            [2, 2, 0, 0, 2],
-            [0, 2, 0, 0, 2],
-            [0, 0, 2, 2, 0]
+        # Ground truth graph
+        gt_graph = np.array([
+            [0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0],
+            [1, 1, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 1, 1, 0]
         ])
 
-        # Compare with ground truth
-        correct_edges = np.sum((adj_matrix == gt_matrix).astype(int))
-        total_edges = np.sum(gt_matrix > 0)
-        accuracy = correct_edges / (total_edges * 2)
-        
-        print(f"\nAccuracy: {accuracy:.4f}")
+        # Use GraphEvaluator to compute metrics
+        evaluator = GraphEvaluator()
+        metrics = evaluator.compute_metrics(gt_graph, adj_matrix)
+
+        print("\nMetrics:")
+        print(f"F1 Score: {metrics['f1']:.4f}")
+        print(f"Precision: {metrics['precision']:.4f}")
+        print(f"Recall: {metrics['recall']:.4f}")
+        print(f"SHD: {metrics['shd']:.4f}")
 
 if __name__ == "__main__":
-    mbor = MBORWrapper()
+    mbor = MBOR()
     mbor.test_algorithm() 

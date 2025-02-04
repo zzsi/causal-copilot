@@ -24,7 +24,7 @@ from CBD.MBs import MBOR
 from CBD.MBs.LCMB import LRH
 
 
-def evaluation(method, path, numberPara, filenumber=10, alaph=0.01, k=1):
+def evaluation(method, path, numberPara, filenumber=10, alpha=0.01, k=1):
     # pre_set variables is zero
     Precision = 0
     Recall = 0
@@ -43,59 +43,59 @@ def evaluation(method, path, numberPara, filenumber=10, alaph=0.01, k=1):
             print("target is: " + str(target))
             if method == "MMMB":
                 start_time = time.process_time()
-                MB, ci_num = MMMB(data, target, alaph)
+                MB, ci_num = MMMB(data, target, alpha)
                 end_time = time.process_time()
             elif method == "IAMB":
                 start_time = time.process_time()
-                MB, ci_num = IAMB(data, target, alaph)
+                MB, ci_num = IAMB(data, target, alpha)
                 end_time = time.process_time()
             elif method =="inter_IAMB":
                 start_time = time.process_time()
-                MB, ci_num = inter_IAMB(data, target, alaph)
+                MB, ci_num = inter_IAMB(data, target, alpha)
                 end_time = time.process_time()
             elif method == "fast_IAMB":
                 start_time = time.process_time()
-                MB, ci_num = fast_IAMB(data, target, alaph)
+                MB, ci_num = fast_IAMB(data, target, alpha)
                 end_time = time.process_time()
             elif method == "GSMB":
                 start_time = time.process_time()
-                MB, ci_num = GSMB(data, target, alaph)
+                MB, ci_num = GSMB(data, target, alpha)
                 end_time = time.process_time()
             elif method == "HITON_MB":
                 start_time = time.process_time()
-                MB, ci_num = HITON_MB(data, target, alaph)
+                MB, ci_num = HITON_MB(data, target, alpha)
                 end_time = time.process_time()
             elif method == "PCMB":
                 start_time = time.process_time()
-                MB, ci_num = PCMB(data, target, alaph)
+                MB, ci_num = PCMB(data, target, alpha)
                 end_time = time.process_time()
             elif method == "IPCMB":
                 start_time = time.process_time()
-                MB, ci_num = IPC_MB(data, target, alaph)
+                MB, ci_num = IPC_MB(data, target, alpha)
                 end_time = time.process_time()
             elif method == "STMB":
                 start_time = time.process_time()
-                MB, ci_num = STMB(data, target, alaph)
+                MB, ci_num = STMB(data, target, alpha)
                 end_time = time.process_time()
             elif method == "IAMBnPC":
                 start_time = time.process_time()
-                MB, ci_num = IAMBnPC(data, target, alaph)
+                MB, ci_num = IAMBnPC(data, target, alpha)
                 end_time = time.process_time()
             elif method == "BAMB":
                 start_time = time.process_time()
-                MB, ci_num = BAMB(data, target, alaph)
+                MB, ci_num = BAMB(data, target, alpha)
                 end_time = time.process_time()
             elif method == "FBED":
                 start_time = time.process_time()
-                MB, ci_num = FBED(data, target, k, alaph)
+                MB, ci_num = FBED(data, target, k, alpha)
                 end_time = time.process_time()
             elif method == "MBOR":
                 start_time = time.process_time()
-                MB, ci_num = MBOR(data, target, alaph)
+                MB, ci_num = MBOR(data, target, alpha)
                 end_time = time.process_time()
             elif method == "LRH":
                 start_time = time.process_time()
-                MB, ci_num = LRH(data, target, alaph)
+                MB, ci_num = LRH(data, target, alpha)
                 end_time = time.process_time()
             else:
                 raise Exception("method input error!")

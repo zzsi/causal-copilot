@@ -9,7 +9,7 @@ from CBD.MBs.common.subsets import subsets
 from CBD.MBs.common.Meek import meek
 from CBD.MBs.common.condition_independence_test import cond_indep_test
 
-def GSMB(data, target, alaph, is_discrete):
+def GSMB(data, target, alpha, is_discrete):
     number, kVar = np.shape(data)
     CMB = []
     ci_number = 0
@@ -23,7 +23,7 @@ def GSMB(data, target, alaph, is_discrete):
         for x in S_variables:
             ci_number += 1
             pval_gp, dep_gp = cond_indep_test(data, target, x, CMB, is_discrete)
-            if pval_gp < alaph:
+            if pval_gp < alpha:
                 # print("CMB append is: "+str(x))
                 CMB.append(x)
                 circulateFlag = True
@@ -40,7 +40,7 @@ def GSMB(data, target, alaph, is_discrete):
             subsets_CMB = [i for i in CMB if i != x]
             ci_number += 1
             pval_sp, dep_sp= cond_indep_test(data, target, x, subsets_CMB, is_discrete)
-            if pval_sp > alaph :
+            if pval_sp > alpha :
                 # print("CMB remove is: "+ str(x))
                 CMB.remove(x)
                 circulateFlag = True

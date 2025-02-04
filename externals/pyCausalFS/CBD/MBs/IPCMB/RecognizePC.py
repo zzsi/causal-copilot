@@ -9,7 +9,7 @@ from CBD.MBs.common.subsets import subsets
 import numpy as np
 
 
-def RecognizePC(data, target, ADJT, alaph, is_discrete=True):
+def RecognizePC(data, target, ADJT, alpha, is_discrete=True):
     number, kVar = np.shape(data)
     NonPC = []
     cutSetSize = 0
@@ -23,7 +23,7 @@ def RecognizePC(data, target, ADJT, alaph, is_discrete=True):
                 ci_number += 1
                 pval_gp, dep_gp = cond_indep_test(
                     data, target, x, S, is_discrete)
-                if pval_gp > alaph:
+                if pval_gp > alpha:
                     NonPC.append(x)
                     sepset[x] = [i for i in S]
                     break
@@ -40,8 +40,8 @@ def RecognizePC(data, target, ADJT, alaph, is_discrete=True):
 # print("the file read")
 # _,k = np.shape(data)
 # target = 12
-# alaph = 0.05
+# alpha = 0.05
 # ADJT = [i for i in range(k) if i != target]
-# MBs,sepset=RecognizePC(data,target,ADJT,alaph)
+# MBs,sepset=RecognizePC(data,target,ADJT,alpha)
 # print("MBs is: "+str(MBs))
 # print(sepset)

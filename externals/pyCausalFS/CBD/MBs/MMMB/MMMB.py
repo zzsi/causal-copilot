@@ -8,13 +8,13 @@ from CBD.MBs.MMMB.MMPC import MMPC
 from CBD.MBs.common.condition_independence_test import cond_indep_test
 
 
-def MMMB(data, target, alaph, is_discrete=True):
+def MMMB(data, target, alpha, is_discrete=True):
     ci_number = 0
-    PC, sepset, ci_num2 = MMPC(data, target, alaph, is_discrete)
+    PC, sepset, ci_num2 = MMPC(data, target, alpha, is_discrete)
     ci_number += ci_num2
     MB = PC.copy()
     for x in PC:
-        PCofPC, _, ci_num3 = MMPC(data, x, alaph, is_discrete)
+        PCofPC, _, ci_num3 = MMPC(data, x, alpha, is_discrete)
         ci_number += ci_num3
         for y in PCofPC:
             if y != target and y not in PC:
@@ -24,7 +24,7 @@ def MMMB(data, target, alaph, is_discrete=True):
                 ci_number += 1
                 pval, dep = cond_indep_test(
                     data, target, y, conditions_Set, is_discrete)
-                if pval <= alaph:
+                if pval <= alpha:
                     MB.append(y)
                     break
     return list(set(MB)), ci_number
@@ -34,9 +34,9 @@ def MMMB(data, target, alaph, is_discrete=True):
 # print("the file read")
 #
 # target = 10
-# alaph = 0.05
+# alpha = 0.05
 #
-# MBs=MMMB(data,target,alaph)
+# MBs=MMMB(data,target,alpha)
 # print("MBs is: "+str(MBs))
 
 

@@ -9,7 +9,7 @@ from CBD.MBs.common.condition_independence_test import cond_indep_test
 # import common.subsets as subsets
 
 
-def IAMB(data, target, alaph, is_discrete=True):
+def IAMB(data, target, alpha, is_discrete=True):
     number, kVar = np.shape(data)
     CMB = []
     ci_number = 0
@@ -29,7 +29,7 @@ def IAMB(data, target, alaph, is_discrete=True):
             # print("target is:",target,",x is: ", x," CMB is: ", CMB," ,pval is: ",pval," ,dep is: ", dep)
 
             # chose maxsize of f(X:T|CMB)
-            if pval <= alaph:
+            if pval <= alpha:
                 if dep > temp_dep:
                     temp_dep=dep
                     y=x
@@ -80,7 +80,7 @@ def IAMB(data, target, alaph, is_discrete=True):
 # print("the file read")
 #
 # target = 2
-# alaph = 0.01
+# alpha = 0.01
 #
-# MBs=IAMB(data, target, alaph, is_discrete=True)
+# MBs=IAMB(data, target, alpha, is_discrete=True)
 # print("MBs is: "+str(MBs))

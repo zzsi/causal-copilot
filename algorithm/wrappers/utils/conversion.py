@@ -17,7 +17,7 @@ sys.path.insert(0, causal_learn_dir)
 from causallearn.utils.cit import CIT, fisherz, kci, chisq, gsq
 
 
-def MB2CPDAG(data: pd.DataFrame, mb_dict: Dict[int, List[int]], is_discrete: bool = False, alpha: float = 0.05) -> np.ndarray:
+def MB2CPDAG(data: pd.DataFrame, mb_dict: Dict[int, List[int]], indep_test: str = 'fisherz', alpha: float = 0.05, n_jobs: int = 1) -> np.ndarray:
     """
     Convert Markov blanket results to a CPDAG by running PC algorithm on each target and its MB nodes.
     
@@ -35,49 +35,41 @@ def MB2CPDAG(data: pd.DataFrame, mb_dict: Dict[int, List[int]], is_discrete: boo
     n_vars = data.shape[1]
     merged_cpdag = np.zeros((n_vars, n_vars))
     
-    # Set independence test based on data type
-    indep_test = 'gsq' if is_discrete else 'fisherz'
-    
-    # For each target and its MB nodes
-    for target, mb_nodes in mb_dict.items():
-        # Get indices for this local graph
+    from joblib import Parallel, delayed
+    def compute_local_cpdag(target, mb_nodes):
         local_indices = [target] + mb_nodes
-        
         if len(local_indices) < 2:
-            continue
+            return None
         if len(local_indices) == 2:
-            merged_cpdag[local_indices[0], local_indices[1]] = 2
-            continue
-
-        # Extract relevant data columns
+            local_adj = np.zeros((2,2))
+            local_adj[0,1] = 2
+            return (local_indices, local_adj)
         local_data = data.iloc[:, local_indices].values
         node_names = [str(i) for i in local_indices]
-        
-        # Run PC algorithm on local graph
         cg = pc(local_data,
                 alpha=alpha,
                 indep_test=indep_test,
                 node_names=node_names,
                 verbose=False)
-        
-        print(cg.G.graph)
-                
-        # Convert PC result to adjacency matrix format
         local_adj = cg.G.graph
-        
-        # Map local results back to full adjacency matrix
+        return (local_indices, local_adj)
+
+    results = Parallel(n_jobs=n_jobs)(
+        delayed(compute_local_cpdag)(target, mb_nodes) for target, mb_nodes in mb_dict.items()
+    )
+    for res in results:
+        if res is None:
+            continue
+        local_indices, local_adj = res
         for i in range(len(local_indices)):
             for j in range(len(local_indices)):
-                if local_adj[i,j] == 1:
-                    if local_adj[j,i] == -1:
-                        # Directed edge i->j
+                if local_adj[i, j] == 1:
+                    if local_adj[j, i] == -1:
                         merged_cpdag[local_indices[i], local_indices[j]] = 1
-                    elif local_adj[j,i] == 1:
-                        # Undirected edge i--j
+                    elif local_adj[j, i] == 1:
                         if merged_cpdag[local_indices[j], local_indices[i]] == 0:
                             merged_cpdag[local_indices[i], local_indices[j]] = 2
-                elif local_adj[i,j] == -1 and local_adj[j,i] == -1:
-                    # Undirected edge i--j
+                elif local_adj[i, j] == -1 and local_adj[j, i] == -1:
                     if merged_cpdag[local_indices[j], local_indices[i]] == 0:
                         merged_cpdag[local_indices[i], local_indices[j]] = 2
                         
@@ -222,34 +214,3 @@ def MB2CPDAG(data: pd.DataFrame, mb_dict: Dict[int, List[int]], is_discrete: boo
 #             node_size=1500, font_size=12, font_weight='bold')
 #     plt.title('Discovered Network Structure')
 #     plt.show()
-
-def main():
-    # Generate test data
-    print("Generating test data...")
-    data, true_classification = generate_test_data()
-    
-    # Initialize classifier with Fisher Z test
-    classifier = MarkovBlanketClassifier(data, ci_test='fisherz')
-    
-    # Define target and Markov blanket nodes
-    T = 'X'
-    MB = ['P1', 'P2', 'S1', 'S2', 'C1']
-    
-    print("\nClassifying Markov blanket nodes...")
-    classification = classifier.classify_blanket_nodes(T, MB)
-    
-    # Print results
-    print("\nResults:")
-    print(f"Discovered classification: {classification}")
-    print(f"True classification: {true_classification}")
-    
-    # Calculate accuracy
-    correct = sum(1 for node in MB if classification[node] == true_classification[node])
-    accuracy = correct / len(MB)
-    
-    print(f"\nClassification accuracy: {accuracy:.2%}")
-    
-    # Visualize the network
-    # visualize_network(classification, T)
-if __name__ == "__main__":
-    main()

@@ -3,7 +3,7 @@ import numpy as np
 import random
 
 
-def KIAMB(data, target, alaph, k, is_discrete=True):
+def KIAMB(data, target, alpha, k, is_discrete=True):
     n, p = np.shape(data)
     MB = []
     ci_number = 0
@@ -16,7 +16,7 @@ def KIAMB(data, target, alaph, k, is_discrete=True):
         for x in variables:
             ci_number += 1
             pval, dep = cond_indep_test(data, target, x, MB, is_discrete)
-            if pval <= alaph:
+            if pval <= alpha:
                 CanMB.append(x)
                 x_dep[x] = dep
         if len(CanMB) == 0:
@@ -38,7 +38,7 @@ def KIAMB(data, target, alaph, k, is_discrete=True):
         condition_set = [i for i in MB if i != x]
         ci_number += 1
         pval, _ = cond_indep_test(data, target, x, condition_set, is_discrete)
-        if pval > alaph:
+        if pval > alpha:
             MB.remove(x)
 
     return list(set(MB)), ci_number

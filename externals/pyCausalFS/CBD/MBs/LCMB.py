@@ -9,7 +9,7 @@ from CBD.MBs.common.subsets import subsets
 from CBD.MBs.common.condition_independence_test import cond_indep_test
 
 
-def LRH(data, target, alaph, is_discrete=True):
+def LRH(data, target, alpha, is_discrete=True):
     ci_number = 0
     number, kVar = np.shape(data)
     max_k = 3
@@ -22,7 +22,7 @@ def LRH(data, target, alaph, is_discrete=True):
         for x in variables:
             ci_number += 1
             pval, dep = cond_indep_test(data, target, x, M, is_discrete)
-            if pval <= alaph:
+            if pval <= alpha:
                 M1.append(x)
                 x_dep_set.append([x,dep])
 
@@ -42,7 +42,7 @@ def LRH(data, target, alaph, is_discrete=True):
             for y in vari_set:
                 ci_number += 1
                 pval, _ = cond_indep_test(data, x, y, M, is_discrete)
-                if pval <= alaph:
+                if pval <= alpha:
                     NX.append(y)
             # print("NX is:" + str(NX))
             Nlength = len(NX)
@@ -56,7 +56,7 @@ def LRH(data, target, alaph, is_discrete=True):
                     ci_number += 1
                     pval, _ = cond_indep_test(data, target, x, conditionset, is_discrete)
                     # print("pval is: " + str(pval) + " ,x is: " + str(x) + " ,conditionset is: " + str(conditionset))
-                    if pval > alaph:
+                    if pval > alpha:
                         break_flag = True
                         break
                 if break_flag:
@@ -82,7 +82,7 @@ def LRH(data, target, alaph, is_discrete=True):
             for x in M2:
                 ci_number += 1
                 pval, dep = cond_indep_test(data, target, x, M, is_discrete)
-                if pval <= alaph:
+                if pval <= alpha:
                     x_dep_set.append([x, dep])
             x_dep_set = sorted(x_dep_set, key=lambda x: x[1], reverse=True)
             # print("--x_dep_set is: " + str(x_dep_set))
@@ -104,7 +104,7 @@ def LRH(data, target, alaph, is_discrete=True):
         ci_number += 1
         pval, _ = cond_indep_test(data, target, x, conditionset, is_discrete)
         # print("pval is: " + str(pval) + " , x is: " + str(x))
-        if pval > alaph:
+        if pval > alpha:
             M.remove(x)
 
     return M, ci_number
@@ -115,9 +115,9 @@ def LRH(data, target, alaph, is_discrete=True):
 # print("the file read")
 #
 # target = 19
-# alaph = 0.01
+# alpha = 0.01
 #
-# MB = LRH(data, target, alaph)
+# MB = LRH(data, target, alpha)
 # print("MBs is: " + str(MB))
 
 # 500

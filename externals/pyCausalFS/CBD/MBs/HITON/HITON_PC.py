@@ -11,7 +11,7 @@ from CBD.MBs.common.condition_independence_test import cond_indep_test
 from CBD.MBs.common.subsets import subsets
 
 
-def HITON_PC(data, target, alaph, is_discrete=True):
+def HITON_PC(data, target, alpha, is_discrete=True):
     number, kVar = np.shape(data)
     sepset = [[] for i in range(kVar)]
     variDepSet = []
@@ -28,8 +28,8 @@ def HITON_PC(data, target, alaph, is_discrete=True):
         ci_number += 1
         pval_gp, dep_gp = cond_indep_test(
             data, target, x, [], is_discrete)
-        print(pval_gp)
-        if pval_gp <= alaph:
+        # print(pval_gp)
+        if pval_gp <= alpha:
             variDepSet.append([x, dep_gp])
 
     # sorted by dep from max to min
@@ -70,7 +70,7 @@ def HITON_PC(data, target, alaph, is_discrete=True):
                     conditions_test_set = [i for i in s]
                     pval_rm, dep_rm = cond_indep_test(
                         data, target, y, conditions_test_set, is_discrete)
-                    if pval_rm > alaph:
+                    if pval_rm > alpha:
                         sepset[y] = [i for i in conditions_test_set]
                         # if new x add will be removed ,test will not be
                         # continue
@@ -92,8 +92,8 @@ def HITON_PC(data, target, alaph, is_discrete=True):
 # print("the file read")
 #
 # target = 1
-# alaph = 0.05
+# alpha = 0.05
 #
-# MBs,sepset,_=HITON_PC(data,target,alaph)
+# MBs,sepset,_=HITON_PC(data,target,alpha)
 # print("MBs is: "+str(MBs))
 # print(sepset)

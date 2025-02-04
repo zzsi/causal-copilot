@@ -6,71 +6,83 @@ desc:
 """
 
 import numpy as np
-from CBD.MBs.common.condition_independence_test import cond_indep_test
+import os
+import sys
+
+causal_learn_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), 'causal-learn')
+sys.path.append(causal_learn_dir)
+
+import causallearn.utils.cit as cit
 from CBD.MBs.common.subsets import subsets
 
-
-def IAMBnPC(data, target, alaph, is_discrete=True):
+def IAMBnPC(data, target, alpha, indep_test='fisherz', n_jobs=1):
     CMB = []
     ci_number = 0
     number, kVar = np.shape(data)
+    
+    # Initialize conditional independence test
+    cond_indep_test = cit.CIT(data, indep_test)
 
     while True:
         variDepSet = []
         Svariables = [i for i in range(kVar) if i != target and i not in CMB]
-        # print(Svariables)
-        for x in Svariables:
-            ci_number += 1
-            pval, dep = cond_indep_test(data, target, x, CMB, is_discrete)
-            # print("pval: " + str(pval))
-            if pval <= alaph:
-                variDepSet.append([x, dep])
+        if n_jobs > 1 and Svariables:
+            from joblib import Parallel, delayed
+            results = Parallel(n_jobs=n_jobs)(
+                delayed(cond_indep_test)(target, x, CMB) for x in Svariables
+            )
+            for x, pval in zip(Svariables, results):
+                ci_number += 1
+                if pval <= alpha:
+                    variDepSet.append([x, -pval])
+        else:
+            for x in Svariables:
+                ci_number += 1
+                pval = cond_indep_test(target, x, CMB)
+                if pval <= alpha:
+                    variDepSet.append([x, -pval])
+
         variDepSet = sorted(variDepSet, key=lambda x: x[1], reverse=True)
-        # print(variDepSet)
-        if variDepSet == []:
+        if not variDepSet:
             break
         else:
             CMB.append(variDepSet[0][0])
-            # print(CMB)
 
     """shrinking phase"""
-    TestMB = CMB.copy()
-    # whether or not sorted TestMB  is not influence,just for elegant!
-    TestMB = sorted(TestMB)
+    TestMB = sorted(CMB)
     p = len(TestMB)
     DAG = np.ones((1, p))
     size = 0
     continueFlag = True
-    # conditionSet maximum set 3
     max_k = 3
-    # target_index = TestMB.index(target)
     while continueFlag:
-        # Candidate of MBs traverse
         for y in range(p):
             if DAG[0, y] == 0:
                 continue
-            conditionAllSet = [i for i in range(
-                p) if i != y and DAG[0, i] == 1]
+            conditionAllSet = [i for i in range(p) if i != y and DAG[0, i] == 1]
             conditionSet = subsets(conditionAllSet, size)
-            for S in conditionSet:
-                condtionVari = [TestMB[i] for i in S]
-                ci_number += 1
-                pval_sp, _ = cond_indep_test(
-                    data, target, TestMB[y], condtionVari, is_discrete)
-                if pval_sp >= alaph:
+            if n_jobs > 1 and conditionSet:
+                from joblib import Parallel, delayed
+                results = Parallel(n_jobs=n_jobs)(
+                    delayed(cond_indep_test)(target, TestMB[y], [TestMB[i] for i in S])
+                    for S in conditionSet
+                )
+                ci_number += len(results)
+                if any(r >= alpha for r in results):
                     DAG[0, y] = 0
-                    # print("pDAG: \n" + str(DAG))
-                    break
-        # print("test: \n" + str(DAG))
+                    continue
+            else:
+                for S in conditionSet:
+                    ci_number += 1
+                    pval_sp = cond_indep_test(target, TestMB[y], [TestMB[i] for i in S])
+                    if pval_sp >= alpha:
+                        DAG[0, y] = 0
+                        break
         size += 1
         continueFlag = False
-
-        # circulate will be continue if condition suited
         if np.sum(DAG[0, :] == 1) >= size and size <= max_k:
             continueFlag = True
-    # end while
 
-    # print("DAG is: \n" + str(DAG))
     MB = [TestMB[i] for i in range(p) if DAG[0, i] == 1]
 
     return MB, ci_number
@@ -81,9 +93,9 @@ def IAMBnPC(data, target, alaph, is_discrete=True):
 # print("the file read")
 #
 # target = 11
-# alaph = 0.05
+# alpha = 0.05
 #
-# MBs = interIAMBnPC(data,target,alaph)
+# MBs = interIAMBnPC(data,target,alpha)
 # print("MBs is: "+str(MBs))
 
 

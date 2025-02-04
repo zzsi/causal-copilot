@@ -171,10 +171,10 @@ import pandas as pd
 data = pd.read_csv("D:/data/Alarm_data/Alarm1_s5000_v2.csv")
 print("the file read")
 num1, kvar = np.shape(data)
-alaph = 0.01
+alpha = 0.01
 dic = {}
 dic.setdefault("cache", [0, 0])
-DAG, _, dic = pc(data, alaph, dic)
+DAG, _, dic = pc(data, alpha, dic)
 print("DAG:\n ", DAG)
 for i in range(kvar):
     for j in range(kvar):

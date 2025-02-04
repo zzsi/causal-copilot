@@ -253,7 +253,7 @@ class Hybrid(CausalDiscoveryAlgorithm):
         params = {
             'first_stage_algo': 'pc',
             'alpha': 0.05,
-            'm_max': 3,
+            'm_max': 1,
             'second_stage_method': None  # Disable second stage
         }
         self._params.update(params)
@@ -301,4 +301,3 @@ class Hybrid(CausalDiscoveryAlgorithm):
 if __name__ == "__main__":
     hybrid = Hybrid({})
     hybrid.test_algorithm()
-
