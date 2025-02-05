@@ -3,10 +3,11 @@ import causal_analysis.IV.wrappers as wrappers
 #import hte.wrappers as wrappers
 
 class HTE_Programming(object):
-    def __init__(self, args, y_col: str, T_col: str,  T0: int, T1: int, X_col: list, W_col: list=None):
+    def __init__(self, args, y_col: str, T_col: str, Z_col:str, T0: int, T1: int, X_col: list, W_col: list=None):
         self.args = args
         self.y_col = y_col
         self.T_col = T_col
+        self.Z_col = Z_col
         self.T0 = T0
         self.T1 = T1
         self.X_col = X_col
@@ -16,7 +17,7 @@ class HTE_Programming(object):
     def fit_model(self, global_state):
         algo_func = getattr(wrappers, global_state.inference.hte_algo_json['name'])
         self.model = algo_func(params=global_state.inference.hte_model_param, 
-                          y_col=self.y_col, T_col=self.T_col, X_col=self.X_col, W_col=self.W_col,
+                          y_col=self.y_col, T_col=self.T_col, X_col=self.X_col, Z_col=self.Z_col, W_col=self.W_col,
                           T0=self.T0, T1=self.T1)
         self.model.fit(global_state.user_data.processed_data)
     

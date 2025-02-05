@@ -5,14 +5,15 @@ import sklearn.linear_model
 import sklearn.ensemble
 import sklearn.svm
 
-# Class to get models in DML two stages suggested by LLM
+# Class to get models in IV two stages suggested by LLM
 class HTE_Param_Selector(object):
-    def __init__(self, args, y_col: str, T_col: str, X_col: list, W_col: list=None):
+    def __init__(self, args, y_col: str, T_col: str, Z_col:str, X_col: list, W_col: list=None):
         self.args = args
         self.y_col = y_col
         self.T_col = T_col
         self.X_col = X_col
         self.W_col = W_col
+        self.Z_col = Z_col
 
     def prompt_generation(self, target_node, global_state):
         node_type = global_state.statistics.data_type_column[target_node]

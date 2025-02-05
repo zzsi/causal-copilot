@@ -17,7 +17,6 @@ from .base import Estimator
 class DRIV(Estimator):
     def __init__(self, y_col: str, T_col: str,  Z_col: str, X_col: list, params: Dict = {}, W_col: list = None):
         super().__init__(params, y_col, T_col, X_col, W_col)
-        self.Z_col = Z_col
         self.model = Econ_DRIV(**self._params)
 
     @property
@@ -66,7 +65,6 @@ class LinearDRIV(Estimator):
         if 'model_final' in params:
             del params['model_final']
         super().__init__(params, y_col, T_col, X_col, W_col)
-        self.Z_col = Z_col
         self.model = Econ_LinearDRIV(**self._params)
 
     @property
@@ -113,7 +111,6 @@ class SparseLinearDRIV(Estimator):
         if 'model_final' in params:
             del params['model_final']
         super().__init__(params, y_col, T_col, X_col, W_col)
-        self.Z_col = Z_col
         self.model = Econ_SparseLinearDRIV(**self._params)
 
     @property
@@ -160,7 +157,6 @@ class ForestDRIV(Estimator):
         if 'model_final' in params:
             del params['model_final']
         super().__init__(params, y_col, T_col, X_col, W_col)
-        self.Z_col = Z_col
         self.model = Econ_ForestDRIV(**self._params)
 
     @property
