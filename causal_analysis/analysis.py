@@ -52,6 +52,7 @@ def generate_analysis_matching(args, treatment, outcome, method, W_col, ate, que
     **Average Treatment Effect (ATE)**: {ate}
     **Description from User**: {query}
     """
+
     response = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt)
     return response
         
@@ -87,6 +88,7 @@ def generate_analysis_matching(args, treatment, outcome, method, W_col, ate, que
     # e. The red triangle shows the estimated effect when the unobserved covariate has 1 or 2 or 3 times partial-R^2 of a chosen benchmark observed covariate with the outcome.
     # **Description from User**: {desc}
     # """
+
     # response2 = LLM_parse_query(self.args, None, 'You are an expert in Causal Discovery.', prompt)
     # response = response1 + '\n' + response2
 
@@ -99,6 +101,7 @@ def generate_analysis_feature_importance(args, key_node, parent_nodes, mean_shap
     ""Description from User**: {desc}
     **Mean of Shapley Values**: {mean_shap_values}
     """
+    
     response = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt)
     return response
 
@@ -115,6 +118,7 @@ def generate_analysis_anormaly(args, df, key_node, parent_nodes, desc):
     We estimated the contribution of the ancestors of {key_node}, including {key_node} itself, to the observed anomaly.
     In this method, we use invertible causal mechanisms to reconstruct and modify the noise leading to a certain observation. We then ask, “If the noise value of a specific node was from its ‘normal’ distribution, would we still have observed an anomalous value in the target node?”. The change in the severity of the anomaly in the target node after altering an upstream noise variable’s value, based on its learned distribution, indicates the node’s contribution to the anomaly. The advantage of using the noise value over the actual node value is that we measure only the influence originating from the node and not inherited from its parents.
     """
+
     response = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt)
     return response
 
@@ -130,5 +134,6 @@ def generate_analysis_anormaly_dist(args, df, key_node, desc):
     **Methods to calculate Distributional Change Attribution**
     We compared two datasets (old and new) to identify which nodes in the causal graph contributed most to the change in the distribution of the target variable.
     """
+
     response = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt)
     return response

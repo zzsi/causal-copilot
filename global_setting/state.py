@@ -19,7 +19,6 @@ class UserData:
     selected_features: Optional[object] = None
     important_features: Optional[object] = None
     visual_selected_features: Optional[object] = None
-    system_drop_features: Optional[object] = None
     user_drop_features: Optional[object] = None
     llm_drop_features: Optional[object] = None
     high_corr_drop_features: Optional[object] = None
@@ -28,6 +27,7 @@ class UserData:
 @dataclass
 class Statistics:
     miss_ratio: List[Dict] = field(default_factory=list)
+    sparsity_dict: Optional[Dict] = None
     linearity: Optional[bool] = None
     gaussian_error: Optional[bool] = None
     missingness: Optional[bool] = None
@@ -45,11 +45,6 @@ class Statistics:
     time_series: Optional[bool] = False # indicator of time-series data
     time_lag: List[Dict] = field(default_factory=list) # estimated time lags for each feature
     nlags: int = 50
-    
-    def update(self, values_dict: dict):
-        for key, value in values_dict.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
 
 @dataclass
 class Logging:
@@ -62,6 +57,7 @@ class Logging:
     graph_conversion: Optional[Dict] = field(default_factory=dict)
     downstream_discuss: List[Dict] = field(default_factory=list)
     final_discuss: List[Dict] = field(default_factory=list)
+    global_state_logging: List[Dict] = field(default_factory=list)
 
 @dataclass
 class Algorithm:
@@ -71,6 +67,7 @@ class Algorithm:
     algorithm_arguments: Optional[Dict] = None
     waiting_minutes: float = 1440.0
     algorithm_arguments_json: Optional[object] = None
+    gpu_available: Optional[bool] = False
 
 @dataclass
 class Results:
@@ -85,11 +82,12 @@ class Results:
     revised_metrics: Optional[Dict] = None
     bootstrap_probability: Optional[np.ndarray] = None
     bootstrap_check_dict: Optional[Dict] = None
-    llm_errors: List[Dict] = field(default_factory=list)
+    llm_errors: Optional[Dict] = None
     bootstrap_errors: List[Dict] = field(default_factory=list)
     eda_result: Optional[Dict] = None
     prior_knowledge: Optional[object] = None
     refutation_analysis: Optional[object] = None
+    report_selected_index: Optional[object] = None
 
 @dataclass
 class Inference:

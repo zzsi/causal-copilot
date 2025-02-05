@@ -25,6 +25,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import NearestNeighbors
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from causal_analysis.DML.hte_filter import HTE_Filter as DML_HTE_Filter
 from causal_analysis.DML.hte_params import HTE_Param_Selector as DML_HTE_Param_Selector
 from causal_analysis.DML.hte_program import HTE_Programming as DML_HTE_Programming
@@ -315,7 +316,6 @@ class Analysis(object):
         plt.savefig(density_plot_path, bbox_inches='tight')
         plt.close()
 
-    
     def estimate_causal_effect_matching(self, treatment, outcome, confounders, cont_confounders, method="propensity_score", visualize=True):
         """
         Estimate the causal effect using matching methods.
@@ -564,7 +564,7 @@ class Analysis(object):
                   'att': [att, att_lower, att_upper],
                   'hte': [hte, hte_lower, hte_upper]}
         return result
-    
+
     def estimate_effect_drl(self, outcome, treatment, T0, T1, X_col, W_col, query):
         if len(W_col) == 0:
             W_col = ['W']
@@ -590,6 +590,7 @@ class Analysis(object):
         return result
     
     # TODO: Add def estimate_effect_iv()
+    
     def counterfactual_estimation(self, treatment_name, response_name, observed_val = None, intervened_treatment = None):
         # observed_val should be a df as the processed data
         if observed_val is None:
@@ -640,7 +641,6 @@ class Analysis(object):
             os.makedirs(path)
         print(f"Saving counterfactual estimation plot to {os.path.join(path, 'counterfactual_est_fig.jpg')}")
         plt.savefig(os.path.join(path, 'counterfactual_est_fig.jpg'))
-
 
     def simulate_intervention(self, treatment_name, response_name,
                               shift_intervention_val = None):
@@ -695,7 +695,6 @@ class Analysis(object):
         # Shift Intervention
         if shift_intervention_val is None:
             shift_intervention_val = 1
-
         shift_samples = gcm.interventional_samples(self.causal_model,
                                                     {treatment_name: lambda x: x + shift_intervention_val},
                                                     num_samples_to_draw=1000)
@@ -735,7 +734,6 @@ class Analysis(object):
 
         print(f"Saving simulated dataset {os.path.join(path, 'simulated_shift_intervention.csv')}")
         shift_samples.to_csv(os.path.join(path, 'simulated_shift_intervention.csv'), index=False)
-
 
     def evaluate_treatment_effect_metrics(self, true_value, estimations, cis):
         """
@@ -917,6 +915,7 @@ class Analysis(object):
         
         else:
             return None, None
+
 
 def main(analysis, global_state):    
 ##################           

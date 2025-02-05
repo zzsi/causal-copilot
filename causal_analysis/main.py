@@ -121,7 +121,6 @@ if __name__ == '__main__':
             default="selected algorithm: PC",
             help='Initial query for the algorithm'
         )
-
         args = parser.parse_args()
         return args
     

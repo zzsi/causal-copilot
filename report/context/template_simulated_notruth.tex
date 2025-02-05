@@ -1,10 +1,10 @@
 \documentclass{article}
 
-\usepackage{postprocess/context/arxiv}
+\usepackage{report/context/arxiv}
 
 \usepackage[utf8]{inputenc} % allow utf-8 input
-\usepackage{amsmath}
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{amsmath}
 \usepackage{hyperref}       % hyperlinks
 \usepackage{url}            % simple URL typesetting
 \usepackage{booktabs}       % professional-quality tables
@@ -17,8 +17,6 @@
 % \usepackage{doi}
 \usepackage{float}
 \usepackage{subcaption}
-% \usepackage{wrapfig}
-
 
 
 \title{[TITLE]}
@@ -33,7 +31,7 @@
 \hypersetup{
 pdftitle={[TITLE]},
 pdfauthor={Causal Copilot},
-pdfkeywords={Causal Discovery, Large Language Model, [ALGO], [DATASET]},
+pdfkeywords={Causal Discovery, Large Language Model, [ALGO]},
 }
 
 \begin{document}
@@ -43,22 +41,11 @@ pdfkeywords={Causal Discovery, Large Language Model, [ALGO], [DATASET]},
 [ABSTRACT]
 \end{abstract}
 
-\keywords{Causal Discovery, Large Language Model, [ALGO], [DATASET]}
+\keywords{Causal Discovery, Large Language Model, [ALGO]}
 
 \raggedbottom
 \section{Introduction}
 [INTRO_INFO]
-
-\section{Background Knowledge}
-\subsection{Detailed Explanation about the Variables}
-[BACKGROUND_INFO1]
-
-\subsection{Possible Causal Relations among these Variables with LLM}
-
-The following are some possible causal relations suggested by LLM, and the relationships are visualized
-in the Figure 1. Please note that only variables in our dataset are included in the figure.
-
-[BACKGROUND_INFO2]
 
 \section{Dataset Descriptions and EDA}
 The following is a preview of our original dataset. Please note that if the column number is greater than 20,
@@ -84,8 +71,8 @@ If the dataset was found to satisfy the linearity assumption, we fitted an OLS m
 If the dataset did not satisfy the linearity assumption, we employed a flexible non-parametric method, locally weighted scatterplot smoothing (LOWESS), to fit the model and obtain the residuals. 
 Again, we used the Benjamini and Yekutieli procedure to correct for multiple testing results. 
 
-
 [PREPROCESS_GRAPH]
+
 
 Properties of the dataset we analyzed are listed below.
 
@@ -141,29 +128,17 @@ The above is the initial result graph produced by our algorithm.
 
 [RESULT_ANALYSIS]
 
-\clearpage
-
-\subsection{Revised Graph}
+\subsection{Graph Reliability Analysis}
 
 \subsubsection{Bootstrap Probability}
 [CONFIDENCE_GRAPH]
-
 [RELIABILITY_ANALYSIS]
 
-\subsubsection{LLM Pruning}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[height=0.3\textheight]{[RESULT_GRAPH2]}
-    \caption{Revised Graph}
-\end{figure}
-
-[REVISE_PROCESS]
-
-
-\subsection{Graph Reliability Analysis}
-
+\subsubsection{Refutation Analysis}
 [REFUTATION_GRAPH]
+
+[RESULT_GRAPH_COMPARISION]
+[RESULT_COMPARISION]
 
 \subsection{Conclusion}
 [CONCLUSION]

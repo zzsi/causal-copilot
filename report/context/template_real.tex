@@ -1,10 +1,10 @@
 \documentclass{article}
 
-\usepackage{postprocess/context/arxiv}
+\usepackage{report/context/arxiv}
 
 \usepackage[utf8]{inputenc} % allow utf-8 input
-\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
 \usepackage{amsmath}
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
 \usepackage{hyperref}       % hyperlinks
 \usepackage{url}            % simple URL typesetting
 \usepackage{booktabs}       % professional-quality tables
@@ -17,12 +17,13 @@
 % \usepackage{doi}
 \usepackage{float}
 \usepackage{subcaption}
+% \usepackage{wrapfig}
 
 
 \title{[TITLE]}
 
 
-\author{ \href{https://orcid.org/0000-0000-0000-0000}{\includegraphics[scale=0.06]{asset/logo.png}} }
+\author{ \href{https://orcid.org/0000-0000-0000-0000}{\includegraphics[scale=0.06]{asset/logo.png}}}
 	
 
 \renewcommand{\headeright}{Technical Report}
@@ -31,7 +32,7 @@
 \hypersetup{
 pdftitle={[TITLE]},
 pdfauthor={Causal Copilot},
-pdfkeywords={Causal Discovery, Large Language Model, [ALGO]},
+pdfkeywords={Causal Discovery, Large Language Model, [ALGO], [DATASET]},
 }
 
 \begin{document}
@@ -41,11 +42,23 @@ pdfkeywords={Causal Discovery, Large Language Model, [ALGO]},
 [ABSTRACT]
 \end{abstract}
 
-\keywords{Causal Discovery, Large Language Model, [ALGO]}
+\keywords{Causal Discovery, Large Language Model, [ALGO], [DATASET]}
 
 \raggedbottom
 \section{Introduction}
 [INTRO_INFO]
+
+\section{Background Knowledge}
+\subsection{Detailed Explanation about the Variables}
+[BACKGROUND_INFO1]
+
+\subsection{Possible Causal Relations among these Variables with LLM}
+
+The following are some possible causal relations suggested by LLM, and the relationships are visualized
+in the Figure 1. Please note that only variables in our dataset are included in the figure.
+
+[BACKGROUND_INFO2]
+
 
 \section{Dataset Descriptions and EDA}
 The following is a preview of our original dataset. Please note that if the column number is greater than 20,
@@ -72,6 +85,7 @@ If the dataset did not satisfy the linearity assumption, we employed a flexible 
 Again, we used the Benjamini and Yekutieli procedure to correct for multiple testing results. 
 
 [PREPROCESS_GRAPH]
+
 
 Properties of the dataset we analyzed are listed below.
 
@@ -122,16 +136,16 @@ and the black line represents the median. Variables are categorized into three t
     \begin{subfigure}{0.45\textwidth}
         \centering
         \vspace{-0.5cm}
-        \includegraphics[width=\linewidth]{[RESULT_GRAPH0]}
+        \includegraphics[width=0.3\textheight]{[RESULT_GRAPH0]}
         \vfill
         \caption{True Graph}
         \label{fig:sub1}
     \end{subfigure}
-    \hspace{0.04\textwidth}
+    \hspace{0.04\textwidth}0.3\textheight0.3\textheight0.3\textheight
     \begin{subfigure}{0.45\textwidth}
         \centering
         \vspace{-0.5cm}
-        \includegraphics[height=0.3\textheight]{[RESULT_GRAPH1]}
+        \includegraphics[width=height=0.3\textheight]{[RESULT_GRAPH1]}
         \vfill
         \caption{Initial Graph}
         \label{fig:sub2}
@@ -144,17 +158,29 @@ The above is the initial result graph produced by our algorithm.
 
 [RESULT_ANALYSIS]
 
-\subsection{Graph Reliability Analysis}
+\clearpage
+
+\subsection{Revised Graph}
 
 \subsubsection{Bootstrap Probability}
+
 [CONFIDENCE_GRAPH]
+
 [RELIABILITY_ANALYSIS]
 
-\subsubsection{Refutation Analysis}
+\subsubsection{LLM Pruning}
+
+[REVISE_PROCESS]
+
+
+\subsection{Graph Reliability Analysis}
+
 [REFUTATION_GRAPH]
+
+[RESULT_GRAPH_COMPARISION]
+[RESULT_COMPARISION]
 
 \subsection{Conclusion}
 [CONCLUSION]
-
 
 \end{document}
