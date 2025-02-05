@@ -1,28 +1,21 @@
 Given a dataset with the following properties:
 
-1. Columns: [COLUMNS]
-2. Statistics:
-[STATISTICS_DESC]
+1. Columns: [COLUMNS]  
+2. Statistics: [STATISTICS_DESC]
 
-We want to conduct the following Heterogeneous Effect Estimation task:
-[QUESTION]
+We want to estimate Heterogeneous Treatment Effects (HTE) using a Doubly Robust Instrumental Variable (DRIV) framework.
 
-Please analyze the dataset characteristics and the task description, and recommend the most suitable one HTE estimation algorithm. Use the following context information to inform your recommendations:
+Please analyze the dataset characteristics and recommend the most suitable HTE estimation algorithm from the following list:
+- DRIV  
+- LinearDRIV  
+- SparseLinearDRIV  
+- ForestDRIV  
+- metalearners  
 
-Algorithms:
-[ALGO_CONTEXT]
-
-For the chosen one algorithm, provide:
-1. Algorithm name (name of the available algorithm in the implementation)
-2. Brief description
-3. Justification for its suitability based on the dataset characteristics
-
-Present your recommendations in a structured JSON format, provide the most suitable algorithm given the dataset characteristics.
-
-Please structure your response like this example, DO NOT include anything else:
+Provide your recommendation in the structured JSON format below:
 
 {
   "name": "Algorithm Name",
   "description": "Brief description of the algorithm.",
-  "justification": "Explanation of why this algorithm is suitable for the given dataset.",
+  "justification": "Explanation of why this algorithm is suitable for the given dataset."
 }
