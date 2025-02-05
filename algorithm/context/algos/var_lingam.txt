@@ -1,0 +1,27 @@
+### VARLiNGAM
+
+- **Description**: The VARLiNGAM (Vector Autoregressive Linear Non-Gaussian Acyclic Model) algorithm is a causal discovery method designed for time series data. It extends the LiNGAM (Linear Non-Gaussian Acyclic Model) framework to capture lagged causal relationships between variables over time. VARLiNGAM learns a directed acyclic graph (DAG) that represents both instantaneous and lagged causal dependencies in a time series dataset.
+
+- **Assumptions**:
+    - **Non-Gaussianity**: The underlying causal mechanisms generate non-Gaussian error distributions, allowing for identifiable causal relationships.
+    - **Linearity**: The relationships between variables are assumed to be linear.
+    - **Acyclicity**: There are no cyclic dependencies in the causal structure, even when considering time lags.
+    - **Time-Ordered Causality**: Causal effects propagate over time, meaning past values influence future values, but not vice versa.
+    - **No Hidden Confounders**: The model assumes all relevant variables are observed.
+
+- **Advantages**:
+    - Specifically designed for time series causal discovery, unlike many static causal models.
+    - Exploits non-Gaussianity to achieve identifiability in causal structure learning.
+    - Can distinguish between instantaneous and lagged causal effects.
+    - Works well for moderate-dimensional time series datasets.
+
+- **Limitations**:
+    - Assumes linear relationships, making it unsuitable for highly non-linear causal structures.
+    - Requires sufficient sample size to ensure reliable estimation, especially for higher-order lag dependencies.
+    - Sensitive to the correct choice of maximum lag length and time interval for each lag term, which needs to be specified beforehand.
+
+- **Suitable Cases**:
+    - Time series data where causal relationships evolve over time.
+    - Econometrics, neuroscience, finance, and other domains where lagged causal effects are important.
+    - Situations where non-Gaussian assumptions hold, allowing for unique causal identification.
+

@@ -1,0 +1,26 @@
+### PCMCI  
+
+- **Description**: The PCMCI (Peter-Clark Momentary Conditional Independence) algorithm is a causal discovery method designed for time series data. It extends the PC algorithm by incorporating momentary conditional independence (MCI) tests, allowing it to efficiently infer lagged and contemporaneous causal relationships. PCMCI first prunes irrelevant links using PC-based conditional independence testing (PC step) and then refines the structure using MCI-based independence testing (MCI step). The result is a directed graph capturing both instantaneous and lagged causal influences.  
+
+- **Assumptions**:  
+    - **Causal Sufficiency**: Assumes that all relevant variables are observed, meaning no hidden confounders.  
+    - **Faithfulness**: The observed dependencies in the data reflect the true causal structure without coincidental independencies.  
+    - **Markov Property**: A variable is conditionally independent of its non-effects given its direct causes.  
+    - **Time-Ordered Causality**: Past values influence future values, but not the reverse.  
+    - **Non-Cyclic**: The underlying causal structure is acyclic within a given lag window.  
+
+- **Advantages**:  
+    - Designed for time series causal discovery, unlike PC, which is for static data.  
+    - More computationally efficient than full PC for time series because it **prunes irrelevant dependencies early**.  
+    - Can handle high-dimensional datasets by reducing the number of conditional independence tests.  
+    - Works well with continuous and discrete data, supporting multiple conditional independence test methods.  
+
+- **Limitations**:  
+    - Requires careful lag selection (τ_max) to capture relevant causal effects while avoiding spurious connections.  
+    - Sensitive to small sample sizes, as statistical independence tests may become unreliable.  
+    - Outputs a Partially Directed Graph (PDAG) rather than a fully oriented Directed Acyclic Graph (DAG).  
+
+- **Suitable Cases**:  
+    - Time series data where both instantaneous and lagged causal relationships need to be identified.  
+    - Large datasets where computational efficiency is crucial.  
+    - Domains such as climate science, neuroscience, and finance, where causal mechanisms evolve over time.  
