@@ -2,26 +2,27 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Tuple
 
-from econml.dml import DML as Econ_DML
-from econml.dml import LinearDML as Econ_LinearDML
-from econml.dml import SparseLinearDML as Econ_SparseLinearDML
-from econml.dml import CausalForestDML as Econ_CausalForestDML
+from econml.iv.dr import DRIV as Econ_DRIV
+from econml.iv.dr import LinearDRIV as Econ_LinearDRIV
+from econml.iv.dr import SparseLinearDRIV as Econ_SparseLinearDRIV
+from econml.iv.dr import ForestDRIV as Econ_ForestDRIV
 
 from .base import Estimator
 
-# - DML 
-# - LinearDML
-# - SparseLinearDML
-# - CausalForestDML
+# - DRIV 
+# - LinearDRIV 
+# - SparseLinearDRIV 
+# - ForestDRIV 
 
-class DML(Estimator):
-    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None):
+class DRIV(Estimator):
+    def __init__(self, y_col: str, T_col: str,  Z_col: str, X_col: list, params: Dict = {}, W_col: list = None):
         super().__init__(params, y_col, T_col, X_col, W_col)
-        self.model = Econ_DML(**self._params)
+        self.Z_col = Z_col
+        self.model = Econ_DRIV(**self._params)
 
     @property
     def name(self):
-        return "DML"
+        return "DRIV"
 
     def get_params(self):
         return self._params
@@ -30,9 +31,10 @@ class DML(Estimator):
         y = data[[self.y_col]].values.ravel()
         T = data[[self.T_col]]
         X = data[self.X_col]
+        Z = data[[self.Z_col]]
         W = data[self.W_col]
-        # Run DML algorithm        
-        self.model.fit(y, T, X=X, W=W)
+        # Run DRIV algorithm        
+        self.model.fit(y, T, X=X, Z=Z, W=W)
     
     def ate(self, data: pd.DataFrame):
         X = data[self.X_col]
@@ -58,15 +60,18 @@ class DML(Estimator):
     def test_algorithm(self):
         pass
 
-class LinearDML(Estimator):
-    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None):
-        del params['model_final']
+class LinearDRIV(Estimator):
+    def __init__(self, y_col: str, T_col: str, Z_col: str, X_col: list, params: Dict = {}, W_col: list = None):
+        # Remove final stage key if present
+        if 'model_final' in params:
+            del params['model_final']
         super().__init__(params, y_col, T_col, X_col, W_col)
-        self.model = Econ_LinearDML(**self._params)
+        self.Z_col = Z_col
+        self.model = Econ_LinearDRIV(**self._params)
 
     @property
     def name(self):
-        return "LinearDML"
+        return "LinearDRIV"
 
     def get_params(self):
         return self._params
@@ -75,10 +80,10 @@ class LinearDML(Estimator):
         y = data[[self.y_col]].values.ravel()
         T = data[[self.T_col]]
         X = data[self.X_col]
-        W = data[self.W_col]
-        # Run DML algorithm        
-        self.model.fit(y, T, X=X, W=W)
-        
+        Z = data[[self.Z_col]]
+        W = data[self.W_col] if self.W_col is not None else None
+        self.model.fit(y, T, X=X, Z=Z, W=W)
+
     def ate(self, data: pd.DataFrame):
         X = data[self.X_col]
         ate = self.model.ate(X=X, T0=self.T0, T1=self.T1)
@@ -103,15 +108,17 @@ class LinearDML(Estimator):
     def test_algorithm(self):
         pass
 
-class SparseLinearDML(Estimator):
-    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None):
-        del params['model_final']
+class SparseLinearDRIV(Estimator):
+    def __init__(self, y_col: str, T_col: str, Z_col: str, X_col: list, params: Dict = {}, W_col: list = None):
+        if 'model_final' in params:
+            del params['model_final']
         super().__init__(params, y_col, T_col, X_col, W_col)
-        self.model = Econ_SparseLinearDML(**self._params)
+        self.Z_col = Z_col
+        self.model = Econ_SparseLinearDRIV(**self._params)
 
     @property
     def name(self):
-        return "SparseLinearDML"
+        return "SparseLinearDRIV"
 
     def get_params(self):
         return self._params
@@ -120,10 +127,10 @@ class SparseLinearDML(Estimator):
         y = data[[self.y_col]].values.ravel()
         T = data[[self.T_col]]
         X = data[self.X_col]
-        W = data[self.W_col]
-        # Run DML algorithm        
-        self.model.fit(y, T, X=X, W=W)
-           
+        Z = data[[self.Z_col]]
+        W = data[self.W_col] if self.W_col is not None else None
+        self.model.fit(y, T, X=X, Z=Z, W=W)
+
     def ate(self, data: pd.DataFrame):
         X = data[self.X_col]
         ate = self.model.ate(X=X, T0=self.T0, T1=self.T1)
@@ -148,15 +155,17 @@ class SparseLinearDML(Estimator):
     def test_algorithm(self):
         pass
 
-class CausalForestDML(Estimator):
-    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int = 0, T1: int = 1):
-        del params['model_final']
-        super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
-        self.model = Econ_CausalForestDML(**self._params)
+class ForestDRIV(Estimator):
+    def __init__(self, y_col: str, T_col: str, Z_col: str, X_col: list, params: Dict = {}, W_col: list = None):
+        if 'model_final' in params:
+            del params['model_final']
+        super().__init__(params, y_col, T_col, X_col, W_col)
+        self.Z_col = Z_col
+        self.model = Econ_ForestDRIV(**self._params)
 
     @property
     def name(self):
-        return "CausalForestDML"
+        return "ForestDRIV"
 
     def get_params(self):
         return self._params
@@ -165,10 +174,10 @@ class CausalForestDML(Estimator):
         y = data[[self.y_col]].values.ravel()
         T = data[[self.T_col]]
         X = data[self.X_col]
-        W = data[self.W_col]
-        # Run DML algorithm        
-        self.model.fit(y, T, X=X, W=W)
-    
+        Z = data[[self.Z_col]]
+        W = data[self.W_col] if self.W_col is not None else None
+        self.model.fit(y, T, X=X, Z=Z, W=W)
+
     def ate(self, data: pd.DataFrame):
         X = data[self.X_col]
         ate = self.model.ate(X=X, T0=self.T0, T1=self.T1)
@@ -195,5 +204,5 @@ class CausalForestDML(Estimator):
 
 
 if __name__ == "__main__":
-    pc_algo = DML(y_col='', T_col='', X_col='')
+    pc_algo = DRIV(y_col='', T_col='', Z_col='', X_col='')
     pc_algo.test_algorithm() 
