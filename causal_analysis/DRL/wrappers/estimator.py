@@ -27,7 +27,7 @@ class DRL(Estimator):
         return self._params
 
     def fit(self, data: pd.DataFrame):
-        y = data[[self.y_col]]
+        y = data[[self.y_col]].values.ravel()
         T = data[[self.T_col]]
         X = data[self.X_col] if self.X_col else None
         W = data[self.W_col] if self.W_col else None
@@ -35,8 +35,9 @@ class DRL(Estimator):
         self.model.fit(Y=y, T=T, X=X, W=W)
             
     def ate(self, data: pd.DataFrame):
-        ate = self.model.ate(X=None, T0=self.T0, T1=self.T1)
-        ate_lower, ate_upper = self.model.ate_interval(X=None, T0=self.T0, T1=self.T1)
+        X = data[self.X_col] if self.X_col else None
+        ate = self.model.ate(X=X, T0=self.T0, T1=self.T1)
+        ate_lower, ate_upper = self.model.ate_interval(X=X, T0=self.T0, T1=self.T1)
         return ate, ate_lower, ate_upper
 
     def att(self, data: pd.DataFrame):
@@ -72,7 +73,7 @@ class LinearDRL(Estimator):
         return self._params
 
     def fit(self, data: pd.DataFrame):
-        y = data[[self.y_col]]
+        y = data[[self.y_col]].values.ravel()
         T = data[[self.T_col]]
         X = data[self.X_col] if self.X_col else None
         W = data[self.W_col] if self.W_col else None
@@ -80,8 +81,9 @@ class LinearDRL(Estimator):
         self.model.fit(y, T, X=X, W=W)
         
     def ate(self, data: pd.DataFrame):
-        ate = self.model.ate(X=None, T0=self.T0, T1=self.T1)
-        ate_lower, ate_upper = self.model.ate_interval(X=None, T0=self.T0, T1=self.T1)
+        X = data[self.X_col] if self.X_col else None
+        ate = self.model.ate(X=X, T0=self.T0, T1=self.T1)
+        ate_lower, ate_upper = self.model.ate_interval(X=X, T0=self.T0, T1=self.T1)
         return ate, ate_lower, ate_upper
 
     def att(self, data: pd.DataFrame):
@@ -116,7 +118,7 @@ class SparseLinearDRL(Estimator):
         return self._params
 
     def fit(self, data: pd.DataFrame):
-        y = data[[self.y_col]]
+        y = data[[self.y_col]].values.ravel()
         T = data[[self.T_col]]
         X = data[self.X_col] if self.X_col else None
         W = data[self.W_col] if self.W_col else None
@@ -124,8 +126,9 @@ class SparseLinearDRL(Estimator):
         self.model.fit(y, T, X=X, W=W)
            
     def ate(self, data: pd.DataFrame):
-        ate = self.model.ate(X=None, T0=self.T0, T1=self.T1)
-        ate_lower, ate_upper = self.model.ate_interval(X=None, T0=self.T0, T1=self.T1)
+        X = data[self.X_col] if self.X_col else None
+        ate = self.model.ate(X=X, T0=self.T0, T1=self.T1)
+        ate_lower, ate_upper = self.model.ate_interval(X=X, T0=self.T0, T1=self.T1)
         return ate, ate_lower, ate_upper
 
     def att(self, data: pd.DataFrame):
@@ -160,7 +163,7 @@ class ForestDRL(Estimator):
         return self._params
 
     def fit(self, data: pd.DataFrame):
-        y = data[[self.y_col]]
+        y = data[[self.y_col]].values.ravel()
         T = data[[self.T_col]]
         X = data[self.X_col] if self.X_col else None
         W = data[self.W_col] if self.W_col else None
@@ -168,8 +171,9 @@ class ForestDRL(Estimator):
         self.model.fit(y, T, X=X, W=W)
     
     def ate(self, data: pd.DataFrame):
-        ate = self.model.ate(X=None, T0=self.T0, T1=self.T1)
-        ate_lower, ate_upper = self.model.ate_interval(X=None,T0=self.T0, T1=self.T1)
+        X = data[self.X_col] if self.X_col else None
+        ate = self.model.ate(X=X, T0=self.T0, T1=self.T1)
+        ate_lower, ate_upper = self.model.ate_interval(X=X,T0=self.T0, T1=self.T1)
         return ate, ate_lower, ate_upper
 
     def att(self, data: pd.DataFrame):
