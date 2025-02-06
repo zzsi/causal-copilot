@@ -32,9 +32,9 @@ from causal_analysis.DML.hte_program import HTE_Programming as DML_HTE_Programmi
 from causal_analysis.DRL.hte_filter import HTE_Filter as DRL_HTE_Filter
 from causal_analysis.DRL.hte_params import HTE_Param_Selector as DRL_HTE_Param_Selector
 from causal_analysis.DRL.hte_program import HTE_Programming as DRL_HTE_Programming
-from causal_analysis.DRL.hte_filter import HTE_Filter as IV_HTE_Filter
-from causal_analysis.DRL.hte_params import HTE_Param_Selector as IV_HTE_Param_Selector
-from causal_analysis.DRL.hte_program import HTE_Programming as IV_HTE_Programming
+from causal_analysis.IV.hte_filter import HTE_Filter as IV_HTE_Filter
+from causal_analysis.IV.hte_params import HTE_Param_Selector as IV_HTE_Param_Selector
+from causal_analysis.IV.hte_program import HTE_Programming as IV_HTE_Programming
 from causal_analysis.help_functions import *
 from causal_analysis.analysis import *
 from global_setting.Initialize_state import global_state_initialization
