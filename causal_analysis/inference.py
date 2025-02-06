@@ -593,6 +593,31 @@ class Analysis(object):
         return result
     
     # TODO: Add def estimate_effect_iv()
+    def estimate_effect_iv(self, outcome, treatment, instrument_variable, T0, T1, X_col, W_col, query):
+        if len(W_col) == 0:
+            W_col = ['W']
+            W = pd.DataFrame(np.zeros((len(self.data), 1)), columns=W_col)
+            self.data = pd.concat([self.data, W], axis=1)
+            self.global_state.user_data.processed_data = self.data
+        # Algorithm selection and deliberation
+        filter = IV_HTE_Filter(self.args)
+        self.global_state = filter.forward(self.global_state, query)
+        reranker = IV_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, Z_col=instrument_variable, X_col=X_col, W_col=W_col)
+        self.global_state = reranker.forward(self.global_state)
+        programmer = IV_HTE_Programming(self.args, y_col=outcome, T_col=treatment, Z_col=instrument_variable, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
+        # Estimate ate, att, hte
+        ate, ate_lower, ate_upper = programmer.forward(self.global_state, task='ate')
+        att, att_lower, att_upper = programmer.forward(self.global_state, task='att')
+        hte, hte_lower, hte_upper = programmer.forward(self.global_state, task='hte')
+        hte = pd.DataFrame({'hte': hte.flatten()})
+        hte.to_csv(f'{self.global_state.user_data.output_graph_dir}/hte.csv', index=False)
+
+        result = {'ate': [ate, ate_lower, ate_upper],
+                  'att': [att, att_lower, att_upper],
+                  'hte': [hte, hte_lower, hte_upper]}
+        return result
+    
+    # TODO: Add def contains_iv() to check where the causal graph contains IV
     
     def counterfactual_estimation(self, treatment_name, response_name, observed_val = None, intervened_treatment = None):
         # observed_val should be a df as the processed data
@@ -840,15 +865,27 @@ class Analysis(object):
             confounders += add_confounder
             cont_confounders = [col for col in confounders if self.global_state.statistics.data_type_column[col]=='Continuous']
             ### Suggest method based on dataset characteristics
-            if len(confounders) > 5:
-                method = "dml" # Add drl here
-            if len(confounders) - len(cont_confounders) > len(cont_confounders):  # If more than half discrete confounders
-                method = "cem"
+            # TODO: Check for IV in the Causal Graph
+            exist_IV = False
+            if exist_IV:
+                iv_variable = None
+                global_state.inference.task_info[global_state.inference.task_index]['IV'] = iv_variable
+                method = "iv"
+
+            if len(confounders) <= 5:
+                if len(confounders) - len(cont_confounders) > len(cont_confounders):  # If more than half discrete confounders
+                    method = "cem"
+                else:
+                    method = "propensity_score"
             else:
-                method = "propensity_score"
+                if len(global_state.user_data.processed_data) > 2000:
+                    method = "dml"
+                else:
+                    method = "drl"
+
             print("According to the characteristics of your data, we recommend you to use this Treatment Effect Estimation Method:\n"
                   f"{method}.")
-            # TODO: Add logic for IV
+
             ### Run algorithm
             if method == "dml":
                 ### Check Heterogeneous Variable
@@ -867,6 +904,10 @@ class Analysis(object):
                 result = self.estimate_effect_drl(outcome=key_node, treatment=treatment, T0=control, T1=treat,
                                                         X_col=hte_variable, W_col=confounders, query=desc)
                 response, figs = generate_analysis_econml(self.args, self.global_state, key_node, treatment, parent_nodes, hte_variable, confounders, result, desc)
+
+            # TODO: Add IV Estimation
+            if method == "iv":
+                pass
 
             elif method in ["cem", "propensity_score"]:
                 # Perform matching-based estimation

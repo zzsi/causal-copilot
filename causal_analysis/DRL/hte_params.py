@@ -30,7 +30,7 @@ class HTE_Param_Selector(object):
         
         replacement = {
                 "[COLUMNS]": '\t'.join(global_state.user_data.processed_data.columns._data),
-                "[STATISTICS INFO]": global_state.statistics.description,
+                "[STATISTICS_DESC]": global_state.statistics.description,
                 "[TARGET_NODE]": self.y_col,
                 "[ALGO_CONTEXT]": algo_text
                 }
@@ -79,8 +79,8 @@ class HTE_Param_Selector(object):
         import json
         import DRL.wrappers as wrappers
 
-        y_prompt = self.prompt_generation(self.y_col, global_state)
-        T_prompt = self.prompt_generation(self.T_col, global_state)
+        y_prompt, discrete_y = self.prompt_generation(self.y_col, global_state)
+        T_prompt, discrete_T = self.prompt_generation(self.T_col, global_state)
         final_prompt = open('causal_analysis/DRL/context/final_stage_select_prompt.txt', "r").read()
 
         global_state.inference.hte_model_y_json = None
@@ -106,5 +106,9 @@ class HTE_Param_Selector(object):
             'model_t': T_model, 
             'model_final': final_model
         }
+        if discrete_y:
+            global_state.inference.hte_model_param['discrete_outcome'] = True 
+        if discrete_T:
+            global_state.inference.hte_model_param['discrete_treatment'] = True
 
         return global_state
