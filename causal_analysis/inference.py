@@ -6,7 +6,7 @@ import networkx as nx
 # from dowhy import gcm, CausalModel
 
 # Keep gcm if you still want anomaly attribution and interventions:
-from dowhy import gcm  
+from dowhy import gcm, CausalModel
 # Import econml classes instead of using DoWhy's linear_regression or DML
 from econml.dml import DML, LinearDML, SparseLinearDML, CausalForestDML
 
@@ -23,6 +23,7 @@ from CEM_LinearInf.cem import cem
 from CEM_LinearInf.balance import balance
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import NearestNeighbors
+from sklearn.ensemble import RandomForestRegressor
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -99,36 +100,41 @@ class Analysis(object):
         print("Please ensure your causal assumptions align with these column types.")
         print("="*60 + "\n")
 
-    def feature_importance(self, target_node, visualize=True):
+    def feature_importance(self, target_node, linearity, visualize=True):
         print('start feature importance analysis')
-        # parent_relevance, noise_relevance = gcm.parent_relevance(self.causal_model, target_node=target_node)
-        # parent_relevance, noise_relevance
         parent_nodes = list(self.G.predecessors(target_node))
 
         X = self.data.drop(columns=[target_node])
         y = self.data[[target_node]]
-        X100 = shap.utils.sample(X, 100)  # background distribution for SHAP
-
-        model_linear = sklearn.linear_model.LinearRegression()
-        model_linear.fit(X, y)
-        explainer_linear = shap.Explainer(model_linear.predict, X100)
-        shap_values_linear = explainer_linear(X)
-        
+        X_background = shap.utils.sample(X, int(len(X)*0.2))  # background distribution for SHAP
+        if linearity:
+            model_linear = sklearn.linear_model.LinearRegression()
+            model_linear.fit(X, y)
+            explainer_linear = shap.Explainer(model_linear.predict, X_background)
+            shap_values = explainer_linear(X)
+        else:
+            # Xd = xgboost.DMatrix(X, label=y)
+            # model_xgb = xgboost.train({"eta": 1, "max_depth": 3, "base_score": 0, "lambda": 0}, Xd, 1)
+            # pred = model_xgb.predict(Xd, output_margin=True)
+            model_rf = RandomForestRegressor()
+            model_rf.fit(X, y)
+            explainer_rf = shap.TreeExplainer(model_rf)
+            shap_values = explainer_rf(X)
         # Mean absolute SHAP values
-        shap_df = pd.DataFrame(np.abs(shap_values_linear.values), columns=X.columns)
+        shap_df = pd.DataFrame(np.abs(shap_values.values), columns=X.columns)
         mean_shap_values = shap_df.mean()
         shap_df.to_csv(f'{self.global_state.user_data.output_graph_dir}/shap_df.csv', index=False)
         
         figs = []
         if visualize == True:
             # 1st SHAP Plot beeswarm
-            ax = shap.plots.beeswarm(shap_values_linear, plot_size=(8,6), show=False)
+            ax = shap.plots.beeswarm(shap_values, plot_size=(8,6), show=False)
             plt.savefig(f'{self.global_state.user_data.output_graph_dir}/shap_beeswarm_plot.png', bbox_inches='tight')  # Save as PNG
             figs.append(f'{self.global_state.user_data.output_graph_dir}/shap_beeswarm_plot.png')
 
             # 2nd SHAP Plot Bar
             fig, ax = plt.subplots(figsize=(8, 6))
-            ax = shap.plots.bar(shap_values_linear, show=False)
+            ax = shap.plots.bar(shap_values, show=False)
             plt.savefig(f'{self.global_state.user_data.output_graph_dir}/shap_bar_plot.png', bbox_inches='tight')  # Save as PNG
             figs.append(f'{self.global_state.user_data.output_graph_dir}/shap_bar_plot.png')
             plt.close()
@@ -230,96 +236,27 @@ class Analysis(object):
             print("Warning: No valid continuous confounders found in the matched data.")
 
         # Generate density plot
-        self._generate_density_plot(data, matched_data, treatment, valid_confounders, title)
+        figs = generate_density_plot(self.global_state, data, matched_data, treatment, valid_confounders, title)
+        return figs
 
-    def _generate_density_plot(self, data, matched_data, treatment, confounders, title):
-        """
-        Generate a single density plot with subplots for different confounders.
-        Each row corresponds to a confounder, with treated and control groups in separate subplots.
-        """
-        sns.set_style("darkgrid")  
-        num_confounders = len(confounders)
-        fig, axes = plt.subplots(nrows=num_confounders, ncols=2, figsize=(20, 6 * num_confounders))
+    def _matched_treatment_effect(self, matched_data, treatment, outcome, treat, control, X_col):
+        treated_mean = matched_data[matched_data[treatment] == treat][outcome].mean()
+        control_mean = matched_data[matched_data[treatment] == control][outcome].mean()
+        ate = treated_mean - control_mean
+        cont_X_col = [var for var in X_col if self.global_state.statistics.data_type_column[var]=='Continuous']
+        coarsen_data = coarsen_continuous_variables(matched_data, cont_X_col)
+        cate_results = {}
+        for label in X_col:
+            if label in cont_X_col:
+                group_col = f'coarsen_{label}'
+            else:
+                group_col = label
+            cate = coarsen_data.groupby(group_col).apply(lambda x: x[x[treatment] == treat][outcome].mean() - x[x[treatment] == 0][outcome].mean())
+            cate_results[label] = cate
         
-        if num_confounders == 1:
-            axes = [axes]  
-
-        for i, confounder in enumerate(confounders):
-            # Treated group (left subplot)
-            ax_treated = axes[i][0]
-        # Generate density plot
-        self._generate_density_plot(data, matched_data, treatment, valid_confounders, title)
-
-    def _generate_density_plot(self, data, matched_data, treatment, confounders, title):
-        """
-        Generate a single density plot with subplots for different confounders.
-        Each row corresponds to a confounder, with treated and control groups in separate subplots.
-        """
-        sns.set_style("darkgrid")  
-        num_confounders = len(confounders)
-        fig, axes = plt.subplots(nrows=num_confounders, ncols=2, figsize=(20, 6 * num_confounders))
-        
-        if num_confounders == 1:
-            axes = [axes]  
-
-        for i, confounder in enumerate(confounders):
-            # Treated group (left subplot)
-            ax_treated = axes[i][0]
-            sns.kdeplot(
-                data[data[treatment] == 1][confounder], 
-                label='Treated (Unmatched)', 
-                color='blue', 
-                fill=True, 
-                alpha=0.3, 
-                ax=ax_treated
-            )
-            sns.kdeplot(
-                matched_data[matched_data[treatment] == 1][confounder], 
-                label='Treated (Matched)', 
-                color='orange', 
-                fill=True,  
-                alpha=0.3,  
-                ax=ax_treated
-            )
-            ax_treated.set_title(f'Treated Group: {confounder} ({title})')
-            ax_treated.set_xlabel(confounder)
-            ax_treated.set_ylabel('Density')
-            ax_treated.legend()
-            ax_treated.grid(True)
-
-            # Control group (right subplot)
-            ax_control = axes[i][1]
-            sns.kdeplot(
-                data[data[treatment] == 0][confounder], 
-                label='Control (Unmatched)', 
-                color='blue', 
-                fill=True,  
-                alpha=0.3,  
-                ax=ax_control
-            )
-            sns.kdeplot(
-                matched_data[matched_data[treatment] == 0][confounder], 
-                label='Control (Matched)', 
-                color='orange', 
-                fill=True, 
-                alpha=0.3,  
-                ax=ax_control
-            )
-            ax_control.set_title(f'Control Group: {confounder} ({title})')
-            ax_control.set_xlabel(confounder)
-            ax_control.set_ylabel('Density')
-            ax_control.legend()
-            ax_control.grid(True)
-
-        plt.tight_layout()
-
-        # Save the density plot
-        density_plot_filename = f'density_plot_{title.lower().replace(" ", "_")}.png'
-        density_plot_path = os.path.join(self.global_state.user_data.output_graph_dir, density_plot_filename)
-        plt.savefig(density_plot_path, bbox_inches='tight')
-        plt.close()
-
-    def estimate_causal_effect_matching(self, treatment, outcome, confounders, cont_confounders, method="propensity_score", visualize=True):
+        return ate, cate_results
+    
+    def estimate_causal_effect_matching(self, treatment, outcome, confounders, X_col, treat, control, cont_confounders, method="propensity_score", visualize=True):
         """
         Estimate the causal effect using matching methods.
         
@@ -356,7 +293,7 @@ class Analysis(object):
                 matched_data=matched_data,  # Matched dataframe (after matching)
                 treatment=treatment,
                 outcome=outcome,
-                confounders=confounders,
+                confounders=confounders, 
                 cont_confounders=cont_confounders,
                 title="Balance Checking"
             )
@@ -364,12 +301,12 @@ class Analysis(object):
             figs = []
 
         # Step 4: Estimate Treatment Effect
-        treated_mean = matched_data[matched_data[treatment] == 1][outcome].mean()
-        control_mean = matched_data[matched_data[treatment] == 0][outcome].mean()
-        ate = treated_mean - control_mean
-
+        ate, cate_results = self._matched_treatment_effect(matched_data, treatment, outcome, treat, control, X_col)
+        cate_plot_path = os.path.join(self.global_state.user_data.output_graph_dir, 'cate_plot.png')
+        plot_cate_bars_by_group(cate_results, cate_plot_path)
+        figs.append(cate_plot_path)
         print(f"\nAverage Treatment Effect (ATE) using {method}: {ate}")
-        return ate, matched_data, figs
+        return ate, cate_results, matched_data, figs
 
     def _generate_dowhy_graph(self):
         """
@@ -434,8 +371,6 @@ class Analysis(object):
         fig_path = f'{self.global_state.user_data.output_graph_dir}/attribution_plot.png'
         plt.savefig(fig_path, bbox_inches='tight')
         figs = [f'{self.global_state.user_data.output_graph_dir}/attribution_plot.png']
-        # plt.show()  # Show the plot in the notebook or script
-        # plt.close()
         return df, figs
     
     def attribute_distributional_changes(self, target_node, data_old, data_new, method='distribution_change', confidence_level=0.95):
@@ -591,7 +526,7 @@ class Analysis(object):
                   'att': [att, att_lower, att_upper],
                   'hte': [hte, hte_lower, hte_upper]}
         return result
-    
+    # TODO: Add def contains_iv() to check where the causal graph contains IV
     # TODO: Add def estimate_effect_iv()
     def estimate_effect_iv(self, outcome, treatment, instrument_variable, T0, T1, X_col, W_col, query):
         if len(W_col) == 0:
@@ -617,8 +552,60 @@ class Analysis(object):
                   'hte': [hte, hte_lower, hte_upper]}
         return result
     
-    # TODO: Add def contains_iv() to check where the causal graph contains IV
-    
+    def estimate_effect_linear(self, 
+                               treatment, 
+                               outcome, 
+                               control_value=0, 
+                               treatment_value=1):
+        """
+        Estimate the causal effect of a treatment on an outcome using
+        DoWhy (backdoor.linear_regression).
+
+        :param treatment: str, name of the treatment variable
+        :param outcome: str, name of the outcome variable
+        :param control_value: value representing 'control'
+        :param treatment_value: value representing 'treated'
+        :param target_units: 'ate' (default), 'treated', or a callable (lambda df: df[...] for subgroups)
+
+        :return: (causal_estimate, p_value)
+        """
+        print("\n" + "#"*60)
+        print(f"Estimating Causal Effect of Treatment: {treatment} on Outcome: {outcome}")
+        print(f"Method: backdoor.linear_regression | target_units='ate'")
+        print("#"*60)
+
+        print("\nCreating Causal Model...")
+        print(self.dot_graph)
+        model = CausalModel(
+            data=self.data,
+            treatment=treatment,
+            outcome=outcome,
+            graph=self.dot_graph  # The DOT-format graph
+        )
+
+        identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
+        # print("\nIdentified Estimand:")
+        # print(identified_estimand)
+        # Backdoor linear_regression
+        causal_estimate = model.estimate_effect(
+            identified_estimand,
+            method_name="backdoor.linear_regression",
+            control_value=control_value,
+            treatment_value=treatment_value,
+            target_units='ate'
+        )
+        print("\nCausal Estimate:")
+        print(causal_estimate)
+        # Significance Test
+        significance_results = causal_estimate.estimator.test_significance(
+            self.data, 
+            causal_estimate.value
+        )
+        p_value = significance_results['p_value'][0]
+        print("Significance Test Results:", p_value)
+
+        return causal_estimate, p_value
+
     def counterfactual_estimation(self, treatment_name, response_name, observed_val = None, intervened_treatment = None):
         # observed_val should be a df as the processed data
         if observed_val is None:
@@ -723,6 +710,8 @@ class Analysis(object):
         # Shift Intervention
         if shift_intervention_val is None:
             shift_intervention_val = 1
+        gcm.auto.assign_causal_mechanisms(self.causal_model, self.data)
+        gcm.fit(self.causal_model, self.data)
         shift_samples = gcm.interventional_samples(self.causal_model,
                                                     {treatment_name: lambda x: x + shift_intervention_val},
                                                     num_samples_to_draw=1000)
@@ -731,14 +720,14 @@ class Analysis(object):
 
         # Histogram for atomic_samples_org
         plt.subplot(1, 2, 1)
-        plt.hist(self.data[response_name], bins=30, color='blue', alpha=0.7)
+        plt.hist(self.data[response_name], bins=30, color='#409fde', alpha=0.7)
         plt.title(f'Observed Data: {response_name}')
         plt.xlabel(response_name)
         plt.ylabel('Frequency')
 
         # Histogram for atomic_samples_new
         plt.subplot(1, 2, 2)
-        plt.hist(shift_samples[response_name], bins=30, color='orange', alpha=0.7)
+        plt.hist(shift_samples[response_name], bins=30, color='#f77f3e', alpha=0.7)
         plt.title(f'Shift Intervention: {response_name}')
         plt.xlabel(response_name)
         plt.ylabel('Frequency')
@@ -752,7 +741,7 @@ class Analysis(object):
 
         print(f"Saving shift intervention comparison plot to {os.path.join(path, 'shift_intervention.jpg')}")
         plt.savefig(os.path.join(path, 'shift_intervention.jpg'))
-
+        figs = [os.path.join(path, 'shift_intervention.jpg')]
         # Save dataset
         # print(f"Saving simulated dataset {os.path.join(path, 'simulated_atomic_intervention_org.csv')}")
         # atomic_samples_org.to_csv(os.path.join(path, 'simulated_atomic_intervention_org.csv'), index=False)
@@ -762,41 +751,7 @@ class Analysis(object):
 
         print(f"Saving simulated dataset {os.path.join(path, 'simulated_shift_intervention.csv')}")
         shift_samples.to_csv(os.path.join(path, 'simulated_shift_intervention.csv'), index=False)
-
-    def evaluate_treatment_effect_metrics(self, true_value, estimations, cis):
-        """
-        Evaluate metrics for Treatment Effect Estimation: Bias, MSE, and CI Coverage Probability.
-
-        Parameters:
-        - true_value (float): The true treatment effect.
-        - estimations (np.ndarray): A 1D array of estimated treatment effects.
-        - cis (list of tuples): A list of confidence intervals, where each element is a tuple (lower_bound, upper_bound).
-
-        Returns:
-        - dict: A dictionary containing Bias, MSE, and Coverage Probability.
-        """
-        # Convert inputs to numpy arrays for vectorized operations
-        estimations = np.array(estimations)
-        cis = np.array(cis)
-
-        # Bias: Mean difference between estimation and true value
-        bias = np.mean(estimations - true_value)
-
-        # MSE: Mean squared error
-        mse = np.mean((estimations - true_value) ** 2)
-
-        # Coverage Probability: Proportion of CIs that contain the true value
-        lower_bounds = cis[:, 0]
-        upper_bounds = cis[:, 1]
-        coverage_count = np.sum((true_value >= lower_bounds) & (true_value <= upper_bounds))
-        coverage_probability = coverage_count / len(cis)
-
-        # Return metrics as a dictionary
-        return {
-            "Bias": bias,
-            "MSE": mse,
-            "Coverage Probability": coverage_probability
-        }
+        return figs
 
     def sensitivity_analysis(self, target_node, model, estimand, estimate, treatment, outcome):
         # if self.global_state.statistics.linearity:
@@ -830,40 +785,30 @@ class Analysis(object):
         return refute, figs 
 
     
-    def forward(self, task, desc, key_node):
+    def forward(self, task, desc, key_node, chat_history):
         if task == 'Feature Importance':
-            parent_nodes, mean_shap_values, figs = self.feature_importance(key_node, visualize=True)
+            linearity = self.global_state.statistics.linearity
+            if linearity:
+                chat_history.append((None, "💡 We use the linear model to calculate SHAP Value because your dataset is linear."))
+            else:
+                chat_history.append((None, "💡 We use the non-linear model to calculate SHAP Value because your dataset is non-linear."))
+            parent_nodes, mean_shap_values, figs = self.feature_importance(key_node, linearity, visualize=True)
             response = generate_analysis_feature_importance(self.args, key_node, parent_nodes, mean_shap_values, desc)
-            return response, figs 
+            for fig in figs:
+                chat_history.append((None, (f'{fig}',)))
+            chat_history.append((None, response))
+            return response, figs, chat_history 
         
         elif task == 'Treatment Effect Estimation':
-            prompt = f"""
-            I'm doing the Treatment Effect Estimation analysis, please identify the Treatment Variable in this description:
-            {desc}
-            The variable name must be among these variables: {self.data.columns}
-            Only return me with the variable name, do not include anything else.
-            """
-            ### Check Treatment
-            treatment = LLM_parse_query(self.args, None, 'You are an expert in Causal Discovery.', prompt)
-            is_binary, treat, control = check_binary(self.data[treatment])
-            while not is_binary:
-                treatment_message = input(f"Your treatment column is not binary, please specify another variable name!")
-                is_binary, treat, control = check_binary(self.data[treatment_message.strip()])
-            treatment_message = input(f"Your treatment column is binary with treatment={treat} and control={control}\n"
-                                        "Is there anything you want to correct? ")
-            ### Check Confounder
+            task_info = self.global_state.inference.task_info[self.global_state.inference.task_index]
+            confounders = task_info['confounders']
+            cont_confounders = task_info['cont_confounders']
+            treatment = task_info['treatment']
+            treat = task_info['treat']
+            control = task_info['control']
+            hte_variables = task_info['X_col']
             parent_nodes = list(self.G.predecessors(key_node))
-            confounders = self._identify_confounders(treatment, key_node)
-            
-            remaining_var = list(set(self.data.columns) - set([treatment]) - set([key_node]) - set(confounders))
-            #TODO: No Confounder Case and Add LLM variable selection
-            add_confounder = input(f"These are Confounders between treatment {treatment} and outcome {key_node}: \n"
-                      f"{','.join(confounders)}\n"
-                      "Do you want to add any variables as confounders in your dataset? Please choose from the following:\n"
-                      f"{','.join(remaining_var)}\n")
-            add_confounder = [var.strip() for var in add_confounder.split(',') if var.strip() in remaining_var]
-            confounders += add_confounder
-            cont_confounders = [col for col in confounders if self.global_state.statistics.data_type_column[col]=='Continuous']
+            method = task_info['hte_method']
             ### Suggest method based on dataset characteristics
             # TODO: Check for IV in the Causal Graph
             exist_IV = False
@@ -872,7 +817,7 @@ class Analysis(object):
                 global_state.inference.task_info[global_state.inference.task_index]['IV'] = iv_variable
                 method = "iv"
 
-            if len(confounders) <= 5:
+            elif len(confounders) <= 5:
                 if len(confounders) - len(cont_confounders) > len(cont_confounders):  # If more than half discrete confounders
                     method = "cem"
                 else:
@@ -883,27 +828,22 @@ class Analysis(object):
                 else:
                     method = "drl"
 
-            print("According to the characteristics of your data, we recommend you to use this Treatment Effect Estimation Method:\n"
-                  f"{method}.")
 
             ### Run algorithm
-            if method == "dml":
-                ### Check Heterogeneous Variable
-                hte_variable = input("Is there any heterogeneous variables you care about? If no, we can suggest some variables with LLM.\n")
-                #TODO: Add LLM variable selection
-                hte_variable = [var.strip() for var in hte_variable.split(',') if var.strip() in self.data.columns]
-                result = self.estimate_effect_dml(outcome=key_node, treatment=treatment, T0=control, T1=treat,
-                                                        X_col=hte_variable, W_col=confounders, query=desc)
-                response, figs = generate_analysis_econml(self.args, self.global_state, key_node, treatment, parent_nodes, hte_variable, confounders, result, desc)
-
-            if method == "drl":
-                ### Check Heterogeneous Variable
-                hte_variable = input("Is there any heterogeneous variables you care about? If no, we can suggest some variables with LLM.\n")
-                #TODO: Add LLM variable selection
-                hte_variable = [var.strip() for var in hte_variable.split(',') if var.strip() in self.data.columns]
-                result = self.estimate_effect_drl(outcome=key_node, treatment=treatment, T0=control, T1=treat,
-                                                        X_col=hte_variable, W_col=confounders, query=desc)
-                response, figs = generate_analysis_econml(self.args, self.global_state, key_node, treatment, parent_nodes, hte_variable, confounders, result, desc)
+            if method in ["dml", "drl"]:
+                if method == "dml":
+                    result = self.estimate_effect_dml(outcome=key_node, treatment=treatment, T0=control, T1=treat,
+                                                            X_col=hte_variables, W_col=confounders, query=desc)
+                else:
+                    result = self.estimate_effect_drl(outcome=key_node, treatment=treatment, T0=control, T1=treat,
+                                                            X_col=hte_variables, W_col=confounders, query=desc)
+                response, figs = generate_analysis_econml(self.args, self.global_state, key_node, treatment, parent_nodes, hte_variables, confounders, result, desc)
+                chat_history.append(("📝 Analyze for ATE and ATT...", None))
+                chat_history.append((None, response[0]))
+                chat_history.append(("📝 Analyze for HTE...", None))
+                for fig in figs:
+                    chat_history.append((None, (f'{fig}',)))
+                chat_history.append((None, response[1]))
 
             # TODO: Add IV Estimation
             if method == "iv":
@@ -911,22 +851,45 @@ class Analysis(object):
 
             elif method in ["cem", "propensity_score"]:
                 # Perform matching-based estimation
-                ate, matched_data, figs = self.estimate_causal_effect_matching(
+                ate, cate_result, matched_data, figs = self.estimate_causal_effect_matching(
                     treatment=treatment,
                     outcome=key_node,
                     confounders=confounders,
+                    X_col=hte_variables,
+                    treat=treat,
+                    control=control,
                     cont_confounders=cont_confounders,
                     method=method,
                     visualize=True
                 )
-                response = generate_analysis_matching(self.args, treatment, key_node, method, confounders, ate, desc)
-            return response, figs
+                response = generate_analysis_matching(self.args, treatment, key_node, method, confounders, ate, cate_result, desc)
+                chat_history.append(("📝 Matching Balance Checking...", None))
+                chat_history.append((None, (f'{figs[0]}',)))
+                chat_history.append((None, response[0]))
+                chat_history.append(("📝 Analyze for ATE...", None))
+                chat_history.append((None, response[1]))
+                chat_history.append(("📝 Analyze for CATE...", None))
+                chat_history.append((None, (f'{figs[1]}',)))
+                chat_history.append((None, response[2]))
+
+            elif method == 'linear_regression':
+                ate, p_value = self.estimate_effect_linear(
+                               treatment=treatment,
+                               outcome=key_node,
+                               control_value=control, 
+                               treatment_value=treat)
+                response = generate_analysis_linear_regression(args, treatment, key_node, ate, p_value, desc)
+            
+            return response, figs, chat_history
         
         elif task == 'Anormaly Attribution':
             df, figs = self.attribute_anomalies(target_node=key_node, anomaly_samples=self.data, confidence_level=0.95)
             parent_nodes = list(self.G.predecessors(key_node))
             response = generate_analysis_anormaly(self.args, df, key_node, parent_nodes, desc)
-            return response, figs
+            for fig in figs:
+                chat_history.append((None, (f'{fig}',)))
+            chat_history.append((None, response))
+            return response, figs, chat_history
                        
         elif task == 'Distributional Change Attribution':
             # Split the dataset into two subsets (data_old and data_new)
@@ -940,84 +903,16 @@ class Analysis(object):
             return response, figs
 
         elif task == 'Counterfactual Estimation':
-            prompt = f"""
-                        I'm doing the Treatment Effect Estimation analysis, please identify the Treatment Variable in this description:
-                        {desc}
-                        The variable name must be among these variables: {self.data.columns}
-                        Only return me with the variable name, do not include anything else.
-                        """
-            treatment = LLM_parse_query(self.args, None, 'You are an expert in Causal Discovery.', prompt)
-            shift_intervention_val = input(f"""
-                In this simulation, we are applying a 'shift intervention' to study how changes in the {treatment} 
-                impact the {key_node}. A shift intervention involves modifying the value of a variable by a fixed
-                amount (the 'shift value') while keeping other variables unchanged.\n
-                For example, if we are studying the effect of increasing income on health outcomes, we might apply a
-                shift intervention where the income variable is increased by a fixed amount, such as $500, for all individuals.\n
-                Please enter the shift value:
-            """)
-            self.simulate_intervention(treatment_name = treatment, response_name = key_node, shift_intervention_val = shift_intervention_val)
-        
+            treatment = self.global_state.inference.task_info[self.global_state.inference.task_index]['treatment']
+            shift_intervention_val = self.global_state.inference.task_info[self.global_state.inference.task_index]['shift_value']
+            figs = self.simulate_intervention(treatment_name = treatment, response_name = key_node, shift_intervention_val = shift_intervention_val)
+            response = generate_conterfactual_estimation(self.args, df, key_node, desc)
+            for fig in figs:
+                chat_history.append((None, (f'{fig}',)))
+            chat_history.append((None, response))
+            return response, figs
         else:
             return None, None
-
-
-def main(analysis, global_state):    
-##################           
-    results = analysis.estimate_effect_econml(
-        treatment='PIP2',
-        outcome='PIP3',
-        covariates=[],   # or e.g. ["X1","X2"] if you have them
-        controls=[]      # or e.g. ["W1","W2"] if needed
-    )
-    
-    ate_val, ate_ci = results["ATE"]
-    att_val, att_ci = results["ATT"]
-    cate_vals, cate_cis = results["CATE"]
-
-    print("EconML ATE:", ate_val, "CI:", ate_ci)
-    print("EconML ATT:", att_val, "CI:", att_ci)
-    if cate_vals is not None:
-        print("Mean CATE:", np.mean(cate_vals))
-
-    # Optional plot the distribution of the CATE:
-    if cate_vals is not None:
-        dist_fig_path = os.path.join(global_state.user_data.output_graph_dir, "cate_dist.png")
-        analysis.plot_cate_distribution(cate_vals, dist_fig_path)
-
-
-    # EXAMPLE: Compare with linear approach, specifying a different target_units
-    lin_estimate, lin_p_value, refutaion, figs = analysis.estimate_causal_effect(
-        treatment='PIP2',
-        outcome='PIP3',
-        target_units=lambda df: df[df['PIP2'] > 100].index  # example subgroup
-    )
-    print("Linear Subgroup Estimate (CATE approach):", lin_estimate.value)
-    print("p-value:", lin_p_value)
-    # Testing code to check the above functions replace it appropriately
-    # Perform Matching-Based Effect Estimation
-    response, figs = analysis.forward(
-        task='Matching-Based Effect Estimation',
-        desc='Analyze the effect of PIP2 on PIP3 using matching.',
-        key_node='PIP3'
-    )
-    print(response)
-    
-    # Example: Run CEM for treatment 'PIP2' and outcome 'PIP3'
-    treatment = 'PIP2'
-    outcome = 'PIP3'
-    confounders = analysis._identify_confounders(treatment, outcome)
-    cont_confounders = [col for col in confounders if analysis.data[col].nunique() > 10]  # Continuous confounders
-    
-    ate, matched_data = analysis.estimate_causal_effect_matching(
-        treatment=treatment,
-        outcome=outcome,
-        confounders=confounders,
-        cont_confounders=cont_confounders,
-        method="cem",
-        visualize=True
-    )
-    
-    print(f"Average Treatment Effect (ATE) using CEM: {ate}")
 
 
 if __name__ == '__main__':
@@ -1030,7 +925,7 @@ if __name__ == '__main__':
         parser.add_argument(
             '--data-file',
             type=str,
-            default="dataset/sachs/sachs.csv",
+            default="demo_data/20250121_223113/lalonde/lalonde.csv",
             help='Path to the input dataset file (e.g., CSV format or directory location)'
         )
 
@@ -1099,33 +994,18 @@ if __name__ == '__main__':
             default="selected algorithm: PC",
             help='Initial query for the algorithm'
         )
-
-        parser.add_argument(
-            '--parallel',
-            type=bool,
-            default=False,
-            help='Parallel computing for bootstrapping.'
-        )
-
-        parser.add_argument(
-            '--demo_mode',
-            type=bool,
-            default=False,
-            help='Demo mode'
-        )
-
-        parser.add_argument(
-            '--revised_graph',
-            type=str,
-            default='dataset/sachs/base_graph.npy',
-            help='Demo mode'
-        )
-
         args = parser.parse_args()
         return args
-    with open('report/test/args.pkl', 'rb') as file:
-        args = pickle.load(file)
-    with open('report/test/global_state.pkl', 'rb') as file:
+    
+    args = parse_args()
+    with open('demo_data/20250121_223113/lalonde/output_graph/PC_global_state.pkl', 'rb') as file:
         global_state = pickle.load(file)
-
-    main(global_state, args)
+    
+    my_analysis = Analysis(global_state, args)
+    # my_analysis.estimate_effect_dml(outcome='re78', treatment='treat', 
+    #                                 T0=0, T1=1, 
+    #                                 X_col=['age', 'nodegr'], 
+    #                                 W_col=['educ', 'age', 'married', 'nodegr'], 
+    #                                 query='What is the treatment effect of treat on re78')
+    my_analysis.feature_importance(target_node='re78', linearity=False, visualize=True)
+    #my_analysis.simulate_intervention(treatment_name = 'married', response_name = 're78', shift_intervention_val =1)

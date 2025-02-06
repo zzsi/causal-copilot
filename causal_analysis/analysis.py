@@ -26,7 +26,9 @@ def generate_analysis_econml(args, global_state, key_node, treatment, parent_nod
     **Treatment Variable**: {treatment}
     **Heterogeneous Confounders we coutrol**: {X_col}
     **Description from User**: {query}
-    **Information in the plot**: Distribution of the HTE; Violin plot of the CATE grouped by: {X_col}
+    **Information in the plot**: 
+    Plot 1: Distribution of the HTE; 
+    Plot 2: Violin plot of the CATE grouped by: {X_col}
     """
     response_hte = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt_hte)
     
@@ -38,18 +40,49 @@ def generate_analysis_econml(args, global_state, key_node, treatment, parent_nod
     plot_cate_violin(global_state, hte, X_col, cate_fig_path)
     figs.append(cate_fig_path)
 
-    return response_ate+'\n'+response_hte, figs
+    return [response_ate,response_hte], figs
 
-def generate_analysis_matching(args, treatment, outcome, method, W_col, ate, query):
+def generate_analysis_matching(args, treatment, outcome, method, W_col, ate, cate_result, query):
     # Generate a response using the LLM
+    response_balance = """
+The figure above is for balance checking. It's a comparision of heterogeneous variables before and after matching.
+"""
     prompt = f"""
-    I'm doing the Matching-Based Effect Estimation analysis and please help me to write a brief analysis in bullet points.
+    I'm doing the Matching-Based Effect Treatment Estimation analysis and please help me to write a brief analysis in bullet points.
     Here are some informations:
     **Treatment Variable**: {treatment}
     **Outcome Variable**: {outcome}
     **Matching Method**: {method}
     **Confounders**: {W_col}
+    **Description from User**: {query}
     **Average Treatment Effect (ATE)**: {ate}
+    """
+    response_ate = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt)
+    prompt = f"""
+    I'm doing the Matching-Based Effect Treatment Estimation analysis and please help me to write a brief analysis in bullet points.
+    Here are some informations:
+    **Treatment Variable**: {treatment}
+    **Outcome Variable**: {outcome}
+    **Matching Method**: {method}
+    **Confounders**: {W_col}
+    **Description from User**: {query}
+    **Conditional Average Treatment Effect**:
+    """
+    for key, value in cate_result.items():
+        prompt += f"Conditional on {key}: {value}\n"
+    response_cate = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt)
+    return [response_balance, response_ate, response_cate]
+
+def generate_analysis_linear_regression(args, treatment, outcome, ate, p_value, query):
+    # Generate a response using the LLM
+    prompt = f"""
+    I'm doing the Treatment Effect Estimation analysis and please help me to write a brief analysis in bullet points.
+    Here are some informations:
+    **Treatment Variable**: {treatment}
+    **Outcome Variable**: {outcome}
+    **Method**: Linear Regression
+    **Average Treatment Effect (ATE)**: {ate}
+    **P-value**: {p_value}
     **Description from User**: {query}
     """
 
@@ -137,3 +170,6 @@ def generate_analysis_anormaly_dist(args, df, key_node, desc):
 
     response = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt)
     return response
+
+def generate_conterfactual_estimation(args, df, key_node, desc):
+    pass

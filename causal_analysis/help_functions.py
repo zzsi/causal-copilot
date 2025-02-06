@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from openai import OpenAI
 import os
+from pydantic import BaseModel
 
 def convert_adj_mat(mat):
     # In downstream analysis, we only keep direct edges and ignore all undirected edges
@@ -45,7 +46,7 @@ def plot_cate_violin(global_state, hte, X_col, fig_path):
     coarsen_data = coarsen_continuous_variables(data, cont_X_col)
     data = pd.concat([coarsen_data, hte], axis=1)
     num_groups = len(X_col)
-    fig, axes = plt.subplots(num_groups, 1, figsize=(10, 6 * num_groups), sharex=False)
+    fig, axes = plt.subplots(1, num_groups, figsize=(10 * num_groups, 6), sharex=False)
     if num_groups == 1:
         axes = [axes]  # Ensure axes is always a list for consistency
 
@@ -55,7 +56,9 @@ def plot_cate_violin(global_state, hte, X_col, fig_path):
         else:
             x=group_col
         palette = sns.color_palette("Blues", n_colors=len(data[x].unique()))
-        sns.violinplot(x=x, y='hte', data=data, ax=ax, inner="quartile", density_norm="width", palette=palette)
+        sns.violinplot(x=x, y='hte', data=data, ax=ax, 
+                       inner="quartile", density_norm="width", 
+                       hue=x, legend=False, palette=palette)
         # Customize the subplot
         ax.set_title(f"CATE Distribution by {group_col.capitalize()}")
         ax.set_xlabel(group_col.capitalize())
@@ -65,44 +68,21 @@ def plot_cate_violin(global_state, hte, X_col, fig_path):
     plt.tight_layout()
     plt.savefig(fig_path)
 
-def plot_cate_distribution(cate_array, fig_path):
-    """
-    Plot distribution of the CATE (HTE) array and save to fig_path.
-    """
-    plt.figure(figsize=(8,6))
-    sns.histplot(cate_array, bins=30, kde=True, color='skyblue', alpha=0.7)
-    plt.title("Distribution of Estimated CATE")
-    plt.xlabel("CATE Value")
-    plt.ylabel("Frequency")
-    plt.axvline(np.mean(cate_array), color='red', linestyle='--', label='Mean CATE')
-    plt.legend()
-    plt.savefig(fig_path)
-    plt.close()
-
-def plot_cate_bars_by_group(cate_arrays, group_labels, fig_path):
-    n_groups = len(group_labels)
+def plot_cate_bars_by_group(cate_result, fig_path):
+    n_groups = len(cate_result)
     n_rows = (n_groups + 2) // 3  # Calculate number of rows needed (3 plots per row)
     n_cols = min(3, n_groups)
-    fig = plt.figure(figsize=(5*n_cols, 4*n_rows))
-    for idx, group in enumerate(group_labels):
+    fig = plt.figure(figsize=(7*n_cols, 6*n_rows))
+    for idx, group in enumerate(cate_result.keys()):
         plt.subplot(n_rows, n_cols, idx + 1)
         # Create bar plot for each group
-        counts, bins, _ = plt.hist(cate_arrays[group], bins=30, 
-                                 density=True, alpha=0)
-        bin_centers = (bins[:-1] + bins[1:]) / 2
-        plt.bar(bin_centers, counts, width=np.diff(bins), 
-                color='skyblue', alpha=0.7, 
-                align='center', label='CATE')
-        plt.title(f"CATE Distribution - {group}")
-        plt.xlabel("CATE Value")
-        plt.ylabel("Density")
-        # Add mean line
-        group_mean = np.mean(cate_arrays[group])
-        plt.axvline(group_mean, color='red', linestyle='--', 
-                   label=f'Mean: {group_mean:.3f}')
-        plt.legend()
+        sns.barplot(x=cate_result[group].index, y=cate_result[group].values, color='skyblue', alpha=0.7)
+        plt.title(f"CATE - {group}")
+        plt.xlabel("Group Label")
+        plt.ylabel("CATE")
+    fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
     plt.tight_layout()
-    plt.savefig(fig_path)
+    plt.savefig(fig_path, bbox_inches='tight')
     plt.close()
 
 def generate_density_plot(global_state, data, matched_data, treatment, confounders, title):
@@ -123,7 +103,7 @@ def generate_density_plot(global_state, data, matched_data, treatment, confounde
         sns.kdeplot(
             data[data[treatment] == 1][confounder], 
             label='Treated (Unmatched)', 
-            color='blue', 
+            color='#409fde', 
             fill=True, 
             alpha=0.3, 
             ax=ax_treated
@@ -131,7 +111,7 @@ def generate_density_plot(global_state, data, matched_data, treatment, confounde
         sns.kdeplot(
             data[data[treatment] == 0][confounder], 
             label='Control (UnMatched)', 
-            color='orange', 
+            color='#f77f3e', 
             fill=True,  
             alpha=0.3,  
             ax=ax_treated
@@ -147,7 +127,7 @@ def generate_density_plot(global_state, data, matched_data, treatment, confounde
         sns.kdeplot(
             matched_data[matched_data[treatment] == 1][confounder], 
             label='Treated (matched)', 
-            color='blue', 
+            color='#409fde', 
             fill=True,  
             alpha=0.3,  
             ax=ax_control
@@ -155,7 +135,7 @@ def generate_density_plot(global_state, data, matched_data, treatment, confounde
         sns.kdeplot(
             matched_data[matched_data[treatment] == 0][confounder], 
             label='Control (Matched)', 
-            color='orange', 
+            color='#f77f3e', 
             fill=True, 
             alpha=0.3,  
             ax=ax_control
@@ -197,6 +177,38 @@ def LLM_parse_query(args, format, prompt, message):
         )
         parsed_response = completion.choices[0].message.content
     return parsed_response
+
+def LLM_select_confounders(treatment, key_node, args, data):
+    class ConfounderList(BaseModel):
+        confounders: list[str]
+    prompt = f"""
+I'm doing the Treatment Effect Estimation analysis, please identify possible confounders between the treatment and result variables.
+Treatment: {treatment}
+Result: {key_node}
+The confounders must be among these variables: {data.columns}
+Only return me with the variable name, do not include anything else.
+"""
+    parsed_response = LLM_parse_query(args, ConfounderList, 'You are an expert in Causal Discovery.', prompt)
+    LLM_confounders = parsed_response.confounders
+    return LLM_confounders 
+
+def LLM_select_hte_var(args, treatment, key_node, message, data):
+    class HTE_VarList(BaseModel):
+            hte_variable: list[str]
+    prompt = f"""
+I'm doing the Treatment Effect Estimation analysis.
+Firstly, identify whether there are heterogeneous variables in this query: {message}
+If so, save these variables in the hte_variable list
+Otherwise, please identify heterogeneous variables between the treatment and result variables, and save these variables in the hte_variable list
+Please limit the number of heterogeneous variables within 5!
+Treatment: {treatment}
+Result: {key_node}
+The heterogeneous variables must be among these variables: {data.columns}
+Only return me with the variable name, do not include anything else.
+"""
+    parsed_response = LLM_parse_query(args, HTE_VarList, 'You are an expert in Causal Discovery.', prompt)
+    hte_variables = parsed_response.hte_variable    
+    return hte_variables
 
 def check_binary(column):
     unique_values = column.unique()
