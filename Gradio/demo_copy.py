@@ -75,6 +75,7 @@ from user.discuss import Discussion
 from openai import OpenAI
 from pydantic import BaseModel
 from help_functions import *
+from causal_analysis.help_functions import *
 
 print('##########Initialize Global Variables##########')
 # Global variables
@@ -185,7 +186,6 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 global_state = global_state_initialization(args)
                 # Load data
                 global_state.user_data.raw_data = pd.read_csv(REQUIRED_INFO['target_path'])
-                global_state.user_data.raw_data.columns = [col.replace(' ', '_') for col in global_state.user_data.raw_data.columns]
                 global_state.user_data.processed_data = global_state.user_data.raw_data
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
@@ -296,22 +296,10 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 chat_history.append((None, f"📍 The missing ratios of the following variables are greater than 0.5: \n"
                                         f"{', '.join(global_state.statistics.sparsity_dict['high'])}"))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                if set(global_state.user_data.important_features) & set(global_state.statistics.sparsity_dict['high']) != set():
-                    chat_history.append((None, "⚠️ Important features are detected with high missing ratios, we suggest you to drop them otherwise the result can be unreliable.\n"
-                                         "Do you want to drop them? Please enter 'YES' or 'NO'."))
-                    CURRENT_STAGE = "drop_greater_miss_50"
-                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                    return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                else:
-                    CURRENT_STAGE = "impute_smaller_miss_30"
-        if CURRENT_STAGE == "drop_greater_miss_50":
-            chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_drop_high_miss_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE)
-            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-            if CURRENT_STAGE != "impute_smaller_miss_30":
-                return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-        if CURRENT_STAGE == "impute_smaller_miss_30":
-            ####### update variable list
-            global_state = drop_greater_miss_50_feature(global_state)
+                if 
+                chat_history.append((None, f"⚠️ "))
+                ####### update variable list
+                global_state = drop_greater_miss_50_feature(global_state)
             if global_state.statistics.sparsity_dict['low'] != []:
                 # impute variables with sparsity<0.3 in the following
                 chat_history.append((None, f"📍 The missing ratios of the following variables are smaller than 0.3, we will impute them: \n" \
@@ -743,8 +731,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                                             "Please follow the templete below, otherwise your input cannot be parsed. \n"
                                             "Add Edges: A1->A2; A3->A4; ... \n"
                                             "Forbid Edges: F1->F2; F3->F4; ... \n"
-                                            "Orient Edges: O1->O2; O3->O4; ... \n"
-                                            "Or Enter NO to move on to next step\n"))
+                                            "Orient Edges: O1->O2; O3->O4; ... \n"))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             else:
@@ -782,11 +769,6 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                     chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/{global_state.algorithm.selected_algorithm}_revised_graph.jpg',)))
                     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                    
-                    chat_history.append((None, "Do you have further edges you want to edit?\n"))
-                    CURRENT_STAGE = 'user_postprocess'
-                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                    return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 CURRENT_STAGE = 'retry_algo'
             elif CURRENT_STAGE == 'retry_algo':
                 pass                
@@ -819,46 +801,202 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 return process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn)
         
         if CURRENT_STAGE == 'inference_analysis_check':
+            with open('demo_data/20250121_223113/lalonde/output_graph/PC_global_state.pkl', 'rb') as file:
+                global_state = pickle.load(file)
+                global_state.inference.task_index = -1
+                global_state.inference.task_info = {}
             chat_history.append((None, "Do you want to conduct downstream analysis based on the causal discovery result? You can descripbe your needs.\n"
                                         "Otherwise please input 'NO'.\n"
                                            "We support the following tasks: \n"
-                                           "1️⃣ Average Treatment Effect Estimation\n"
-                                           "2️⃣ Heterogeneous Treatment Effect Estimation\n"
-                                           "3️⃣ Anormaly Attribution\n"
-                                           "4️⃣ Feature Importance\n"
-                                           "5️⃣ Conterfactual Simulation\n")) 
-            CURRENT_STAGE = 'inference_analysis'
+                                           "1️⃣ Treatment Effect Estimation\n"
+                                           "2️⃣ Anormaly Attribution\n"
+                                           "3️⃣ Feature Importance\n"
+                                           "4️⃣ Conterfactual Simulation\n")) 
+            CURRENT_STAGE = 'parse_task'
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn 
             return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn 
-        if CURRENT_STAGE == 'inference_analysis': 
-            print('inference_analysis')
-            tasks_list, descs_list, key_node_list, reasons, chat_history, download_btn, global_state, REQUIRED_INFO = parse_inference_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO)
+        if CURRENT_STAGE == 'parse_task': 
+            print('parse_task')
+            tasks_list, descs_list, key_node_list, chat_history, download_btn, global_state, REQUIRED_INFO = parse_inference_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-            if tasks_list is not None:
-                if tasks_list == []:
-                    chat_history.append((None, "We cannot identify any supported task in your query, please retry or type 'NO' to skip this step."))
-                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                    #return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                else:
-                    chat_history.append((None, f"📄 Proposal for your causal task:\n {reasons}"))
-                    chat_history.append((None, f"Analyzing for your causal task..."))
-                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                    analysis = Analysis(global_state, args)
-                    for i, (task, desc, key_node) in enumerate(zip(tasks_list, descs_list, key_node_list)):
-                        info, figs = analysis.forward(task, desc, key_node)
-                        if info is None:
-                            chat_history.append((None, 'Your query cannot be parsed, please ask again or reply NO to end this part.'))
-                        else:
-                            for fig in figs:
-                                chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/{fig}',)))
-                            chat_history.append((None, info))
-                            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                            global_state.logging.downstream_discuss.append({"role": "system", "content": info})
-                    chat_history.append((None, "Do you have questions about this analysis? Or do you want to conduct other downstream analysis? \n"
-                                                "Please reply NO if you want to end this part. Please describe your needs."))
-                    CURRENT_STAGE = 'analysis_discussion'
-                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn            
+            if tasks_list == []:
+                chat_history.append((None, "We cannot identify any supported task in your query, please retry or type 'NO' to skip this step."))
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            else:
+                global_state.inference.task_index += 1
+                global_state.inference.task_info[global_state.inference.task_index] = {'task':tasks_list,
+                                                                                       'desc': descs_list,
+                                                                                       'key_node': key_node_list}
+                if "Treatment Effect Estimation" in tasks_list:
+                    CURRENT_STAGE = "inference_info_collection_1"
+                if 'Counterfactual Estimation' in tasks_list:
+                    CURRENT_STAGE = "counterfactual_info_collection1"
         
+        if CURRENT_STAGE == "counterfactual_info_collection1":
+            task_info = global_state.inference.task_info[global_state.inference.task_index]
+            treatment = parse_treatment(task_info['desc'][0], global_state, args)
+            global_state.inference.task_info[global_state.inference.task_index]['treatment'] = treatment
+            print('treatment: ', treatment)
+            chat_history.append((None, f"""💡 In this simulation, we are applying a 'shift intervention' to study how changes in the {treatment} impact the {task_info['key_node'][0]}. 
+                                 A shift intervention involves modifying the value of a variable by a fixed amount (the 'shift value') while keeping other variables unchanged.
+                                 For example, if we are studying the effect of increasing income on health outcomes, we might **apply ashift intervention where the income variable is increased by a fixed amount, such as $500**, for all individuals. Then your shift value is 500.
+                                 Please enter the shift value:"""))
+            CURRENT_STAGE = "counterfactual_info_collection2"
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+        if CURRENT_STAGE == "counterfactual_info_collection2":
+            chat_history.append((message, None)) 
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            shift_value = parse_shift_value(message, args)
+            if shift_value is not None:
+                global_state.inference.task_info[global_state.inference.task_index]['shift_value'] = shift_value
+                chat_history.append((None, f"✅ Successfully parsed your provided value!"))
+                CURRENT_STAGE = "analyze_causal_task"
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            else:
+                chat_history.append((None, f"❌ Cannot parse your provided value, please input numerical values!"))
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+        if CURRENT_STAGE == "inference_info_collection_1":
+            task_info = global_state.inference.task_info[global_state.inference.task_index]
+            ### Check Treatment
+            treatment = parse_treatment(task_info['desc'][0], global_state, args)
+            is_binary, treat, control = check_binary(global_state.user_data.processed_data[treatment])
+            if not is_binary:
+                CURRENT_STAGE = "inference_info_collection_binary"
+                chat_history.append((None, f"Your treatment column is not binary, please specify another variable name!"))
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            else:
+                chat_history.append((None, f"Your treatment column is binary with treatment={treat} and control={control}\n"))
+                CURRENT_STAGE = "inference_info_collection_2"
+                global_state.inference.task_info[global_state.inference.task_index]['treatment'] = treatment
+                global_state.inference.task_info[global_state.inference.task_index]['treat'] = treat
+                global_state.inference.task_info[global_state.inference.task_index]['control'] = control
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                
+            
+        if CURRENT_STAGE == "inference_info_collection_binary":
+            treatment = parse_treatment(message, global_state, args)
+            is_binary, treat, control = check_binary(global_state.user_data.processed_data[treatment])
+            if not is_binary:
+                chat_history.append((None, f"Your treatment column is not binary, please specify another variable name!"))
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            else:
+                chat_history.append((None, f"Your treatment column is binary with treatment={treat} and control={control}\n"))
+                CURRENT_STAGE = "inference_info_collection_2"
+                global_state.inference.task_info[global_state.inference.task_index]['treatment'] = treatment
+                global_state.inference.task_info[global_state.inference.task_index]['treat'] = treat
+                global_state.inference.task_info[global_state.inference.task_index]['control'] = control
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+        
+        if CURRENT_STAGE == "inference_info_collection_2": 
+            analysis = Analysis(global_state, args)
+            ### Check Confounder
+            key_node = global_state.inference.task_info[global_state.inference.task_index]['key_node'][0]
+            confounders = analysis._identify_confounders(treatment, key_node)
+            global_state.inference.task_info[global_state.inference.task_index]['confounders'] = confounders
+            remaining_var = list(set(analysis.data.columns) - set([treatment]) - set([key_node]) - set(confounders))
+            # Allow user add confounder
+            chat_history.append((None, f"These are Confounders between treatment {treatment} and outcome {key_node}: \n"
+                      f"{','.join(confounders)}\n"
+                      "💡 Do you want to add any variables as confounders in your dataset? Please choose from the following:\n"
+                      f"{','.join(remaining_var)}\n"))
+            CURRENT_STAGE = "inference_info_collection_confounder1"
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+        if CURRENT_STAGE == "inference_info_collection_confounder1":
+            if message=='' or message.lower()=='no':
+                CURRENT_STAGE = "inference_info_collection_confounder2"
+            else:
+                add_confounder, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_var_selection_query(message, chat_history, download_btn, 
+                                                                                                                                "inference_info_collection_confounder2", 
+                                                                                                                                args, global_state, REQUIRED_INFO, CURRENT_STAGE)
+                global_state.inference.task_info[global_state.inference.task_index]['confounders'] += add_confounder
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                if CURRENT_STAGE != "inference_info_collection_confounder2":
+                    return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+        
+        if CURRENT_STAGE == "inference_info_collection_confounder2":
+            confounders = global_state.inference.task_info[global_state.inference.task_index]['confounders']
+            cont_confounders = [col for col in confounders if global_state.statistics.data_type_column[col]=='Continuous']
+            global_state.inference.task_info[global_state.inference.task_index]['cont_confounders'] = cont_confounders
+            # No Confounder Case and Add LLM variable selection
+            if len(confounders) == 0:
+                task_info = global_state.inference.task_info[global_state.inference.task_index]
+                LLM_confounders = LLM_select_confounders(task_info['treatment'], task_info['key_node'], args, global_state.user_data.processed_data)
+                chat_history.append((None, "According to your provided graph, there is no confounder between your treatment and result variables.\n"
+                    "We add the following variables suggested by LLM as confounders:\n"
+                    f'{",".join(LLM_confounders)}'))
+                confounders = LLM_confounders
+                global_state.inference.task_info[global_state.inference.task_index]['confounders'] = confounders
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+
+            CURRENT_STAGE = "inference_info_collection_hte"
+            chat_history.append((None, "💡 Is there any heterogeneous variables you care about? If no, please input 'no' and we can suggest some variables with LLM.\n"))
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+
+        if CURRENT_STAGE == "inference_info_collection_hte":
+            task_info = global_state.inference.task_info[global_state.inference.task_index]
+            hte_variable = LLM_select_hte_var(args, task_info['treatment'], task_info['key_node'], message, global_state.user_data.processed_data)
+            global_state.inference.task_info[global_state.inference.task_index]['X_col'] = hte_variable
+            chat_history.append((None, "✅ The following are selected heterogeneous variables:\n"
+                                 f"{','.join(hte_variable)}"))
+            CURRENT_STAGE = "method_selection"
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+
+        if CURRENT_STAGE == "method_selection":
+            task_info = global_state.inference.task_info[global_state.inference.task_index]
+            confounders = task_info['confounders']
+            cont_confounders = task_info['cont_confounders']
+            ### Suggest method based on dataset characteristics
+            # TODO Check IV according to causal Graph
+            exist_IV = False
+            ## code ##
+            if exist_IV:
+                iv_variable = None
+                global_state.inference.task_info[global_state.inference.task_index]['IV'] = iv_variable
+            if len(confounders) <= 5:
+                if len(confounders) - len(cont_confounders) > len(cont_confounders):  # If more than half discrete confounders
+                    method = "cem"
+                else:
+                    method = "propensity_score"
+            else:
+                if len(global_state.user_data.processed_data) > 2000:
+                    method = "dml" # Add drl here
+                else:
+                    method = "drl"
+            global_state.inference.task_info[global_state.inference.task_index]['hte_method'] = method
+            chat_history.append((None, "✅ According to the characteristics of your data, we recommend you to use this Treatment Effect Estimation Method:\n"
+                f"**{method}**."))
+            if method == "dml":
+                chat_history.append((None, """**Double Machine Learning (DML)** is chosen because the sample size is large. It leverages orthogonalization to remove biases from nuisance function errors, making the treatment effect estimation more reliable. With a sufficient sample size, DML ensures asymptotic normality, enabling valid statistical inference like confidence intervals and hypothesis testing. Accurate nuisance function estimation in larger datasets further enhances its performance."""))
+            elif method == "drl":
+                chat_history.append((None, "**Doubly Robust Learning (DRL)** is chosen because the sample size is small. It remains consistent even if only one of the nuisance models (propensity scores or outcome models) is correctly specified. This property makes DRL more robust in small datasets, where limited data can lead to inaccuracies in machine learning model estimates."))
+            CURRENT_STAGE = "analyze_causal_task"
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+
+        if CURRENT_STAGE == "analyze_causal_task":
+            chat_history.append((None, f"✏️ Analyzing for your causal task..."))
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            analysis = Analysis(global_state, args)
+            task_info = global_state.inference.task_info[global_state.inference.task_index]
+            tasks_list, descs_list, key_node_list = task_info['task'], task_info['desc'], task_info['key_node']
+            for i, (task, desc, key_node) in enumerate(zip(tasks_list, descs_list, key_node_list)):
+                info, figs, chat_history = analysis.forward(task, desc, key_node, chat_history)
+                if info is None:
+                    chat_history.append((None, 'Your query cannot be parsed, please ask again or reply NO to end this part.'))
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                global_state.logging.downstream_discuss.append({"role": "system", "content": info})
+            chat_history.append((None, "Do you have questions about this analysis? Or do you want to conduct other downstream analysis? \n"
+                                        "Please reply NO if you want to end this part. Please describe your needs."))
+            CURRENT_STAGE = 'analysis_discussion'
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn    
+            return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn         
+    
         if CURRENT_STAGE == 'analysis_discussion':
             chat_history, download_btn, global_state, REQUIRED_INFO =  parse_inf_discuss_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -974,11 +1112,11 @@ def clear_chat(REQUIRED_INFO, CURRENT_STAGE, global_state):
     REQUIRED_INFO = update(REQUIRED_INFO, 'initial_query', False)
     REQUIRED_INFO = update(REQUIRED_INFO, 'target_path', None)
     REQUIRED_INFO = update(REQUIRED_INFO, 'output_dir', None)
-    CURRENT_STAGE = 'initial_process'
+    CURRENT_STAGE = 'inference_analysis_check'
 
     # Return initial welcome message
     chat_history =  [(None, "👋 Hello! I'm your causal discovery assistant. Want to discover some causal relationships today? \n"
-                   "⏫ Please upload you dataset first to begin your causal discovery journey. Here are some guidances: \n"
+                   "⏫ Some guidances before uploading your dataset: \n"
                    "1️⃣ The dataset should be tabular in .csv format, with each column representing a variable. \n "
                    "2️⃣ Ensure that the features are in numerical format or appropriately encoded if categorical. \n"
                    "3️⃣ For initial query, your dataset has meaningful feature names, please indicate it using 'YES' or 'NO'. \n"
@@ -1041,6 +1179,89 @@ function createGradioAnimation() {
     return 'Animation created';
 }
 """
+
+import argparse
+import pickle
+def parse_args():
+    parser = argparse.ArgumentParser(description='Causal Learning Tool for Data Analysis')
+
+    # Input data file
+    parser.add_argument(
+        '--data-file',
+        type=str,
+        default="demo_data/20250121_223113/lalonde/lalonde.csv",
+        help='Path to the input dataset file (e.g., CSV format or directory location)'
+    )
+
+    # Output file for results
+    parser.add_argument(
+        '--output-report-dir',
+        type=str,
+        default='causal_analysis/test_result',
+        help='Directory to save the output report'
+    )
+
+    # Output directory for graphs
+    parser.add_argument(
+        '--output-graph-dir',
+        type=str,
+        default='causal_analysis/test_result',
+        help='Directory to save the output graph'
+    )
+
+    # OpenAI Settings
+    parser.add_argument(
+        '--organization',
+        type=str,
+        default="org-gw7mBMydjDsOnDlTvNQWXqPL",
+        help='Organization ID'
+    )
+
+    parser.add_argument(
+        '--project',
+        type=str,
+        default="proj_SIDtemBJMHUWG7CPdU7yRjsn",
+        help='Project ID'
+    )
+
+    parser.add_argument(
+        '--apikey',
+        type=str,
+        default=None,
+        help='API Key'
+    )
+
+    parser.add_argument(
+        '--simulation_mode',
+        type=str,
+        default="offline",
+        help='Simulation mode: online or offline'
+    )
+
+    parser.add_argument(
+        '--data_mode',
+        type=str,
+        default="real",
+        help='Data mode: real or simulated'
+    )
+
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        default=False,
+        help='Enable debugging mode'
+    )
+
+    parser.add_argument(
+        '--initial_query',
+        type=str,
+        default="selected algorithm: PC",
+        help='Initial query for the algorithm'
+    )
+    args = parser.parse_args()
+    return args
+
+args = parse_args()
 
 with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
     .input-buttons { 
@@ -1108,21 +1329,23 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
     }
 """) as demo:
     print('##########Initialize Global Variables##########')
-    stage_state = gr.State('initial_process')
+    stage_state = gr.State('inference_analysis_check')
     state = gr.State(None)
     REQUIRED_INFO = gr.State({
             'data_uploaded': False,
             'initial_query': False,
-            "interactive_mode": False, 
+            #"interactive_mode": False, 
+            "interactive_mode": True, 
             'processing': False,
             'target_path': None,
             'output_dir': None
         })
-    args = gr.State(type('Args', (), {})())
+    args = gr.State(args)
+    #args = gr.State(type('Args', (), {})())
     chatbot = gr.Chatbot(
         value=[
             (None, "👋 Hello! I'm your causal discovery assistant. Want to discover some causal relationships today? \n"
-                   "⏫ Please upload you dataset first to begin your causal discovery journey. Here are some guidances: \n"
+                   "⏫ Some guidances before uploading your dataset: \n"
                    "1️⃣ The dataset should be tabular in .csv format, with each column representing a variable. \n "
                    "2️⃣ Ensure that the features are in numerical format or appropriately encoded if categorical. \n"
                    "3️⃣ For initial query, your dataset has meaningful feature names, please indicate it using 'YES' or 'NO'. \n"
@@ -1152,8 +1375,6 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
             gr.update(interactive=False),  # For reset button
         ])
         return updates
-
-  
 
 
     def enable_all_inputs(all_demo_buttons):

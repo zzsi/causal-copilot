@@ -396,6 +396,7 @@ The JSON should be
         response += """
                     \end{itemize}
                     """
+        response = response.replace('_', '\_')
         return response
 
     def procedure_prompt(self):

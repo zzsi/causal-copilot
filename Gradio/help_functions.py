@@ -51,6 +51,27 @@ def LLM_parse_query(format, prompt, message, args):
         parsed_response = completion.choices[0].message.content
     return parsed_response
 
+def parse_drop_high_miss_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
+    class Bool(BaseModel):
+        yes_or_no: bool=None
+    prompt = """You are a helpful assistant, please extract the user's query as a boolean value. 
+    If user's input is like 'yes', 'Yes', 'YES', 'y', 'Y', the boolean should be True. 
+    Otherwise, the boolean should be False.
+    If you cannot determine yes or no, save yes_or_no as None.
+    """
+    parsed_response = LLM_parse_query(Bool, prompt, message, global_state.args)
+    yes = parsed_response.yes_or_no
+    if yes is None:
+        chat_history.append((message, "❌ Your query cannot be parsed, please follow the templete and retry."))
+    else:
+        if yes:
+            global_state.statistics.drop_important_var = True
+            chat_history.append((message, "✅ We will drop important variables with missing values greater than 50%."))
+        else:
+            global_state.statistics.drop_important_var = False
+            chat_history.append((message, "✅ We will not drop important variables with missing values greater than 50%, but it may lead to unreliable result."))
+        CURRENT_STAGE = 'impute_smaller_miss_30'
+    return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 # process functions
 def sample_size_check(n_row, n_col, chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE):
     ## Few sample case: give warning
