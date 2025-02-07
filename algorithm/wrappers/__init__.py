@@ -5,6 +5,7 @@ import torch
 from .pc import PC
 from .fci import FCI
 from .cdnod import CDNOD
+from .pc_parallel import PCParallel
 ## Markov Blanket based algorithms
 from .inter_iamb import InterIAMB
 from .bamb import BAMB
@@ -34,7 +35,7 @@ from .ica_lingam import ICALiNGAM
 from .hybrid import Hybrid
 
 
-constraint_based_algorithms = ['PC', 'FCI', 'CDNOD', 'InterIAMB', 'BAMB', 'HitonMB', 'IAMBnPC', 'MBOR']
+constraint_based_algorithms = ['PC', 'FCI', 'CDNOD', 'InterIAMB', 'BAMB', 'HitonMB', 'IAMBnPC', 'MBOR', 'PCParallel']
 score_based_algorithms = ['GES', 'FGES', 'XGES', 'NOTEARSLinear', 'NOTEARSNonlinear', 'CORL', 'CALM', 'GOLEM']
 functional_model_based_algorithms = ['DirectLiNGAM', 'ICALiNGAM']
 permutation_based_algorithms = ['GRaSP']

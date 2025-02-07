@@ -1,0 +1,23 @@
+### PCParallel
+
+- **Description**: Parallelized version of PC algorithm, achieved by parallelizing the CI tests at each step over multiple cores of the underlying hardware. 
+
+- **Assumptions**
+    - **Causal Sufficiency**: No hidden confounders exist, meaning all relevant variables are observed.
+    - **Faithfulness**: The observed statistical dependencies reflect the true causal structure, without any coincidental independencies.
+    - **Markov Condition**: Each variable is conditionally independent of its non-effects given its direct causes.
+    - **Non-cyclic**: The underlying causal structure is acyclic.
+
+- **Advantages**
+    - Faster and more scalable over high dimensional datasets
+    - Results are independent of the order of the variables. 
+    - Implements the stable-PC with minimal loss in accuracy
+
+- **Limitations**
+    - Works under the assumption that all the cores have similar performance
+    - Significant memory consumption for large datasets 
+    - Tradeoff between number of cores and synchronization of results
+
+- **Suitable Cases**:
+    - Datasets with large number of variables and sample size where computational efficiency is crucial.
+    - Scenarios where all relevant variables are observed and the underlying causal structure is assumed to be acyclic. 
