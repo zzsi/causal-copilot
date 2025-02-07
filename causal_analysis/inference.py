@@ -714,7 +714,7 @@ class Analysis(object):
         gcm.fit(self.causal_model, self.data)
         shift_samples = gcm.interventional_samples(self.causal_model,
                                                     {treatment_name: lambda x: x + shift_intervention_val},
-                                                    num_samples_to_draw=1000)
+                                                    num_samples_to_draw=len(self.data))
 
         plt.figure(figsize=(12, 6))
 
@@ -751,7 +751,7 @@ class Analysis(object):
 
         print(f"Saving simulated dataset {os.path.join(path, 'simulated_shift_intervention.csv')}")
         shift_samples.to_csv(os.path.join(path, 'simulated_shift_intervention.csv'), index=False)
-        return figs
+        return figs, shift_samples
 
     def sensitivity_analysis(self, target_node, model, estimand, estimate, treatment, outcome):
         # if self.global_state.statistics.linearity:
@@ -827,7 +827,6 @@ class Analysis(object):
                     method = "dml"
                 else:
                     method = "drl"
-
 
             ### Run algorithm
             if method in ["dml", "drl"]:
@@ -905,14 +904,14 @@ class Analysis(object):
         elif task == 'Counterfactual Estimation':
             treatment = self.global_state.inference.task_info[self.global_state.inference.task_index]['treatment']
             shift_intervention_val = self.global_state.inference.task_info[self.global_state.inference.task_index]['shift_value']
-            figs = self.simulate_intervention(treatment_name = treatment, response_name = key_node, shift_intervention_val = shift_intervention_val)
-            response = generate_conterfactual_estimation(self.args, df, key_node, desc)
+            figs, shift_df = self.simulate_intervention(treatment_name = treatment, response_name = key_node, shift_intervention_val = shift_intervention_val)
+            response = generate_conterfactual_estimation(self.args, self.global_state, shift_intervention_val, shift_df, treatment, key_node, desc)
             for fig in figs:
                 chat_history.append((None, (f'{fig}',)))
             chat_history.append((None, response))
-            return response, figs
+            return response, figs, chat_history
         else:
-            return None, None
+            return None, None, chat_history
 
 
 if __name__ == '__main__':

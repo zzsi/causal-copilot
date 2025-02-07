@@ -844,6 +844,8 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
         if CURRENT_STAGE == "counterfactual_info_collection2":
+            chat_history.append((message, None)) 
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             shift_value = parse_shift_value(message, args)
             if shift_value is not None:
                 global_state.inference.task_info[global_state.inference.task_index]['shift_value'] = shift_value

@@ -171,5 +171,20 @@ def generate_analysis_anormaly_dist(args, df, key_node, desc):
     response = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt)
     return response
 
-def generate_conterfactual_estimation(args, df, key_node, desc):
-    pass
+def generate_conterfactual_estimation(args, global_state, shift_intervention_val, shift_df, treatment, key_node, desc):
+    original_df = global_state.user_data.processed_data
+    prompt = f"""
+    I'm doing the Counterfactual Estimation analysis and please help me to write a brief analysis in bullet points.
+    Here are some informations:
+    **Target Variable we care about**: {key_node}
+    **Treatment Variable**: {treatment}
+    **Treatment Shift Values**: {shift_intervention_val}
+    **Original Distribution of Target Variable**: {original_df[key_node].describe().to_string()}
+    **Counterfactual Estimation Result of Target Variable**: {shift_df[key_node].describe().to_string()}
+    **Description from User**: {desc}
+    **Methods to calculate Counterfactual Estimation**
+    We estimated the counterfactual distribution of the target variable by shifting the observed samples in the direction of the identified confounders.
+    """
+
+    response = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt)
+    return response
