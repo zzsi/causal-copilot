@@ -133,8 +133,6 @@ def parse_var_selection_query(message, chat_history, download_btn, next_step, ar
                              ))
         return var_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
     else:
-        print('var_list:', var_list)
-        print('global_state:', global_state.user_data.raw_data.columns)
         missing_vars = [var for var in var_list if var not in global_state.user_data.raw_data.columns and var!='']
         if missing_vars != []:
             chat_history.append((message, "❌ Variables " + ", ".join(missing_vars) + " are not in the dataset, please check it and retry.\n"
@@ -373,55 +371,22 @@ def parse_inference_query(message, chat_history, download_btn, args, global_stat
     if message.lower() == 'no' or message == '':
         chat_history.append((None, "✅ No need for downstream analysis, continue to the next section..."))
         REQUIRED_INFO["current_stage"] = 'report_generation_check'
-        return None, None, None, None, chat_history, download_btn, global_state, REQUIRED_INFO
+        return None, None, None, chat_history, download_btn, global_state, REQUIRED_INFO
     else:
         class InfList(BaseModel):
-                    tasks: list[str]
-                    descriptions: list[str]
-                    key_node: list[str]
-                    reasons: str
-        prompt = f"""You are a helpful assistant, please do the following tasks:
-    **Tasks*
-    # Firstly please identify what tasks the user want to do and save them as a list in tasks.
-    Please choose among the following causal tasks, if there's no matched task just return an empty list 
-    You can only choose from the following tasks, and you can choose more than one task: 
-    1. Average Treatment Effect Estimation; 2. Heterogeneous Treatment Effect Estimation 3. Anormaly Attribution; 4. Feature Importance
-    # Secondly, save user's description for their tasks as a list in descriptions, the length of description list must be the same with task list
-    # Thirdly, save the key result variable user care about as a list, each task must have a key result variable and they can be the same, the length of result variable list must be the same with task list
-    key result variable must be among this list! {global_state.user_data.processed_data.columns}
-    # Fourthly, save the reasons why you choose these tasks to address user's question, and save it as a string in reasons.
-    Please write your reasons in 1-2 paragraphs as a brief proposal, you can use some bullet points to list your steps
-    
-    **Question Examples**
-    1. Average Treatment Effect Estimation:
-    What is the causal effect of introducing coding classes in schools on students' future career prospects?
-    What is the average treatment effect of a minimum wage increase on employment rates?
-    How much does the availability of free internet in rural areas improve educational outcomes?
-    How does access to affordable childcare affect women’s labor force participation?
-    What is the impact of reforestation programs on air quality in urban areas?
-    2. Heterogeneous Treatment Effect Estimation:
-    What is the heterogeneity in the impact of reforestation programs on air quality across neighborhoods with varying traffic density?
-    How does the introduction of mental health support programs in schools impact academic performance differently for students with varying levels of pre-existing stress?
-    Which demographic groups benefit most from telemedicine adoption in terms of reduced healthcare costs and improved health outcomes?
-    How does the effectiveness of renewable energy subsidies vary for households with different income levels or geographic locations?
-    3. Anormaly Attribution
-    How can we attribute a sudden increase in stock market volatility to specific economic events or market sectors?
-    Which variables (e.g., transaction amount, location, time) explain anomalies in loan repayment behavior?
-    What factors explain unexpected delays in surgery schedules or patient discharge times?
-    What are the root causes of deviations in supply chain delivery times?
-    What factors contribute most to unexpected drops in product sales during a specific period?
-    4. Feature Importance
-    What are the most influential factors driving credit score predictions?
-    What are the key factors influencing the effectiveness of a specific treatment or medication?
-    Which product attributes (e.g., price, brand, reviews) are the most influential in predicting online sales?
-    Which environmental variables (e.g., humidity, temperature, CO2 levels) are most important for predicting weather patterns?
-    What customer behaviors (e.g., browsing time, cart size) contribute most to predicting cart abandonment?
-    """
+                tasks: list[str]
+                descriptions: list[str]
+                key_node: list[str]
+        columns = global_state.user_data.processed_data.columns
+        with open('causal_analysis/context/query_prompt.txt', 'r') as file:
+            query_prompt = file.read()
+            query_prompt = query_prompt.replace('[COLUMNS]', f",".join(columns))
+        
         global_state.logging.downstream_discuss.append({"role": "user", "content": message})
-        parsed_response = LLM_parse_query(InfList, prompt, message, args)
-        tasks_list, descs_list, key_node_list, reasons = parsed_response.tasks, parsed_response.descriptions, parsed_response.key_node, parsed_response.reasons
-        print(tasks_list, descs_list, key_node_list, reasons)
-        return tasks_list, descs_list, key_node_list, reasons, chat_history, download_btn, global_state, REQUIRED_INFO
+        parsed_response = LLM_parse_query(InfList, query_prompt, message, args)
+        tasks_list, descs_list, key_node_list = parsed_response.tasks, parsed_response.descriptions, parsed_response.key_node
+        print(tasks_list, descs_list, key_node_list)
+        return tasks_list, descs_list, key_node_list, chat_history, download_btn, global_state, REQUIRED_INFO
 
 
 def parse_inf_discuss_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO):
@@ -462,3 +427,19 @@ def parse_inf_discuss_query(message, chat_history, download_btn, args, global_st
     return chat_history, download_btn, global_state, REQUIRED_INFO            
                 
 
+def parse_treatment(desc, global_state, args):
+    prompt = f"""
+    I'm doing the Treatment Effect Estimation analysis, please identify the Treatment Variable in this description:
+    {desc}
+    The variable name must be among these variables: {global_state.user_data.processed_data.columns}
+    Only return me with the variable name, do not include anything else.
+    """
+    treatment = LLM_parse_query(None, 'You are an expert in Causal Discovery.', prompt, args)
+    return treatment
+
+def parse_shift_value(desc, args):
+    class ShiftValue(BaseModel):
+        shift_value: float
+    parsed_response = LLM_parse_query(ShiftValue, "Extract the numerical value from the query and save it in shift_value", desc, args)
+    shift_value = parsed_response.shift_value
+    return shift_value
