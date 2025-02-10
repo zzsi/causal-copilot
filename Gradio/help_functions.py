@@ -85,6 +85,8 @@ def parse_reupload_query(message, chat_history, download_btn, REQUIRED_INFO, CUR
 def process_initial_query(message, chat_history, download_btn, args, REQUIRED_INFO, CURRENT_STAGE):
     # TODO: check if the initial query is valid or satisfies the requirements
     print('initial query:', message)
+    # algorithm 
+    # 
     if 'yes' in message.lower():
         args.data_mode = 'real'
         REQUIRED_INFO['initial_query'] = True
@@ -386,6 +388,8 @@ def parse_inference_query(message, chat_history, download_btn, args, global_stat
         parsed_response = LLM_parse_query(InfList, query_prompt, message, args)
         tasks_list, descs_list, key_node_list = parsed_response.tasks, parsed_response.descriptions, parsed_response.key_node
         print(tasks_list, descs_list, key_node_list)
+        chat_history.append((None, "✅ Successfully parsed your query. We will analyze it in the following perspectives:\n"
+                                    f"{', '.join(tasks_list)}\n"))
         return tasks_list, descs_list, key_node_list, chat_history, download_btn, global_state, REQUIRED_INFO
 
 
@@ -399,31 +403,23 @@ def parse_inf_discuss_query(message, chat_history, download_btn, args, global_st
         REQUIRED_INFO["current_stage"] = 'report_generation_check'
     else:
         class DiscussList(BaseModel):
-                    indicator: bool
                     answer: str
         prompt = f"""You are a helpful assistant, here is the previous conversation history for your reference:
                 ** Conversation History **
                 {global_state.logging.downstream_discuss}
                 ** Your Task **
-                Firstly identify whether you can answer user's question based on the given history and save the boolean result in indicator. 
-                If the given history is enough to answer the question, set the indicator to True, otherwise set it to False.
-                Secondly, if indicator is True, save your answer to user's question in answer, your answer should be in bullet points; Otherwise set the answer to be None.
+                Answer user's question based on the given history in bullet points.
+                Your answer must be based on the given history, DO NOT include any fake information.
                 """
         global_state.logging.downstream_discuss.append({"role": "user", "content": message})
         parsed_response = LLM_parse_query(DiscussList, prompt, message, args)
-        answer_ind, answer_info = parsed_response.indicator, parsed_response.answer 
-        print(answer_ind, answer_info)
+        answer_info = parsed_response.answer 
+        print(answer_info)
     
-        if answer_ind:
-            chat_history.append((None, answer_info))
-            global_state.logging.downstream_discuss.append({"role": "system", "content": answer_info})
-            chat_history.append((None, "Do you have questions about this analysis? Or do you want to conduct other downstream analysis? \n"
-                                        "You can also input 'NO' to end this part. Please describe your needs."))
-        else:
-            REQUIRED_INFO["current_stage"] = 'inference_analysis'
-            # chat_history.append((None, "Receive your question! Input 'yes' to analyze it..."))
-            # return process_message(message, chat_history, download_btn)  
-            tasks_list, descs_list, key_node_list, reasons, chat_history, download_btn, global_state, REQUIRED_INFO = parse_inference_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO)                   
+        chat_history.append((None, answer_info))
+        global_state.logging.downstream_discuss.append({"role": "system", "content": answer_info})
+        chat_history.append((None, "Do you have questions about this analysis?  Please describe your questions.\n"
+                                    "You can also input 'NO' to end this discussion."))
     return chat_history, download_btn, global_state, REQUIRED_INFO            
                 
 

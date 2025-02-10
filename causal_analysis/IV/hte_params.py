@@ -105,7 +105,8 @@ class HTE_Param_Selector(object):
         global_state.inference.hte_model_param = {
             'model_y': y_model,
             'model_t': T_model, 
-            'model_final': final_model
+            'model_final': final_model,
+            'min_propensity': 0.05,
         }
         if discrete_y:
             global_state.inference.hte_model_param['discrete_outcome'] = True 

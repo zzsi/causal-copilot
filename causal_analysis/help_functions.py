@@ -41,7 +41,7 @@ def plot_hte_dist(hte, fig_path):
     plt.savefig(fig_path)
 
 def plot_cate_violin(global_state, hte, X_col, fig_path):
-    data = global_state.user_data.processed_data
+    data = global_state.user_data.processed_data.copy()
     cont_X_col = [var for var in X_col if global_state.statistics.data_type_column[var]=='Continuous']
     coarsen_data = coarsen_continuous_variables(data, cont_X_col)
     data = pd.concat([coarsen_data, hte], axis=1)

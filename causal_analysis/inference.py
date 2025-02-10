@@ -128,7 +128,8 @@ class Analysis(object):
         figs = []
         if visualize == True:
             # 1st SHAP Plot beeswarm
-            ax = shap.plots.beeswarm(shap_values, plot_size=(8,6), show=False)
+            fig, ax = plt.subplots(figsize=(8, 6))
+            ax = shap.plots.beeswarm(shap_values, show=False)
             plt.savefig(f'{self.global_state.user_data.output_graph_dir}/shap_beeswarm_plot.png', bbox_inches='tight')  # Save as PNG
             figs.append(f'{self.global_state.user_data.output_graph_dir}/shap_beeswarm_plot.png')
 
@@ -515,6 +516,7 @@ class Analysis(object):
         reranker = DRL_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
         self.global_state = reranker.forward(self.global_state)
         programmer = DRL_HTE_Programming(self.args, y_col=outcome, T_col=treatment, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
+        programmer.fit_model(self.global_state)
         # Estimate ate, att, hte
         ate, ate_lower, ate_upper = programmer.forward(self.global_state, task='ate')
         att, att_lower, att_upper = programmer.forward(self.global_state, task='att')
@@ -814,7 +816,7 @@ class Analysis(object):
             exist_IV = False
             if exist_IV:
                 iv_variable = None
-                global_state.inference.task_info[global_state.inference.task_index]['IV'] = iv_variable
+                global_state.inference.task_info[self.global_state.inference.task_index]['IV'] = iv_variable
                 method = "iv"
 
             elif len(confounders) <= 5:
@@ -823,7 +825,7 @@ class Analysis(object):
                 else:
                     method = "propensity_score"
             else:
-                if len(global_state.user_data.processed_data) > 2000:
+                if len(self.global_state.user_data.processed_data) > 2000:
                     method = "dml"
                 else:
                     method = "drl"

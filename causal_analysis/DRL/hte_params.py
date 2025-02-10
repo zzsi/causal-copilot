@@ -17,7 +17,7 @@ class HTE_Param_Selector(object):
     def prompt_generation(self, target_node, global_state):
         node_type = global_state.statistics.data_type_column[target_node]
 
-        if node_type =='continuous':
+        if node_type =='Continuous':
             prompt_path = 'causal_analysis/DRL/context/regressor_select_prompt.txt'
             algo_text_path = 'causal_analysis/DRL/context/regressor.txt'
             discrete = False
@@ -76,9 +76,6 @@ class HTE_Param_Selector(object):
         client = OpenAI(organization=self.args.organization, project=self.args.project, api_key=self.args.apikey)
         # Set up the Hyperparameters
         # Load hyperparameters prompt template
-        import json
-        import DRL.wrappers as wrappers
-
         y_prompt, discrete_y = self.prompt_generation(self.y_col, global_state)
         T_prompt, discrete_T = self.prompt_generation(self.T_col, global_state)
         final_prompt = open('causal_analysis/DRL/context/final_stage_select_prompt.txt', "r").read()
@@ -102,13 +99,13 @@ class HTE_Param_Selector(object):
         final_model = self.get_model(final_model_name)
 
         global_state.inference.hte_model_param = {
-            'model_y': y_model,
-            'model_t': T_model, 
+            'model_regression': y_model,
+            'model_propensity': T_model,
             'model_final': final_model
         }
         if discrete_y:
             global_state.inference.hte_model_param['discrete_outcome'] = True 
-        if discrete_T:
-            global_state.inference.hte_model_param['discrete_treatment'] = True
+        # if discrete_T:
+        #     global_state.inference.hte_model_param['discrete_treatment'] = True
 
         return global_state

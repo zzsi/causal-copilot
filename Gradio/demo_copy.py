@@ -907,10 +907,11 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
         if CURRENT_STAGE == "inference_info_collection_confounder1":
             if message=='' or message.lower()=='no':
+                chat_history.append((message, None))
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 CURRENT_STAGE = "inference_info_collection_confounder2"
             else:
-                add_confounder, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_var_selection_query(message, chat_history, download_btn, 
-                                                                                                                                "inference_info_collection_confounder2", 
+                add_confounder, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_var_selection_query(message, chat_history, download_btn,                                                                                                                                "inference_info_collection_confounder2", 
                                                                                                                                 args, global_state, REQUIRED_INFO, CURRENT_STAGE)
                 global_state.inference.task_info[global_state.inference.task_index]['confounders'] += add_confounder
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -938,6 +939,8 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
         if CURRENT_STAGE == "inference_info_collection_hte":
+            chat_history.append((message, None))
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             task_info = global_state.inference.task_info[global_state.inference.task_index]
             hte_variable = LLM_select_hte_var(args, task_info['treatment'], task_info['key_node'], message, global_state.user_data.processed_data)
             global_state.inference.task_info[global_state.inference.task_index]['X_col'] = hte_variable
@@ -984,6 +987,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             task_info = global_state.inference.task_info[global_state.inference.task_index]
             tasks_list, descs_list, key_node_list = task_info['task'], task_info['desc'], task_info['key_node']
             for i, (task, desc, key_node) in enumerate(zip(tasks_list, descs_list, key_node_list)):
+                chat_history.append((f"🔍 Analyzing for {task}...", None))
                 info, figs, chat_history = analysis.forward(task, desc, key_node, chat_history)
                 if info is None:
                     chat_history.append((None, 'Your query cannot be parsed, please ask again or reply NO to end this part.'))
@@ -998,7 +1002,8 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
         if CURRENT_STAGE == 'analysis_discussion':
             chat_history, download_btn, global_state, REQUIRED_INFO =  parse_inf_discuss_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-
+            return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            
         # Report Generation
         if CURRENT_STAGE == 'report_generation_check': # empty query or postprocess query parsed successfully
             import glob

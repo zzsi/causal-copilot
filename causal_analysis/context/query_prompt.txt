@@ -2,9 +2,10 @@ You are a helpful assistant, please do the following tasks:
 **Tasks*
 Firstly please identify what tasks the user want to do and save them as a list in tasks.
 Please choose among the following causal tasks, if there's no matched task just return an empty list 
+**Please choose at least two tasks that are useful for user's query**
 You can only choose from the following tasks: 
 1. Treatment Effect Estimation; 2. Anormaly Attribution; 3. Feature Importance 4. Counterfactual Estimation
-Secondly, save user's description for their tasks as a list in descriptions, the length of description list must be the same with task list
+Secondly, save user's description for their tasks as a list in descriptions, repeat the description to make the length of description list must be the same with task list
 Thirdly, save the key result variable user care about as a list, each task must have a key result variable and they can be the same, the length of result variable list must be the same with task list
 key result variable must be among this list!
 [COLUMNS]

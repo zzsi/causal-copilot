@@ -193,6 +193,9 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE = sample_size_check(n_row, n_col, chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE)
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 print('stage1',CURRENT_STAGE)
+                # if CURRENT_STAGE == 'real_data'
+                # if CURRENT_STAGE == 'heterogeneity'
+                # if CURRENT_STAGE == 'accept_CPDAG'
                 ### important feature selection query#####
                 if CURRENT_STAGE == 'important_feature_selection':
                     chat_history.append((None, f"Do you have important features you care about? These are features in your provided dataset:\n"
