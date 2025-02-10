@@ -744,6 +744,7 @@ class Analysis(object):
         print(f"Saving shift intervention comparison plot to {os.path.join(path, 'shift_intervention.jpg')}")
         plt.savefig(os.path.join(path, 'shift_intervention.jpg'))
         figs = [os.path.join(path, 'shift_intervention.jpg')]
+
         # Save dataset
         # print(f"Saving simulated dataset {os.path.join(path, 'simulated_atomic_intervention_org.csv')}")
         # atomic_samples_org.to_csv(os.path.join(path, 'simulated_atomic_intervention_org.csv'), index=False)
@@ -753,7 +754,22 @@ class Analysis(object):
 
         print(f"Saving simulated dataset {os.path.join(path, 'simulated_shift_intervention.csv')}")
         shift_samples.to_csv(os.path.join(path, 'simulated_shift_intervention.csv'), index=False)
-        return figs, shift_samples
+
+        # Boxplot Comparison to summarize distributions
+        plt.figure(figsize=(8, 6))
+
+        data_to_plot = [self.data[response_name], shift_samples[response_name]]
+        plt.boxplot(data_to_plot, labels=["Observed Data", "Shift Intervention"], patch_artist=True)
+        plt.title(f'Shift Intervention Comparison: {response_name}')
+        plt.ylabel(response_name)
+
+        print(f"Saving box-plot comparison plot to {os.path.join(path, 'shift_intervention_boxplot.jpg')}")
+        plt.savefig(os.path.join(path, 'shift_intervention_boxplot.jpg'))
+        figs_boxplot = [os.path.join(path, 'shift_intervention_boxplot.jpg')]
+
+        return figs, figs_boxplot, shift_samples
+
+
 
     def sensitivity_analysis(self, target_node, model, estimand, estimate, treatment, outcome):
         # if self.global_state.statistics.linearity:
