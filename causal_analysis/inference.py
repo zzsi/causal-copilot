@@ -865,8 +865,16 @@ class Analysis(object):
 
             # TODO: Add IV Estimation
             if method == "iv":
-                pass
-
+                result = self.estimate_effect_iv(outcome=key_node, treatment=treatment, instrument_variable=iv_variable, T0=control, T1=treat,
+                                                            X_col=hte_variables, W_col=confounders, query=desc)
+                response, figs = generate_analysis_econml(self.args, self.global_state, key_node, treatment, parent_nodes, hte_variables, confounders, result, desc)
+                chat_history.append(("📝 Analyze for ATE and ATT...", None))
+                chat_history.append((None, response[0]))
+                chat_history.append(("📝 Analyze for HTE...", None))
+                for fig in figs:
+                    chat_history.append((None, (f'{fig}',)))
+                chat_history.append((None, response[1]))
+                
             elif method in ["cem", "propensity_score"]:
                 # Perform matching-based estimation
                 ate, cate_result, matched_data, figs = self.estimate_causal_effect_matching(
