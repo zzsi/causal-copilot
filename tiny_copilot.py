@@ -6,10 +6,12 @@ import json
 
 # Import global state initialization and data loading functions                        
 from global_setting.Initialize_state import global_state_initialization, load_data
+from preprocess.stat_info_functions import convert_stat_info_to_text
 # Import algorithm selection modules
 from algorithm.filter import Filter
 from algorithm.rerank import Reranker
 from algorithm.program import Programming
+from algorithm.hyperparameter_selector import HyperparameterSelector
 
 def load_real_world_data(file_path):
     # Baseline: CSV or JSON file loading
@@ -50,7 +52,7 @@ def simulated_algorithm_run(global_state):
 def main():
     parser = argparse.ArgumentParser(description="Tiny Copilot - Simplified Version")
     parser.add_argument('--data-file', type=str, default="dataset/sachs/sachs.csv", help='Path to dataset file')
-    parser.add_argument('--initial_query', type=str, default="selected algorithm: FGES; filter: continuous", help='Initial algorithm query')
+    parser.add_argument('--initial_query', type=str, default="Do causal discovery on this biology dataset.", help='Initial algorithm query')
     parser.add_argument('--debug', action='store_true', default=False, help='Enable debug mode (skip heavy preprocessing)')
     # Modes: normal, skip, simulate
     parser.add_argument('--mode', type=str, choices=["normal", "skip", "simulate"], default="simulate", help='Mode of operation')
@@ -75,7 +77,7 @@ def main():
     if args.mode == "simulate":
         # In simulate mode, use the user_simulation module to generate simulated user queries and statistics
         from algorithm.tests.user_simulation import simulate_user_query
-        simulated_info = simulate_user_query()
+        simulated_info = simulate_user_query(args)
         # Create and populate a new global state with simulated values
         from global_setting.state import GlobalState
         global_state = GlobalState()
@@ -104,17 +106,20 @@ def main():
             if args.data_mode == "real":
                 global_state.user_data.raw_data = load_real_world_data(args.data_file)
             global_state.user_data.processed_data = global_state.user_data.raw_data
-            # Set fake statistics for debug mode
-            global_state.statistics.sample_size = 853
+            # Set statistics for the Sachs dataset, which contains flow cytometry measurements
+            # of 11 phosphoproteins and phospholipids in human immune system cells
+            global_state.statistics.sample_size = 853  # Number of single cells measured
             if global_state.user_data.processed_data is not None:
                 global_state.statistics.feature_number = len(global_state.user_data.processed_data.columns)
             else:
                 global_state.statistics.feature_number = 0
-            global_state.statistics.missingness = False
-            global_state.statistics.data_type = "Continuous"
-            global_state.statistics.linearity = True
+            global_state.statistics.missingness = True
+            global_state.statistics.data_type = "Continuous"  # Flow cytometry data is continuous
+            global_state.statistics.linearity = False  # Protein signaling networks are often nonlinear
             global_state.statistics.gaussian_error = True
-            global_state.statistics.stationary = "non time-series"
+            global_state.statistics.stationary = "non time-series"  # Single cell measurements
+            global_state.statistics.description = convert_stat_info_to_text(global_state.statistics)
+            global_state.user_data.knowledge_docs = "The Sachs dataset contains flow cytometry measurements of 11 phosphoproteins and phospholipids in human immune system cells under different experimental conditions. The data represents a protein signaling network."
         
     # Set selected features if the processed data is available
     if global_state.user_data.processed_data is not None:
@@ -131,7 +136,10 @@ def main():
     
     reranker = Reranker(args)
     global_state = reranker.forward(global_state)
-    
+
+    hp_selector = HyperparameterSelector(args)
+    global_state = hp_selector.forward(global_state)
+
     if args.mode == "simulate":
         # In simulate mode, perform a fast-forward (fake) algorithm run
         global_state = simulated_algorithm_run(global_state)

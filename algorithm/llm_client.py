@@ -1,3 +1,5 @@
+import re
+import json
 from openai import OpenAI
 
 class LLMClient:
@@ -33,6 +35,10 @@ class LLMClient:
         
         if json_response:
             kwargs["response_format"] = {"type": "json_object"}
-            
-        response = self.client.chat.completions.create(**kwargs)
-        return response.choices[0].message.content
+
+        messages = self.client.chat.completions.create(**kwargs).choices[0].message.content
+
+        if json_response:
+            return json.loads(messages)
+        else:
+            return messages

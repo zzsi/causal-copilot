@@ -81,7 +81,7 @@ def generate_datasets():
         })
 
     # Data quality - Missing values
-    for missing_rate in [0.05, 0.10, 0.15]:
+    for missing_rate in [0.1, 0.2, 0.3]:
         dataset_configs.append({
             **default_settings,
             "name": f"missing_{int(missing_rate*100)}",
@@ -97,7 +97,7 @@ def generate_datasets():
             "n_domains": n_domains
         })
 
-    output_dir = os.path.join(os.getcwd(), "simulated_data/algorithm_benchmarking")
+    output_dir = os.path.join(os.getcwd(), "simulated_data/algorithm_benchmarking_v2")
     os.makedirs(output_dir, exist_ok=True)
 
     # Generate 3 random versions of each configuration

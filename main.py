@@ -4,6 +4,7 @@ from preprocess.stat_info_functions import stat_info_collection, convert_stat_in
 from algorithm.filter import Filter
 from algorithm.program import Programming
 from algorithm.rerank import Reranker
+from algorithm.hyperparameter_selector import HyperparameterSelector
 from postprocess.judge import Judge
 from postprocess.visualization import Visualization, convert_to_edges
 from preprocess.eda_generation import EDA
@@ -189,6 +190,9 @@ def main(args):
 
     reranker = Reranker(args)
     global_state = reranker.forward(global_state)
+
+    hp_selector = HyperparameterSelector(args)
+    global_state = hp_selector.forward(global_state)
 
     programmer = Programming(args)
     global_state = programmer.forward(global_state)

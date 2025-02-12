@@ -106,3 +106,7 @@ class XGES(CausalDiscoveryAlgorithm):
         print(f"Precision: {metrics['precision']:.4f}")
         print(f"Recall: {metrics['recall']:.4f}")
         print(f"SHD: {metrics['shd']:.4f}") 
+
+if __name__ == "__main__":
+    xges_algo = XGES({})
+    xges_algo.test_algorithm()

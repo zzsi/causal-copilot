@@ -13,6 +13,7 @@ from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
 from castle.algorithms import Notears
 
+
 class NOTEARSLinear(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
@@ -34,11 +35,11 @@ class NOTEARSLinear(CausalDiscoveryAlgorithm):
         return self._params
     
     def get_primary_params(self):
-        self._primary_param_keys = ['lambda1', 'max_iter']
+        self._primary_param_keys = ['lambda1', 'loss_type', 'max_iter', 'w_threshold']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
     
     def get_secondary_params(self):
-        self._secondary_param_keys = ['loss_type', 'h_tol', 'rho_max', 'w_threshold']
+        self._secondary_param_keys = ['h_tol', 'rho_max']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: Union[pd.DataFrame, np.ndarray]) -> Tuple[np.ndarray, Dict]:
@@ -50,22 +51,14 @@ class NOTEARSLinear(CausalDiscoveryAlgorithm):
             data = np.array(data)
 
         # Initialize NOTEARS from Castle
-        model = Notears(
-            lambda1=self._params['lambda1'],
-            loss_type=self._params['loss_type'],
-            max_iter=self._params['max_iter'],
-            h_tol=self._params['h_tol'],
-            rho_max=self._params['rho_max'],
-            w_threshold=self._params['w_threshold']
-        )
-        
+        all_params = {**self.get_primary_params(), **self.get_secondary_params()}
+        model = Notears(**all_params)
+
         # Fit the model
         model.learn(data)
         
         # Get the adjacency matrix
-        adj_matrix = model.causal_matrix
-        if isinstance(adj_matrix, pd.DataFrame):
-            adj_matrix = adj_matrix.values
+        adj_matrix = model.causal_matrix.T
 
         # Prepare additional information
         info = {
@@ -74,27 +67,6 @@ class NOTEARSLinear(CausalDiscoveryAlgorithm):
         }
 
         return adj_matrix, info, model
-    
-    def convert_to_adjacency_matrix(self, sm, node_names: List[str]) -> np.ndarray:
-        """
-        Convert NOTEARS StructureModel to adjacency matrix.
-        
-        Args:
-            sm: NOTEARS StructureModel
-            node_names: List of node names
-            
-        Returns:
-            numpy array with adjacency matrix
-        """
-        n = len(node_names)
-        adj_matrix = np.zeros((n, n))
-        
-        for i in range(n):
-            for j in range(n):
-                if sm.has_edge(node_names[i], node_names[j]):  # i->j
-                    adj_matrix[j, i] = 1
-        
-        return adj_matrix
 
     def test_algorithm(self):
         # Generate some sample data
@@ -109,13 +81,6 @@ class NOTEARSLinear(CausalDiscoveryAlgorithm):
         df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
 
         print("Testing NOTEARS algorithm with pandas DataFrame:")
-        params = {
-            'lambda1': 0.1,
-            'loss_type': 'l2',
-            'max_iter': 100,
-            'h_tol': 1e-8,
-            'w_threshold': 0.3
-        }
 
         # Ground truth graph
         gt_graph = np.array([

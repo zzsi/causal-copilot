@@ -72,7 +72,19 @@ def MB2CPDAG(data: pd.DataFrame, mb_dict: Dict[int, List[int]], indep_test: str 
                 elif local_adj[i, j] == -1 and local_adj[j, i] == -1:
                     if merged_cpdag[local_indices[j], local_indices[i]] == 0:
                         merged_cpdag[local_indices[i], local_indices[j]] = 2
-                        
+
+    # Remove symmetries by keeping only one entry for undirected edges
+    indices = np.where(merged_cpdag == 2)
+    for i, j in zip(indices[0], indices[1]):
+        if merged_cpdag[i,j] == merged_cpdag[j,i] == 2:
+            merged_cpdag[i,j] = 2
+            merged_cpdag[j,i] = 0
+    indices = np.where(merged_cpdag == 1)
+    for i, j in zip(indices[0], indices[1]):
+        if merged_cpdag[i,j] == merged_cpdag[j,i] == 1:
+            merged_cpdag[i,j] = 2
+            merged_cpdag[j,i] = 0 
+
     return merged_cpdag
 
 

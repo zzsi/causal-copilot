@@ -1,0 +1,29 @@
+{
+  "algorithm_name": "NOTEARSLinear",
+  "lambda1": {
+    "meaning": "regularization parameter for sparsity",
+    "suggested_values": {
+      "default": 0.01,
+      "sparse": 0.1,
+      "dense": 0.001
+    },
+    "reasoning": "Higher values promote sparser graphs, lower values allow more connections."
+  },
+  "loss_type": {
+    "meaning": "The type of sparsity regularization",
+    "suggested_values": {
+      "default": "l2",
+      "explicit": "l1"
+    },
+    "reasoning": "l2 is more implicit and smooth to learn a sparse graph, l1 is more explicit but may lead to a over-penalized graph."
+  },
+  "w_threshold": {
+    "meaning": "Threshold for edge weights in adjacency matrix",
+    "suggested_values": {
+      "default": 0.3,
+      "conservative": 0.5,
+      "liberal": 0.1
+    },
+    "reasoning": "Higher values lead to sparser graphs by pruning weak connections, which is a kind of implicit sparsity."
+  }
+} 

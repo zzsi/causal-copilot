@@ -11,6 +11,7 @@ from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
 from castle.algorithms import NotearsNonlinear
 
+
 class NOTEARSNonlinear(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
@@ -25,7 +26,7 @@ class NOTEARSNonlinear(CausalDiscoveryAlgorithm):
             'bias': True,
             'model_type': 'mlp',  # 'mlp' or 'sob'
             'device_type': 'auto',  # Device type ('cpu', 'gpu', or 'auto')
-            'device_ids': None,
+            'device_ids': 0,
             # Additional parameters for Sobolev model
             'expansions': 10  # Only used when model_type='sob'
         }
@@ -34,7 +35,7 @@ class NOTEARSNonlinear(CausalDiscoveryAlgorithm):
         if self._params.get('device_type', 'cpu') == 'auto':
             try:
                 import torch
-                self._params['device_type'] = 'cuda' if torch.cuda.is_available() else 'cpu'
+                self._params['device_type'] = 'gpu' if torch.cuda.is_available() else 'cpu'
             except ImportError:
                 self._params['device_type'] = 'cpu'
 
@@ -46,13 +47,12 @@ class NOTEARSNonlinear(CausalDiscoveryAlgorithm):
         return self._params
     
     def get_primary_params(self):
-        self._primary_param_keys = ['lambda1', 'lambda2', 'max_iter']
+        self._primary_param_keys = ['lambda1', 'lambda2', 'max_iter', 'w_threshold']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
     
     def get_secondary_params(self):
         self._secondary_param_keys = ['hidden_layers', 'model_type', 'device_type',
-                                      'h_tol', 'rho_max', 'w_threshold', 'bias', 
-                                      'device_ids', 'expansions']
+                                      'h_tol', 'rho_max', 'bias', 'device_ids', 'expansions']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: Union[pd.DataFrame, np.ndarray]) -> Tuple[np.ndarray, Dict]:
@@ -74,23 +74,17 @@ class NOTEARSNonlinear(CausalDiscoveryAlgorithm):
             node_names = [f"X{i}" for i in range(data.shape[1])]
             data = np.array(data)
 
+
         # Initialize NOTEARS-MLP from Castle
-        model = NotearsNonlinear(
-            lambda1=self._params['lambda1'],
-            lambda2=self._params['lambda2'],
-            max_iter=self._params['max_iter'],
-            h_tol=self._params['h_tol'],
-            rho_max=self._params['rho_max'],
-            w_threshold=self._params['w_threshold'],
-        )
+        all_params = {**self.get_primary_params(), **self.get_secondary_params()}
+
+        model = NotearsNonlinear(**all_params)
         
         # Fit the model
         model.learn(data)
         
         # Get the adjacency matrix
-        adj_matrix = model.causal_matrix
-        if isinstance(adj_matrix, pd.DataFrame):
-            adj_matrix = adj_matrix.values
+        adj_matrix = model.causal_matrix.T
 
         # Prepare additional information
         info = {
@@ -113,16 +107,6 @@ class NOTEARSNonlinear(CausalDiscoveryAlgorithm):
         df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
 
         print("Testing NOTEARS-MLP algorithm with pandas DataFrame:")
-        params = {
-            'lambda1': 0.01,
-            'lambda2': 0.01,
-            'max_iter': 100,
-            'h_tol': 1e-8,
-            'w_threshold': 0.3,
-            'hidden_layers': (10, 1),
-            'model_type': 'mlp',
-            'device_type': 'gpu'
-        }
 
         # Ground truth graph
         gt_graph = np.array([
@@ -140,7 +124,7 @@ class NOTEARSNonlinear(CausalDiscoveryAlgorithm):
         shds = []
 
         # Run the algorithm 10 times
-        for _ in range(10):
+        for _ in range(1):
             adj_matrix, info, _ = self.fit(df)
             evaluator = GraphEvaluator()
             metrics = evaluator.compute_metrics(gt_graph, adj_matrix)

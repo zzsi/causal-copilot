@@ -1,24 +1,238 @@
-### GES
+Below is a comprehensive profile of the Greedy Equivalence Search (GES) algorithm, organized according to the seven degrees (dimensions) for causal discovery algorithm profiling. This synthesis draws upon the provided hyperparameter settings, benchmarking outcomes, additional references from external knowledge sources, as well as general domain knowledge of GES.
 
-- **Description**: Greedy Equivalence Search (GES) is a score-based causal discovery algorithm that identifies the optimal causal structure by navigating the space of equivalence classes of Directed Acyclic Graphs (DAGs).
+────────────────────────────────────────────────────────────────────────
+1. HYPER-PARAMETERS SENSITIVITY
+────────────────────────────────────────────────────────────────────────
 
-- **Assumptions**:
-    - **Causal Sufficiency**: All relevant variables are observed, no hidden confounders.
-    - **Faithfulness**: The observed statistical dependencies correspond to true causal relationships.
-    - **Markov Condition**: Every variable is conditionally independent of its non-effects given its direct causes.
-    - **No Cycles**: The causal structure is assumed to be acyclic.
+• Number of Key Hyperparameters  
+  GES has two overarching hyperparameters of interest:  
+  1) The “score_func” (scoring function)  
+  2) The “maxP” parameter (maximum number of parents allowed per node)  
 
-- **Advantages**:
-    - **Efficiency in Complex Search Spaces**: Efficiently navigates large search spaces using equivalence class representation.
-    - **Versatility**: Can use various score functions (BIC or generalized scores).
-    - **Global Optimization**: Optimizes a global criterion through local steps.
+  The scoring function determines how each candidate structure is evaluated (e.g., BIC, BDeu, or more sophisticated non-parametric scores).  
+  The “maxP” parameter constrains the potential number of incoming edges per node, directly influencing the search space.
 
-- **Limitations**:
-    - **Parametric Assumptions**: BIC score assumes Gaussianity and linearity.
-    - **Computational Demands**: Generalized scoring functions can be computationally intensive.
-    - **Output**: Produces a Markov equivalence class rather than a single DAG.
+• Tuning Difficulty  
+  – Scoring Function:  
+    Default “local_score_BIC” works well for linear or near-linear data, balancing model fit and complexity. For discrete data, “local_score_BDeu” can be more suitable, while “marginal_general” or “marginal_multi” are recommended for complex, potentially non-linear relationships (albeit at a higher computational cost).  
+  – maxP:  
+    The suggested defaults vary by graph size (e.g., maxP=3, 5, or 7) to keep complexity manageable. For very small networks (<10 nodes), one can leave this parameter unlimited.  
 
-- **Suitable Cases**:
-    - **Large-Scale Data with Gaussian/Linear Assumptions**: Efficient with BIC score.
-    - **Complex, Non-Gaussian Data**: Can use generalized score functions.
-    - **Applications Requiring Global Optimization**: High-dimensional causal discovery tasks. 
+  Because these defaults are relatively straightforward, domain experts or automated routines (including large language models) often have little difficulty choosing sensible starting points.
+
+• Sensitivity  
+  – Small changes in “score_func” can noticeably alter the discovered graph: a parametric scoring function (BIC) may favor sparser structures for continuous data, while a non-parametric choice (e.g., marginal_general) may detect more nuanced dependencies but require more runtime.  
+  – Adjusting “maxP” even by one parent can substantially affect computational cost in larger graphs because it expands or contracts the space of candidate edges.
+
+• Critique/Extension  
+  – Graph-Search vs. Statistical Score Parameters:  
+    The “maxP” parameter predominantly controls search complexity, with each additional allowable parent expanding the search exponentially. Meanwhile, the scoring function selection has greater impact on how edges are penalized or rewarded statistically, thus affecting model fit and orientation decisions.
+
+────────────────────────────────────────────────────────────────────────
+2. ROBUSTNESS & SCALABILITY
+────────────────────────────────────────────────────────────────────────
+
+• Tolerance to Bad Data Quality  
+  – Missing Data:  
+    Benchmarks suggest GES remains robust in many missing-data scenarios, especially if the chosen scoring function can accommodate incomplete observations. Some performance degradation is inevitable with severe missingness, but the algorithm’s composite rank for handling missing data is among the better-performing methods (based on the benchmark “levels” of performance and efficiency).  
+  – Measurement/Observation Error:  
+    GES’s ranking and levels for measurement error also indicate that it can maintain good performance and efficiency under moderate noise. Significant error can degrade the correctness of edge orientations, but the method still retains reasonable reliability relative to other techniques.
+
+• Tolerance to Sparse vs. Dense Networks  
+  – Sparse Networks:  
+    GES tends to discover sparse structures effectively, particularly when using penalized scores such as BIC.  
+  – Moderately Dense Networks:  
+    It can still adapt to more connected configurations, although the search space grows quickly; using “maxP” can help curb exponential blow-ups.
+
+• Scalability  
+  – With moderate numbers of variables, GES is relatively efficient. Benchmark data did indicate that its efficiency ranking drops for high-dimensional settings, suggesting that runtime can become a bottleneck if the graph is large or maxP is set too high.  
+  – In practice, many users turn to variations like Fast GES (FGES), which parallelizes or approximates certain edges to maintain scalability.
+
+• Critique/Extension  
+  – Parallelization and Approximation: FGES exploits parallel computation and more efficient data structures, providing a faster alternative in large-sample or high-dimensional contexts without significantly hurting performance accuracy.
+
+────────────────────────────────────────────────────────────────────────
+3. MIXED DATA & COMPLEX FUNCTIONS
+────────────────────────────────────────────────────────────────────────
+
+• Noise Type  
+  – GES can handle both Gaussian and non-Gaussian noise, depending on the selected scoring function. For instance, BIC-based local scores are typically aligned with (approximately) Gaussian error assumptions for continuous variables, whereas BDeu is more suitable for purely discrete variables.
+
+• Mixed Data (Continuous & Discrete)  
+  – With appropriate “score_func,” GES can incorporate both continuous and discrete variables in the same model. In the provided hyperparameters, “local_score_marginal_general” and “local_score_marginal_multi” are specifically mentioned for more complex data mixtures or non-linear relationships.
+
+• Heterogeneous Data  
+  – Benchmarks labeled “Heterogeneity” show strong combined performance and efficiency (high “composite” rating). This suggests GES can remain effective even when data come from slightly different underlying distributions, provided the user carefully configures the scoring function.
+
+• Complex Functional Forms  
+  – Out-of-the-box, GES often assumes linear or log-linear forms, especially when using BIC. However, non-parametric scoring options (marginal scores) allow detection of more complex forms at the expense of notably higher runtime.
+
+• Critique/Extension  
+  – Users looking for robust non-linear discovery tend to pair GES with advanced scoring metrics or domain knowledge constraints, as purely linear approaches may miss subtler non-linear dependencies.
+
+────────────────────────────────────────────────────────────────────────
+4. COMPUTATIONAL COMPLEXITY
+────────────────────────────────────────────────────────────────────────
+
+• Theoretical Time Complexity  
+  – The typical worst-case complexity for GES is <temp>[O(n^4)]</temp>, though actual runtime can be lower in practical scenarios or higher if “maxP” is large.
+
+• Variability in Practical Usage  
+  – Tighter “maxP” constraints can reduce the search space dramatically, especially in networks with many potential edges.  
+  – More complex, non-parametric score functions (“marginal_general” / “marginal_multi”) lengthen computation time and can be a limiting factor in large datasets.
+
+• Critique/Extension  
+  – Worst-case vs. Typical Performance:  
+    In the worst-case, GES enumerates many potential edge additions and deletions, but typical performance can be far better in sparse or moderately sized problems.  
+  – Hardware Considerations:  
+    Parallel implementations (FGES) provide significant runtime relief, making large-scale analysis more feasible when multi-core processing is available.
+
+────────────────────────────────────────────────────────────────────────
+5. INTERPRETABILITY
+────────────────────────────────────────────────────────────────────────
+
+• Output Format  
+  – GES returns a Completed Partially Directed Acyclic Graph (CPDAG), reflecting the set of DAGs that share the same likelihood score and are statistically indistinguishable given the data.
+
+• Strength of the Output Format  
+  – CPDAGs convey which edges are definitely oriented vs. which remain undetermined by the data. This can be highly interpretable, showing robustly supported causal directions versus potential bidirectional ambiguities.  
+
+• Limitations of the Output Format  
+  – Unoriented edges in the CPDAG can be common, particularly when the data are insufficient to break certain equivalences.  
+  – Standard GES implementations typically do not provide confidence intervals or p-values for edges in the final graph.
+
+• Critique/Extension  
+  – Domain experts often incorporate additional knowledge or run supplementary analyses (e.g., constraint-based checks) to further orient uncertain edges.  
+  – Post-processing, such as resampling or bootstrapping, can give approximate confidence scores for edges if desired, though it is not native in basic GES implementations.
+
+────────────────────────────────────────────────────────────────────────
+6. ASSUMPTIONS
+────────────────────────────────────────────────────────────────────────
+
+• Critical Assumptions  
+  1) Causal Markov and Faithfulness: The observed distribution is assumed to reflect the true causal DAG structure without degeneracies.  
+  2) Causal Sufficiency: No hidden confounders or unmeasured variables strongly affecting the relationships among measured variables.  
+  3) Acyclicity: The true structure must be a directed acyclic graph.
+
+• Violation Impact  
+  – If hidden common causes exist, GES can place erroneous edges or fail to discover genuine causal pathways.  
+  – If faithfulness is violated, subtle dependencies might go undetected or incorrectly oriented.
+
+• Critique/Extension  
+  – Some variants relax causal sufficiency by explicitly modeling latent variables, but standard GES assumes all relevant causes are observed.  
+  – Minor assumption violations typically produce moderate distortions in orientation or adjacency; more severe violations (like strong confounding) can introduce critical errors.
+
+────────────────────────────────────────────────────────────────────────
+7. (OPTIONAL) REAL-WORLD BENCHMARKS
+────────────────────────────────────────────────────────────────────────
+
+• Performance on Real Datasets  
+  – GES frequently performs among the more competitive methods on real-world tasks, especially when the data set is sizable and well-sampled.  
+  – It can achieve high adjacency precision in domains like genomics (gene regulatory networks) or neuroscience (brain connectivity analysis) where it has been widely tested.
+
+• Practical Tips  
+  – Choosing a score function well-suited to the data type substantially improves performance.  
+  – Limiting “maxP” can prevent excessive runtimes in moderately sized or large graphs.  
+  – Domain knowledge is often used after GES identifies a CPDAG, helping to resolve undirected edges and validate spurious connections.
+
+• Known Pitfalls  
+  – If the data are extremely sparse, or if strong violations of causal sufficiency exist, GES may orient edges incorrectly.  
+  – In highly non-linear settings, purely parametric scoring functions (like BIC) can miss important relationships, so more advanced scoring methods or combined approaches are recommended.
+
+────────────────────────────────────────────────────────────────────────
+CONCLUSION
+────────────────────────────────────────────────────────────────────────
+In summary, GES is a well-established score-based causal discovery algorithm known for its relatively balanced performance on both sparse and somewhat dense networks. It offers flexible scoring options (BIC, BDeu, non-parametric variants) and a “maxP” hyperparameter to manage complexity. Although its runtime may grow in large or complex systems, variants such as Fast GES (FGES) and careful limiting of the search space help mitigate scalability concerns. The CPDAG output is highly interpretable, though ambiguous edges often require further refinement or domain expertise. As with many causal discovery approaches, GES assumes acyclicity, sufficiency, and faithfulness; significant departures from these assumptions can degrade results. Overall, it remains a widely used, adaptable method for causal structure learning across diverse fields.────────────────────────────────────────────────────────
+Benchmarking Results
+────────────────────────────────────────────────────────
+
+• Comparative Performance
+  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
+  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+  – Metrics are scored from 1-5, with 5 being the best.
+
+• Algorithm Rankings
+
+| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
+|----------|-----------|---------|-------------|------------|------------|
+| Scalability | 8.5 | 4.03 | 4.0 | 2.0 | 4.0 |
+| Heterogeneity | 3.0 | 0.00 | 5.0 | 5.0 | 5.0 |
+| Measurement Error | 3.0 | 0.00 | 5.0 | 5.0 | 5.0 |
+| Noise Type | 3.0 | 0.00 | 4.0 | 4.0 | 5.0 |
+| Missing Data | 3.0 | 0.00 | 5.0 | 5.0 | 5.0 |
+
+• Analysis
+
+  – Overall mean ranking across 5 scenarios: 4.10
+  – Average standard deviation: 0.81
+
+• Key Observations
+  – Very stable performance across scenarios (low variance)
+  – Best performance in Heterogeneity scenario (rank 3.0)
+
+*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
+
+
+────────────────────────────────────────────────────────
+Benchmarking Results
+────────────────────────────────────────────────────────
+
+• Comparative Performance
+  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
+  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+  – Metrics are scored from 1-5, with 5 being the best.
+
+• Algorithm Rankings
+
+| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
+|----------|-----------|---------|-------------|------------|------------|
+| Scalability | 8.5 | 4.03 | 4.0 | 2.0 | 4.0 |
+| Heterogeneity | 3.0 | 0.00 | 5.0 | 5.0 | 5.0 |
+| Measurement Error | 3.0 | 0.00 | 5.0 | 5.0 | 5.0 |
+| Noise Type | 3.0 | 0.00 | 4.0 | 4.0 | 5.0 |
+| Missing Data | 3.0 | 0.00 | 5.0 | 5.0 | 5.0 |
+
+• Analysis
+
+  – Overall mean ranking across 5 scenarios: 4.10
+  – Average standard deviation: 0.81
+
+• Key Observations
+  – Very stable performance across scenarios (low variance)
+  – Best performance in Heterogeneity scenario (rank 3.0)
+
+*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
+
+
+────────────────────────────────────────────────────────
+Benchmarking Results
+────────────────────────────────────────────────────────
+
+• Comparative Performance
+  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
+  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+  – Metrics are scored from 1-5, with 5 being the best.
+
+• Algorithm Rankings
+
+| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
+|----------|-----------|---------|-------------|------------|------------|
+| Scalability | 8.5 | 4.03 | 4.0 | 2.0 | 4.0 |
+| Heterogeneity | 3.0 | 0.00 | 5.0 | 5.0 | 5.0 |
+| Measurement Error | 3.0 | 0.00 | 5.0 | 5.0 | 5.0 |
+| Noise Type | 3.0 | 0.00 | 4.0 | 4.0 | 5.0 |
+| Missing Data | 3.0 | 0.00 | 5.0 | 5.0 | 5.0 |
+
+• Analysis
+
+  – Overall mean ranking across 5 scenarios: 4.10
+  – Average standard deviation: 0.81
+
+• Key Observations
+  – Very stable performance across scenarios (low variance)
+  – Best performance in Heterogeneity scenario (rank 3.0)
+
+*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*

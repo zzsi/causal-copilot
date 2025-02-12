@@ -25,7 +25,7 @@ class IAMBnPC(CausalDiscoveryAlgorithm):
             'alpha': 0.05,
             'indep_test': 'fisherz',
             'n_jobs': 4,
-            'n_subjobs': 4,
+            'n_subjobs': 1,
         }
         self._params.update(params)
 
@@ -37,11 +37,12 @@ class IAMBnPC(CausalDiscoveryAlgorithm):
         return self._params
 
     def get_primary_params(self):
-        self._primary_param_keys = ['alpha', 'indep_test', 'n_jobs']
+        self._primary_param_keys = ['alpha', 'indep_test']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def get_secondary_params(self):
-        return {}
+        self._secondary_param_keys = ['n_jobs', 'n_subjobs']
+        return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict]:
         """
@@ -57,7 +58,7 @@ class IAMBnPC(CausalDiscoveryAlgorithm):
         """
         from joblib import Parallel, delayed
         n_vars = data.shape[1]
-        params = self.get_primary_params()
+        params = {**self.get_primary_params(), **self.get_secondary_params()}
         results = Parallel(n_jobs=params['n_jobs'])(
             delayed(Iambnpc)(
                 data=data.values, 
@@ -79,7 +80,7 @@ class IAMBnPC(CausalDiscoveryAlgorithm):
             'total_ci_tests': total_ci_tests,
         }
 
-        return adj_matrix, info
+        return adj_matrix, info, mb_dict
 
     def test_algorithm(self):
         """Run a simple test of the algorithm on synthetic data."""
@@ -95,7 +96,7 @@ class IAMBnPC(CausalDiscoveryAlgorithm):
         df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
 
         print("Testing IAMBnPC algorithm with synthetic data:")
-        adj_matrix, info = self.fit(df)
+        adj_matrix, info, mb_dict = self.fit(df)
         
         print("\nAdjacency Matrix:")
         print(adj_matrix)

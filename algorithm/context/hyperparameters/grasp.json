@@ -19,6 +19,6 @@
       "medium_graph": 3,
       "large_graph": 2
     },
-    "reasoning": "Controls how thoroughly the algorithm explores the permutation space. Higher values allow more thorough search but increase computational cost. Use smaller values for larger graphs to maintain reasonable runtime."
+    "reasoning": "Controls how thoroughly the algorithm explores the permutation space. Higher values allow more thorough search but increase computational cost. For graphs with <10 nodes, use depth 5; for graphs with 10-25 nodes, use depth 3; for graphs with >25 nodes, use depth 2 to maintain reasonable runtime. Each unit increase in depth can increase runtime exponentially."
   }
 } 
