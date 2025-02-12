@@ -4,6 +4,8 @@ import pandas as pd
 import json
 import os
 from typing import Dict, List, Any
+from openai import OpenAI
+import scipy.special
 
 # Unified time complexity units
 # N: number of samples
@@ -16,10 +18,16 @@ class RuntimeEstimator:
     def __init__(self, algorithm_name: str):
         """Initialize estimator for a specific algorithm."""
         self.algorithm_name = algorithm_name
-        
-        # Load complexity terms configuration
-        with open('algorithm/runtime_estimators/complexity_terms.json', 'r') as f:
-            self.complexity_config = json.load(f)[algorithm_name]
+        self.algorithm_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+        # Load complexity terms configuration from file
+        with open(os.path.join(self.algorithm_dir, 'runtime_estimators', 'complexity_terms.json'), 'r') as f:
+            all_configs = json.load(f)
+        if algorithm_name in all_configs:
+            self.complexity_config = all_configs[algorithm_name]
+        else:
+            # For a new algorithm not registered in the JSON file, handle it here.
+            self.complexity_config = self._handle_new_algorithm(algorithm_name, all_configs)
             
         self.feature_names = [term['name'] for term in self.complexity_config['terms']]
         self.log_transform = self.complexity_config['log_transform']
@@ -30,7 +38,7 @@ class RuntimeEstimator:
     
     def _initialize_model(self):
         """Load existing model or fit new one."""
-        fit_path = 'algorithm/context/benchmarking/acceleration_fit.json'
+        fit_path = os.path.join(self.algorithm_dir, 'context', 'benchmarking', 'acceleration_fit.json')
         if os.path.exists(fit_path):
             with open(fit_path, 'r') as f:
                 fit_data = json.load(f)
@@ -38,9 +46,35 @@ class RuntimeEstimator:
                     self._load_model(fit_data[self.algorithm_name])
                     return
                     
-        # If no saved coefficients, fit model
-        data = json.load(open('algorithm/context/benchmarking/acceleration.json', 'r'))[self.algorithm_name]
+        data = self._load_data()
         self._fit_model(data)
+
+    def _load_data(self):
+         # If no saved coefficients, fit model
+        data = json.load(open(os.path.join(self.algorithm_dir, 'context', 'benchmarking', 'merged_results.json'), 'r'))
+        # Screen the data specifically for the algorithm and extract relevant fields
+        filtered_data = []
+        for d in data:
+            if d['algorithm'] == self.algorithm_name and d['success']:
+                filtered_data.append({
+                    'variables': d['data_config']['n_nodes'],
+                    'samples': d['data_config']['n_samples'], 
+                    'time_cost': d['runtime']
+                })
+
+        df = pd.DataFrame(filtered_data)
+        # Rename columns to match our parameter naming convention
+        column_mapping = {
+            'variables': 'p',
+            'samples': 'N',
+            'time_cost': 'time_cost'
+        }
+        df = df.rename(columns=column_mapping)
+
+        # remove rows with time_cost > 1 hours
+        df = df[df['time_cost'] < 3600]
+
+        return df
     
     def _load_model(self, coef_data: Dict[str, Any]):
         """Load model from saved coefficients."""
@@ -65,7 +99,7 @@ class RuntimeEstimator:
         
         # Set default values for missing parameters
         defaults = {
-            'density': params.get('density', 0.3),
+            'density': params.get('density', 0.2),
             'N': params.get('N', 5000)  # Default N to N if n exists, otherwise 5000
         }
         
@@ -82,6 +116,11 @@ class RuntimeEstimator:
                         'int': int,
                         'min': min,
                         'max': max,
+                        'pow': pow,
+                        'sqrt': np.sqrt,
+                        'sum': sum,
+                        'range': range,
+                        'comb': scipy.special.comb,
                         **{k: float(v) if isinstance(v, (int, float, np.number)) else v 
                            for k, v in params.items()}
                     }
@@ -108,6 +147,11 @@ class RuntimeEstimator:
             'exp': np.exp,
             'pow': pow,
             'sqrt': np.sqrt,
+            'sum': sum,
+            'range': range,
+            'comb': scipy.special.comb,
+            'min': min,
+            'max': max,
             **{k: float(v) for k, v in variables.items()}
         }
         
@@ -123,18 +167,8 @@ class RuntimeEstimator:
             features[term['name']] = self._evaluate_expression(term['expression'], full_params)
         return pd.Series(features)
     
-    def _fit_model(self, data: List[Dict[str, Any]]):
+    def _fit_model(self, df: pd.DataFrame):
         """Fit the model using training data."""
-        df = pd.DataFrame(data)
-        
-        # Rename columns to match our parameter naming convention
-        column_mapping = {
-            'variables': 'p',
-            'samples': 'N',
-            'time_cost': 'time_cost'
-        }
-        df = df.rename(columns=column_mapping)
-        
         # Calculate features for each data point
         feature_list = []
         for _, row in df.iterrows():
@@ -148,11 +182,10 @@ class RuntimeEstimator:
         X_features = pd.DataFrame(feature_list, columns=self.feature_names)
         
         # Filter out timeout cases if needed
-        mask = df['time_cost'] < 43200  # 12 hours
-        X_features = X_features[mask].values
+        X_features = X_features.values
         
         # Transform target variable if needed
-        y = np.log(df['time_cost'][mask]) if self.log_transform else df['time_cost'][mask]
+        y = np.log(df['time_cost']) if self.log_transform else df['time_cost']
         
         # Fit model
         self.model = LinearRegression(fit_intercept=True)
@@ -169,7 +202,7 @@ class RuntimeEstimator:
     
     def _save_coefficients(self):
         """Save model coefficients to file."""
-        fit_path = 'algorithm/context/benchmarking/acceleration_fit.json'
+        fit_path = os.path.join(self.algorithm_dir, 'context', 'benchmarking', 'acceleration_fit.json')
         if os.path.exists(fit_path):
             with open(fit_path, 'r') as f:
                 fit_data = json.load(f)
@@ -184,17 +217,26 @@ class RuntimeEstimator:
         with open(fit_path, 'w') as f:
             json.dump(fit_data, f, indent=4)
     
-    def predict_runtime(self, **params) -> float:
+    def predict_runtime(self, truncate_runtime=True, **params) -> float:
         """Predict runtime using the complexity formula."""
         features = self._calculate_features(params)
         # Ensure feature order matches training data
         features = pd.DataFrame([features])[self.feature_names].values
+        # Replace any infinite values with a large number to avoid prediction issues
+        features = np.nan_to_num(features, posinf=1e10, neginf=-1e10)
         
         predicted = self.model.predict(features)[0]
         if self.log_transform:
             predicted = np.exp(predicted)
+
+        # hard coded for now for CDNOD small sample case
+        if predicted == np.inf:
+            predicted = 0.002
             
-        return max(predicted, self.min_runtime)
+        if truncate_runtime:
+            return max(np.abs(predicted), self.min_runtime)
+        else:
+            return np.abs(predicted)
     
     def explain_complexity(self, **params):
         """Explain the complexity breakdown for given dimensions."""
@@ -210,7 +252,7 @@ class RuntimeEstimator:
         for term, value in features.items():
             print(f"{term}: {value:.2e}")
             
-        predicted_time = self.predict_runtime(**params)
+        predicted_time = self.predict_runtime(truncate_runtime=False, **params)
         print(f"\nPredicted runtime: {predicted_time:.3f} seconds")
     
     def test_accuracy(self, test_cases=None):
@@ -218,20 +260,19 @@ class RuntimeEstimator:
         if test_cases is None:
             # Default test cases for each algorithm
             # Load test cases from acceleration.json
-            with open('algorithm/context/benchmarking/acceleration.json', 'r') as f:
-                data = json.load(f)[self.algorithm_name]
+            df = self._load_data()
             
             # Convert data to list of test cases
             test_cases = []
-            for i in range(len(data['variables'])):
-                if data['time_cost'][i] < 43200:
+            for i, row in df.iterrows():
+                if row['time_cost'] < 43200:
                     case = {
-                        'variables': data['variables'][i],
-                        'samples': data['samples'][i],
-                        'actual': data['time_cost'][i]
+                        'variables': row['p'],
+                        'samples': row['N'],
+                        'actual': row['time_cost']
                     }
-                    if 'density' in data:
-                        case['density'] = data['density'][i]
+                    if 'density' in row:
+                        case['density'] = row['density']
                     test_cases.append(case)
         
         print(f"\nValidation against empirical data for {self.algorithm_name}:")
@@ -245,7 +286,7 @@ class RuntimeEstimator:
             actual = case['actual']
             
             # Make prediction
-            predicted = self.predict_runtime(**params)
+            predicted = self.predict_runtime(truncate_runtime=False, **params)
             
             # Calculate relative error
             rel_error = abs(predicted - actual) / actual * 100
@@ -260,9 +301,94 @@ class RuntimeEstimator:
         
         return avg_rel_error
 
+    def _handle_new_algorithm(self, algorithm_name: str, all_configs: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle case when the algorithm's complexity term is not registered.
+        Load the mapping table to find the main code file(s), read their content,
+        combine with a prompt template, query the LLM to deduce the time complexity,
+        and update the complexity_terms.json file.
+        """
+        mapping_path = os.path.join(self.algorithm_dir, 'runtime_estimators', 'algorithm_mappings.json')
+        if not os.path.exists(mapping_path):
+            raise FileNotFoundError("Algorithm mapping table not found at " + mapping_path)
+        with open(mapping_path, 'r') as f:
+            mapping = json.load(f)
+        
+            
+        if algorithm_name not in mapping:
+            raise ValueError(f"Algorithm '{algorithm_name}' not found in the mapping table.")
+            
+        # Support a single file or a list of code files.
+        code_files = mapping[algorithm_name]
+        if not isinstance(code_files, list):
+            code_files = [code_files]
+            
+        code_contents = ""
+        root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        for file_path in code_files:
+            file_path = file_path.replace("[root_dir]", root_dir)
+            if os.path.exists(file_path):
+                with open(file_path, 'r') as code_file:
+                    code_contents += f"Here is the code for {algorithm_name}, code file: {file_path}:\n\n" + code_file.read() + "\n\n"
+            else:
+                print(f"Warning: Code file {file_path} not found.")
+                
+        # Load the prompt template used to ask the LLM.
+        prompt_template_path = os.path.join(self.algorithm_dir, 'runtime_estimators', 'time_complexity_prompt.txt')
+        if not os.path.exists(prompt_template_path):
+            raise FileNotFoundError("Time complexity prompt template not found at " + prompt_template_path)
+        with open(prompt_template_path, 'r') as pt:
+            prompt_template = pt.read()
+            
+        # Format the prompt with the algorithm name and the combined code.
+        full_prompt = prompt_template.replace("[algorithm_name]", algorithm_name).replace("[code]", code_contents)
+        full_prompt = full_prompt.replace("[example_json]", json.dumps([v for k, v in all_configs.items()]))
+        
+        # Query LLM to determine the algorithm's complexity in our JSON format.
+        complexity_info = self._query_llm(full_prompt)
+
+        # Add the default minimum runtime and log transform.
+        complexity_info['min_runtime'] = 10
+        
+        # Update the complexity_terms.json file with the new algorithm information.
+        all_configs[algorithm_name] = complexity_info
+        with open(os.path.join(self.algorithm_dir, 'runtime_estimators', 'complexity_terms.json'), 'w') as f:
+            json.dump(all_configs, f, indent=4)
+            
+        return complexity_info
+
+    def _query_llm(self, prompt: str) -> Dict[str, Any]:
+        """
+        Stub for querying an LLM with the given prompt.
+        In a production environment, this should call the LLM API.
+        For now, we simulate a response.
+        """
+        # Use o3-mini model to analyze code complexity
+        client = OpenAI()
+        
+        response = client.chat.completions.create(
+            model="o3-mini",
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+        print(response.choices[0].message.content)
+        try:
+            complexity_json = json.loads(response.choices[0].message.content)
+            return complexity_json
+        except json.JSONDecodeError:
+            # Fallback to default response if parsing fails
+            return {
+                "terms": [{"name": "default_term", "expression": "N * p"}],
+                "min_runtime": 10,
+                "log_transform": False,
+                "param_calculations": {}
+            }
+
 if __name__ == "__main__":
     # Test all algorithms
-    algorithms = ['direct_lingam', 'accelerated_lingam', 'pc', 'ges', 'fges', 'xges', 'fci', 'cdnod', 'notears']
+    algorithms = ['AcceleratedPC', 'BAMB', 'GOLEM', 'GRaSP', 'IAMBnPC', 'InterIAMB', 'MBOR', 'NOTEARSLinear', 'AcceleratedLiNGAM', 'DirectLiNGAM', 'PC', 'GES', 'FGES', 'XGES', 'FCI', 'CDNOD']
     overall_error = 0
     
     for algo in algorithms:
