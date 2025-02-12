@@ -17,7 +17,7 @@ from .base import Estimator
 class DRL(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int=0, T1: int=1):
         super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
-        self.model = Econ_DRL(**self._params)
+        self.model = Econ_DRL(cv=5, **self._params)
 
     @property
     def name(self):
@@ -63,7 +63,7 @@ class LinearDRL(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int=0, T1: int=1):
         del params['model_final']
         super().__init__(params, y_col, T0, T1, T_col, X_col, W_col)
-        self.model = Econ_LinearDRL(**self._params)
+        self.model = Econ_LinearDRL(cv=5, **self._params)
 
     @property
     def name(self):
@@ -108,7 +108,7 @@ class SparseLinearDRL(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int=0, T1: int=1):
         del params['model_final']
         super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
-        self.model = Econ_SparseLinearDRL(**self._params)
+        self.model = Econ_SparseLinearDRL(cv=5, **self._params)
 
     @property
     def name(self):
@@ -153,7 +153,7 @@ class ForestDRL(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int = 0, T1: int = 1):
         del params['model_final']
         super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
-        self.model = Econ_ForestDRL(**self._params)
+        self.model = Econ_ForestDRL(cv=5, **self._params)
 
     @property
     def name(self):
