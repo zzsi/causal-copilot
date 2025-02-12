@@ -766,10 +766,11 @@ class Analysis(object):
 
         print(f"Saving box-plot comparison plot to {os.path.join(path, 'shift_intervention_boxplot.jpg')}")
         plt.savefig(os.path.join(path, 'shift_intervention_boxplot.jpg'))
+
         figs_boxplot = [os.path.join(path, 'shift_intervention_boxplot.jpg')]
+        figs.append(figs_boxplot)
 
-        return figs, figs_boxplot, shift_samples
-
+        return figs, shift_samples
 
 
     def sensitivity_analysis(self, target_node, model, estimand, estimate, treatment, outcome):
