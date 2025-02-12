@@ -115,33 +115,34 @@ class HTE_Param_Selector(object):
         z_xw_model_name = global_state.inference.hte_model_Z_json['name']
         z_xw_model = self.get_model(z_xw_model_name)
 
-        # model_t_xwz - treatment to all
-        global_state.inference.hte_model_TALL_json = None
-        while not global_state.inference.hte_model_TALL_json:
-            global_state.inference.hte_model_TALL_json = self.model_suggestion(client, T_prompt)
-        t_xwz_model_name = global_state.inference.hte_model_TALL_json['name']
-        t_xwz_model = self.get_model(t_xwz_model_name)
+        # TODO: Figure out why these are not working
+        # # model_t_xwz - treatment to all
+        # global_state.inference.hte_model_TALL_json = None
+        # while not global_state.inference.hte_model_TALL_json:
+        #     global_state.inference.hte_model_TALL_json = self.model_suggestion(client, T_prompt)
+        # t_xwz_model_name = global_state.inference.hte_model_TALL_json['name']
+        # t_xwz_model = self.get_model(t_xwz_model_name)
 
-        # model_tz_xw - covraiance to features
-        global_state.inference.hte_model_TZ_json = None
-        while not global_state.inference.hte_model_TZ_json:
-            global_state.inference.hte_model_TZ_json = self.model_suggestion(client, T_prompt)
-        tz_xw_model_name = global_state.inference.hte_model_TZ_json['name']
-        tz_xw_model = self.get_model(tz_xw_model_name)
+        # # model_tz_xw - covraiance to features
+        # global_state.inference.hte_model_TZ_json = None
+        # while not global_state.inference.hte_model_TZ_json:
+        #     global_state.inference.hte_model_TZ_json = self.model_suggestion(client, T_prompt)
+        # tz_xw_model_name = global_state.inference.hte_model_TZ_json['name']
+        # tz_xw_model = self.get_model(tz_xw_model_name)
 
-        global_state.inference.hte_model_final_json = None
-        while not global_state.inference.hte_model_final_json:
-            global_state.inference.hte_model_final_json = self.model_suggestion(client, final_prompt)
-        final_model_name = global_state.inference.hte_model_final_json['name']
-        final_model = self.get_model(final_model_name)
+        # global_state.inference.hte_model_final_json = None
+        # while not global_state.inference.hte_model_final_json:
+        #     global_state.inference.hte_model_final_json = self.model_suggestion(client, final_prompt)
+        # final_model_name = global_state.inference.hte_model_final_json['name']
+        # final_model = self.get_model(final_model_name)
 
         global_state.inference.hte_model_param = {
             'model_y_xw': y_xw_model,
             'model_t_xw': t_xw_model, 
             'model_z_xw': z_xw_model,
             'model_t_xwz': "auto",
-            'model_tz_xw': tz_xw_model,
-            'model_final': final_model
+            'model_tz_xw': "auto",
+            # 'model_final': final_model
         }
         
         if discrete_y:
