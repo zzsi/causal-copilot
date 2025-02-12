@@ -15,9 +15,8 @@ class HTE_Param_Selector(object):
         self.W_col = W_col
         self.Z_col = Z_col
 
-    def prompt_generation(self, target_node, global_state):
+    def check_discrete(self, target_node, global_state):
         node_type = global_state.statistics.data_type_column[target_node]
-
         if node_type =='Continuous':
             prompt_path = 'causal_analysis/IV/context/regressor_select_prompt.txt'
             algo_text_path = 'causal_analysis/IV/context/regressor.txt'
@@ -26,6 +25,10 @@ class HTE_Param_Selector(object):
             prompt_path = 'causal_analysis/IV/context/classifier_select_prompt.txt'
             algo_text_path = 'causal_analysis/IV/context/classifier.txt'
             discrete = True
+
+        return prompt_path, algo_text_path, discrete
+
+    def prompt_generation(self, prompt_path, algo_text_path, global_state):
         prompt = open(prompt_path, "r").read()
         algo_text = open(algo_text_path, "r").read()
         
@@ -37,7 +40,7 @@ class HTE_Param_Selector(object):
                 }
         for placeholder, value in replacement.items():
             prompt = prompt.replace(placeholder, value)
-        return prompt, discrete
+        return prompt
     
     def model_suggestion(self, client, prompt):
         response = client.chat.completions.create(
@@ -80,28 +83,51 @@ class HTE_Param_Selector(object):
         import json
         import DML.wrappers as wrappers
 
-        y_prompt, discrete_y = self.prompt_generation(self.y_col, global_state)
-        T_prompt, discrete_T = self.prompt_generation(self.T_col, global_state)
-        z_prompt, discrete_z = self.prompt_generation(self.Z_col, global_state)
-        final_prompt = open('causal_analysis/IV/context/final_stage_select_prompt.txt', "r").read()
+        # Check if discrete
+        prompt_path_y, algo_text_path_y, discrete_y = self.check_discrete(self.y_col, global_state)
+        prompt_path_T, algo_text_path_T, discrete_T = self.check_discrete(self.T_col, global_state)
+        prompt_path_z, algo_text_path_z, discrete_z = self.check_discrete(self.Z_col, global_state)
 
+        # Generate prompts
+        y_prompt = self.prompt_generation(prompt_path_y, algo_text_path_y, global_state)
+        T_prompt = self.prompt_generation(prompt_path_T, algo_text_path_T, global_state)
+        z_prompt = self.prompt_generation(prompt_path_z, algo_text_path_z, global_state)
+        final_prompt = open('causal_analysis/IV/context/final_stage_select_prompt.txt', "r").read()
+        
+        # model_y_xw - outcome
         global_state.inference.hte_model_y_json = None
         while not global_state.inference.hte_model_y_json:
             global_state.inference.hte_model_y_json = self.model_suggestion(client, y_prompt)
-        y_model_name = global_state.inference.hte_model_y_json['name']
-        y_model = self.get_model(y_model_name)
+        y_xw_model_name = global_state.inference.hte_model_y_json['name']
+        y_xw_model = self.get_model(y_xw_model_name)
 
+        # model_t_xw - treatment
         global_state.inference.hte_model_T_json = None
         while not global_state.inference.hte_model_T_json:
             global_state.inference.hte_model_T_json = self.model_suggestion(client, T_prompt)
-        T_model_name = global_state.inference.hte_model_T_json['name']
-        T_model = self.get_model(T_model_name)
+        t_xw_model_name = global_state.inference.hte_model_T_json['name']
+        t_xw_model = self.get_model(t_xw_model_name)
 
+        # model_z_xw - iv
         global_state.inference.hte_model_Z_json = None
         while not global_state.inference.hte_model_Z_json:
             global_state.inference.hte_model_Z_json = self.model_suggestion(client, z_prompt)
-        z_model_name = global_state.inference.hte_model_Z_json['name']
-        z_model = self.get_model(z_model_name)
+        z_xw_model_name = global_state.inference.hte_model_Z_json['name']
+        z_xw_model = self.get_model(z_xw_model_name)
+
+        # model_t_xwz - treatment to all
+        global_state.inference.hte_model_TALL_json = None
+        while not global_state.inference.hte_model_TALL_json:
+            global_state.inference.hte_model_TALL_json = self.model_suggestion(client, T_prompt)
+        t_xwz_model_name = global_state.inference.hte_model_TALL_json['name']
+        t_xwz_model = self.get_model(t_xwz_model_name)
+
+        # model_tz_xw - covraiance to features
+        global_state.inference.hte_model_TZ_json = None
+        while not global_state.inference.hte_model_TZ_json:
+            global_state.inference.hte_model_TZ_json = self.model_suggestion(client, T_prompt)
+        tz_xw_model_name = global_state.inference.hte_model_TZ_json['name']
+        tz_xw_model = self.get_model(tz_xw_model_name)
 
         global_state.inference.hte_model_final_json = None
         while not global_state.inference.hte_model_final_json:
@@ -110,12 +136,14 @@ class HTE_Param_Selector(object):
         final_model = self.get_model(final_model_name)
 
         global_state.inference.hte_model_param = {
-            'model_y': y_model,
-            'model_t': T_model, 
-            'model_z': z_model,
-            'model_final': final_model,
-            'min_propensity': 0.05,
+            'model_y_xw': y_xw_model,
+            'model_t_xw': t_xw_model, 
+            'model_z_xw': z_xw_model,
+            'model_t_xwz': "auto",
+            'model_tz_xw': tz_xw_model,
+            'model_final': final_model
         }
+        
         if discrete_y:
             global_state.inference.hte_model_param['discrete_outcome'] = True 
         if discrete_T:
