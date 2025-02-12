@@ -82,6 +82,7 @@ class HTE_Param_Selector(object):
 
         y_prompt, discrete_y = self.prompt_generation(self.y_col, global_state)
         T_prompt, discrete_T = self.prompt_generation(self.T_col, global_state)
+        z_prompt, discrete_z = self.prompt_generation(self.Z_col, global_state)
         final_prompt = open('causal_analysis/IV/context/final_stage_select_prompt.txt', "r").read()
 
         global_state.inference.hte_model_y_json = None
@@ -96,6 +97,12 @@ class HTE_Param_Selector(object):
         T_model_name = global_state.inference.hte_model_T_json['name']
         T_model = self.get_model(T_model_name)
 
+        global_state.inference.hte_model_Z_json = None
+        while not global_state.inference.hte_model_Z_json:
+            global_state.inference.hte_model_Z_json = self.model_suggestion(client, z_prompt)
+        z_model_name = global_state.inference.hte_model_Z_json['name']
+        z_model = self.get_model(z_model_name)
+
         global_state.inference.hte_model_final_json = None
         while not global_state.inference.hte_model_final_json:
             global_state.inference.hte_model_final_json = self.model_suggestion(client, final_prompt)
@@ -105,6 +112,7 @@ class HTE_Param_Selector(object):
         global_state.inference.hte_model_param = {
             'model_y': y_model,
             'model_t': T_model, 
+            'model_z': z_model,
             'model_final': final_model,
             'min_propensity': 0.05,
         }
@@ -112,5 +120,7 @@ class HTE_Param_Selector(object):
             global_state.inference.hte_model_param['discrete_outcome'] = True 
         if discrete_T:
             global_state.inference.hte_model_param['discrete_treatment'] = True
+        if discrete_z:
+            global_state.inference.hte_model_param['discrete_instrument'] = True
 
         return global_state

@@ -529,7 +529,7 @@ class Analysis(object):
                   'hte': [hte, hte_lower, hte_upper]}
         return result
     # TODO: Add def contains_iv() to check where the causal graph contains IV
-    # TODO: Add def estimate_effect_iv()
+    
     def estimate_effect_iv(self, outcome, treatment, instrument_variable, T0, T1, X_col, W_col, query):
         if len(W_col) == 0:
             W_col = ['W']
@@ -542,6 +542,7 @@ class Analysis(object):
         reranker = IV_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, Z_col=instrument_variable, X_col=X_col, W_col=W_col)
         self.global_state = reranker.forward(self.global_state)
         programmer = IV_HTE_Programming(self.args, y_col=outcome, T_col=treatment, Z_col=instrument_variable, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
+        programmer.fit_model(self.global_state)
         # Estimate ate, att, hte
         ate, ate_lower, ate_upper = programmer.forward(self.global_state, task='ate')
         att, att_lower, att_upper = programmer.forward(self.global_state, task='att')
