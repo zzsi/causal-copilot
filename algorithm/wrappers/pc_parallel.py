@@ -20,7 +20,6 @@ class PCParallel(CausalDiscoveryAlgorithm):
         self._params = {
             'alpha': 0.05,
             'indep_test': 'fisherz',
-            # fisherz, g2, chi2
             'cores': 1,
             'memory_efficient': False,
             'background_knowledge': None,
@@ -30,7 +29,7 @@ class PCParallel(CausalDiscoveryAlgorithm):
 
     @property
     def name(self):
-        return "PC_Parallel"
+        return "PCParallel"
 
     def get_params(self):
         return self._params
