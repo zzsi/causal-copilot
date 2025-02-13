@@ -193,15 +193,18 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE = sample_size_check(n_row, n_col, chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE)
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 print('stage1',CURRENT_STAGE)
-                # if CURRENT_STAGE == 'real_data'
-                # if CURRENT_STAGE == 'heterogeneity'
-                # if CURRENT_STAGE == 'accept_CPDAG'
+
                 ### important feature selection query#####
-                if CURRENT_STAGE == 'important_feature_selection':
-                    chat_history.append((None, f"Do you have important features you care about? These are features in your provided dataset:\n"
-                                            f"{', '.join(global_state.user_data.raw_data.columns)}"))
+                # if CURRENT_STAGE == 'important_feature_selection':
+                #     chat_history.append((None, f"Do you have important features you care about? These are features in your provided dataset:\n"
+                #                             f"{', '.join(global_state.user_data.raw_data.columns)}"))
+                #     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                # return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                if CURRENT_STAGE == 'meaningful_feature':
+                    chat_history.append(
+                        (None, "Does your dataset have meaningful feature names? Please respond with 'Yes' or 'No'."))
                     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn            
+                    return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
         if CURRENT_STAGE == 'reupload_dataset':
             # chat_history, download_btn, REQUIRED_INFO = parse_reupload_query(message, chat_history, download_btn, REQUIRED_INFO)
@@ -210,7 +213,49 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             CURRENT_STAGE = 'initial_process'
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             return process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn)
-        
+
+        # Meaningful Feature Checking
+        if CURRENT_STAGE == 'meaningful_feature':
+            chat_history, download_btn, global_state, CURRENT_STAGE = meaningful_feature_query(global_state,message,chat_history,download_btn,CURRENT_STAGE)
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            if CURRENT_STAGE == 'heterogeneity':
+                chat_history.append((None,
+                                     "Please mention heterogeneity if there is any. \n "
+                                     "Heterogeneity means that the patterns or trends in the data change over time, instead of staying consistent throughout the entire period."
+                                     "If there is no indicator of heterogeneity, please answer 'NO', otherwise please provide the column name of this indicator. \n"
+                                     "These are features in your provided dataset:\n"
+                                     f"{', '.join(global_state.user_data.raw_data.columns)}"))
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+
+        # Heterogeneity Checking
+        if CURRENT_STAGE == 'heterogeneity':
+            chat_history, download_btn, global_state, CURRENT_STAGE = heterogeneity_query(global_state, message,
+                                                                                               chat_history,
+                                                                                               download_btn,
+                                                                                               CURRENT_STAGE, args)
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            if CURRENT_STAGE == 'accept_CPDAG':
+                chat_history.append((None,"Do you accept CPDAG as the analysis result? Please respond with 'Yes' or 'No'. \n"
+                                          "A CPDAG is a type of graph used to represent possible cause-and-effect relationships, "
+                                          "where some connections have a clear direction (cause to effect), while others remain undirected because the exact direction of influence is uncertain."))
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+
+        # if CURRENT_STAGE == 'accept_CPDAG'
+        if CURRENT_STAGE == 'accept_CPDAG':
+            chat_history, download_btn, global_state, CURRENT_STAGE = accept_CPDAG_query(global_state, message,
+                                                                                               chat_history,
+                                                                                               download_btn,
+                                                                                               CURRENT_STAGE)
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            if CURRENT_STAGE == 'important_feature_selection':
+                chat_history.append((None,
+                                     f"Do you have important features you care about? These are features in your provided dataset:\n"
+                                     f"{', '.join(global_state.user_data.raw_data.columns)}"))
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+
         if CURRENT_STAGE == 'important_feature_selection':
             if (message == '') or (' no ' in message.lower()) or ('none' in message.lower()):
                 chat_history.append((message, None))
@@ -963,9 +1008,9 @@ def clear_chat(REQUIRED_INFO, CURRENT_STAGE, global_state):
                    "⏫ Some guidances before uploading your dataset: \n"
                    "1️⃣ The dataset should be tabular in .csv format, with each column representing a variable. \n "
                    "2️⃣ Ensure that the features are in numerical format or appropriately encoded if categorical. \n"
-                   "3️⃣ For initial query, your dataset has meaningful feature names, please indicate it using 'YES' or 'NO'. \n"
-                   "4️⃣ Please mention heterogeneity and its indicator's column name in your initial query if there is any. \n"
-                   "💡 Example initial query: 'YES. Use PC algorithm to analyze causal relationships between variables. The dataset has heterogeneity with domain column named 'country'.' \n")]
+                   # "3️⃣ For initial query, your dataset has meaningful feature names, please indicate it using 'YES' or 'NO'. \n"
+                   # "4️⃣ Please mention heterogeneity and its indicator's column name in your initial query if there is any. \n"
+                   "💡 Example initial query: 'YES. Use PC algorithm to analyze causal relationships between variables.' \n")]
     return REQUIRED_INFO, chat_history, CURRENT_STAGE, global_state
 
 def load_demo_dataset(dataset_name, REQUIRED_INFO, CURRENT_STAGE, chatbot, demo_btn, download_btn):
@@ -1107,9 +1152,7 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
                    "⏫ Some guidances before uploading your dataset: \n"
                    "1️⃣ The dataset should be tabular in .csv format, with each column representing a variable. \n "
                    "2️⃣ Ensure that the features are in numerical format or appropriately encoded if categorical. \n"
-                   "3️⃣ For initial query, your dataset has meaningful feature names, please indicate it using 'YES' or 'NO'. \n"
-                   "4️⃣ Please mention heterogeneity and its indicator's column name in your initial query if there is any. \n"
-                   "💡 Example initial query: 'YES. Use PC algorithm to analyze causal relationships between variables. The dataset has heterogeneity with domain column named 'country'.' \n")],
+                   "💡 Example initial query: 'YES. Use PC algorithm to analyze causal relationships between variables.' \n")],
         height=700,
         show_label=False,
         show_share_button=False,

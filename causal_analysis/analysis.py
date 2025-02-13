@@ -179,8 +179,9 @@ def generate_conterfactual_estimation(args, global_state, shift_intervention_val
     **Target Variable we care about**: {key_node}
     **Treatment Variable**: {treatment}
     **Treatment Shift Values**: {shift_intervention_val}
-    **Original Distribution of Target Variable**: {original_df[key_node].describe().to_string()}
-    **Counterfactual Estimation Result of Target Variable**: {shift_df[key_node].describe().to_string()}
+    **Original Distribution of Target Variable**: {original_df[key_node].describe().to_string()}. Please use some descriptive words to describe the distribution. DO NOT only list summary statistics, e.g., quantiles, maximum, minium, etc.
+    **Counterfactual Estimation Result of Target Variable**: {shift_df[key_node].describe().to_string()}. Please use some descriptive words to describe the distribution. DO NOT only list summary statistics, e.g., quantiles, maximum, minium, etc. 
+    You need to compare the counterfactual estimation result with the original distribution of target variables.
     **Description from User**: {desc}
     **Methods to calculate Counterfactual Estimation**
     We estimated the counterfactual distribution of the target variable by shifting the observed samples in the direction of the identified confounders.
