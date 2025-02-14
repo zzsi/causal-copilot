@@ -17,24 +17,24 @@ class GOLEM(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
         self._params = {
-            'lambda1': 2e-2,  # L1 penalty coefficient
-            'lambda2': 5.0,  # DAG penalty coefficient
+            'lambda_1': 2e-2,  # L1 penalty coefficient
+            'lambda_2': 5.0,  # DAG penalty coefficient
             'equal_variances': True,  # Whether to assume equal noise variances
             'non_equal_variances': True,  # Whether to assume non-equal noise variances
             'learning_rate': 1e-3,  # Learning rate for Adam optimizer
-            'max_iter': 1e5,  # Number of training iterations
+            'max_iter': 1e4,  # Number of training iterations (default: 1e5)
             'checkpoint_iter': 5000,  # Iterations between checkpoints
             'seed': 1,  # Random seed
             'graph_thres': 0.3,  # Threshold for weighted matrix
             'device_type': 'auto',  # Device type ('cpu' or 'gpu' or 'auto')
-            'device_ids': None  # GPU device IDs to use
+            'device_ids': 0  # GPU device IDs to use
         }
         self._params.update(params)
         # Automatically decide device_type if set to 'auto'
         if self._params.get('device_type', 'cpu') == 'auto':
             try:
                 import torch
-                self._params['device_type'] = 'cuda' if torch.cuda.is_available() else 'cpu'
+                self._params['device_type'] = 'gpu' if torch.cuda.is_available() else 'cpu'
             except ImportError:
                 self._params['device_type'] = 'cpu'
 
@@ -46,12 +46,12 @@ class GOLEM(CausalDiscoveryAlgorithm):
         return self._params
     
     def get_primary_params(self):
-        self._primary_param_keys = ['lambda1', 'lambda2', 'max_iter']
+        self._primary_param_keys = ['lambda_1', 'num_iter', 'graph_thres']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
     
     def get_secondary_params(self):
-        self._secondary_param_keys = ['learning_rate', 'equal_variances', 'non_equal_variances', 
-                                      'checkpoint_iter', 'seed', 'graph_thres', 'device_type', 'device_ids']
+        self._secondary_param_keys = ['lambda_2', 'learning_rate', 'equal_variances', 'non_equal_variances', 
+                                      'checkpoint_iter', 'seed', 'device_type', 'device_ids']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: Union[pd.DataFrame, np.ndarray]) -> Tuple[np.ndarray, Dict]:
@@ -61,29 +61,20 @@ class GOLEM(CausalDiscoveryAlgorithm):
         else:
             node_names = [f"X{i}" for i in range(data.shape[1])]
 
-        model = golem(lambda_1=self._params['lambda1'],
-                     lambda_2=self._params['lambda2'],
-                     equal_variances=self._params['equal_variances'],
-                     non_equal_variances=self._params['non_equal_variances'],
-                     learning_rate=self._params['learning_rate'],
-                     num_iter=self._params['max_iter'],
-                     checkpoint_iter=self._params['checkpoint_iter'],
-                     seed=self._params['seed'],
-                     graph_thres=self._params['graph_thres'],
-                     device_type=self._params['device_type'],
-                     device_ids=self._params['device_ids'])
+        all_params = {**self.get_primary_params(), **self.get_secondary_params()}
+        model = golem(**all_params)
 
         model.learn(data)
         
         # GOLEM returns transposed matrix compared to our convention
-        adj_matrix = model.causal_matrix
+        adj_matrix = model.causal_matrix.T
 
         info = {
             'model': model,
             'node_names': node_names
         }
 
-        return adj_matrix, info
+        return adj_matrix, info, model
 
     def test_algorithm(self):
         # Generate sample data
@@ -115,8 +106,8 @@ class GOLEM(CausalDiscoveryAlgorithm):
         shds = []
 
         # Run the algorithm 10 times
-        for _ in range(10):
-            adj_matrix, info = self.fit(df)
+        for _ in range(1):
+            adj_matrix, info, model = self.fit(df)
             evaluator = GraphEvaluator()
             metrics = evaluator.compute_metrics(gt_graph, adj_matrix)
             f1_scores.append(metrics['f1'])

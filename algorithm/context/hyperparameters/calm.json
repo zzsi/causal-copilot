@@ -1,56 +1,30 @@
 {
   "algorithm_name": "CALM",
   "lambda1": {
-    "meaning": "Coefficient for the L0 penalty, which encourages sparsity in the learned graph",
-    "suggested_values": {
-      "default": 0.005,
-      "sparse_graph": 0.01,
-      "dense_graph": 0.001
-    },
-    "reasoning": "Controls the sparsity of the learned graph. Higher values lead to sparser graphs. Use larger values for sparse graphs and smaller values for dense graphs."
-  },
-  "alpha": {
-    "meaning": "Significance level for moral graph estimation using IAMB",
+    "meaning": "L1 regularization parameter for sparsity",
     "suggested_values": {
       "default": 0.01,
-      "small_sample": 0.05,
-      "large_sample": 0.001
+      "sparse": 0.1,
+      "dense": 0.001
     },
-    "reasoning": "Controls the significance level for independence tests in moral graph estimation. Use larger values for small samples to avoid missing edges, and smaller values for large samples to maintain precision."
+    "reasoning": "Higher values promote sparser graphs, lower values allow more connections."
   },
-  "tau": {
-    "meaning": "Temperature parameter for the Gumbel-Sigmoid approximation",
+  "alpha": {
+    "meaning": "Desired significance level in (0, 1)",
     "suggested_values": {
-      "default": 0.5,
-      "high_precision": 0.2,
-      "high_recall": 0.8
+      "default": 0.05,
+      "small_sample": 0.1,
+      "large_sample": 0.01
     },
-    "reasoning": "Controls the sharpness of the Gumbel-Sigmoid approximation. Lower values make it closer to a hard threshold but may make optimization harder."
+    "reasoning": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
   },
-  "rho_init": {
-    "meaning": "Initial value of the penalty parameter for the acyclicity constraint",
+  "subproblem_iter": {
+    "meaning": "Maximum number of sub-optimization steps during optimization",
     "suggested_values": {
-      "default": 1e-5,
-      "small_graph": 1e-4,
-      "large_graph": 1e-6
+      "default": 10000,
+      "light": 5000,
+      "thorough": 40000
     },
-    "reasoning": "Starting value for the penalty parameter in the quadratic penalty method. Should be small enough to allow initial exploration but not too small to slow convergence."
-  },
-  "rho_mult": {
-    "meaning": "Multiplication factor for increasing rho in each iteration",
-    "suggested_values": {
-      "default": 3,
-      "aggressive": 5,
-      "conservative": 2
-    },
-    "reasoning": "Controls how quickly the penalty parameter increases. Larger values lead to faster convergence but may miss better solutions."
-  },
-  "standardize": {
-    "meaning": "Whether to standardize the input data",
-    "suggested_values": {
-      "default": true,
-      "no_standardization": false
-    },
-    "reasoning": "Standardization is recommended in most cases as it helps with numerical stability and improves performance. Only set to false if there's a specific reason to preserve the original scale."
+    "reasoning": "Increase for more complex graphs and functional relationships, while more iterations is much more time-consuming."
   }
 } 

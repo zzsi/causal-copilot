@@ -1,23 +1,25 @@
 {
   "algorithm_name": "IAMBnPC",
   "alpha": {
-    "meaning": "Significance level for conditional independence tests",
+    "meaning": "Desired significance level in (0, 1)",
     "suggested_values": {
       "default": 0.05,
       "small_sample": 0.1,
-      "large_sample": 0.01,
-      "high_precision": 0.001
+      "large_sample": 0.01
     },
-    "reasoning": "Use 0.1 for small samples (<500) to avoid missing true relationships. Use 0.05 for moderate samples (500-10000). Use 0.01 for large samples (>10000). Use 0.001 when high precision is required and sample size is very large."
+    "reasoning": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
   },
-  "is_discrete": {
-    "meaning": "Whether the data contains discrete variables",
+  "indep_test": {
+    "meaning": "Independence test method",
     "suggested_values": {
-      "default": true,
-      "continuous_data": false,
-      "discrete_data": true,
-      "mixed_data": true
+      "default": "fisherz",
+      "continuous": "fisherz",
+      "discrete": "chisq",
+      "mixed": "gsq",
+      "robust_nonlinear": "kci",
+      "fast_robust_nonlinear": "fastkci",
+      "approximate_fast_nonlinear": "rcit"
     },
-    "reasoning": "Set to true for discrete or mixed data to use appropriate statistical tests. Set to false for purely continuous data to use tests optimized for continuous variables."
+    "reasoning": "Choose based on data type: 'fisherz' for linear continuous; 'chisq' for discrete; 'gsq' for simplied mixed data types; 'kci' for general nonlinear data; 'fastkci' is a fast version of kci for nonlinear data; 'rcit' is a fast version of kci approximation for nonlinear data."
   }
 } 

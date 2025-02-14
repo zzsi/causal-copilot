@@ -1,48 +1,30 @@
 {
   "algorithm_name": "GOLEM",
   "lambda_1": {
-    "meaning": "L1 regularization parameter",
+    "meaning": "L1 regularization parameter for sparsity",
     "suggested_values": {
-      "default": 0.02,
-      "sparse": 0.05,
-      "very_sparse": 0.1,
-      "dense": 0.01
+      "default": 0.01,
+      "sparse": 0.1,
+      "dense": 0.001
     },
-    "reasoning": "Controls sparsity of the graph structure. Higher values lead to sparser graphs."
-  },
-  "lambda_2": {
-    "meaning": "DAG constraint parameter",
-    "suggested_values": {
-      "default": 5.0,
-      "strict": 10.0,
-      "relaxed": 2.0
-    },
-    "reasoning": "Controls strength of DAG constraint. Higher values enforce stricter acyclicity."
-  },
-  "learning_rate": {
-    "meaning": "Learning rate for optimization",
-    "suggested_values": {
-      "default": 0.001,
-      "slow": 0.0001,
-      "fast": 0.01
-    },
-    "reasoning": "Controls optimization step size. Lower values for stability, higher for faster convergence."
+    "reasoning": "Higher values promote sparser graphs, lower values allow more connections."
   },
   "num_iter": {
-    "meaning": "Number of optimization iterations",
+    "meaning": "Maximum number of dual ascent steps during optimization",
     "suggested_values": {
-      "default": 100000,
-      "quick": 50000,
-      "thorough": 200000
+      "default": 10000,
+      "medium": 50000,
+      "thorough": 100000
     },
-    "reasoning": "More iterations may improve results but increase computation time."
+    "reasoning": "Increase for more complex graphs and functional relationships."
   },
-  "equal_variances": {
-    "meaning": "Whether to assume equal noise variances",
+  "graph_thres": {
+    "meaning": "Threshold for edge weights in adjacency matrix",
     "suggested_values": {
-      "default": true,
-      "alternative": false
+      "default": 0.3,
+      "conservative": 0.5,
+      "liberal": 0.1
     },
-    "reasoning": "True for simpler model, False for more flexible noise modeling."
+    "reasoning": "Higher values lead to sparser graphs by pruning weak connections, which is a kind of implicit sparsity."
   }
 } 

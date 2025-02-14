@@ -80,7 +80,7 @@ def simulate_parameter(B, w_ranges=((-2.0, -0.5), (0.5, 2.0))):
         W += B * (S == i) * U
     return W
 
-def simulate_linear_sem(W, n, sem_type, noise_scale=None, discrete_ratio=0.3, max_categories=10):
+def simulate_linear_sem(W, n, sem_type, noise_scale=None, discrete_ratio=0.0, max_categories=10):
     """Simulate samples from linear SEM with specified type of noise and mixed continuous/discrete variables.
 
     For uniform, noise z ~ uniform(-a, a), where a = noise_scale.
@@ -371,6 +371,7 @@ class DataSimulator:
             self.variable_names = [f'X{i+1}' for i in range(n_nodes)]
             self.graph_dict = {i: f'X{i+1}' for i in range(n_nodes)}
         self.ground_truth['graph'] = self.graph_dict
+        self.ground_truth['edge_probability'] = edge_probability
 
     def generate_single_domain_data(self, n_samples: int, noise_scale: float, noise_type: str, 
                                     function_type: Union[str, List[str], Dict[str, str]], 
@@ -452,11 +453,12 @@ class DataSimulator:
             else:
                 self.data.columns = variable_names + ['domain_index']
             
-        self.ground_truth['discrete_ratio'] = discrete_ratio
-        self.ground_truth['max_categories'] = max_categories
+
+        self.ground_truth['n_domains'] = n_domains
         self.ground_truth['noise_type'] = noise_type
         self.ground_truth['function_type'] = function_type
-        self.ground_truth['n_domains'] = n_domains
+        self.ground_truth['discrete_ratio'] = discrete_ratio
+        self.ground_truth['max_categories'] = max_categories
  
 
     def add_measurement_error(self, error_std: float = 0.3, error_rate: float = 0.5) -> None:
@@ -558,7 +560,10 @@ class DataSimulator:
             'measurement_error': self.ground_truth.get('measurement_error'),
             'selection_bias': self.ground_truth.get('selection_bias'),
             'confounding': self.ground_truth.get('confounding'),
-            'missing_rate': self.ground_truth.get('missing_rate')
+            'missing_rate': self.ground_truth.get('missing_rate'),
+            'edge_probability': self.ground_truth.get('edge_probability'),
+            'discrete_ratio': self.ground_truth.get('discrete_ratio'),
+            'max_categories': self.ground_truth.get('max_categories'),
         }
         with open(config_filename, 'w') as f:
             json.dump(config, f, indent=2, default=str)

@@ -4,16 +4,21 @@ import sys
 import json
 import argparse
 import asyncio
+from tqdm import tqdm
 from openai import AsyncOpenAI
-
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(root_dir)
 
-BASELINE_MODEL = "o1-mini"
+from algorithm.tests.user_simulation import BASE_MODEL as SIM_BASE_MODEL
+
+BASELINE_MODEL = "gpt-4o-mini"
+NUM_SIMULATIONS = 100
+NUM_CHUNK_SIMULATIONS = 25  # Process 10 simulations at a time to avoid rate limits
+
 
 def generate_dummy_args():
     # Create a dummy args object with necessary attributes for simulation.
-    parser = argparse.ArgumentParser(description="Tiny Copilot - Simplified Version")
+    parser = argparse.ArgumentParser()
     parser.add_argument('--data-file', type=str, default="dataset/sachs/sachs.csv", help='Path to dataset file')
     parser.add_argument('--initial_query', type=str, default="selected algorithm: FGES; filter: continuous", help='Initial algorithm query')
     parser.add_argument('--debug', action='store_true', default=False, help='Enable debug mode (skip heavy preprocessing)')
@@ -31,6 +36,7 @@ def generate_dummy_args():
     # Quick test of simulation output
     args = parser.parse_args()
     args.apikey = os.getenv("OPENAI_API_KEY")
+    args.num_users = NUM_CHUNK_SIMULATIONS
     return args
 
 async def simulate_task(task_id):
@@ -43,13 +49,14 @@ async def simulate_task(task_id):
     except ImportError:
         raise ImportError("Could not import simulate_user_query from user_simulation.py.")
     args = generate_dummy_args()
-    # Run the potentially blocking simulate_user_query in a separate thread.
-    simulation = await asyncio.to_thread(simulate_user_query, args)
-    # If fake_data is a DataFrame, convert it to a JSON serializable string.
-    # Remove the actual fake data since it's not needed for the selection task.
-    simulation.pop("fake_data")
-    simulation["simulation_id"] = task_id
-    return simulation
+    simulations = await asyncio.to_thread(simulate_user_query, args)
+    valid_simulations = []
+    # simulations is now a list of simulation dicts
+    for i, sim in enumerate(simulations):
+         sim.pop("fake_data", None)
+         sim["simulation_id"] = f"{task_id+i}"
+         valid_simulations.append(sim)
+    return valid_simulations
 
 async def select_algorithm(simulation):
     """
@@ -57,6 +64,7 @@ async def select_algorithm(simulation):
     from the available candidate list in algorithm.wrappers.__all__, and explain the choice.
     """
     import json
+    import random
     try:
         import algorithm.wrappers as wrappers
     except ImportError:
@@ -69,17 +77,28 @@ async def select_algorithm(simulation):
     user_query = simulation.get("initial_query", "")
     statistics = simulation.get("statistics", {})
 
-    # Build a prompt that includes the user query, statistics and candidate algorithms.
+    # Load algorithm tagging information
+    tagging_path = os.path.join(os.path.dirname(__file__), "..", "context", "algos", "tagging.txt")
+    with open(tagging_path, "r") as f:
+        algorithm_tags = f.read()
+
+    # Randomly sample cuda_visible
+    cuda_visible = random.choice([True, False])
+    cuda_warning = "" if cuda_visible else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms."
+
+    # Build a prompt that includes the user query, statistics, candidate algorithms and algorithm tags.
     prompt = (
         f"Given the following user query:\n{user_query}\n\n"
         f"And the following statistics:\n{json.dumps(statistics)}\n\n"
         f"Candidate algorithms:\n{json.dumps(candidate_algorithms)}\n\n"
-        "Please choose the most suitable causal discovery algorithm for the data user provided and explain why this algorithm was chosen over the others.\n\n"
-        "Please return the selected algorithm and the explanation in a JSON object. Wrap the JSON object in <json>...</json> tags. For"
+        f"Algorithm descriptions and tags:\n{algorithm_tags}\n\n"
+        "Please choose the top 3 most suitable causal discovery algorithms for the data user provided and explain why these algorithms were chosen over the others.\n\n"
+        f"{cuda_warning}\n\n"
+        "Please return the selected algorithms and the explanation in a JSON object. Wrap the JSON object in <json>...</json> tags. For"
         "example:\n"
         "<json>\n"
         "{{"
-        "  'selected_algorithm': '...', "
+        "  'selected_algorithms': ['...', '...', '...'], "
         "  'selection_response': '...'"
         "}}"
         "</json>"
@@ -105,48 +124,57 @@ async def select_algorithm(simulation):
         "simulation_id": simulation.get("simulation_id"),
         "initial_query": user_query,
         "statistics": statistics,
-        "selected_algorithm": answer.get("selected_algorithm"),
-        "selection_response": answer.get("selection_response")
+        "selected_algorithms": answer.get("selected_algorithms"),
+        "selection_response": answer.get("selection_response"),
+        "cuda_visible": cuda_visible
     }
     return selection
 
-async def baseline():
-    # Number of user simulation data points to generate (adjust as needed)
-    NUM_SIMULATIONS = 10
+async def process_simulation_chunk(start_idx):
+    """Process a chunk of simulations"""
+    results = await simulate_task(start_idx)
+    return results
 
-    # Step 1: Generate N user simulation data in parallel.
-    if os.path.exists("simulations.json"):
-        with open("simulations.json", "r") as sim_file:
+async def process_selection_chunk(simulations):
+    """Process a chunk of selections"""
+    selection_tasks = [select_algorithm(sim) for sim in simulations]
+    return await asyncio.gather(*selection_tasks, return_exceptions=True)
+
+async def baseline():
+    # Step 1: Generate N user simulation data in chunks
+    if os.path.exists(f"simulations_{SIM_BASE_MODEL}.json"):
+        with open(f"simulations_{SIM_BASE_MODEL}.json", "r") as sim_file:
             valid_simulations = json.load(sim_file)
     else:
-        simulation_tasks = [simulate_task(i) for i in range(NUM_SIMULATIONS)]
-        simulation_results = await asyncio.gather(*simulation_tasks, return_exceptions=True)
-
-        # Process simulation results, handling any exceptions.
         valid_simulations = []
-        for idx, result in enumerate(simulation_results):
-            if isinstance(result, Exception):
-                print(f"Simulation task {idx} generated an exception: {result}")
-            else:
-                valid_simulations.append(result)
+        for start_idx in tqdm(range(0, NUM_SIMULATIONS, NUM_CHUNK_SIMULATIONS), desc="Generating user simulations..."):
+            chunk_results = await process_simulation_chunk(start_idx)
+            
+            # Process simulation results, handling any exceptions
+            for idx, result in enumerate(chunk_results):
+                if isinstance(result, Exception):
+                    print(f"Simulation task {start_idx + idx} generated an exception: {result}")
+                else:
+                    valid_simulations.append(result)
 
-        # Save all simulation data into a JSON file.
-        with open(f"simulations.json", "w") as sim_file:
+        # Save all simulation data into a JSON file
+        with open(f"simulations_{SIM_BASE_MODEL}.json", "w") as sim_file:
             json.dump(valid_simulations, sim_file, indent=4)
 
-    # Step 2: For each simulation, perform the algorithm selection in parallel.
-    selection_tasks = [select_algorithm(sim) for sim in valid_simulations]
-    selection_results = await asyncio.gather(*selection_tasks, return_exceptions=True)
-
-    # Process selection results, handling any exceptions.
+    # Step 2: Process selections in chunks
     final_selections = []
-    for idx, result in enumerate(selection_results):
-        if isinstance(result, Exception):
-            print(f"Selection task for simulation {valid_simulations[idx].get('simulation_id')} generated an exception: {result}")
-        else:
-            final_selections.append(result)
+    for i in range(0, len(valid_simulations), NUM_CHUNK_SIMULATIONS):
+        chunk = valid_simulations[i:i + NUM_CHUNK_SIMULATIONS]
+        selection_results = await process_selection_chunk(chunk)
+        
+        # Process selection results, handling any exceptions
+        for idx, result in enumerate(selection_results):
+            if isinstance(result, Exception):
+                print(f"Selection task for simulation {chunk[idx].get('simulation_id')} generated an exception: {result}")
+            else:
+                final_selections.append(result)
 
-    # Save the selection responses into a JSON file.
+    # Save the selection responses into a JSON file
     with open(f"selection_results_{BASELINE_MODEL}.json", "w") as sel_file:
         json.dump(final_selections, sel_file, indent=4)
 

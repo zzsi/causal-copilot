@@ -51,23 +51,56 @@ def kci_dask_cupy(X: int, Y: int, Z: list, data: da.Array, alpha: float, gamma: 
 
 
 # Fisher-Z with GPU acceleration using gpucsl
-def fisherz_gpu_gpucsl(data: np.ndarray, alpha: float, depth: int) -> Tuple[np.ndarray, Dict, CausalGraph]:
+def fisherz_gpu_gpucsl(data: np.ndarray, alpha: float, depth: int, node_names: list) -> Tuple[np.ndarray, Dict, CausalGraph]:
     pc_result = GaussianPC(data, depth, alpha).set_distribution_specific_options().execute()
-    directed_graph, separation_sets, _, _, _, _ = pc_result
-    cg = CausalGraph(directed_graph)
+    ((directed_graph, separation_sets, _, _, _, _), pc_runtime) = pc_result
+
+    # Convert directed graph to adjacency matrix
+    adj_matrix = np.zeros((directed_graph.number_of_nodes(), directed_graph.number_of_nodes()))
+    for edge in directed_graph.edges():
+        adj_matrix[edge[0], edge[1]] = 1
+    
+    indices = np.where(adj_matrix == 1)
+    for i, j in zip(indices[0], indices[1]):
+        if adj_matrix[i, j] == 1 and adj_matrix[j, i] == 1:
+            adj_matrix[i, j] = -1
+            adj_matrix[j, i] = -1
+        if adj_matrix[i, j] == 1 and adj_matrix[j, i] == 0:
+            adj_matrix[i, j] = -1
+            adj_matrix[j, i] = 1
+    
+    # Create CausalGraph object
+    cg = CausalGraph(len(node_names), node_names)
+    cg.G = adj_matrix
     cg.sepset = separation_sets
+    
     info = {
         'sepset': separation_sets,
-        'PC_elapsed': pc_result.PC_elapsed,
+        'PC_elapsed': pc_runtime,
     }
     return directed_graph, info, cg
 
 
 # Chi-Square with GPU acceleration using gpucsl
-def chi_square_gpu_gpucsl(data: np.ndarray, alpha: float, depth: int) -> Tuple[np.ndarray, Dict, CausalGraph]:
+def chi_square_gpu_gpucsl(data: np.ndarray, alpha: float, depth: int, node_names: list) -> Tuple[np.ndarray, Dict, CausalGraph]:
     pc_result = DiscretePC(data, depth, alpha).set_distribution_specific_options().execute()
-    directed_graph, separation_sets, _, _, _, _ = pc_result
-    cg = CausalGraph(directed_graph)
+    ((directed_graph, separation_sets, _, _, _, _), pc_runtime) = pc_result
+    # Convert directed graph to adjacency matrix
+    adj_matrix = np.zeros((directed_graph.number_of_nodes(), directed_graph.number_of_nodes()))
+    for edge in directed_graph.edges():
+        adj_matrix[edge[0], edge[1]] = 1
+    
+    indices = np.where(adj_matrix == 1)
+    for i, j in zip(indices[0], indices[1]):
+        if adj_matrix[i, j] == 1 and adj_matrix[j, i] == 1:
+            adj_matrix[i, j] = -1
+            adj_matrix[j, i] = -1
+        if adj_matrix[i, j] == 1 and adj_matrix[j, i] == 0:
+            adj_matrix[i, j] = -1
+            adj_matrix[j, i] = 1
+    # Create CausalGraph object
+    cg = CausalGraph(len(node_names), node_names)
+    cg.G = adj_matrix
     cg.sepset = separation_sets
     info = {
         'sepset': separation_sets,
@@ -94,11 +127,13 @@ def accelerated_pc(
     Returns:
         Tuple containing adjacency matrix, info dictionary, and CausalGraph object.
     """
+    node_names = [str(i) for i in range(data.shape[1])]
+
     if indep_test == 'fisherz':
-        return fisherz_gpu_gpucsl(data, alpha, depth)
+        return fisherz_gpu_gpucsl(data, alpha, depth, node_names)
 
     elif indep_test == 'chi_square':
-        return chi_square_gpu_gpucsl(data, alpha, depth)
+        return chi_square_gpu_gpucsl(data, alpha, depth, node_names)
 
     elif indep_test == 'kci':
         data_dask = da.from_array(cp.asarray(data), chunks=data.shape)
@@ -108,9 +143,10 @@ def accelerated_pc(
             indep_test=lambda X, Y, Z: kci_dask_cupy(X, Y, Z, data_dask, alpha, gamma),
             depth=depth,
         )
-        directed_graph = pc_result.G
-        cg = CausalGraph(directed_graph)
-        return directed_graph, cg
+        directed_graph = pc_result.G.graph
+        cg = CausalGraph(len(node_names), node_names)
+        cg.G = directed_graph
+        return directed_graph, {}, cg
 
     else:
         raise ValueError(f"Independence test '{indep_test}' not supported. Use 'fisherz', 'chi_square', or 'kci'.")

@@ -64,6 +64,7 @@ class Algorithm:
     selected_algorithm: Optional[str] = None
     selected_reason: Optional[str] = None
     algorithm_candidates: Optional[Dict] = None
+    algorithm_optimum: Optional[str] = None
     algorithm_arguments: Optional[Dict] = None
     waiting_minutes: float = 1440.0
     algorithm_arguments_json: Optional[object] = None
