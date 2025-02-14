@@ -74,7 +74,13 @@ class DYNOTEARS(CausalDiscoveryAlgorithm):
                 
         summary_matrix, lag_matrix = self.dict_to_adjacency_matrix(graph_dict, len(node_names), max_lag)
         
-        return summary_matrix, lag_matrix
+        info = {
+            'summary': summary_matrix,
+            'lag': max_lag,
+            'nodes': node_names
+        }
+
+        return lag_matrix, info, sm
         
         
     def dict_to_adjacency_matrix(self, result_dict, num_nodes, lookback_period):
@@ -152,7 +158,7 @@ class DYNOTEARS(CausalDiscoveryAlgorithm):
         
         # Run the algorithm
         for _ in range(2):
-            _, adj_matrix = self.fit(df)
+            adj_matrix,_,_ = self.fit(df)
             print(np.column_stack(adj_matrix))
             evaluator = GraphEvaluator()
             metrics = evaluator._compute_single_metrics(gt_graph, np.column_stack(adj_matrix))

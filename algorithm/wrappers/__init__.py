@@ -34,9 +34,11 @@ from .ica_lingam import ICALiNGAM
 # hybrid algorithms
 from .hybrid import Hybrid
 
+#TS algorithms
+from .dynotears import DYNOTEARS
 
 constraint_based_algorithms = ['PC', 'FCI', 'CDNOD', 'InterIAMB', 'BAMB', 'HitonMB', 'IAMBnPC', 'MBOR', 'PCParallel']
-score_based_algorithms = ['GES', 'FGES', 'XGES', 'NOTEARSLinear', 'NOTEARSNonlinear', 'CORL', 'CALM', 'GOLEM']
+score_based_algorithms = ['GES', 'FGES', 'XGES', 'NOTEARSLinear', 'NOTEARSNonlinear', 'CORL', 'CALM', 'GOLEM', 'DYNOTEARS']
 functional_model_based_algorithms = ['DirectLiNGAM', 'ICALiNGAM']
 permutation_based_algorithms = ['GRaSP']
 hybrid_algorithms = ['Hybrid']
