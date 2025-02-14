@@ -529,7 +529,7 @@ class Analysis(object):
                   'hte': [hte, hte_lower, hte_upper]}
         return result
     # TODO: Add def contains_iv() to check where the causal graph contains IV
-    # TODO: Add def estimate_effect_iv()
+    
     def estimate_effect_iv(self, outcome, treatment, instrument_variable, T0, T1, X_col, W_col, query):
         if len(W_col) == 0:
             W_col = ['W']
@@ -542,6 +542,7 @@ class Analysis(object):
         reranker = IV_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, Z_col=instrument_variable, X_col=X_col, W_col=W_col)
         self.global_state = reranker.forward(self.global_state)
         programmer = IV_HTE_Programming(self.args, y_col=outcome, T_col=treatment, Z_col=instrument_variable, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
+        programmer.fit_model(self.global_state)
         # Estimate ate, att, hte
         ate, ate_lower, ate_upper = programmer.forward(self.global_state, task='ate')
         att, att_lower, att_upper = programmer.forward(self.global_state, task='att')
@@ -743,6 +744,7 @@ class Analysis(object):
         print(f"Saving shift intervention comparison plot to {os.path.join(path, 'shift_intervention.jpg')}")
         plt.savefig(os.path.join(path, 'shift_intervention.jpg'))
         figs = [os.path.join(path, 'shift_intervention.jpg')]
+
         # Save dataset
         # print(f"Saving simulated dataset {os.path.join(path, 'simulated_atomic_intervention_org.csv')}")
         # atomic_samples_org.to_csv(os.path.join(path, 'simulated_atomic_intervention_org.csv'), index=False)
@@ -763,6 +765,7 @@ class Analysis(object):
         figs_boxplot = os.path.join(path, 'shift_intervention_boxplot.jpg')
         figs.append(figs_boxplot)
         return figs, shift_samples
+
 
     def sensitivity_analysis(self, target_node, model, estimand, estimate, treatment, outcome):
         # if self.global_state.statistics.linearity:
@@ -857,8 +860,16 @@ class Analysis(object):
 
             # TODO: Add IV Estimation
             if method == "iv":
-                pass
-
+                result = self.estimate_effect_iv(outcome=key_node, treatment=treatment, instrument_variable=iv_variable, T0=control, T1=treat,
+                                                            X_col=hte_variables, W_col=confounders, query=desc)
+                response, figs = generate_analysis_econml(self.args, self.global_state, key_node, treatment, parent_nodes, hte_variables, confounders, result, desc)
+                chat_history.append(("📝 Analyze for ATE and ATT...", None))
+                chat_history.append((None, response[0]))
+                chat_history.append(("📝 Analyze for HTE...", None))
+                for fig in figs:
+                    chat_history.append((None, (f'{fig}',)))
+                chat_history.append((None, response[1]))
+                
             elif method in ["cem", "propensity_score"]:
                 # Perform matching-based estimation
                 ate, cate_result, matched_data, figs = self.estimate_causal_effect_matching(

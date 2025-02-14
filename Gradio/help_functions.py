@@ -68,8 +68,72 @@ def sample_size_check(n_row, n_col, chat_history, download_btn, REQUIRED_INFO, C
     else:
         chat_history.append((None, "Sample Size Check Summary: \n"\
                              "✅ The sample size is enough for the following analysis. \n"))
-        CURRENT_STAGE = 'important_feature_selection'
+        CURRENT_STAGE = 'meaningful_feature' #'important_feature_selection'
     return chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE
+
+def meaningful_feature_query(global_state, message, chat_history, download_btn, CURRENT_STAGE):
+    if message.lower() == 'yes':
+        global_state.user_data.meaningful_feature = True
+        CURRENT_STAGE = 'heterogeneity'
+        chat_history.append((message, None))
+    elif message.lower() == 'no' or message == '':
+        global_state.user_data.meaningful_feature = False
+        CURRENT_STAGE = 'heterogeneity'
+        chat_history.append((message, None))
+    else:
+        chat_history.append((None, "❌ Invalid input, please try again!"))
+    return chat_history, download_btn, global_state, CURRENT_STAGE
+
+
+def heterogeneity_query(global_state, message, chat_history, download_btn, CURRENT_STAGE,args):
+    if message.lower() == 'no' or message == '':
+        global_state.user_data.heterogeneity = None
+        CURRENT_STAGE = 'accept_CPDAG'
+        chat_history.append((message, None))
+        return chat_history, download_btn, global_state, CURRENT_STAGE
+    else:
+        class VarList(BaseModel):
+            variables: list[str]
+
+        prompt = "You are a helpful assistant, please extract variable names as a list. \n"
+        "If there is only one variable, also save it in list variables"
+        f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
+        "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
+        "If you cannot find variable names, just return an empty list."
+        parsed_vars = LLM_parse_query(VarList, prompt, message, args)
+        var_list = parsed_vars.variables
+        if var_list == []:
+            chat_history.append((message,
+                                 "❌ Your heterogeneity indicator cannot be parsed, please make sure variables are among your dataset features and retry. \n"
+                                 ))
+            return var_list, chat_history, download_btn, global_state, CURRENT_STAGE
+        else:
+            missing_vars = [var for var in var_list if var not in global_state.user_data.raw_data.columns and var != '']
+            if missing_vars != []:
+                chat_history.append((message, "❌ Variables " + ", ".join(
+                    missing_vars) + " are not in the dataset, please check it and retry.\n"
+                                    "Note that it's CASE SENSITIVE."))
+                return var_list, chat_history, download_btn, global_state, CURRENT_STAGE
+            else:
+                chat_history.append((message, "✅ Successfully parsed your provided heterogeneity indicator."))
+                CURRENT_STAGE = 'accept_CPDAG'
+                global_state.user_data.heterogeneity = var_list
+                return chat_history, download_btn, global_state, CURRENT_STAGE
+
+
+def accept_CPDAG_query(global_state, message, chat_history, download_btn, CURRENT_STAGE):
+    if message.lower() == 'yes':
+        global_state.user_data.accept_CPDAG = True
+        CURRENT_STAGE = 'important_feature_selection'
+        chat_history.append((message, None))
+    elif message.lower() == 'no' or message == '':
+        global_state.user_data.accept_CPDAG = False
+        CURRENT_STAGE = 'important_feature_selection'
+        chat_history.append((message, None))
+    else:
+        chat_history.append((None, "❌ Invalid input, please try again!"))
+    return chat_history, download_btn, global_state, CURRENT_STAGE
+
 
 def parse_reupload_query(message, chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE):
     print('reupload query:', message)

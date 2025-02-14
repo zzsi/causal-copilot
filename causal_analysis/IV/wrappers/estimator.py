@@ -15,8 +15,9 @@ from .base import Estimator
 # - ForestDRIV 
 
 class DRIV(Estimator):
-    def __init__(self, y_col: str, T_col: str,  Z_col: str, X_col: list, params: Dict = {}, W_col: list = None):
-        super().__init__(params, y_col, T_col, X_col, W_col)
+    def __init__(self, y_col: str, T_col: str, Z_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int = 0, T1: int = 1):
+        super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
+        self.Z_col = Z_col  
         self.model = Econ_DRIV(**self._params)
 
     @property
@@ -60,11 +61,12 @@ class DRIV(Estimator):
         pass
 
 class LinearDRIV(Estimator):
-    def __init__(self, y_col: str, T_col: str, Z_col: str, X_col: list, params: Dict = {}, W_col: list = None):
+    def __init__(self, y_col: str, T_col: str, Z_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int = 0, T1: int = 1):
         # Remove final stage key if present
         if 'model_final' in params:
             del params['model_final']
-        super().__init__(params, y_col, T_col, X_col, W_col)
+        super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
+        self.Z_col = Z_col
         self.model = Econ_LinearDRIV(**self._params)
 
     @property
@@ -107,10 +109,11 @@ class LinearDRIV(Estimator):
         pass
 
 class SparseLinearDRIV(Estimator):
-    def __init__(self, y_col: str, T_col: str, Z_col: str, X_col: list, params: Dict = {}, W_col: list = None):
+    def __init__(self, y_col: str, T_col: str, Z_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int = 0, T1: int = 1):
         if 'model_final' in params:
             del params['model_final']
-        super().__init__(params, y_col, T_col, X_col, W_col)
+        super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
+        self.Z_col = Z_col
         self.model = Econ_SparseLinearDRIV(**self._params)
 
     @property
@@ -153,10 +156,11 @@ class SparseLinearDRIV(Estimator):
         pass
 
 class ForestDRIV(Estimator):
-    def __init__(self, y_col: str, T_col: str, Z_col: str, X_col: list, params: Dict = {}, W_col: list = None):
+    def __init__(self, y_col: str, T_col: str, Z_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int = 0, T1: int = 1):
         if 'model_final' in params:
             del params['model_final']
-        super().__init__(params, y_col, T_col, X_col, W_col)
+        super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
+        self.Z_col = Z_col
         self.model = Econ_ForestDRIV(**self._params)
 
     @property
