@@ -367,16 +367,17 @@ def parse_report_algo_query(message, chat_history, download_btn, args, global_st
         CURRENT_STAGE = 'report_generation'
     return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
-def parse_inference_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO):
+def parse_inference_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE):
     chat_history.append((message, None))
     message = message.strip()
     if message.lower() == 'no' or message == '':
         chat_history.append((None, "✅ No need for downstream analysis, continue to the next section..."))
-        REQUIRED_INFO["current_stage"] = 'report_generation_check'
-        return None, None, None, chat_history, download_btn, global_state, REQUIRED_INFO
+        CURRENT_STAGE = 'report_generation_check'
+        return None, None, None, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
     else:
         class InfList(BaseModel):
                 tasks: list[str]
+                reason: str
                 descriptions: list[str]
                 key_node: list[str]
         columns = global_state.user_data.processed_data.columns
@@ -386,21 +387,21 @@ def parse_inference_query(message, chat_history, download_btn, args, global_stat
         
         global_state.logging.downstream_discuss.append({"role": "user", "content": message})
         parsed_response = LLM_parse_query(InfList, query_prompt, message, args)
-        tasks_list, descs_list, key_node_list = parsed_response.tasks, parsed_response.descriptions, parsed_response.key_node
+        reason, tasks_list, descs_list, key_node_list = parsed_response.reason, parsed_response.tasks, parsed_response.descriptions, parsed_response.key_node
         print(tasks_list, descs_list, key_node_list)
         chat_history.append((None, "✅ Successfully parsed your query. We will analyze it in the following perspectives:\n"
                                     f"{', '.join(tasks_list)}\n"))
-        return tasks_list, descs_list, key_node_list, chat_history, download_btn, global_state, REQUIRED_INFO
+        return reason, tasks_list, descs_list, key_node_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
 
-def parse_inf_discuss_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO):
+def parse_inf_discuss_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE):
     chat_history.append((message, None))
     global_state.logging.downstream_discuss.append({"role": "user", "content": message})
     message = message.strip()
     if message.lower() == 'no' or message == '':
         print('go to report_generation')
         chat_history.append((None, "✅ No need for downstream analysis, continue to the next section..."))
-        REQUIRED_INFO["current_stage"] = 'report_generation_check'
+        CURRENT_STAGE = 'report_generation_check'
     else:
         class DiscussList(BaseModel):
                     answer: str
@@ -414,13 +415,14 @@ def parse_inf_discuss_query(message, chat_history, download_btn, args, global_st
         global_state.logging.downstream_discuss.append({"role": "user", "content": message})
         parsed_response = LLM_parse_query(DiscussList, prompt, message, args)
         answer_info = parsed_response.answer 
+        global_state.inference.task_info[global_state.inference.task_index]['result']['discussion'][message] = answer_info
         print(answer_info)
     
         chat_history.append((None, answer_info))
         global_state.logging.downstream_discuss.append({"role": "system", "content": answer_info})
         chat_history.append((None, "Do you have questions about this analysis?  Please describe your questions.\n"
                                     "You can also input 'NO' to end this discussion."))
-    return chat_history, download_btn, global_state, REQUIRED_INFO            
+    return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE            
                 
 
 def parse_treatment(desc, global_state, args):

@@ -718,8 +718,7 @@ class Analysis(object):
                                                     {treatment_name: lambda x: x + shift_intervention_val},
                                                     num_samples_to_draw=len(self.data))
 
-        plt.figure(figsize=(12, 6))
-
+        plt.figure(figsize=(8, 6))
         # Histogram for atomic_samples_org
         plt.subplot(1, 2, 1)
         plt.hist(self.data[response_name], bins=30, color='#409fde', alpha=0.7)
@@ -753,6 +752,16 @@ class Analysis(object):
 
         print(f"Saving simulated dataset {os.path.join(path, 'simulated_shift_intervention.csv')}")
         shift_samples.to_csv(os.path.join(path, 'simulated_shift_intervention.csv'), index=False)
+        # Boxplot Comparison to summarize distributions
+        plt.figure(figsize=(8, 6))
+        data_to_plot = [self.data[response_name], shift_samples[response_name]]
+        plt.boxplot(data_to_plot, labels=["Observed Data", "Shift Intervention"], patch_artist=True)
+        plt.title(f'Shift Intervention Comparison: {response_name}')
+        plt.ylabel(response_name)
+        print(f"Saving box-plot comparison plot to {os.path.join(path, 'shift_intervention_boxplot.jpg')}")
+        plt.savefig(os.path.join(path, 'shift_intervention_boxplot.jpg'))
+        figs_boxplot = os.path.join(path, 'shift_intervention_boxplot.jpg')
+        figs.append(figs_boxplot)
         return figs, shift_samples
 
     def sensitivity_analysis(self, target_node, model, estimand, estimate, treatment, outcome):
