@@ -54,6 +54,7 @@ def fix_latex_itemize(text):
 def list_conversion(text):
     # Split the text into lines
     lines = text.strip().split('\n')
+    lines = [l for l in lines if l not in ['', '\n']]
     latex_lines = []
     item_num = 0
     # Process each line
@@ -130,3 +131,48 @@ def replace_unicode_with_latex( text):
     pattern = "|".join(map(re.escape, greek_to_latex.keys()))
     return re.sub(pattern, lambda match: greek_to_latex[match.group()], text)
 
+def remove_redundant_point(text):
+    lines = text.split('\n')
+    processed_lines = []
+    
+    for line in lines:
+        line = line.strip()
+        if line.startswith('\item'):  # Regular bullet point
+            if not r'\textbf' in line:  # Not a header
+                line = line.replace('\item','\n') # Remove the hyphen but keep indentation
+        processed_lines.append(line)
+    
+    return '\n'.join(processed_lines)
+
+def remove_redundant_title(text):
+    lines = text.split('\n')
+    processed_lines = []
+    for line in lines:
+        line = line.strip()
+        if line.startswith('#'):  # Regular bullet point
+            line = ''
+        processed_lines.append(line)
+    
+    return '\n'.join(processed_lines)
+
+def LLM_parse_query(client, format, prompt, message):
+    if format:
+        completion = client.beta.chat.completions.parse(
+        model="gpt-4o-mini-2024-07-18",
+        messages=[
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": message},
+        ],
+        response_format=format,
+        )
+        parsed_response = completion.choices[0].message.parsed
+    else: 
+        completion = client.beta.chat.completions.parse(
+        model="gpt-4o-mini-2024-07-18",
+        messages=[
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": message},
+        ],
+        )
+        parsed_response = completion.choices[0].message.content
+    return parsed_response

@@ -1,34 +1,21 @@
 Given a dataset with the following properties:
 
-1. Columns: [COLUMNS]
-2. Statistics:
-[STATISTICS_DESC]
+1. Columns: [COLUMNS]  
+2. Statistics: [STATISTICS_DESC]
 
-We want to predict [TARGET_NODE] with a classification model.
+We want to predict [TARGET_NODE] for the nuisance component within a Doubly Robust Instrumental Variable (DRIV) framework using a classification model.
 
-Please analyze the dataset characteristics and the task description, and recommend the most suitable one classification algorithm. Use the following context information to inform your recommendations:
-
-You can only choose from these Classifiers, and use exactly the same name in your response:
-[ALGO_CONTEXT]
-
-For the chosen one algorithm, provide:
-1. Classifier name (name of the available classifier in the implementation)
-2. Brief description
-3. Justification for its suitability based on the dataset characteristics
-
-Present your recommendation in a structured JSON format, provide only the most suitable algorithm given the dataset characteristics.
-**You can only choose from these Regressors**:
+Please analyze the dataset characteristics and recommend the most suitable classifier. You can only choose from the following (exact names):
 - LogisticRegression  
 - RandomForestClassifier  
 - HistGradientBoostingClassifier  
-- SVC 
+- SVC  
 - SGDClassifier  
 
-Please structure your response like this example, DO NOT include anything else:
+Provide your recommendation in the structured JSON format below:
 
 {
-  "name": "classifier Name",
+  "name": "Classifier Name",
   "description": "Brief description of the classifier.",
-  "justification": "Explanation of why this classifier is suitable for the given dataset.",
+  "justification": "Explanation of why this classifier is suitable for the given dataset."
 }
-    

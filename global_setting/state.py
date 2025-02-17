@@ -23,6 +23,10 @@ class UserData:
     llm_drop_features: Optional[object] = None
     high_corr_drop_features: Optional[object] = None
     nan_indicator: Optional[str] = None
+    drop_important_var: Optional[bool] = None
+    meaningful_feature: Optional[bool] = None
+    heterogeneity: Optional[str] = None
+    accept_CPDAG: Optional[bool] = None
 
 @dataclass
 class Statistics:

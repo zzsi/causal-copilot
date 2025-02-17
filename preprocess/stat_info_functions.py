@@ -103,7 +103,8 @@ def missing_ratio_table(global_state):
 def drop_greater_miss_50_feature(global_state):
     # Step 1: Drop features whose ratio is greater than 0.5
     ratio_greater_05 = [k for k, v in global_state.statistics.miss_ratio.items() if v >= 0.5]
-    ratio_greater_05_drop = [element for element in ratio_greater_05 if
+    if global_state.user_data.drop_important_var:
+        ratio_greater_05_drop = [element for element in ratio_greater_05 if
                              element not in global_state.user_data.important_features]  # keep important features
 
     # Update global state
@@ -137,12 +138,9 @@ def llm_select_dropped_features(global_state, args):
     llm_drop_feature = [element for element in ratio_between_05_03 if element not in llm_select_feature]
     llm_drop_keep_important = [element for element in llm_drop_feature if
                                element not in global_state.user_data.important_features]  # keep important features
-
     global_state.user_data.llm_drop_features = llm_drop_keep_important
 
     return global_state
-
-
 
 
 def drop_greater_miss_between_30_50_feature(global_state):
@@ -180,12 +178,18 @@ def correlation_check(global_state):
                 var1 = df.columns[i]
                 var2 = df.columns[j]
 
-                if var1 not in global_state.user_data.important_features:
-                    drop_feature.append(var1)
-                elif var2 not in global_state.user_data.important_features:
-                    drop_feature.append(var2)
+                if global_state.user_data.drop_important_var:
+                    if var1 not in global_state.user_data.important_features and var1 not in drop_feature:
+                        drop_feature.append(var1)
+                    elif var2 not in global_state.user_data.important_features and var2 not in drop_feature:
+                        drop_feature.append(var2)
+                    else:
+                        continue
                 else:
-                    continue
+                    if var1 not in drop_feature:
+                        drop_feature.append(var1)
+                    elif var2 not in drop_feature:
+                        drop_feature.append(var2)
 
     # Update global state
     global_state.user_data.high_corr_drop_features = drop_feature
