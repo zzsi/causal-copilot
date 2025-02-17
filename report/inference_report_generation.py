@@ -105,7 +105,7 @@ class Inference_Report_generation(object):
 
 \\begin{{figure}}[H]
     \centering
-    \includegraphics[height=0.3\\textheight]{{{figs[0]}}}
+    \includegraphics[height=0.2\\textheight]{{{figs[0]}}}
     \caption{{Distribution of HTE}}
 \end{{figure}}
 
@@ -283,13 +283,13 @@ class Inference_Report_generation(object):
         next_step = self.generate_next_step()
         #print(next_step)
         # Replace the placeholders
-        replacement = {'[PROPOSAL]': proposal.replace('$', '\$').replace('`', ''), 
-                       '[TE_RESULT]': treatment_effect.replace('$', '\$').replace('`', '') if treatment_effect is not None else '',
-                       '[FI_RESULT]': feature_importance.replace('$', '\$').replace('`', '') if feature_importance is not None else '',
-                       '[AT_RESULT]': attribution.replace('$', '\$').replace('`', '') if attribution is not None else '',
-                       '[CF_RESULT]': counterfactual.replace('$', '\$').replace('`', '') if counterfactual is not None else '',
-                       '[DISCUSSION]': discussion.replace('$', '\$').replace('$_', '\_'),
-                       '[NEXT_STEP]': next_step.replace('$', '\$').replace('$_', '\_')}
+        replacement = {'[PROPOSAL]': proposal.replace('$', '\$').replace('`', '').replace('%', '\%'), 
+                       '[TE_RESULT]': treatment_effect.replace('$', '\$').replace('`', '').replace('%', '\%') if treatment_effect is not None else '',
+                       '[FI_RESULT]': feature_importance.replace('$', '\$').replace('`', '').replace('%', '\%') if feature_importance is not None else '',
+                       '[AT_RESULT]': attribution.replace('$', '\$').replace('`', '').replace('%', '\%') if attribution is not None else '',
+                       '[CF_RESULT]': counterfactual.replace('$', '\$').replace('`', '').replace('%', '\%') if counterfactual is not None else '',
+                       '[DISCUSSION]': discussion.replace('$', '\$').replace('$_', '\_').replace('%', '\%'),
+                       '[NEXT_STEP]': next_step.replace('$', '\$').replace('$_', '\_').replace('%', '\%')}
         for placeholder, value in replacement.items():
             context = context.replace(placeholder, value)
         # Save the context to a file
@@ -404,12 +404,12 @@ def parse_args():
 
 import pickle  
 if __name__ == '__main__':
-    args = parse_args()
-    with open('demo_data/20250121_223113/lalonde/output_graph/inference_global_state.pkl', 'rb') as file:
-        global_state = pickle.load(file)
-    test(args, global_state)
-    # save_path = 'demo_data/20250130_130622/house_price/output_report'
-    # compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
+    # args = parse_args()
+    # with open('demo_data/20250121_223113/lalonde/output_graph/inference_global_state.pkl', 'rb') as file:
+    #     global_state = pickle.load(file)
+    # test(args, global_state)
+    save_path = 'demo_data/20250121_223113/lalonde/output_report'
+    compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
     
 
 
