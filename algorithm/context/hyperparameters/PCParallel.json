@@ -27,13 +27,5 @@
         "large_sample": 16
       },
       "reasoning": "The number of available cores to run the algorithm on. 1 core is set as default. To be used based on available hardware. For values > 16, no significant speedup is observed"
-    },
-    "memory_efficient": {
-      "meaning": "Use memory efficient version of the algo",
-      "suggested_values": {
-        "default": false,
-        "large_sample": true
-      },
-      "reasoning": "The algorithm presents a memory speed tradeoff, and for very large sample size, set the value to true. About 50% reported memory usage efficiency"
     }
   } 

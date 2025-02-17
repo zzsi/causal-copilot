@@ -14,6 +14,8 @@ Please choose the top [TOP_K] most suitable causal discovery algorithms for the 
 
 [CUDA_WARNING]
 
+The user accepts the output graph including undirected edges/undeterministic directions (CPDAG/PAG): [ACCEPT_CPDAG].
+
 Think in-depth and thoroughly step by step. Please include the justifications, the descriptions and finally the selected algorithms in a JSON object. For example:
 
 {
