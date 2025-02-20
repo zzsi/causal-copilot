@@ -18,12 +18,12 @@ class HTE_Param_Selector(object):
         node_type = global_state.statistics.data_type_column[target_node]
 
         if node_type =='Continuous':
-            prompt_path = 'causal_analysis/DML/context/regressor_select_prompt.txt'
-            algo_text_path = 'causal_analysis/DML/context/regressor.txt'
+            prompt_path = 'causal_analysis/MetaLearners/context/regressor_select_prompt.txt'
+            algo_text_path = 'causal_analysis/MetaLearners/context/regressor.txt'
             discrete = False
         else:
-            prompt_path = 'causal_analysis/DML/context/classifier_select_prompt.txt'
-            algo_text_path = 'causal_analysis/DML/context/classifier.txt'
+            prompt_path = 'causal_analysis/MetaLearners/context/classifier_select_prompt.txt'
+            algo_text_path = 'causal_analysis/MetaLearners/context/classifier.txt'
             discrete = True
         prompt = open(prompt_path, "r").read()
         algo_text = open(algo_text_path, "r").read()
@@ -79,7 +79,7 @@ class HTE_Param_Selector(object):
 
         y_prompt, discrete_y = self.prompt_generation(self.y_col, global_state)
         T_prompt, discrete_T = self.prompt_generation(self.T_col, global_state)
-        final_prompt = open('causal_analysis/DML/context/final_stage_select_prompt.txt', "r").read()
+        final_prompt = open('causal_analysis/MetaLearners/context/final_stage_select_prompt.txt', "r").read()
 
         global_state.inference.hte_model_y_json = None
         while not global_state.inference.hte_model_y_json:

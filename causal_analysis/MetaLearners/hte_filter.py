@@ -2,17 +2,16 @@ from openai import OpenAI
 import json
 import os
 
-# Class to get hte_algo suggested by LLM
 class HTE_Filter(object):
     def __init__(self, args):
         self.args = args
         self.client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
 
     def load_algo_context(self):
-        return open(f"causal_analysis/DML/context/hte_algo.txt", "r").read()
+        return open(f"causal_analysis/MetaLearners/context/hte_algo.txt", "r").read()
     
     def load_select_prompt(self):
-        return open(f"causal_analysis/DML/context/hte_select_prompt.txt", "r").read()
+        return open(f"causal_analysis/MetaLearners/context/hte_select_prompt.txt", "r").read()
 
     def create_prompt(self, data, statistics_desc, question):
         columns = ', '.join(data.columns)
