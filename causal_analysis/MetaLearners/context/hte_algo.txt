@@ -6,7 +6,7 @@ Current available algorithms implemented for usage:
 - LinearDML
 - SparseLinearDML
 - CausalForestDML
-- metalearners
+- Metalearners
 
 ## Domain Knowledge about Algorithm Selection
 
@@ -48,6 +48,7 @@ Default algorithm ranking for general cases (when data doesn't favor any specifi
 5. DirectLiNGAM: Efficient but assumes linear relationships and non-Gaussian noise
 6. ICALiNGAM: More computationally intensive than DirectLiNGAM
 7. CDNOD: Specialized for nonstationary/heterogeneous data, may be overkill for stationary data
+8. Metalearners: Flexible and data-adaptive, suitable for complex and nonlinear relationships
 
 ## Algorithms Description 
 
@@ -142,7 +143,7 @@ Default algorithm ranking for general cases (when data doesn't favor any specifi
   2. Scenarios requiring flexible, non-parametric models of treatment effects.  
   3. Applications where valid confidence intervals are critical despite data adaptivity.
 
-### metalearners
+### Metalearners
 
 - **Description**:  
   Metalearners are highly flexible frameworks for estimating CATE, allowing users to specify any machine learning method at each stage of the estimation process, including cross-validation for model selection.
@@ -165,3 +166,99 @@ Default algorithm ranking for general cases (when data doesn't favor any specifi
   1. Scenarios where minimizing the MSE of the CATE estimate is the primary goal.  
   2. When flexibility is needed to experiment with different ML models and perform model selection.  
   3. Use cases where confidence intervals are not a critical requirement.
+
+#### S-Learner
+
+- **Description**:  
+  The S-Learner estimates treatment effects by fitting a single model to the entire dataset, including the treatment variable as a feature. It is simple and works well when the treatment effect is relatively homogeneous.
+
+- **Assumptions**:  
+  1. The treatment effect can be captured by including the treatment variable as a feature in a single model.  
+  2. The relationship between covariates, treatment, and outcome is well-specified by the chosen machine learning model.  
+
+- **Advantages**:  
+  1. Simple to implement and computationally efficient.  
+  2. Works well when the treatment effect is not highly heterogeneous.  
+  3. Can handle multiple treatments and continuous treatment variables.  
+
+- **Limitations**:  
+  1. May struggle with highly heterogeneous treatment effects.  
+  2. The treatment effect is inferred indirectly, which can lead to bias if the model is misspecified.  
+  3. Less flexible than other metalearners for capturing complex treatment effect heterogeneity.  
+
+- **Suitable Cases**:  
+  1. When the treatment effect is expected to be relatively uniform across the population.  
+  2. Scenarios where computational efficiency is a priority.  
+  3. Use cases where a single model can adequately capture the relationship between treatment and outcome.
+
+#### T-Learner
+
+- **Description**:  
+  The T-Learner estimates treatment effects by fitting separate models for the treated and control groups. It is more flexible than the S-Learner and can capture heterogeneous treatment effects.
+
+- **Assumptions**:  
+  1. The treated and control groups can be modeled separately.  
+  2. The relationship between covariates and outcomes is well-specified by the chosen machine learning models.  
+
+- **Advantages**:  
+  1. Can capture heterogeneous treatment effects better than the S-Learner.  
+  2. Simple to implement and interpret.  
+  3. Works well when the treated and control groups have similar covariate distributions.  
+
+- **Limitations**:  
+  1. Requires fitting two models, which can be computationally expensive.  
+  2. May overfit if the treated and control groups have very different distributions.  
+  3. Does not explicitly model the treatment effect, which can lead to inefficiencies.  
+
+- **Suitable Cases**:  
+  1. When the treatment effect is expected to vary across subgroups.  
+  2. Scenarios where the treated and control groups have similar covariate distributions.  
+  3. Use cases where capturing heterogeneity in treatment effects is important.
+
+#### X-Learner
+
+- **Description**:  
+  The X-Learner is an extension of the T-Learner that uses information from both the treated and control groups to improve the estimation of treatment effects. It is particularly effective when the treatment and control groups are imbalanced.
+
+- **Assumptions**:  
+  1. The treated and control groups can be modeled separately, and their predictions can be used to improve treatment effect estimation.  
+  2. The relationship between covariates and outcomes is well-specified by the chosen machine learning models.  
+
+- **Advantages**:  
+  1. Handles imbalanced treatment and control groups effectively.  
+  2. Can provide more accurate estimates of heterogeneous treatment effects.  
+  3. Combines the strengths of the S-Learner and T-Learner.  
+
+- **Limitations**:  
+  1. More complex to implement than S-Learner and T-Learner.  
+  2. Computationally intensive due to the need to fit multiple models.  
+  3. Requires careful tuning of the models for treated and control groups.  
+
+- **Suitable Cases**:  
+  1. When the treatment and control groups are imbalanced.  
+  2. Scenarios where accurate estimation of heterogeneous treatment effects is critical.  
+  3. Use cases where combining information from treated and control groups can improve estimation.
+
+#### Domain Adaptation Learner
+
+- **Description**:  
+  The Domain Adaptation Learner is designed for scenarios where the treated and control groups come from different domains (e.g., different time periods or geographic regions). It uses domain adaptation techniques to account for differences in the distributions of the treated and control groups.
+
+- **Assumptions**:  
+  1. The treated and control groups come from different domains with different covariate distributions.  
+  2. Domain adaptation techniques can effectively account for these differences.  
+
+- **Advantages**:  
+  1. Effective in handling domain shifts between treated and control groups.  
+  2. Can improve the accuracy of treatment effect estimates in cross-domain settings.  
+  3. Flexible and can incorporate various domain adaptation techniques.  
+
+- **Limitations**:  
+  1. Requires domain adaptation techniques, which can be complex to implement.  
+  2. Computationally intensive due to the need to account for domain differences.  
+  3. Performance depends on the quality of the domain adaptation method used.  
+
+- **Suitable Cases**:  
+  1. When the treated and control groups come from different domains (e.g., different time periods or regions).  
+  2. Scenarios where domain shifts are a concern.  
+  3. Use cases where accurate treatment effect estimation across domains is critical.
