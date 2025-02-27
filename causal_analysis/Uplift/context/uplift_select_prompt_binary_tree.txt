@@ -15,10 +15,9 @@ Available Algorithms:
 [ALGO_CONTEXT]
 
 Provide your response in JSON format:
-{
-  "algorithm": {
-    "name": "",
-    "description": "",
-    "justification": ""
+  {
+    "name": "Algorithm name (e.g., 'S-Learner', 'X-Learner')",
+    "description": "Brief description of the algorithm",
+    "justification": "Explanation of why this algorithm is appropriate for this data"
   }
-}
+

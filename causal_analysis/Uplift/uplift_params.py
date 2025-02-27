@@ -1,6 +1,8 @@
 from openai import OpenAI
 import json
 import os
+import sklearn
+from sklearn import ensemble
 
 class UpliftParamSelector:
     def __init__(self, args):
@@ -8,8 +10,8 @@ class UpliftParamSelector:
 
     def prompt_generation(self,  global_state):
 
-        prompt_path = 'causal_analysis/UPLIFT/context/model_select_prompt_tree.txt' #New prompt file
-        algo_text_path = 'causal_analysis/UPLIFT/context/model_tree.txt'#New context file.
+        prompt_path = 'causal_analysis/Uplift/context/model_select_prompt_tree.txt' #New prompt file
+        algo_text_path = 'causal_analysis/Uplift/context/model_tree.txt'#New context file.
         prompt = open(prompt_path, "r").read()
         algo_text = open(algo_text_path, "r").read()
 
@@ -39,11 +41,11 @@ class UpliftParamSelector:
 
     def get_model(self, model_name):
         #Focus on tree based models
-        if hasattr(sklearn.ensemble, model_name):
-            return getattr(sklearn.ensemble, model_name)()
+        if hasattr(ensemble, model_name):
+            return getattr(ensemble, model_name)()
         else:
             print(f"Model {model_name} not found, default to RandomForestRegressor")
-            return sklearn.ensemble.RandomForestRegressor()
+            return ensemble.RandomForestRegressor()
 
     def forward(self, global_state):
         from openai import OpenAI

@@ -7,6 +7,7 @@ from .base import UpliftEstimator
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, GradientBoostingRegressor, GradientBoostingClassifier # Add GB
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier # Add single trees
+from causal_analysis.Uplift.wrappers.base import UpliftEstimator
 
 class CausalMLSLearner(UpliftEstimator):
     def __init__(self, params: Dict, treatment_col: str, outcome_col: str):
