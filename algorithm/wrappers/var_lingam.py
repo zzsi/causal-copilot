@@ -6,46 +6,22 @@ from typing import Dict, Tuple
 import sys
 import os
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-lingam_dir = os.path.join(root_dir, 'externals', 'lingam')
-if not os.path.exists(lingam_dir):
-    raise FileNotFoundError(f"Local lingam directory not found: {lingam_dir}, please git clone the submodule of lingam")
 algorithm_dir = os.path.join(root_dir, 'algorithm')
 sys.path.append(root_dir)
 sys.path.append(algorithm_dir)
-sys.path.insert(0, lingam_dir)
-
-
 
 from lingam import VARLiNGAM as VARLiNGAM_model
+from causalnex.structure.data_generators import gen_stationary_dyn_net_and_df
 
 
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
 
-
+# {‘aic’, ‘fpe’, ‘hqic’, ‘bic’, None}
 class VARLiNGAM(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
         self._params = {
-            """Construct a VARLiNGAM model.
-            Parameters
-            ----------
-            lags : int, optional (default=1)
-                Number of lags.
-            criterion : {‘aic’, ‘fpe’, ‘hqic’, ‘bic’, None}, optional (default='bic')
-                Criterion to decide the best lags within ``lags``.
-                Searching the best lags is disabled if ``criterion`` is ``None``.
-            prune : boolean, optional (default=True)
-                Whether to prune the adjacency matrix of lags.
-            ar_coefs : array-like, optional (default=None)
-                Coefficients of AR model. Estimating AR model is skipped if specified ``ar_coefs``.
-                Shape must be (``lags``, n_features, n_features).
-            lingam_model : lingam object inherits 'lingam._BaseLiNGAM', optional (default=None)
-                LiNGAM model for causal discovery. If None, DirectLiNGAM algorithm is selected.
-            random_state : int, optional (default=None)
-                ``random_state`` is the seed used by the random number generator.
-            """
-            
             'lags': 1,
             'criterion': "bic",
             'prune': True,
@@ -166,12 +142,8 @@ class VARLiNGAM(CausalDiscoveryAlgorithm):
         df = pd.DataFrame(data.T, columns=["x1", "x2", "x3", "x4", "x5"])
         
         return df
-        
-
-        
-
-    
-    def test_algorithm(self):
+ 
+    def test_algorithm2(self):
         # Generate sample data with linear relationships    # np.random.seed(42)    # n_samples = 1000
         df = self.generate_data(n=5, T=1000, random_state=42)
 
@@ -233,7 +205,111 @@ class VARLiNGAM(CausalDiscoveryAlgorithm):
         # print(f"Recall: {metrics['recall']:.4f}")
         # print(f"SHD: {metrics['shd']:.4f}")
 
+    def get_graph(self, sm, data):
+        graph_dict = dict()
+        for name in data:
+            node = int(name.split('_')[0])
+            graph_dict[node] = []
+
+        for c, e in sm.edges:
+            node_e = int(e.split('_')[0])
+            node_c = int(c.split('_')[0])
+            tc = int(c.partition("lag")[2])
+            te = int(e.partition("lag")[2])
+            if te !=0:
+                print(c, e)
+            lag = -1 * tc
+            graph_dict[node_e].append((node_c, lag))
+                
+        return graph_dict
+    
+    def dict_to_adjacency_matrix(self, result_dict, num_nodes, lookback_period):
+        # adj_matrix = np.zeros((lookback_period, num_nodes, num_nodes))
+        lagged_adj_matrix = np.zeros((lookback_period + 1, num_nodes, num_nodes))
+        
+        nodes = list(result_dict.keys())
+        node_to_idx = {node: idx for idx, node in enumerate(nodes)}
+
+        for target, causes in result_dict.items():
+            target_idx = node_to_idx[target]
+            for cause, lag in causes:
+                cause_idx = node_to_idx[cause]
+                lag_index = -lag
+                # if 0 <= lag_index <= lookback_period:
+                # adj_matrix[lag_index, target_idx, cause_idx] = 1
+                lagged_adj_matrix[lag_index, target_idx, cause_idx] = 1
+                    
+        summary_adj_matrix = np.any(lagged_adj_matrix, axis=0).astype(int)
+
+        return summary_adj_matrix, lagged_adj_matrix
+    
+    def test_algorithm(self):
+        np.random.seed(42)
+        n_samples = 1000
+        n_nodes = 3
+        lag = 2
+        graph_net, df, intra_nodes, inter_nodes = gen_stationary_dyn_net_and_df(
+            num_nodes=n_nodes,
+            n_samples=n_samples,
+            p=lag,
+            degree_intra=1,
+            degree_inter=2,
+            w_min_intra=0.04,
+            w_max_intra=0.2,
+            w_min_inter=0.06,
+            w_max_inter=0.3,
+            w_decay=1.0,
+            sem_type='linear-gauss'
+        )
+        print("Sample data generated", inter_nodes, intra_nodes)
+        graph_true = self.get_graph(graph_net, intra_nodes)
+        summary, adj = self.dict_to_adjacency_matrix(graph_true, n_nodes, lag)
+        gt_graph = np.column_stack(adj)
+        print(gt_graph)
+        df = df[intra_nodes]
+        df.columns = [el.split('_')[0] for el in df.columns]
+        print("Testing algorithm with pandas DataFrame:")
+        # Initialize lists to store metrics
+        f1_scores = []
+        precisions = []
+        recalls = []
+        shds = []
+        
+        for _ in range(2):
+            adj_matrix,_,_ = self.fit(df)
+            print(np.column_stack(adj_matrix))
+            evaluator = GraphEvaluator()
+            metrics = evaluator._compute_single_metrics(gt_graph, np.column_stack(adj_matrix))
+            f1_scores.append(metrics['f1'])
+            precisions.append(metrics['precision'])
+            recalls.append(metrics['recall'])
+            shds.append(metrics['shd'])
+            
+        # Calculate average and standard deviation
+        avg_f1 = np.mean(f1_scores)
+        std_f1 = np.std(f1_scores)
+        avg_precision = np.mean(precisions)
+        std_precision = np.std(precisions)
+        avg_recall = np.mean(recalls)
+        std_recall = np.std(recalls)
+        avg_shd = np.mean(shds)
+        std_shd = np.std(shds)
+
+        print("\nAverage Metrics:")
+        print(f"F1 Score: {avg_f1:.4f} ± {std_f1:.4f}")
+        print(f"Precision: {avg_precision:.4f} ± {std_precision:.4f}")
+        print(f"Recall: {avg_recall:.4f} ± {std_recall:.4f}")
+        print(f"SHD: {avg_shd:.4f} ± {std_shd:.4f}")
+
 if __name__ == "__main__":
-    varlingam_algo = VARLiNGAM({})
-    varlingam_algo.test_algorithm() 
+    params = {
+        'lags': 2,
+        'criterion': "bic",
+        'prune': False,
+        'ar_coefs': None,
+        'lingam_model': None,
+        'random_state': None,
+    }
+    algo = VARLiNGAM(params)
+    algo.test_algorithm() 
 

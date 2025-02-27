@@ -2,9 +2,6 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Tuple
 
-
-
-# use the local lingam package
 import sys
 import os
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -12,101 +9,31 @@ algorithm_dir = os.path.join(root_dir, 'algorithm')
 sys.path.append(root_dir)
 sys.path.append(algorithm_dir)
 
-
-
-import tigramite
 from tigramite.pcmci import PCMCI as PCMCI_model
 from tigramite import data_processing as pp
 from tigramite.independence_tests.parcorr import ParCorr
-from tigramite.independence_tests.gpdc import GPDC
-from tigramite.independence_tests.cmiknn import CMIknn
-from tigramite.independence_tests.cmisymb import CMIsymb
+from tigramite.independence_tests.robust_parcorr import RobustParCorr
 
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
+from causalnex.structure.data_generators import gen_stationary_dyn_net_and_df
 
 
 class PCMCI(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
         self._params = {
-            """Construct a PCMCI model.
-                Parameters
-                ----------
-                dataframe : data object
-                    This is the Tigramite dataframe object. Among others, it has the
-                    attributes dataframe.values yielding a numpy array of shape (
-                    observations T, variables N) and optionally a mask of the same shape.
-                cond_ind_test : conditional independence test object
-                    This can be ParCorr or other classes from
-                    ``tigramite.independence_tests`` or an external test passed as a
-                    callable. This test can be based on the class
-                    tigramite.independence_tests.CondIndTest.
-                verbosity : int, optional (default: 0)
-                    Verbose levels 0, 1, ... if larger than 1, print detailed info
-            """
-            
-            'dataframe': None,
-            'cond_ind_test': ParCorr(),
-            'verbosity': 0,
-            
-            
-            """
-                selected_links : dict or None
-                    Deprecated, replaced by link_assumptions
-                link_assumptions : dict
-                    Dictionary of form {j:{(i, -tau): link_type, ...}, ...} specifying
-                    assumptions about links. This initializes the graph with entries
-                    graph[i,j,tau] = link_type. For example, graph[i,j,0] = '-->'
-                    implies that a directed link from i to j at lag 0 must exist.
-                    Valid link types are 'o-o', '-->', '<--'. In addition, the middle
-                    mark can be '?' instead of '-'. Then '-?>' implies that this link
-                    may not exist, but if it exists, its orientation is '-->'. Link
-                    assumptions need to be consistent, i.e., graph[i,j,0] = '-->'
-                    requires graph[j,i,0] = '<--' and acyclicity must hold. If a link
-                    does not appear in the dictionary, it is assumed absent. That is,
-                    if link_assumptions is not None, then all links have to be specified
-                    or the links are assumed absent.
-                tau_min : int, optional (default: 0)
-                    Minimum time lag to test. Note that zero-lags are undirected.
-                tau_max : int, optional (default: 1)
-                    Maximum time lag. Must be larger or equal to tau_min.
-                save_iterations : bool, optional (default: False)
-                    Whether to save iteration step results such as conditions used.
-                pc_alpha : float, optional (default: 0.05)
-                    Significance level in algorithm.
-                max_conds_dim : int, optional (default: None)
-                    Maximum number of conditions to test. If None is passed, this number
-                    is unrestricted.
-                max_combinations : int, optional (default: 1)
-                    Maximum number of combinations of conditions of current cardinality
-                    to test in PC1 step.
-                max_conds_py : int, optional (default: None)
-                    Maximum number of conditions of Y to use. If None is passed, this
-                    number is unrestricted.
-                max_conds_px : int, optional (default: None)
-                    Maximum number of conditions of Z to use. If None is passed, this
-                    number is unrestricted.
-                alpha_level : float, optional (default: 0.05)
-                    Significance level at which the p_matrix is thresholded to 
-                    get graph.
-                fdr_method : str, optional (default: 'fdr_bh')
-                    Correction method, currently implemented is Benjamini-Hochberg
-                    False Discovery Rate method. 
-            """
-            
-            'selected_links': None,
-            'link_assumptions': None,
+            'cond_ind_test': 'parcorr',
             'tau_min': 0,
             'tau_max': 1,
-            'save_iterations': False,
-            'pc_alpha': 0.2,
+            'pc_alpha': 0.05,
+            'alpha_level': 0.05,
+            'fdr_method': 'none',
+            'link_assumptions': None,
             'max_conds_dim': None,
             'max_combinations': 1,
             'max_conds_py': None,
             'max_conds_px': None,
-            'alpha_level': 0.05,
-            'fdr_method': 'none',   
         }
         self._params.update(params)
 
@@ -118,50 +45,96 @@ class PCMCI(CausalDiscoveryAlgorithm):
         return self._params
 
     def get_primary_params(self):
-        self._primary_param_keys = ['dataframe', 'cond_ind_test', 'verbosity']
+        self._primary_param_keys = ['tau_min', 'tau_max', 'pc_alpha', 'alpha_level']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def get_secondary_params(self):
-        self._secondary_param_keys = ['selected_links', 'link_assumptions', 'tau_min', 'tau_max', 'save_iterations', 'pc_alpha', 'max_conds_dim', 'max_combinations', 'max_conds_py', 'max_conds_px', 'alpha_level', 'fdr_method']
+        self._secondary_param_keys = ['link_assumptions', 'max_conds_dim', 'max_combinations', 'max_conds_py', 'max_conds_px']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, PCMCI_model]:
         # PCMCI
+        node_names = list(data.columns)
+        data_t = pp.DataFrame(data.values, var_names=node_names)
         
-        pcmci = PCMCI_model(dataframe=data, cond_ind_test=self._params['cond_ind_test'])
-        results = pcmci.run_pcmci(**self.get_secondary_params())
+        if self._params['cond_ind_test'] == 'parcorr':
+            cond_ind_test = ParCorr()
+        elif self._params['cond_ind_test'] == 'robustparcorr':
+            cond_ind_test = RobustParCorr()
+        elif self._params['cond_ind_test'] == 'gpdc':
+            from tigramite.independence_tests.gpdc import GPDC
+            cond_ind_test = GPDC(significance='analytic', gp_params=None)
+        elif self._params['cond_ind_test'] == 'gsq':
+            from tigramite.independence_tests.gsquared import Gsquared
+            cond_ind_test = Gsquared(significance='analytic')
+        elif self._params['cond_ind_test'] == 'regression':
+            from tigramite.independence_tests.regressionCI import RegressionCI
+            cond_ind_test = RegressionCI(significance='analytic')
+        elif self._params['cond_ind_test'] == 'cmi':
+            from tigramite.independence_tests.cmiknn import CMIknn
+            cond_ind_test = CMIknn(significance='shuffle_test', knn=0.1, shuffle_neighbors=5, transform='ranks', sig_samples=5)
+
         
-        """
-        Returns
-        -------
-        graph : array of shape [N, N, tau_max+1]
-            Causal graph, see description above for interpretation.
-        val_matrix : array of shape [N, N, tau_max+1]
-            Estimated matrix of test statistic values.
-        p_matrix : array of shape [N, N, tau_max+1]
-            Estimated matrix of p-values, optionally adjusted if fdr_method is
-            not 'none'.
-        conf_matrix : array of shape [N, N, tau_max+1,2]
-            Estimated matrix of confidence intervals of test statistic values.
-            Only computed if set in cond_ind_test, where also the percentiles
-            are set.
-        """
-        # adj_matrices = results['graph']
+        pcmci = PCMCI_model(dataframe=data_t, cond_ind_test=cond_ind_test)
+        results = pcmci.run_pcmci(**self.get_primary_params(), **self.get_secondary_params())
+        if self._params['fdr_method'] !='none':
+            q_matrix = pcmci.get_corrected_pvalues(p_matrix=results['p_matrix'], 
+                                                fdr_method=self._params['fdr_method'],
+                                                exclude_contemporaneous=False)
+        else:
+            q_matrix = results['p_matrix']
         
         # Prepare additional information
         info = {
             'val_matrix': results['val_matrix'],
             'p_matrix': results['p_matrix'],
             'conf_matrix': results['conf_matrix'],
+            'alpha': self._params['alpha_level'],
+            'q_matrix': q_matrix
         }
         
-        # create adj_matrices  # Note that zero-lags are undirected.
-        matrices = (results['p_matrix'] < self._params['alpha_level']).astype(int)
-        adj_matrices = np.array([matrices[:, :, lag].T for lag in range(matrices.shape[2])])
+        matrices = (q_matrix <= self._params['alpha_level']).astype(int)
+        lag_matrix = np.array([matrices[:, :, lag].T for lag in range(matrices.shape[2])])
         
-        return adj_matrices, info, pcmci
+        return lag_matrix, info, results
     
+    def dict_to_adjacency_matrix(self, result_dict, num_nodes, lookback_period):
+        # adj_matrix = np.zeros((lookback_period, num_nodes, num_nodes))
+        lagged_adj_matrix = np.zeros((lookback_period + 1, num_nodes, num_nodes))
+        
+        nodes = list(result_dict.keys())
+        node_to_idx = {node: idx for idx, node in enumerate(nodes)}
+
+        for target, causes in result_dict.items():
+            target_idx = node_to_idx[target]
+            for cause, lag in causes:
+                cause_idx = node_to_idx[cause]
+                lag_index = -lag
+                # if 0 <= lag_index <= lookback_period:
+                # adj_matrix[lag_index, target_idx, cause_idx] = 1
+                lagged_adj_matrix[lag_index, target_idx, cause_idx] = 1
+                    
+        summary_adj_matrix = np.any(lagged_adj_matrix, axis=0).astype(int)
+
+        return summary_adj_matrix, lagged_adj_matrix
     
+    def get_graph(self, sm, data):
+        graph_dict = dict()
+        for name in data:
+            node = int(name.split('_')[0])
+            graph_dict[node] = []
+
+        for c, e in sm.edges:
+            node_e = int(e.split('_')[0])
+            node_c = int(c.split('_')[0])
+            tc = int(c.partition("lag")[2])
+            te = int(e.partition("lag")[2])
+            if te !=0:
+                print(c, e)
+            lag = -1 * tc
+            graph_dict[node_e].append((node_c, lag))
+                
+        return graph_dict
     
     def generate_data(self, n=5, T=1000, random_state=None):
         '''
@@ -235,11 +208,8 @@ class PCMCI(CausalDiscoveryAlgorithm):
         # df = pd.DataFrame(data.T, columns=["x1", "x2", "x3", "x4", "x5"])
         df = pp.DataFrame(data.T)
         return df
-        
-        
-        
-        
-    def test_algorithm(self):
+           
+    def test_algorithm_base(self):
         # Generate sample data with linear relationships    # np.random.seed(42)    # n_samples = 1000
         df = self.generate_data(n=5, T=1000, random_state=42)
 
@@ -297,8 +267,73 @@ class PCMCI(CausalDiscoveryAlgorithm):
             ]
         ])
 
+    def test_algorithm(self):
+        np.random.seed(42)
+        n_samples = 1000
+        n_nodes = 3
+        lag = 2
+        graph_net, df, intra_nodes, inter_nodes = gen_stationary_dyn_net_and_df(
+            num_nodes=n_nodes,
+            n_samples=n_samples,
+            p=lag,
+            degree_intra=1,
+            degree_inter=2,
+            w_min_intra=0.04,
+            w_max_intra=0.2,
+            w_min_inter=0.06,
+            w_max_inter=0.3,
+            w_decay=1.0,
+            sem_type='linear-gauss'
+        )
+        print("Sample data generated", inter_nodes, intra_nodes)
+        graph_true = self.get_graph(graph_net, intra_nodes)
+        summary, adj = self.dict_to_adjacency_matrix(graph_true, n_nodes, lag)
+        gt_graph = np.column_stack(adj)
+        print(gt_graph)
+        df = df[intra_nodes]
+        df.columns = [el.split('_')[0] for el in df.columns]
+        print("Testing algorithm with pandas DataFrame:")
+        # Initialize lists to store metrics
+        f1_scores = []
+        precisions = []
+        recalls = []
+        shds = []
+        
+        for _ in range(2):
+            adj_matrix,_,_ = self.fit(df)
+            print(np.column_stack(adj_matrix))
+            evaluator = GraphEvaluator()
+            metrics = evaluator._compute_single_metrics(gt_graph, np.column_stack(adj_matrix))
+            f1_scores.append(metrics['f1'])
+            precisions.append(metrics['precision'])
+            recalls.append(metrics['recall'])
+            shds.append(metrics['shd'])
+            
+        # Calculate average and standard deviation
+        avg_f1 = np.mean(f1_scores)
+        std_f1 = np.std(f1_scores)
+        avg_precision = np.mean(precisions)
+        std_precision = np.std(precisions)
+        avg_recall = np.mean(recalls)
+        std_recall = np.std(recalls)
+        avg_shd = np.mean(shds)
+        std_shd = np.std(shds)
+
+        print("\nAverage Metrics:")
+        print(f"F1 Score: {avg_f1:.4f} ± {std_f1:.4f}")
+        print(f"Precision: {avg_precision:.4f} ± {std_precision:.4f}")
+        print(f"Recall: {avg_recall:.4f} ± {std_recall:.4f}")
+        print(f"SHD: {avg_shd:.4f} ± {std_shd:.4f}")
 
 if __name__ == "__main__":
-    pcmci_algo = PCMCI({})
+    params = {
+        'cond_ind_test': 'robustparcorr',
+        'tau_min': 0,
+        'tau_max': 2,
+        'pc_alpha': 1,
+        'alpha_level': 0.07,
+        'fdr_method': 'fdr_bh'
+    }
+    pcmci_algo = PCMCI(params)
     pcmci_algo.test_algorithm() 
 
