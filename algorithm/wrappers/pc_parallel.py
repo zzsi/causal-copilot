@@ -20,7 +20,7 @@ class PCParallel(CausalDiscoveryAlgorithm):
         self._params = {
             'alpha': 0.05,
             'indep_test': 'fisherz',
-            'cores': 1,
+            'cores': 8,
             'memory_efficient': False,
             'background_knowledge': None,
             'batch': None

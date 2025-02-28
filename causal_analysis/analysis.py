@@ -6,7 +6,9 @@ def generate_analysis_econml(args, global_state, key_node, treatment, parent_nod
     att, att_lower, att_upper = result['att']
     hte, hte_lower, hte_upper = result['hte']
     prompt_ate = f"""
-    I'm doing the Treatment Effect Estimation analysis and please help me to write a brief analysis in bullet points.
+    I'm doing the Treatment Effect Estimation analysis and please help me to write a brief analysis.
+    You can use some bullet points to summarize the result, but not too much.
+    **Focus on the result and DO NOT list out result variable, treatment variable, parent nodes, confounders, etc.**
     Here are some informations:
     **Result Variable we care about**: {key_node}
     **Treatment Variable**: {treatment}
@@ -20,13 +22,17 @@ def generate_analysis_econml(args, global_state, key_node, treatment, parent_nod
     response_ate = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt_ate)
 
     prompt_hte = f"""
-    I'm doing the Heterogeneous Treatment Effect Estimation and please help me to write a brief analysis in bullet points.
+    I'm doing the Heterogeneous Treatment Effect Estimation and please help me to write a brief analysis.
+    You can use some bullet points to summarize the result, but not too much.
+    **Focus on the result and DO NOT list out result variable, treatment variable, Heterogeneous Variables, confounders, etc.**
     Here are some informations:
     **Result Variable we care about**: {key_node}
     **Treatment Variable**: {treatment}
-    **Heterogeneous Confounders we coutrol**: {X_col}
+    **Heterogeneous Variables we coutrol**: {X_col}
     **Description from User**: {query}
-    **Information in the plot**: Distribution of the HTE; Violin plot of the CATE grouped by: {X_col}
+    **Information in the plot**: 
+    Plot 1: Distribution of the HTE; 
+    Plot 2: Violin plot of the CATE grouped by: {X_col}
     """
     response_hte = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt_hte)
     
@@ -38,18 +44,54 @@ def generate_analysis_econml(args, global_state, key_node, treatment, parent_nod
     plot_cate_violin(global_state, hte, X_col, cate_fig_path)
     figs.append(cate_fig_path)
 
-    return response_ate+'\n'+response_hte, figs
+    return [response_ate,response_hte], figs
 
-def generate_analysis_matching(args, treatment, outcome, method, W_col, ate, query):
+def generate_analysis_matching(args, treatment, outcome, method, W_col, ate, cate_result, query):
     # Generate a response using the LLM
+    response_balance = """
+The figure above is for balance checking. It's a comparision of heterogeneous variables before and after matching.
+"""
     prompt = f"""
-    I'm doing the Matching-Based Effect Estimation analysis and please help me to write a brief analysis in bullet points.
+    I'm doing the Matching-Based Effect Treatment Estimation analysis and please help me to write a brief analysis.
+    You can use some bullet points to summarize the result, but not too much.
+    **Focus on the result and DO NOT list out result variable, treatment variable, parent nodes, confounders, etc.**
     Here are some informations:
     **Treatment Variable**: {treatment}
     **Outcome Variable**: {outcome}
     **Matching Method**: {method}
     **Confounders**: {W_col}
+    **Description from User**: {query}
     **Average Treatment Effect (ATE)**: {ate}
+    """
+    response_ate = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt)
+    prompt = f"""
+    I'm doing the Matching-Based Effect Treatment Estimation analysis and please help me to write a brief analysis.
+    You can use some bullet points to summarize the result, but not too much.
+    **Focus on the result and DO NOT list out result variable, treatment variable, parent nodes, confounders, etc.**
+    Here are some informations:
+    **Treatment Variable**: {treatment}
+    **Outcome Variable**: {outcome}
+    **Matching Method**: {method}
+    **Confounders**: {W_col}
+    **Description from User**: {query}
+    **Conditional Average Treatment Effect**:
+    """
+    for key, value in cate_result.items():
+        prompt += f"Conditional on {key}: {value}\n"
+    response_cate = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt)
+    return [response_balance, response_ate, response_cate]
+
+def generate_analysis_linear_regression(args, treatment, outcome, ate, p_value, query):
+    # Generate a response using the LLM
+    prompt = f"""
+    I'm doing the Treatment Effect Estimation analysis and please help me to write a brief analysis.
+    You can use some bullet points to summarize the result, but not too much.
+    Here are some informations:
+    **Treatment Variable**: {treatment}
+    **Outcome Variable**: {outcome}
+    **Method**: Linear Regression
+    **Average Treatment Effect (ATE)**: {ate}
+    **P-value**: {p_value}
     **Description from User**: {query}
     """
 
@@ -94,7 +136,8 @@ def generate_analysis_matching(args, treatment, outcome, method, W_col, ate, que
 
 def generate_analysis_feature_importance(args, key_node, parent_nodes, mean_shap_values, desc):
     prompt = f"""
-    I'm doing the feature importance analysis and please help me to write a brief analysis in bullet points.
+    I'm doing the feature importance analysis and please help me to write a brief analysis.
+    You can use some bullet points to summarize the result, but not too much.
     Here are some informations:
     **Result Variable we care about**: {key_node}
     **Parent Nodes of the Result Variable**: {parent_nodes}
@@ -107,7 +150,8 @@ def generate_analysis_feature_importance(args, key_node, parent_nodes, mean_shap
 
 def generate_analysis_anormaly(args, df, key_node, parent_nodes, desc):
     prompt = f"""
-    I'm doing the Anormaly Attribution analysis and please help me to write a brief analysis in bullet points.
+    I'm doing the Anormaly Attribution analysis and please help me to write a brief analysis.
+    You can use some bullet points to summarize the result, but not too much.
     Here are some informations:
     **Abnormal Variable we care about**: {key_node}
     **Parent Nodes of the Abnormal Variable**: {parent_nodes}
@@ -125,7 +169,8 @@ def generate_analysis_anormaly(args, df, key_node, parent_nodes, desc):
 def generate_analysis_anormaly_dist(args, df, key_node, desc):
     # Generate a response using the LLM
     prompt = f"""
-    I'm doing the Distributional Change Attribution analysis and please help me to write a brief analysis in bullet points.
+    I'm doing the Distributional Change Attribution analysis and please help me to write a brief analysis.
+    You can use some bullet points to summarize the result, but not too much.
     Here are some informations:
     **Target Variable we care about**: {key_node}
     **Attribution Scores**: 
@@ -133,6 +178,28 @@ def generate_analysis_anormaly_dist(args, df, key_node, desc):
     **Description from User**: {desc}
     **Methods to calculate Distributional Change Attribution**
     We compared two datasets (old and new) to identify which nodes in the causal graph contributed most to the change in the distribution of the target variable.
+    """
+
+    response = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt)
+    return response
+
+def generate_conterfactual_estimation(args, global_state, shift_intervention_val, shift_df, treatment, key_node, desc):
+    original_df = global_state.user_data.processed_data
+    prompt = f"""
+    I'm doing the Counterfactual Estimation analysis and please help me to write a brief analysis.
+    You can use some bullet points to summarize the result, but not too much.
+    Here are some informations:
+    **Target Variable we care about**: {key_node}
+    **Treatment Variable**: {treatment}
+    **Treatment Shift Values**: {shift_intervention_val}
+    **Original Distribution of Target Variable**: {original_df[key_node].describe().to_string()}. 
+    Please use some descriptive words to describe the distribution. DO NOT only list summary statistics, e.g., quantiles, maximum, minium, etc.
+    **Counterfactual Estimation Result of Target Variable**: {shift_df[key_node].describe().to_string()}. 
+    Please use some descriptive words to describe the distribution. DO NOT only list summary statistics, e.g., quantiles, maximum, minium, etc. 
+    You need to compare the counterfactual estimation result with the original distribution of target variables.
+    **Description from User**: {desc}
+    **Methods to calculate Counterfactual Estimation**
+    We estimated the counterfactual distribution of the target variable by shifting the observed samples in the direction of the identified confounders.
     """
 
     response = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt)

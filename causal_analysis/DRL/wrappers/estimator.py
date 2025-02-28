@@ -15,9 +15,9 @@ from .base import Estimator
 # - ForestDRL
 
 class DRL(Estimator):
-    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None):
-        super().__init__(params, y_col, T_col, X_col, W_col)
-        self.model = Econ_DRL(**self._params)
+    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int=0, T1: int=1):
+        super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
+        self.model = Econ_DRL(cv=5, **self._params)
 
     @property
     def name(self):
@@ -27,7 +27,7 @@ class DRL(Estimator):
         return self._params
 
     def fit(self, data: pd.DataFrame):
-        y = data[[self.y_col]]
+        y = data[[self.y_col]].values.ravel()
         T = data[[self.T_col]]
         X = data[self.X_col] if self.X_col else None
         W = data[self.W_col] if self.W_col else None
@@ -35,8 +35,9 @@ class DRL(Estimator):
         self.model.fit(Y=y, T=T, X=X, W=W)
             
     def ate(self, data: pd.DataFrame):
-        ate = self.model.ate(X=None, T0=self.T0, T1=self.T1)
-        ate_lower, ate_upper = self.model.ate_interval(X=None, T0=self.T0, T1=self.T1)
+        X = data[self.X_col] if self.X_col else None
+        ate = self.model.ate(X=X, T0=self.T0, T1=self.T1)
+        ate_lower, ate_upper = self.model.ate_interval(X=X, T0=self.T0, T1=self.T1)
         return ate, ate_lower, ate_upper
 
     def att(self, data: pd.DataFrame):
@@ -59,10 +60,10 @@ class DRL(Estimator):
 
 
 class LinearDRL(Estimator):
-    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None):
+    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int=0, T1: int=1):
         del params['model_final']
-        super().__init__(params, y_col, T_col, X_col, W_col)
-        self.model = Econ_LinearDRL(**self._params)
+        super().__init__(params, y_col, T0, T1, T_col, X_col, W_col)
+        self.model = Econ_LinearDRL(cv=5, **self._params)
 
     @property
     def name(self):
@@ -72,7 +73,7 @@ class LinearDRL(Estimator):
         return self._params
 
     def fit(self, data: pd.DataFrame):
-        y = data[[self.y_col]]
+        y = data[[self.y_col]].values.ravel()
         T = data[[self.T_col]]
         X = data[self.X_col] if self.X_col else None
         W = data[self.W_col] if self.W_col else None
@@ -80,8 +81,9 @@ class LinearDRL(Estimator):
         self.model.fit(y, T, X=X, W=W)
         
     def ate(self, data: pd.DataFrame):
-        ate = self.model.ate(X=None, T0=self.T0, T1=self.T1)
-        ate_lower, ate_upper = self.model.ate_interval(X=None, T0=self.T0, T1=self.T1)
+        X = data[self.X_col] if self.X_col else None
+        ate = self.model.ate(X=X, T0=self.T0, T1=self.T1)
+        ate_lower, ate_upper = self.model.ate_interval(X=X, T0=self.T0, T1=self.T1)
         return ate, ate_lower, ate_upper
 
     def att(self, data: pd.DataFrame):
@@ -103,10 +105,10 @@ class LinearDRL(Estimator):
         pass
 
 class SparseLinearDRL(Estimator):
-    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None):
+    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int=0, T1: int=1):
         del params['model_final']
-        super().__init__(params, y_col, T_col, X_col, W_col)
-        self.model = Econ_SparseLinearDRL(**self._params)
+        super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
+        self.model = Econ_SparseLinearDRL(cv=5, **self._params)
 
     @property
     def name(self):
@@ -116,7 +118,7 @@ class SparseLinearDRL(Estimator):
         return self._params
 
     def fit(self, data: pd.DataFrame):
-        y = data[[self.y_col]]
+        y = data[[self.y_col]].values.ravel()
         T = data[[self.T_col]]
         X = data[self.X_col] if self.X_col else None
         W = data[self.W_col] if self.W_col else None
@@ -124,8 +126,9 @@ class SparseLinearDRL(Estimator):
         self.model.fit(y, T, X=X, W=W)
            
     def ate(self, data: pd.DataFrame):
-        ate = self.model.ate(X=None, T0=self.T0, T1=self.T1)
-        ate_lower, ate_upper = self.model.ate_interval(X=None, T0=self.T0, T1=self.T1)
+        X = data[self.X_col] if self.X_col else None
+        ate = self.model.ate(X=X, T0=self.T0, T1=self.T1)
+        ate_lower, ate_upper = self.model.ate_interval(X=X, T0=self.T0, T1=self.T1)
         return ate, ate_lower, ate_upper
 
     def att(self, data: pd.DataFrame):
@@ -147,10 +150,10 @@ class SparseLinearDRL(Estimator):
         pass
 
 class ForestDRL(Estimator):
-    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None):
+    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int = 0, T1: int = 1):
         del params['model_final']
-        super().__init__(params, y_col, T_col, X_col, W_col)
-        self.model = Econ_ForestDRL(**self._params)
+        super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
+        self.model = Econ_ForestDRL(cv=5, **self._params)
 
     @property
     def name(self):
@@ -160,7 +163,7 @@ class ForestDRL(Estimator):
         return self._params
 
     def fit(self, data: pd.DataFrame):
-        y = data[[self.y_col]]
+        y = data[[self.y_col]].values.ravel()
         T = data[[self.T_col]]
         X = data[self.X_col] if self.X_col else None
         W = data[self.W_col] if self.W_col else None
@@ -168,8 +171,9 @@ class ForestDRL(Estimator):
         self.model.fit(y, T, X=X, W=W)
     
     def ate(self, data: pd.DataFrame):
-        ate = self.model.ate(X=None, T0=self.T0, T1=self.T1)
-        ate_lower, ate_upper = self.model.ate_interval(X=None,T0=self.T0, T1=self.T1)
+        X = data[self.X_col] if self.X_col else None
+        ate = self.model.ate(X=X, T0=self.T0, T1=self.T1)
+        ate_lower, ate_upper = self.model.ate_interval(X=X,T0=self.T0, T1=self.T1)
         return ate, ate_lower, ate_upper
 
     def att(self, data: pd.DataFrame):

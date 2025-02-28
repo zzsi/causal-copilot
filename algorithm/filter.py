@@ -12,7 +12,7 @@ class Filter(object):
         self.llm_client = LLMClient(args)
 
     def forward(self, global_state):
-        prompt = self.create_prompt(global_state.user_data.initial_query, global_state.user_data.processed_data, global_state.statistics.description)
+        prompt = self.create_prompt(global_state.user_data.initial_query, global_state.user_data.processed_data, global_state.statistics.description, global_state.user_data.accept_CPDAG)
 
         # save the prompt to a file for debugging
         with open(os.path.join(os.path.dirname(__file__), "prompt.txt"), "w") as f:
@@ -59,7 +59,7 @@ class Filter(object):
     
 
 
-    def create_prompt(self, user_query, data, statistics_desc):
+    def create_prompt(self, user_query, data, statistics_desc, accept_CPDAG):
         algo_context, prompt_template = self.load_prompt_context()
         replacements = {
             "[USER_QUERY]": user_query,
@@ -67,7 +67,8 @@ class Filter(object):
             "[STATISTICS_DESC]": statistics_desc,
             "[ALGO_CONTEXT]": algo_context,
             "[CUDA_WARNING]": "" if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.",
-            "[TOP_K]": str(TOP_K)
+            "[TOP_K]": str(TOP_K),
+            "[ACCEPT_CPDAG]": "Yes" if accept_CPDAG else "No"
         }
 
         for placeholder, value in replacements.items():

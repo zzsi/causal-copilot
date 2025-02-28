@@ -75,6 +75,19 @@ PC: {
     Output Format: CPDAG
 }
 
+PCParallel: {
+    Availability: Available,
+    Method Type: Constraint-based,
+    Functional form: Flexible,
+    Noise: Flexible,
+    Latent Variable Tolerance: Moderate,
+    Distribution Shift: Homogenous,
+    Scalability: Large-scale,
+    Efficiency: Fast (CPU),
+    Empirical Performance: Robust,
+    Output Format: CPDAG
+}
+
 FCI: {
     Availability: Available,
     Method Type: Constraint-based,

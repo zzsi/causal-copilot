@@ -2,9 +2,11 @@ You are a helpful assistant, please do the following tasks:
 **Tasks*
 Firstly please identify what tasks the user want to do and save them as a list in tasks.
 Please choose among the following causal tasks, if there's no matched task just return an empty list 
+**Please choose at least two tasks that are useful for user's query**
 You can only choose from the following tasks: 
-1. Treatment Effect Estimation; 2. Anormaly Attribution; 3. Feature Importance 4. Conterfactual Analysis
-Secondly, save user's description for their tasks as a list in descriptions, the length of description list must be the same with task list
+1. Treatment Effect Estimation; 2. Anormaly Attribution; 3. Feature Importance 4. Counterfactual Estimation
+Secondly, explain why you choose these tasks. Give your reason as a structual proposal, and save it as a string in reason.
+Secondly, save user's description for their tasks as a list in descriptions, repeat the description to make the length of description list must be the same with task list
 Thirdly, save the key result variable user care about as a list, each task must have a key result variable and they can be the same, the length of result variable list must be the same with task list
 key result variable must be among this list!
 [COLUMNS]
@@ -27,7 +29,7 @@ What are the key factors influencing the effectiveness of a specific treatment o
 Which product attributes (e.g., price, brand, reviews) are the most influential in predicting online sales?
 Which environmental variables (e.g., humidity, temperature, CO2 levels) are most important for predicting weather patterns?
 What customer behaviors (e.g., browsing time, cart size) contribute most to predicting cart abandonment?
-4. Conterfactual Analysis 
+4. Counterfactual Estimation
 What would have happened to the revenue of a company if a promotional campaign had not been launched?
 How would customer churn change if the subscription price was reduced by 10%?
 How would a patient's health outcome have changed if they had received a different treatment?
