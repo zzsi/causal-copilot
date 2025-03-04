@@ -10,7 +10,7 @@ algorithm_dir = os.path.join(root_dir, 'algorithm')
 sys.path.append(algorithm_dir)
 sys.path.append(root_dir)
 
-from xges import XGES as Xges
+from xges import XGES as xges
 
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
@@ -39,7 +39,7 @@ class XGES(CausalDiscoveryAlgorithm):
         data_values = data.values
 
         # Run XGES algorithm
-        model = Xges(**self.get_primary_params())
+        model = xges(**self.get_primary_params())
         result = model.fit(data_values)
 
         # Convert the graph to adjacency matrix

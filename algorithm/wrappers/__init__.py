@@ -17,7 +17,7 @@ from .mbor import MBOR
 ## Greedy search based algorithms
 from .ges import GES
 from .fges import FGES
-from .xges import XGES
+from .x_ges import XGES as XGES
 ## Continuous optimization based algorithms
 from .notears_linear import NOTEARSLinear
 from .notears_nolinear import NOTEARSNonlinear

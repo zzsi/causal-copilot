@@ -12,7 +12,9 @@ N_JOBS=20
 #             NOTEARSLinear 
 #             HITONMB BAMB IAMBnPC MBOR InterIAMB)
             # Hybrid CALM NOTEARSNonlinear CORL
-ALGORITHMS=(CDNOD AcceleratedPC AcceleratedLiNGAM FCI GES GOLEM GRaSP IAMBnPC InterIAMB MBOR NOTEARSLinear PC XGES)
+ALGORITHMS=(XGES)
+
+# (CDNOD AcceleratedPC AcceleratedLiNGAM FCI GES GOLEM GRaSP IAMBnPC InterIAMB MBOR NOTEARSLinear PC XGES)
 
 # Create a temporary directory for parallel job logs
 LOG_DIR="$SCRIPT_DIR/benchmark_logs/$(date +"%Y%m%d_%H%M%S")"
@@ -28,7 +30,7 @@ run_benchmark() {
     echo "[$(date +"%Y-%m-%d %H:%M:%S")] Starting benchmark for algorithm: $algo" | tee -a "$log_file"
     
     # Run the benchmark and redirect both stdout and stderr to the log file
-    python "$SCRIPT_DIR/benchmarking.py" --algorithm "$algo" &>> "$log_file"
+    python "$SCRIPT_DIR/benchmarking.py" --algorithm "$algo" >> "$log_file" 2>&1
     
     if [ $? -eq 0 ]; then
         echo "[$(date +"%Y-%m-%d %H:%M:%S")] Benchmark for algorithm $algo completed successfully." | tee -a "$log_file"

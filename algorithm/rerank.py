@@ -83,6 +83,12 @@ class Reranker:
     def select_algorithm(self, global_state, algo_candidates, algo_info, algo2des_cond_hyper):
         if global_state.algorithm.selected_algorithm is not None:
             print(f"User has already selected the algorithm: {global_state.algorithm.selected_algorithm}, skip the reranking process.")
+            global_state.algorithm.algorithm_optimum = {
+                "reasoning": "",
+                "reason": f"The user has already selected the algorithm: {global_state.algorithm.selected_algorithm}",
+                "algorithm": global_state.algorithm.selected_algorithm
+            }
+
             return global_state.algorithm.selected_algorithm
         
         time_info = self.runtime_estimate(algo_candidates, global_state.statistics.sample_size, global_state.statistics.feature_number)
