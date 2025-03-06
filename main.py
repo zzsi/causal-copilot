@@ -90,7 +90,7 @@ def parse_args():
     parser.add_argument(
         '--initial_query',
         type=str,
-        default="selected algorithm: PCMCI",
+        default= "do causal discovery on the data", # "selected algorithm: PCMCI",
         help='Initial query for the algorithm'
     )
 
@@ -128,9 +128,10 @@ def load_real_world_data(file_path):
 def process_user_query(query, data):
     #Baseline code
     query_dict = {}
-    for part in query.split(';'):
-        key, value = part.strip().split(':')
-        query_dict[key.strip()] = value.strip()
+    if ';' in query or ':' in query:
+        for part in query.split(';'):
+            key, value = part.strip().split(':')
+            query_dict[key.strip()] = value.strip()
 
     if 'filter' in query_dict and query_dict['filter'] == 'continuous':
         # Filtering continuous columns, just for target practice right now

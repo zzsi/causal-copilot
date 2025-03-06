@@ -1,5 +1,5 @@
 Given the following user query:
-do causal discovery on the data:
+do causal discovery on the data
 
 For the data that have the following variables:
 Raf, Mek, Plcg, PIP2, PIP3, Erk, Akt, PKA, PKC, P38, Jnk

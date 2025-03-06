@@ -115,7 +115,7 @@ def global_state_initialization(args: argparse.Namespace = None) -> GlobalState:
     from openai import OpenAI
     
     # get all available algorithms
-    algorithms = [algo.split('.')[0] for algo in os.listdir('algorithm/context/algos') if algo.endswith('.txt') and 'tagging' not in algo]  
+    algorithms = [algo.split('.')[0] for algo in os.listdir('algorithm/context/algos') if algo.endswith('.txt') and 'tagging' not in algo and 'guideline' not in algo]  
     algorithms = ', '.join(algorithms)
 
     print(algorithms)
