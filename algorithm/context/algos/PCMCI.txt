@@ -1,0 +1,153 @@
+### PCMCI  
+────────────────────────────────────────────────────────────────────────
+1. HYPER-PARAMETERS SENSITIVITY
+────────────────────────────────────────────────────────────────────────
+
+• Number of Key Hyperparameters   
+  - PCMCI relies on statistical independence tests and hyperparameters controlling lagged causal discovery. Key parameters in your implementation include:  
+    1. cond_ind_test: Choice of conditional independence test (e.g., `parcorr`, `gpdc`, `cmi`, `gsq` for categorical, `regression` for mixed data).  
+    2. τ_min (tau_min): Minimum time lag to consider in the causal graph.  
+    3. τ_max (tau_max): Maximum time lag for causal discovery.  
+    4. pc_alpha: Significance level for the PC1 step (pruning irrelevant edges).  
+    5. alpha_level: Significance level used for graph thresholding after running PCMCI.  
+    6. fdr_method: False Discovery Rate (FDR) correction method (e.g., `none`, `fdr_bh`).  
+    7. link_assumptions: Background knowledge constraints that initialize the causal graph with pre-defined edges.  
+    8. max_conds_dim: Maximum number of conditioning variables in independence tests.  
+    9. max_combinations: Maximum number of condition combinations to test in the PC1 step.  
+    10. max_conds_py: Restricts the number of parent nodes considered in the MCI step.  
+    11. max_conds_px: Maximum number of variables to condition on in tests.  
+
+• Tuning Difficulty
+  - cond_ind_test selection is crucial—`parcorr` for Gaussian data, `gpdc` for non-linearity, `gsq` for categorical, `cmi` for accuracy.  
+  - τ_min and τ_max must be determined through preprocessing—higher values increase computational cost.  
+  - pc_alpha and alpha_level must be adjusted based on sample size—smaller values reduce false positives but may miss weak links.  
+  - fdr_method helps in large graphs by reducing false discoveries.  
+  - max_conds_dim and max_conds_py should be restricted for large datasets to reduce runtime.   
+
+• Sensitivity  
+  - Setting τ_max too high increases computational complexity  
+  - pc_alpha directly affects sparsity—lower values give fewer false positives, higher values reduce false negatives.  
+  - Incorrect cond_ind_test selection can lead to biased results 
+
+•  Critique/Extension   
+  - Choosing the right independence test is critical for valid causal discovery.  
+  - Adaptive max_conds_dim could dynamically adjust based on dataset size.
+
+────────────────────────────────────────────────────────────────────────
+2. ROBUSTNESS & SCALABILITY
+────────────────────────────────────────────────────────────────────────
+
+• Tolerance to Bad Data Quality   
+  - PCMCI handles autocorrelation well, unlike traditional PC-based methods.  
+  - No built-in missing data handling—imputation or pre-processing is required.  
+  - Robust to some noise  due to its independence test framework, but heavy-tailed noise can affect accuracy.  
+
+• Tolerance to Sparse vs. Dense Connected Systems  
+  - Performs best in sparse graphs—pc_alpha and alpha_level help control sparsity.  
+  - Dense graphs slow down execution, but max_conds_dim limits computational overhead .  
+
+• Scalability  
+  - Scales better than standard PC due to its two-step pruning process.  
+  - Increasing τ_max makes execution slower—choosing the right lag range is crucial.  
+  - Large-scale problems require restricting conditioning dimensions.  
+
+• Critique/Extension   
+  - Parallelization of CI tests could further improve scalability.   
+  - Heuristics for adaptive max_combinations settings could reduce computational load.  
+
+────────────────────────────────────────────────────────────────────────
+3. MIXED DATA & COMPLEX FUNCTIONS
+────────────────────────────────────────────────────────────────────────
+• Noise Type   
+  -  Handles Gaussian and non-Gaussian noise via different cond_ind_test choices.   
+  -  GPDC and CMI improve non-linear causal detection  but increase computation time.  
+
+• Mixed Data (Continuous & Discrete)   
+  - Supports mixed data types— `gsq` for categorical variables, `regression` for hybrid models.   
+
+• Heterogeneous Data   
+  -  PCMCI+ can handle time-varying relationships , improving robustness for shifting distributions.  
+
+• Complex Functional Forms   
+  - Standard  ParCorr assumes linearity , while  GPDC and CMI detect non-linear dependencies .  
+  -  Increasing α may help in non-linear cases to account for higher variance.   
+
+• Critique/Extension   
+  -  Adaptive independence test selection based on data distribution could improve flexibility.   
+  -  Graph sparsification techniques could reduce the impact of weak non-linearities.   
+
+────────────────────────────────────────────────────────────────────────
+4. COMPUTATIONAL COMPLEXITY
+────────────────────────────────────────────────────────────────────────
+
+• Theoretical Time Complexity   
+  -  PCMCI is O(n² τ_max) complexity —scales better than PC but still expensive for large τ_max.  
+
+• Variability in Practical Usage   
+  -  High τ_max increases runtime quadratically.   
+  -  Restricting max_conds_dim and max_conds_py helps speed up computations.   
+
+• Critique/Extension   
+  -  Parallelized MCI tests would further reduce runtime.   
+  -  Pre-filtering variables based on Granger causality or prior domain knowledge may help.   
+
+────────────────────────────────────────────────────────────────────────
+5. INTERPRETABILITY
+────────────────────────────────────────────────────────────────────────
+
+• Output Format   
+  -  Outputs a time-lagged DAG  (each edge has a time delay).  
+  -  Provides p-values and effect sizes , making interpretation easier.  
+
+• Strength of the Output Format   
+  -  Explicitly models time-lagged causal dependencies .  
+  -  Can incorporate expert knowledge via link_assumptions.   
+
+• Limitations of the Output Format   
+  -  Thresholding α can lead to missing edges in small-sample datasets.   
+
+• Critique/Extension   
+  -  Bootstrap-based stability analysis could improve edge reliability.   
+
+────────────────────────────────────────────────────────────────────────
+6. ASSUMPTIONS
+────────────────────────────────────────────────────────────────────────
+
+• Critical Assumptions   
+  -  Causal Markov Condition:  Each variable is independent of its non-descendants given its parents.  
+  -  Faithfulness:  Conditional independencies in the data reflect the true causal graph.  
+  -  Acyclicity:  Enforced across time lags.  
+  -  Stationarity:  Assumes causal effects remain constant over time.  
+
+• Violation Impact   
+  -  Non-stationary causal relationships require PCMCI+.   
+  -  Latent confounders introduce spurious edges.   
+
+• Critique/Extension   
+  -  Hybrid models incorporating non-stationary mechanisms may improve causal inference.   
+
+────────────────────────────────────────────────────────────────────────
+7. (OPTIONAL) REAL-WORLD BENCHMARKS
+──────────────────────────────────────────────────────────────────────── 
+
+• Performance on Real Datasets   
+  -  PCMCI outperforms Granger causality and PC in time-series data.   
+  -  Performs well in neuroscience, climate science, and finance applications.   
+
+• Practical Tips   
+  -  Choosing τ_max based on domain knowledge is crucial.   
+  -  False Discovery Rate (fdr_bh) helps in high-dimensional settings.   
+  -  Using non-parametric tests (e.g., GPDC) improves performance on non-linear datasets.   
+
+────────────────────────────────────────────────────────────────────────
+CONCLUSION
+────────────────────────────────────────────────────────────────────────
+PCMCI is a  powerful time-series causal discovery algorithm  that significantly improves over PC for time-lagged systems. Its advantages include:  
+• Better scalability through staged pruning.   
+• Handles mixed data types and non-linear dependencies.   
+• Provides interpretable p-values and effect sizes.   
+
+However, limitations include:  
+• Computational bottlenecks for high τ_max values.   
+• Does not model feedback loops or dynamic confounding (PCMCI+ required).   
+────────────────────────────────────────────────────────
