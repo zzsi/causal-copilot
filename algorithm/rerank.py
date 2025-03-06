@@ -111,7 +111,7 @@ class Reranker:
         runtime_estimates = {}
         for algo in algo_candidates:
             try:
-                estimator = RuntimeEstimator(algo.lower())
+                estimator = RuntimeEstimator(algo)
                 runtime = estimator.predict_runtime(
                     samples=n_sample,
                     variables=feature_number
