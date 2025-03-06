@@ -90,7 +90,7 @@ def parse_args():
     parser.add_argument(
         '--initial_query',
         type=str,
-        default="selected algorithm: FGES",
+        default="selected algorithm: PCMCI",
         help='Initial query for the algorithm'
     )
 

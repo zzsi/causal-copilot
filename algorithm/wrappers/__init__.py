@@ -36,12 +36,15 @@ from .hybrid import Hybrid
 
 #TS algorithms
 from .dynotears import DYNOTEARS
+from .pcmci import PCMCI
+from .var_lingam import VARLiNGAM
 
 constraint_based_algorithms = ['PC', 'FCI', 'CDNOD', 'InterIAMB', 'BAMB', 'HitonMB', 'IAMBnPC', 'MBOR', 'PCParallel']
 score_based_algorithms = ['GES', 'FGES', 'XGES', 'NOTEARSLinear', 'NOTEARSNonlinear', 'CORL', 'CALM', 'GOLEM', 'DYNOTEARS']
 functional_model_based_algorithms = ['DirectLiNGAM', 'ICALiNGAM']
 permutation_based_algorithms = ['GRaSP']
 hybrid_algorithms = ['Hybrid']
+ts_algorithms = ['PCMCI', 'VARLiNGAM', 'DYNOTEARS']
 
 
 if torch.cuda.is_available():
@@ -51,6 +54,6 @@ if torch.cuda.is_available():
     accelerated_algorithms = ['AcceleratedLiNGAM', 'AcceleratedPC']
     # If GPU is available, the continuous optimization based algorithms will use GPU instead of CPU
 
-    __all__ = constraint_based_algorithms + score_based_algorithms + functional_model_based_algorithms + permutation_based_algorithms + hybrid_algorithms + accelerated_algorithms
+    __all__ = constraint_based_algorithms + score_based_algorithms + functional_model_based_algorithms + permutation_based_algorithms + hybrid_algorithms + accelerated_algorithms + ts_algorithms
 else:
-    __all__ = constraint_based_algorithms + score_based_algorithms + functional_model_based_algorithms + permutation_based_algorithms + hybrid_algorithms
+    __all__ = constraint_based_algorithms + score_based_algorithms + functional_model_based_algorithms + permutation_based_algorithms + hybrid_algorithms + ts_algorithms

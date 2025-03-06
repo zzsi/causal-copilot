@@ -118,6 +118,8 @@ def global_state_initialization(args: argparse.Namespace = None) -> GlobalState:
     algorithms = [algo.split('.')[0] for algo in os.listdir('algorithm/context/algos') if algo.endswith('.txt') and 'tagging' not in algo]  
     algorithms = ', '.join(algorithms)
 
+    print(algorithms)
+
     client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
     prompt = (f"Based on the query that I provided: {user_query} \n\n; "
               "extract the following information and summarize them in a json format, and output this json object."

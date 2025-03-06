@@ -42,6 +42,7 @@ class HyperparameterSelector:
         with open("algorithm/context/hyperparameter_select_prompt.txt", "r") as f:
             hp_prompt = f.read()
         
+        print(selected_algo)
         primary_params = getattr(wrappers, selected_algo)().get_primary_params()
         hp_info_str = json.dumps(hp_context)
         table_columns = '\t'.join(global_state.user_data.processed_data.columns._data)

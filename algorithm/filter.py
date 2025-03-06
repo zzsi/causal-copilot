@@ -12,6 +12,19 @@ class Filter(object):
         self.llm_client = LLMClient(args)
 
     def forward(self, global_state):
+        if global_state.algorithm.selected_algorithm is not None:
+            print(f"User has already selected the algorithm: {global_state.algorithm.selected_algorithm}, skip the filtering process.")
+            global_state.algorithm.algorithm_candidates = {
+                f"{global_state.algorithm.selected_algorithm}": {
+                    "description": "",
+                    "justification": f"The user has already selected the algorithm: {global_state.algorithm.selected_algorithm}",
+                }
+            }
+            global_state.logging.select_conversation.append({
+                "prompt": "User has already selected the algorithm: {global_state.algorithm.selected_algorithm}, skip the filtering process.",
+                "response": ""
+            })  
+            return  global_state
         prompt = self.create_prompt(global_state.user_data.initial_query, global_state.user_data.processed_data, global_state.statistics.description, global_state.user_data.accept_CPDAG)
 
         # save the prompt to a file for debugging
