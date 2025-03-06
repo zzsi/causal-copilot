@@ -31,7 +31,7 @@ def coarsen_continuous_variables(data, cont_confounders, bins=5):
     return data
 
 def plot_hte_dist(hte, fig_path):
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(16, 12))
     sns.histplot(hte['hte'], bins=30, color=sns.color_palette("muted")[0], kde=True, alpha=0.7)
     plt.axvline(hte['hte'].mean(), color='firebrick', linestyle='--', label='Mean HTE')
     plt.xlabel("Heterogeneous Treatment Effect (HTE)")
@@ -46,7 +46,7 @@ def plot_cate_violin(global_state, hte, X_col, fig_path):
     coarsen_data = coarsen_continuous_variables(data, cont_X_col)
     data = pd.concat([coarsen_data, hte], axis=1)
     num_groups = len(X_col)
-    fig, axes = plt.subplots(1, num_groups, figsize=(10 * num_groups, 6), sharex=False)
+    fig, axes = plt.subplots(1, num_groups, figsize=(16 * num_groups, 10), sharex=False)
     if num_groups == 1:
         axes = [axes]  # Ensure axes is always a list for consistency
 
