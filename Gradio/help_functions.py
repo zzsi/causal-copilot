@@ -51,6 +51,17 @@ def LLM_parse_query(format, prompt, message, args):
         parsed_response = completion.choices[0].message.content
     return parsed_response
 
+def parse_intention_query(message, chat_history, download_btn, CURRENT_STAGE):
+    if message.lower() == 'yes':
+        exp_data = True
+        chat_history.append((message, None))
+    elif message.lower() == 'no' or message == '':
+        exp_data = False
+        chat_history.append((message, None))
+    else:
+        chat_history.append((None, "❌ Invalid input, please try again!"))
+        exp_data = None
+    return exp_data, chat_history, download_btn, CURRENT_STAGE
 # process functions
 def sample_size_check(n_row, n_col, chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE):
     ## Few sample case: give warning
@@ -190,6 +201,7 @@ def parse_var_selection_query(message, chat_history, download_btn, next_step, ar
     prompt = "You are a helpful assistant, please extract variable names as a list. \n"
     "If there is only one variable, also save it in list variables"
     f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
+    "If there are 'all of them' or 'all', please return all variables."
     "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
     "If you cannot find variable names, just return an empty list."
     parsed_vars = LLM_parse_query(VarList, prompt, message, args)
@@ -254,6 +266,7 @@ def parse_sparsity_query(message, chat_history, download_btn, args, global_state
         prompt = "You are a helpful assistant, please extract variable names as a list. \n"
         "If there is only one variable, also save it in list variables"
         f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
+        "If there are 'all of them' or 'all', please return all variables."
         "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
         "If you cannot find variable names, just return an empty list."
         parsed_vars = LLM_parse_query(VarList, prompt, message, args)
