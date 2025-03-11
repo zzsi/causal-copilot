@@ -1,6 +1,5 @@
 from .estimator import *
-
-__all__ = ['DML', 'LinearDML', 'SparseLinearDML', 'CausalForestDML']
-
+# MetaLearners Classes
+__all__ = ['SLearnerEstimator', 'TLearnerEstimator', 'XLearnerEstimator', 'DomainAdaptationLearnerEstimator']
 
 

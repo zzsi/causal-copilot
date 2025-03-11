@@ -3,6 +3,11 @@ import pandas as pd
 from typing import Union, Dict, List, Tuple
 
 class Estimator:
+    """
+    Base class for MetaLearners estimators.
+    Provides a common interface for estimating treatment effects (ATE, ATT, HTE, etc.).
+    Subclasses must implement the abstract methods.
+    """
     def __init__(self, params: Dict, y_col: str, T_col: str, T0: int, T1: int, X_col: list, W_col: list=None):
         self._params = {}
         self._params.update(params)

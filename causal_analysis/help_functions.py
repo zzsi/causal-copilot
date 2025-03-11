@@ -31,7 +31,7 @@ def coarsen_continuous_variables(data, cont_confounders, bins=5):
     return data
 
 def plot_hte_dist(hte, fig_path):
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(16, 12))
     sns.histplot(hte['hte'], bins=30, color=sns.color_palette("muted")[0], kde=True, alpha=0.7)
     plt.axvline(hte['hte'].mean(), color='firebrick', linestyle='--', label='Mean HTE')
     plt.xlabel("Heterogeneous Treatment Effect (HTE)")

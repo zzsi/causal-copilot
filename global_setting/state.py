@@ -99,6 +99,9 @@ class Inference:
     hte_model_y_json: Optional[Dict] = None
     hte_model_T_json: Optional[Dict] = None
     hte_model_param: Optional[Dict] = None
+    cycle_detection_result: Optional[Dict] = field(default_factory=dict)  # 🔹 Stores detected cycles
+    editing_history: List[Dict] = field(default_factory=list)  # 🔹 Tracks cycle resolution steps
+    inference_result: Optional[Dict] = field(default_factory=dict)  # 🔹 Stores final inference output
 
 @dataclass
 class GlobalState:
