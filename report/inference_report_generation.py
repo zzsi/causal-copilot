@@ -76,7 +76,7 @@ class Inference_Report_generation(object):
 \\begin{{figure}}[H]
     \centering
     \includegraphics[height=0.5\\textheight]{{{figs[0]}}}
-    \caption{{"Distribution of Confounders before and after matching"}}
+    \caption{{Distribution of Confounders before and after matching}}
 \end{{figure}}
 
 {response[0]}
@@ -89,8 +89,8 @@ class Inference_Report_generation(object):
 
 \\begin{{figure}}[H]
     \centering
-    \includegraphics[height=0.3\\textheight]{{{figs[1]}}}
-    \caption{{Distribution of Confounders before and after matching}}
+    \includegraphics[width=\\textwidth]{{{figs[1]}}}
+    \caption{{CATE Bar Plots grouped by different confounders}}
 \end{{figure}}
 
 {response[2]}
@@ -105,13 +105,13 @@ class Inference_Report_generation(object):
 
 \\begin{{figure}}[H]
     \centering
-    \includegraphics[height=0.2\\textheight]{{{figs[0]}}}
+    \includegraphics[height=0.3\\textheight]{{{figs[0]}}}
     \caption{{Distribution of HTE}}
 \end{{figure}}
 
 \\begin{{figure}}[H]
     \centering
-    \includegraphics[width=\\textwidth]{{{figs[1]}}}
+    \includegraphics[width=0.8\\textwidth]{{{figs[1]}}}
     \caption{{Violin plot of HTE by Heterogeneous Variables}}
 \end{{figure}}
 
@@ -198,20 +198,22 @@ class Inference_Report_generation(object):
         """
         method = LLM_parse_query(self.client, None, 'You are an expert in Causal Discovery.', prompt)
         response = self.task_info['result']['Counterfactual Estimation']['response']
+        print('original response', response)
         figs = self.task_info['result']['Counterfactual Estimation']['figs']
         response = bold_conversion(response)
         response = list_conversion(response)
         response = fix_latex_itemize(response)
         #response = remove_redundant_point(response)
         response = remove_redundant_title(response)
+        print('2nd response', response)
 
         cf_template = load_context("report/context/inference/counterfact.tex")
         replacement = {'[METHOD]': method, 
-                       '[RESULTS]': response, 
-                       '[GRAPH1]': figs[0],
-                       '[GRAPH2]': figs[1]}
+                       '[RESULTS]': response.replace('\$','$'), 
+                       '[GRAPH1]': figs[1]}
         for placeholder, value in replacement.items():
             cf_template = cf_template.replace(placeholder, value)
+        print('3rd response', replacement)
         
         return cf_template
 
@@ -221,6 +223,7 @@ class Inference_Report_generation(object):
             discussion_content = self.task_info['result']['discussion']
             prompt = f"""I'm writing a report on the causal inference task. I have generated some discussion based on the results. 
             Please help me to write a 1-2 paragraphs discussion, summarizing the questions and answers.
+            You can bold some important sentences with **.
             DO NOT include any title or section number.
             **Discussion History:**
             """
@@ -246,6 +249,7 @@ class Inference_Report_generation(object):
         Please help me to write a 1-2 paragraphs next step todo, including
         Potential Improvements: Some any refinements or additional analyses needed.
         Future Research Directions: Suggest how the findings can be expanded or validated further.
+        You can bold some important sentences with **.
         DO NOT include any title or section number.
         The following are the results of the tasks:
         """
@@ -404,12 +408,12 @@ def parse_args():
 
 import pickle  
 if __name__ == '__main__':
-    # args = parse_args()
-    # with open('demo_data/20250121_223113/lalonde/output_graph/inference_global_state.pkl', 'rb') as file:
-    #     global_state = pickle.load(file)
-    # test(args, global_state)
-    save_path = 'demo_data/20250121_223113/lalonde/output_report'
-    compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
+    args = parse_args()
+    with open('demo_data/20250121_223113/lalonde/output_graph/inference_global_state.pkl', 'rb') as file:
+        global_state = pickle.load(file)
+    test(args, global_state)
+    # save_path = 'demo_data/20250121_223113/lalonde/output_report'
+    # compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
     
 
 

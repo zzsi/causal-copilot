@@ -1,38 +1,44 @@
 import numpy as np
 import pandas as pd
-from typing import Dict, Tuple
-
-from econml.dml import DML as Econ_DML
-from econml.dml import LinearDML as Econ_LinearDML
-from econml.dml import SparseLinearDML as Econ_SparseLinearDML
-from econml.dml import CausalForestDML as Econ_CausalForestDML
-
+from typing import Dict
+from econml.metalearners import SLearner
+from econml.metalearners import TLearner
+from econml.metalearners import XLearner
+from econml.metalearners import DomainAdaptationLearner
 from .base import Estimator
+from sklearn.linear_model import LinearRegression 
+from xgboost import XGBRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LogisticRegression
 
-# - DML 
-# - LinearDML
-# - SparseLinearDML
-# - CausalForestDML
+# - SLearner
+# - TLearner
+# - XLearner
+# - DomainAdaptationLearner
 
-class DML(Estimator):
+class SLearnerEstimator(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int=0, T1: int=1):
         super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
-        self.model = Econ_DML(**self._params)
+        slearner_params = {
+            'categories': self._params.get('categories', 'auto'),  # Default: 'auto' to use the unique sorted values,The first category will be treated as the control treatment.
+            'allow_missing': self._params.get('allow_missing', False)  # Default: False
+            }
+        base_learner = params.get('model', LinearRegression())  
+        self.model = SLearner(overall_model=base_learner, **slearner_params)
 
     @property
     def name(self):
-        return "DML"
+        return "SLearner"
 
     def get_params(self):
         return self._params
 
     def fit(self, data: pd.DataFrame):
         y = data[[self.y_col]].values.ravel()
-        T = data[[self.T_col]]
+        T = data[self.T_col].values.ravel()
         X = data[self.X_col]
-        W = data[self.W_col]
-        # Run DML algorithm        
-        self.model.fit(y, T, X=X, W=W)
+        # Fit SLearner model
+        self.model.fit(Y=y, T=T, X=X)
     
     def ate(self, data: pd.DataFrame):
         X = data[self.X_col]
@@ -58,26 +64,29 @@ class DML(Estimator):
     def test_algorithm(self):
         pass
 
-class LinearDML(Estimator):
+class TLearnerEstimator(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int=0, T1: int=1):
-        del params['model_final']
         super().__init__(params, y_col, T0, T1, T_col, X_col, W_col)
-        self.model = Econ_LinearDML(**self._params)
+        tlearner_params = {
+            'categories': self._params.get('categories', 'auto'),  # Default: 'auto' to use the unique sorted values,The first category will be treated as the control treatment.
+            'allow_missing': self._params.get('allow_missing', False)  # Default: False
+            }
+        base_learner = params.get('model', LinearRegression())  
+        self.model = TLearner(model=base_learner, **tlearner_params)
 
     @property
     def name(self):
-        return "LinearDML"
+        return "TLearner"
 
     def get_params(self):
         return self._params
 
     def fit(self, data: pd.DataFrame):
         y = data[[self.y_col]].values.ravel()
-        T = data[[self.T_col]]
+        T = data[self.T_col].values.ravel()
         X = data[self.X_col]
-        W = data[self.W_col]
-        # Run DML algorithm        
-        self.model.fit(y, T, X=X, W=W)
+        # Fit TLearner model       
+        self.model.fit(y, T, X=X)
         
     def ate(self, data: pd.DataFrame):
         X = data[self.X_col]
@@ -103,25 +112,43 @@ class LinearDML(Estimator):
     def test_algorithm(self):
         pass
 
-class SparseLinearDML(Estimator):
+class XLearnerEstimator(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int=0, T1: int=1):
         del params['model_final']
         super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
-        self.model = Econ_SparseLinearDML(**self._params)
+        xlearner_params = {
+            'categories': self._params.get('categories', 'auto'),  # Default: 'auto' to use the unique sorted values,The first category will be treated as the control treatment.
+            'allow_missing': self._params.get('allow_missing', False) # Default: False
+        }
+        # Use XGBoost as base learners for treatment and control groups
+        base_learner = params.get('model', XGBRegressor(objective='reg:squarederror'))
+        
+        # Use XGBoost as the CATE model (same as base learners by default)
+        cate_learner = params.get('cate_model', base_learner)
+        
+        # Use Logistic Regression as the propensity score model
+        propensity_model = params.get('propensity_model', LogisticRegression())
+
+        # Initialize XLearner
+        self.model = XLearner(
+            models=base_learner, 
+            cate_models=cate_learner, 
+            propensity_model=propensity_model, 
+            **xlearner_params
+        )
 
     @property
     def name(self):
-        return "SparseLinearDML"
+        return "XLearner"
 
     def get_params(self):
         return self._params
 
     def fit(self, data: pd.DataFrame):
         y = data[[self.y_col]].values.ravel()
-        T = data[[self.T_col]]
+        T = data[self.T_col].values.ravel()
         X = data[self.X_col]
-        W = data[self.W_col]
-        # Run DML algorithm        
+        # Fit XLearner model        
         self.model.fit(y, T, X=X, W=W)
            
     def ate(self, data: pd.DataFrame):
@@ -148,26 +175,44 @@ class SparseLinearDML(Estimator):
     def test_algorithm(self):
         pass
 
-class CausalForestDML(Estimator):
+class DomainAdaptationLearnerEstimator(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int = 0, T1: int = 1):
         del params['model_final']
         super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
-        self.model = Econ_CausalForestDML(**self._params)
+        # Ensure valid parameters
+        dalearner_params = {
+            'categories': self._params.get('categories', 'auto'),# Default: 'auto' to use the unique sorted values,The first category will be treated as the control treatment.
+            'allow_missing': self._params.get('allow_missing', False)# Default: False
+        }
+        # Use XGBoost as the base model for treatment and control groups
+        base_learner = params.get('model', XGBRegressor(objective='reg:squarederror'))
+
+        # Use XGBoost as the final treatment effect model
+        final_learner = params.get('final_model', base_learner)
+
+        # Use Logistic Regression as the propensity score model
+        propensity_model = params.get('propensity_model', LogisticRegression())
+
+        self.model = DomainAdaptationLearner(
+            models=base_learner,
+            final_models=final_learner,
+            propensity_model=propensity_model,
+            **dalearner_params
+        )
 
     @property
     def name(self):
-        return "CausalForestDML"
+        return "DomainAdaptationLearner"
 
     def get_params(self):
         return self._params
 
     def fit(self, data: pd.DataFrame):
         y = data[[self.y_col]].values.ravel()
-        T = data[[self.T_col]]
+        T = data[self.T_col].values.ravel()
         X = data[self.X_col]
-        W = data[self.W_col]
-        # Run DML algorithm        
-        self.model.fit(y, T, X=X, W=W)
+        # Fit DomainAdaptationLearner model  
+        self.model.fit(y, T, X=X)
     
     def ate(self, data: pd.DataFrame):
         X = data[self.X_col]
@@ -195,5 +240,5 @@ class CausalForestDML(Estimator):
 
 
 if __name__ == "__main__":
-    pc_algo = DML(y_col='', T_col='', X_col='')
+    pc_algo = DomainAdaptationLearnerEstimator(y_col='', T_col='', X_col='')
     pc_algo.test_algorithm() 

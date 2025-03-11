@@ -18,11 +18,11 @@ class HTE_Param_Selector(object):
         node_type = global_state.statistics.data_type_column[target_node]
 
         if node_type =='continuous':
-            prompt_path = 'causal_analysis/hte/context/regressor_select_prompt.txt'
+            prompt_path = 'causal_analysis/MetaLearners/context/regressor_select_prompt.txt'
             algo_text_path = 'causal_analysis/hte/context/regressor.txt'
         else:
-            prompt_path = 'causal_analysis/hte/context/classifier_select_prompt.txt'
-            algo_text_path = 'causal_analysis/hte/context/classifier.txt'
+            prompt_path = 'causal_analysis/MetaLearners/context/classifier_select_prompt.txt'
+            algo_text_path = 'causal_analysis/MetaLearners/context/classifier.txt'
         prompt = open(prompt_path, "r").read()
         algo_text = open(algo_text_path, "r").read()
         
