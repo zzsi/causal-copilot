@@ -4,14 +4,16 @@ from typing import Dict, Tuple
 
 # use the local causal-learn package
 import sys
+import os
+root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+algorithm_dir = os.path.join(root_dir, 'algorithm')
+sys.path.append(root_dir)
+sys.path.append(algorithm_dir)
 
-sys.path.insert(0, 'causal-learn')
-sys.path.append('algorithm')
+from externals.acceleration.fges.fges import FGES as Fges
+from externals.acceleration.fges.SEMScore import SEMBicScore
 
-from acceleration.fges.fges import FGES as Fges
-from acceleration.fges.SEMScore import SEMBicScore
-
-from .base import CausalDiscoveryAlgorithm
+from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
 
 
@@ -31,22 +33,19 @@ class FGES(CausalDiscoveryAlgorithm):
         return self._params
 
     def get_primary_params(self):
-        self._primary_param_keys = ['sparsity']
+        self._primary_param_keys = []
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def get_secondary_params(self):
-        self._secondary_param_keys = []
+        self._secondary_param_keys = ['sparsity']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, Dict]:
         node_names = list(data.columns)
         data_values = data.values
 
-        # Combine primary and secondary parameters
-        all_params = {**self.get_primary_params(), **self.get_secondary_params(), 'node_names': node_names}
-
         # Run FGES algorithm
-        score = SEMBicScore(**self.get_primary_params(), dataset=data_values)
+        score = SEMBicScore(**self.get_primary_params(), **self.get_secondary_params(), dataset=data_values)
         variables = list(range(len(node_names)))
         model = Fges(variables, score, filename='input', checkpoint_frequency=0, save_name='result')
 

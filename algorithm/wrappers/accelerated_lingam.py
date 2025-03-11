@@ -2,16 +2,21 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Tuple
 
+# use the local causal-learn package
 import sys
-sys.path.append('algorithm')
+import os
+root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+algorithm_dir = os.path.join(root_dir, 'algorithm')
+sys.path.append(root_dir)
+sys.path.append(algorithm_dir)
 
-from .base import CausalDiscoveryAlgorithm
+from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 
 from algorithm.evaluation.evaluator import GraphEvaluator
 from culingam.directlingam import DirectLiNGAM as AcDirectLiNGAM
 
 
-class AcceleratedDirectLiNGAM(CausalDiscoveryAlgorithm):
+class AcceleratedLiNGAM(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
         self._params = {
@@ -24,7 +29,7 @@ class AcceleratedDirectLiNGAM(CausalDiscoveryAlgorithm):
 
     @property
     def name(self):
-        return "AcceleratedDirectLiNGAM"
+        return "AcceleratedLiNGAM"
 
     def get_params(self):
         return self._params
@@ -74,7 +79,7 @@ class AcceleratedDirectLiNGAM(CausalDiscoveryAlgorithm):
 
         df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
 
-        print("Testing AcceleratedDirectLiNGAM algorithm with pandas DataFrame:")
+        print("Testing AcceleratedLiNGAM algorithm with pandas DataFrame:")
         params = {
             'measure': 'pwling',
             'random_state': 42
@@ -105,5 +110,5 @@ class AcceleratedDirectLiNGAM(CausalDiscoveryAlgorithm):
         print(f"SHD: {metrics['shd']:.4f}")
 
 if __name__ == "__main__":
-    my_alg = AcceleratedDirectLiNGAM()
+    my_alg = AcceleratedLiNGAM()
     my_alg.test_algorithm()

@@ -4,6 +4,7 @@ from preprocess.stat_info_functions import stat_info_collection, convert_stat_in
 from algorithm.filter import Filter
 from algorithm.program import Programming
 from algorithm.rerank import Reranker
+from algorithm.hyperparameter_selector import HyperparameterSelector
 from postprocess.judge import Judge
 from postprocess.visualization import Visualization, convert_to_edges
 from preprocess.eda_generation import EDA
@@ -47,14 +48,14 @@ def parse_args():
     parser.add_argument(
         '--organization',
         type=str,
-        default="org-gw7mBMydjDsOnDlTvNQWXqPL",
+        default="org-Xa9VGT8plP28JBRKtqBRjG5l",
         help='Organization ID'
     )
 
     parser.add_argument(
         '--project',
         type=str,
-        default="proj_SIDtemBJMHUWG7CPdU7yRjsn",
+        default="proj_t78xpJomilJJu5qtuOK4vWfR",
         help='Project ID'
     )
 
@@ -89,7 +90,7 @@ def parse_args():
     parser.add_argument(
         '--initial_query',
         type=str,
-        default="selected algorithm: FGES",
+        default= "do causal discovery on the data", # "selected algorithm: PCMCI",
         help='Initial query for the algorithm'
     )
 
@@ -127,9 +128,10 @@ def load_real_world_data(file_path):
 def process_user_query(query, data):
     #Baseline code
     query_dict = {}
-    for part in query.split(';'):
-        key, value = part.strip().split(':')
-        query_dict[key.strip()] = value.strip()
+    if ';' in query or ':' in query:
+        for part in query.split(';'):
+            key, value = part.strip().split(':')
+            query_dict[key.strip()] = value.strip()
 
     if 'filter' in query_dict and query_dict['filter'] == 'continuous':
         # Filtering continuous columns, just for target practice right now
@@ -189,6 +191,9 @@ def main(args):
 
     reranker = Reranker(args)
     global_state = reranker.forward(global_state)
+
+    hp_selector = HyperparameterSelector(args)
+    global_state = hp_selector.forward(global_state)
 
     programmer = Programming(args)
     global_state = programmer.forward(global_state)

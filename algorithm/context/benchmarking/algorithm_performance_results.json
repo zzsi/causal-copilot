@@ -1,0 +1,1057 @@
+{
+  "Scalability": {
+    "GRaSP": {
+      "ranking": {
+        "mean": 2.5,
+        "std": 0.9574271077563381
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 2.0,
+        "composite": 5.0
+      }
+    },
+    "XGES": {
+      "ranking": {
+        "mean": 4.857142857142857,
+        "std": 3.9434782119549316
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 3.0,
+        "composite": 5.0
+      }
+    },
+    "GOLEM": {
+      "ranking": {
+        "mean": 5.25,
+        "std": 5.952940449895329
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 2.0,
+        "composite": 4.0
+      }
+    },
+    "NOTEARSLinear": {
+      "ranking": {
+        "mean": 5.375,
+        "std": 4.3857011982122085
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 2.0,
+        "composite": 3.0
+      }
+    },
+    "FCI": {
+      "ranking": {
+        "mean": 6.0,
+        "std": 2.1908902300206643
+      },
+      "levels": {
+        "performance": 3.0,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "CDNOD": {
+      "ranking": {
+        "mean": 7.0,
+        "std": 1.0
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "InterIAMB": {
+      "ranking": {
+        "mean": 7.0,
+        "std": 2.7688746209726918
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 4.0,
+        "composite": 5.0
+      }
+    },
+    "IAMBnPC": {
+      "ranking": {
+        "mean": 7.142857142857143,
+        "std": 2.5872528966106905
+      },
+      "levels": {
+        "performance": 3.0,
+        "efficiency": 4.0,
+        "composite": 3.0
+      }
+    },
+    "PC": {
+      "ranking": {
+        "mean": 7.375,
+        "std": 2.9973947020704497
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 3.0,
+        "composite": 2.0
+      }
+    },
+    "AcceleratedPC": {
+      "ranking": {
+        "mean": 7.875,
+        "std": 2.9341736485763756
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 4.0,
+        "composite": 2.0
+      }
+    },
+    "FGES": {
+      "ranking": {
+        "mean": 8.428571428571429,
+        "std": 4.135461378894322
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 5.0,
+        "composite": 2.0
+      }
+    },
+    "GES": {
+      "ranking": {
+        "mean": 8.5,
+        "std": 4.031128874149275
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 2.0,
+        "composite": 4.0
+      }
+    },
+    "MBOR": {
+      "ranking": {
+        "mean": 8.6,
+        "std": 1.7435595774162693
+      },
+      "levels": {
+        "performance": 3.0,
+        "efficiency": 3.0,
+        "composite": 4.0
+      }
+    },
+    "BAMB": {
+      "ranking": {
+        "mean": 10.125,
+        "std": 2.7128168017763383
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 1.0,
+        "composite": 2.0
+      }
+    },
+    "DirectLiNGAM": {
+      "ranking": {
+        "mean": 11.125,
+        "std": 5.18260311040697
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 4.0,
+        "composite": 1.0
+      }
+    },
+    "AcceleratedLiNGAM": {
+      "ranking": {
+        "mean": 12.25,
+        "std": 4.789311015167004
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 5.0,
+        "composite": 1.0
+      }
+    },
+    "HITONMB": {
+      "ranking": {
+        "mean": 13.625,
+        "std": 3.6033838263498934
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 1.0,
+        "composite": 1.0
+      }
+    },
+    "NOTEARSNonlinear": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 2.9154759474226504
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 1.0,
+        "composite": 3.0
+      }
+    },
+    "CORL": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 1.0,
+        "composite": 1.0
+      }
+    }
+  },
+  "Heterogeneity": {
+    "CDNOD": {
+      "ranking": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "GRaSP": {
+      "ranking": {
+        "mean": 2.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 4.0,
+        "composite": 5.0
+      }
+    },
+    "NOTEARSLinear": {
+      "ranking": {
+        "mean": 2.0,
+        "std": 1.7320508075688772
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "GES": {
+      "ranking": {
+        "mean": 3.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "GOLEM": {
+      "ranking": {
+        "mean": 3.0,
+        "std": 1.7320508075688772
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "PC": {
+      "ranking": {
+        "mean": 5.5,
+        "std": 4.330127018922194
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 2.0,
+        "composite": 2.0
+      }
+    },
+    "InterIAMB": {
+      "ranking": {
+        "mean": 6.25,
+        "std": 2.165063509461097
+      },
+      "levels": {
+        "performance": 3.0,
+        "efficiency": 2.0,
+        "composite": 3.0
+      }
+    },
+    "DirectLiNGAM": {
+      "ranking": {
+        "mean": 6.75,
+        "std": 4.763139720814412
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 3.0,
+        "composite": 2.0
+      }
+    },
+    "NOTEARSNonlinear": {
+      "ranking": {
+        "mean": 7.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 4.0,
+        "composite": 5.0
+      }
+    },
+    "IAMBnPC": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 1.7320508075688772
+      },
+      "levels": {
+        "performance": 3.0,
+        "efficiency": 2.0,
+        "composite": 3.0
+      }
+    },
+    "AcceleratedPC": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 3.4641016151377544
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 1.0,
+        "composite": 2.0
+      }
+    },
+    "XGES": {
+      "ranking": {
+        "mean": 8.5,
+        "std": 2.598076211353316
+      },
+      "levels": {
+        "performance": 3.0,
+        "efficiency": 2.0,
+        "composite": 3.0
+      }
+    },
+    "FGES": {
+      "ranking": {
+        "mean": 9.75,
+        "std": 1.299038105676658
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 3.0,
+        "composite": 2.0
+      }
+    },
+    "FCI": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 2.0
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 4.0,
+        "composite": 4.0
+      }
+    },
+    "HITONMB": {
+      "ranking": {
+        "mean": 10.5,
+        "std": 4.330127018922194
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 1.0,
+        "composite": 1.0
+      }
+    },
+    "MBOR": {
+      "ranking": {
+        "mean": 11.5,
+        "std": 2.5
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 4.0,
+        "composite": 4.0
+      }
+    },
+    "AcceleratedLiNGAM": {
+      "ranking": {
+        "mean": 12.25,
+        "std": 2.165063509461097
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 3.0,
+        "composite": 1.0
+      }
+    },
+    "BAMB": {
+      "ranking": {
+        "mean": 13.5,
+        "std": 2.0615528128088303
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 1.0,
+        "composite": 1.0
+      }
+    },
+    "CORL": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 1.0,
+        "composite": 1.0
+      }
+    }
+  },
+  "Measurement Error": {
+    "CDNOD": {
+      "ranking": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "GRaSP": {
+      "ranking": {
+        "mean": 2.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 4.0,
+        "composite": 5.0
+      }
+    },
+    "GES": {
+      "ranking": {
+        "mean": 3.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "NOTEARSLinear": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 4.0,
+        "composite": 5.0
+      }
+    },
+    "NOTEARSNonlinear": {
+      "ranking": {
+        "mean": 5.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 1.0,
+        "composite": 4.0
+      }
+    },
+    "GOLEM": {
+      "ranking": {
+        "mean": 6.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 4.0,
+        "composite": 4.0
+      }
+    },
+    "FCI": {
+      "ranking": {
+        "mean": 7.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "MBOR": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "XGES": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.0,
+        "efficiency": 2.0,
+        "composite": 3.0
+      }
+    },
+    "InterIAMB": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.0,
+        "efficiency": 2.0,
+        "composite": 3.0
+      }
+    },
+    "IAMBnPC": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.0,
+        "efficiency": 2.0,
+        "composite": 3.0
+      }
+    },
+    "FGES": {
+      "ranking": {
+        "mean": 12.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 3.0,
+        "composite": 2.0
+      }
+    },
+    "PC": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 3.0,
+        "composite": 2.0
+      }
+    },
+    "AcceleratedPC": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 2.0,
+        "composite": 2.0
+      }
+    },
+    "DirectLiNGAM": {
+      "ranking": {
+        "mean": 15.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 3.0,
+        "composite": 2.0
+      }
+    },
+    "AcceleratedLiNGAM": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 4.0,
+        "composite": 1.0
+      }
+    },
+    "BAMB": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 1.0,
+        "composite": 1.0
+      }
+    },
+    "HITONMB": {
+      "ranking": {
+        "mean": 18.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 1.0,
+        "composite": 1.0
+      }
+    },
+    "CORL": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 1.0,
+        "composite": 1.0
+      }
+    }
+  },
+  "Noise Type": {
+    "CDNOD": {
+      "ranking": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "GRaSP": {
+      "ranking": {
+        "mean": 2.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 2.0,
+        "composite": 5.0
+      }
+    },
+    "GES": {
+      "ranking": {
+        "mean": 3.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 4.0,
+        "composite": 5.0
+      }
+    },
+    "NOTEARSLinear": {
+      "ranking": {
+        "mean": 3.5,
+        "std": 0.5
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 2.0,
+        "composite": 4.0
+      }
+    },
+    "GOLEM": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 2.0
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 2.0,
+        "composite": 5.0
+      }
+    },
+    "NOTEARSNonlinear": {
+      "ranking": {
+        "mean": 5.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 1.0,
+        "composite": 4.0
+      }
+    },
+    "XGES": {
+      "ranking": {
+        "mean": 6.5,
+        "std": 2.5
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 3.0,
+        "composite": 4.0
+      }
+    },
+    "FCI": {
+      "ranking": {
+        "mean": 7.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.0,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "InterIAMB": {
+      "ranking": {
+        "mean": 7.5,
+        "std": 2.5
+      },
+      "levels": {
+        "performance": 3.0,
+        "efficiency": 3.0,
+        "composite": 3.0
+      }
+    },
+    "MBOR": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 2.0,
+        "composite": 3.0
+      }
+    },
+    "DirectLiNGAM": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 7.0
+      },
+      "levels": {
+        "performance": 3.0,
+        "efficiency": 5.0,
+        "composite": 3.0
+      }
+    },
+    "IAMBnPC": {
+      "ranking": {
+        "mean": 8.5,
+        "std": 2.5
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 3.0,
+        "composite": 2.0
+      }
+    },
+    "FGES": {
+      "ranking": {
+        "mean": 11.5,
+        "std": 0.5
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 5.0,
+        "composite": 2.0
+      }
+    },
+    "PC": {
+      "ranking": {
+        "mean": 11.5,
+        "std": 1.5
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 4.0,
+        "composite": 2.0
+      }
+    },
+    "AcceleratedPC": {
+      "ranking": {
+        "mean": 11.5,
+        "std": 2.5
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 4.0,
+        "composite": 2.0
+      }
+    },
+    "AcceleratedLiNGAM": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 2.0
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 4.0,
+        "composite": 1.0
+      }
+    },
+    "BAMB": {
+      "ranking": {
+        "mean": 15.0,
+        "std": 2.0
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 1.0,
+        "composite": 1.0
+      }
+    },
+    "HITONMB": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 2.0
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 1.0,
+        "composite": 1.0
+      }
+    },
+    "CORL": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 1.0,
+        "composite": 1.0
+      }
+    }
+  },
+  "Missing Data": {
+    "CDNOD": {
+      "ranking": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "GRaSP": {
+      "ranking": {
+        "mean": 2.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 4.0,
+        "composite": 5.0
+      }
+    },
+    "GES": {
+      "ranking": {
+        "mean": 3.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "NOTEARSLinear": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 4.0,
+        "composite": 5.0
+      }
+    },
+    "NOTEARSNonlinear": {
+      "ranking": {
+        "mean": 5.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.0,
+        "efficiency": 1.0,
+        "composite": 4.0
+      }
+    },
+    "GOLEM": {
+      "ranking": {
+        "mean": 6.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 4.0,
+        "composite": 4.0
+      }
+    },
+    "FCI": {
+      "ranking": {
+        "mean": 7.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "MBOR": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.0,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "XGES": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.0,
+        "efficiency": 2.0,
+        "composite": 3.0
+      }
+    },
+    "InterIAMB": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.0,
+        "efficiency": 2.0,
+        "composite": 3.0
+      }
+    },
+    "IAMBnPC": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.0,
+        "efficiency": 2.0,
+        "composite": 3.0
+      }
+    },
+    "FGES": {
+      "ranking": {
+        "mean": 12.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 3.0,
+        "composite": 2.0
+      }
+    },
+    "PC": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 3.0,
+        "composite": 2.0
+      }
+    },
+    "AcceleratedPC": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 2.0,
+        "composite": 2.0
+      }
+    },
+    "DirectLiNGAM": {
+      "ranking": {
+        "mean": 15.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 3.0,
+        "composite": 2.0
+      }
+    },
+    "AcceleratedLiNGAM": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 4.0,
+        "composite": 1.0
+      }
+    },
+    "BAMB": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.0,
+        "efficiency": 1.0,
+        "composite": 1.0
+      }
+    },
+    "HITONMB": {
+      "ranking": {
+        "mean": 18.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 1.0,
+        "composite": 1.0
+      }
+    },
+    "CORL": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 1.0,
+        "composite": 1.0
+      }
+    }
+  }
+}
