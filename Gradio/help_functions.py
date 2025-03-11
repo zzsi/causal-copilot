@@ -437,7 +437,7 @@ def parse_inference_query(message, chat_history, download_btn, args, global_stat
     if message.lower() == 'no' or message == '':
         chat_history.append((None, "✅ No need for downstream analysis, continue to the next section..."))
         CURRENT_STAGE = 'report_generation_check'
-        return None, None, None, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
+        return None, None, None, None, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
     else:
         class InfList(BaseModel):
                 tasks: list[str]
