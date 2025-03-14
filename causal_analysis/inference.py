@@ -984,6 +984,18 @@ class Analysis(object):
         plt.savefig(os.path.join(path, 'shift_intervention_boxplot.jpg'))
         figs_boxplot = os.path.join(path, 'shift_intervention_boxplot.jpg')
         figs.append(figs_boxplot)
+
+        # Violin plot comparison
+        plt.figure(figsize=(8, 6))
+        plt.violinplot([self.data[response_name], shift_samples[response_name]], showmeans=True)
+        plt.xticks([1, 2], ["Observed Data", "Shift Intervention"])
+        plt.title(f'Shift Intervention Violin Plot: {response_name}')
+        plt.ylabel(response_name)
+        print(f"Saving violin plot comparison to {os.path.join(path, 'shift_intervention_violinplot.jpg')}")
+        plt.savefig(os.path.join(path, 'shift_intervention_violinplot.jpg'))
+        figs_violin = os.path.join(path, 'shift_intervention_violinplot.jpg')
+        figs.append(figs_violin)
+             
         return figs, shift_samples
 
 
