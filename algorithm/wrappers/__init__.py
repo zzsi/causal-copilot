@@ -39,8 +39,6 @@ from .dynotears import DYNOTEARS
 from .pcmci import PCMCI
 from .var_lingam import VARLiNGAM
 
-from .accelerated_pc import AcceleratedPC
-
 constraint_based_algorithms = ['PC', 'FCI', 'CDNOD', 'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR', 'PCParallel', 'AcceleratedPC']
 score_based_algorithms = ['GES', 'FGES', 'XGES', 'NOTEARSLinear', 'NOTEARSNonlinear', 'CORL', 'CALM', 'GOLEM', 'DYNOTEARS']
 functional_model_based_algorithms = ['DirectLiNGAM', 'ICALiNGAM']

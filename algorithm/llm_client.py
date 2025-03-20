@@ -4,11 +4,7 @@ from openai import OpenAI
 
 class LLMClient:
     def __init__(self, args):
-        self.client = OpenAI(
-            organization=args.organization, 
-            project=args.project, 
-            api_key=args.apikey
-        )
+        self.client = OpenAI()
         self.model = "gpt-4o-mini"  # Default model
 
     def chat_completion(self, prompt, system_prompt="You are a helpful assistant.", json_response=False):

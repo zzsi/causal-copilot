@@ -125,3 +125,5 @@ python-utils==3.9.1
 psy==0.0.1
 importlib_metadata==8.6.1
 zipp==3.21.0
+dotenv==0.9.9
+python-dotenv==1.0.1

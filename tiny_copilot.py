@@ -58,18 +58,12 @@ def main():
     parser.add_argument('--mode', type=str, choices=["normal", "skip", "simulate"], default="simulate", help='Mode of operation')
     parser.add_argument('--evaluate', action='store_true', default=False, help='Turn on metrics evaluation if ground truth is available')
     # Additional arguments required by the global initialization
-    parser.add_argument('--organization', type=str, default="org-Xa9VGT8plP28JBRKtqBRjG5l")
-    parser.add_argument('--project', type=str, default="proj_t78xpJomilJJu5qtuOK4vWfR")
-    parser.add_argument('--apikey', type=str, default=None)
     parser.add_argument('--simulation_mode', type=str, default="offline")
     parser.add_argument('--data_mode', type=str, default="real")
     parser.add_argument('--demo_mode', type=bool, default=False)
   
     args = parser.parse_args()
 
-    # set the api key
-    if args.apikey is None:
-        args.apikey = os.getenv("OPENAI_API_KEY")
 
     print(f"Running Tiny Copilot in {args.mode} mode.")
 

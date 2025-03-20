@@ -77,7 +77,7 @@ class Report_generation(object):
             self.global_state_list = [global_state]
             global_state.logging.global_state_logging = [global_state.algorithm.selected_algorithm]
 
-        self.client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+        self.client = OpenAI()
         self.data_mode = args.data_mode
         self.data_file = args.data_file
         self.global_state = global_state

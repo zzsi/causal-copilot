@@ -1,4 +1,3 @@
-# Kun Zhou Implemented
 from preprocess.dataset import knowledge_info
 from preprocess.stat_info_functions import stat_info_collection, convert_stat_info_to_text
 from algorithm.filter import Filter
@@ -14,6 +13,9 @@ from global_setting.Initialize_state import global_state_initialization, load_da
 import json
 import argparse
 import pandas as pd
+from dotenv import load_dotenv
+
+load_dotenv()
 
 import os
 
@@ -44,28 +46,6 @@ def parse_args():
         help='Directory to save the output graph'
     )
 
-    # OpenAI Settings
-    parser.add_argument(
-        '--organization',
-        type=str,
-        default="org-Xa9VGT8plP28JBRKtqBRjG5l",
-        help='Organization ID'
-    )
-
-    parser.add_argument(
-        '--project',
-        type=str,
-        default="proj_t78xpJomilJJu5qtuOK4vWfR",
-        help='Project ID'
-    )
-
-    parser.add_argument(
-        '--apikey',
-        type=str,
-        default= None,
-        help='API Key'
-    )
-
     parser.add_argument(
         '--simulation_mode',
         type=str,
@@ -90,7 +70,7 @@ def parse_args():
     parser.add_argument(
         '--initial_query',
         type=str,
-        default="selected algorithm: AcceleratedPC",
+        default="Do causal discovery on this dataset",
         help='Initial query for the algorithm'
     )
 

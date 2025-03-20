@@ -9,7 +9,7 @@
       "marginal_general": "local_score_marginal_general",
       "marginal_multi": "local_score_marginal_multi"
     },
-    "reasoning": "Use 'local_score_BIC' for a good balance of fit and complexity for linear data. 'BDeu' for discrete data. local_score_marginal_general and marginal_multi are powerful for complex data such as nonlinear data but time-consuming. local_score_marginal_general leverages non-parametric generalized score and cross-validation to select the best model. local_score_marginal_multi leverages non-parametric generalized score and marginal likelihood to select the best model."
+    "reasoning": "Use 'local_score_BIC' for a good balance of fit and complexity for linear data. 'BDeu' for discrete data. local_score_marginal_general and marginal_multi are powerful for complex data such as nonlinear data but time-consuming. local_score_marginal_general leverages non-parametric generalized score and cross-validation to select the best model. local_score_marginal_multi leverages non-parametric generalized score and marginal likelihood to select the best model. Note [IMPORTANT]: local_score_marginal_general and local_score_marginal_multi are extremely slow. Only consider local_score_marginal_general if the variable size is less than 5. Do not consider local_score_marginal_multi since it is buggy now."
   },
   "depth": {
     "meaning": "Maximum depth for searching permutations in the graph space",

@@ -49,7 +49,7 @@ def simulate_user_query(args):
     meta_prompt = meta_prompt.replace("[application_fields]", json.dumps(application_fields))
     meta_prompt = meta_prompt.replace("[num_users]", str(args.num_users))
 
-    client = OpenAI(organization=organization, project=project, api_key=apikey)
+    client = OpenAI()
     
     # Call the LLM using the meta-prompt to simulate a user query and statistics
     response = client.chat.completions.create(
