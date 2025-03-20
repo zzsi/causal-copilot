@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import networkx as nx
+import pickle
 
 # REMOVE or comment out the direct import of CausalModel from DoWhy:
 # from dowhy import gcm, CausalModel
@@ -24,6 +25,7 @@ from CEM_LinearInf.balance import balance
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import NearestNeighbors
 from sklearn.ensemble import RandomForestRegressor
+from global_setting.state import Inference
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -39,6 +41,13 @@ from causal_analysis.IV.hte_program import HTE_Programming as IV_HTE_Programming
 from causal_analysis.help_functions import *
 from causal_analysis.analysis import *
 from global_setting.Initialize_state import global_state_initialization
+from postprocess.judge_functions import *
+import seaborn as sns
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+
+
+# add imports for MetaLearners
 
 class Analysis(object):
     def __init__(self, global_state, args):
@@ -319,69 +328,201 @@ class Analysis(object):
             dot_format += f"{u} -> {v}; "
         dot_format += "}"
         return dot_format
-    
+        
     def attribute_anomalies(self, target_node, anomaly_samples, confidence_level=0.95):
         """
-        Perform anomaly attribution and save the bar chart with confidence intervals to ./auto_mpg_output.
+        Performing anomaly attribution with:
+        - Limiting selected nodes to a maximum of 10 nodes including the Ancestors + Graph Nodes in the causal graph 
+        - Detecting and resolving cycles.
+        - Using GCM for causal model fitting.
+        - Computing variance for the target node.
+        - Plotting causal graph with arrow strengths.
+        - Computing and visualizing anomaly attribution scores.
         """
-        print("\n" + "#"*60)
-        print(f"Performing Anomaly Attribution for target node: {target_node}")
-        print("#"*60)
-        gcm.auto.assign_causal_mechanisms(self.causal_model, self.data)
-        gcm.fit(self.causal_model, self.data)
-        # Call the attribute_anomalies function
+        print("\n" + "#" * 60)
+        print(f"Performing Anomaly Attribution for {target_node}")
+        print("#" * 60)
+
+        # Initialize directories
+        output_dir = self.global_state.user_data.output_graph_dir
+        column_names = list(self.data.columns)
+        figs = []
+
+        # Detect and resolve cycles
+        graph_matrix = self.causal_model.graph  
+
+        if isinstance(graph_matrix, nx.DiGraph):
+            graph_matrix = nx.to_numpy_array(graph_matrix)
+
+        resolved_graph = check_cycle(self.args, self.data, graph_matrix)  
+
+        # Ensure the graph is fully acyclic
+        G = nx.from_numpy_array(resolved_graph, create_using=nx.DiGraph)
+
+        if not nx.is_directed_acyclic_graph(G):
+            print("❌ Cycle removal failed! The graph is still cyclic.")
+            raise ValueError("Cycle removal was unsuccessful. Graph must be a DAG.")
+        
+        # Store cycle detection results in global state
+        global_state.inference.cycle_detection_result = {
+            "detected_cycles": list(nx.simple_cycles(G)),  # Store any remaining detected cycles
+            "final_graph_after_resolution": nx.to_dict_of_lists(G)  # Store resolved graph
+        }
+
+        # Store editing history
+        global_state.inference.editing_history.append({
+        "removed_edges": "Stored inside check_cycle function",  # Can be extracted from `check_cycle` if needed
+        "final_resolved_graph": nx.to_dict_of_lists(G)})
+
+
+        # Fix Node Naming Issue: Relabel Graph Nodes
+        column_names = list(self.data.columns)
+        mapping = {i: column_names[i] for i in range(len(column_names))}
+        G = nx.relabel_nodes(G, mapping)
+
+        # Ensure Ancestors + Graph Nodes Are Included (Limit to 10 nodes)
+        ancestors = list(nx.ancestors(G, target_node))  # Get ancestors of target node
+        graph_nodes = list(G.nodes)  # Get all nodes in the causal graph
+
+        if not ancestors:
+            print(f"❌ Target node {target_node} has no ancestors. Not possible to calculate anomaly attribution.")
+            return None, []
+
+        # Combine and limit nodes to max 10
+        selected_columns = list(set(ancestors + graph_nodes + [target_node]))
+
+        # Ensure selected columns exist in the dataset
+        selected_columns = [col for col in selected_columns if col in column_names]
+
+        max_nodes = 10
+        if len(selected_columns) > max_nodes:
+            print(f"⚠️ More than {max_nodes} nodes selected. Reducing selection.")
+
+            # Keep target node and prioritize ancestors
+            selected_columns = [target_node] + ancestors[:max_nodes - 1]
+
+            # Fill remaining slots with graph nodes
+            remaining_slots = max_nodes - len(selected_columns)
+            extra_nodes = [node for node in graph_nodes if node not in selected_columns][:remaining_slots]
+
+            selected_columns.extend(extra_nodes)
+
+        print("✅ Final selected columns (max 10):", selected_columns)
+
+        # Filter dataset
+        self.data = self.data[selected_columns].copy()
+        self.G = self.G.subgraph(selected_columns)
+
+        # Assign Causal Mechanisms using GCM
+        self.causal_model = gcm.InvertibleStructuralCausalModel(self.G)
+        
+        try:
+            gcm.auto.assign_causal_mechanisms(self.causal_model, self.data)
+            gcm.fit(self.causal_model, self.data)
+        except KeyError as e:
+            print(f"❌ KeyError: {e}. Possible mismatch between graph nodes and DataFrame columns.")
+            raise
+
+        # Variance Plot for Target Node
+        if self.data[target_node].isna().all():
+            print(f"⚠️ No data available for {target_node}, skipping variance plot.")
+        else:
+            plt.figure(figsize=(8, 5))
+            self.data[target_node].plot(ylabel=target_node, title=f"{target_node} Value Distribution", rot=45)
+            plt.grid(True)
+            var_plot_path = f"{output_dir}/variance_plot_{target_node}.png"
+            plt.savefig(var_plot_path, bbox_inches='tight')
+            plt.show()
+            plt.close()
+            figs.append(var_plot_path)
+            print(f"✅ Variance plot saved: {var_plot_path}")
+
+        # Causal Graph with Arrow Strengths
+        if len(list(self.G.predecessors(target_node))) == 0:
+            print(f"❌ Target node {target_node} has no ancestors. Not possible to compute anomaly attribution.")
+            return None, []
+
+        arrow_strengths = gcm.arrow_strength(self.causal_model, target_node=target_node)
+
+        plt.figure(figsize=(10, 7))
+        pos = nx.kamada_kawai_layout(self.G)  # Better node spacing
+        nx.draw(self.G, pos, with_labels=True, node_size=2500, node_color="lightblue", edge_color="gray", alpha=0.8)
+
+        # Add edge labels only for arrows that point to the target node
+        edge_labels = {
+            (u, v): f"{arrow_strengths.get((u, v), 0):.2f}"
+            for u, v in self.G.edges if v == target_node
+        }
+
+        # Draw edges with varying thickness based on strength
+        for (u, v) in self.G.edges:
+            strength = arrow_strengths.get((u, v), 0)
+            nx.draw_networkx_edges(self.G, pos, edgelist=[(u, v)], arrowstyle="->",
+                                arrowsize=20, edge_color="black", width=2 + 6 * strength, alpha=0.8)
+
+        nx.draw_networkx_edge_labels(self.G, pos, edge_labels=edge_labels, font_color="darkred", font_size=12, font_weight="bold")
+
+        causal_graph_path = f"{output_dir}/causal_graph_{target_node}.png"
+        plt.savefig(causal_graph_path, bbox_inches='tight')
+        plt.show()
+        plt.close()
+        figs.append(causal_graph_path)
+        print(f"✅ Causal graph saved: {causal_graph_path}")
+
+        #  Anomaly Attribution Scores
         attribution_results = gcm.attribute_anomalies(
-            causal_model=self.causal_model,  # Your fitted InvertibleStructuralCausalModel
-            target_node=target_node,        # The target node for anomaly attribution
-            anomaly_samples=anomaly_samples,  # DataFrame of anomalous samples
-            anomaly_scorer=None,            # Use default anomaly scorer
-            attribute_mean_deviation=False, # Attribute anomaly score (not mean deviation)
-            num_distribution_samples=3000,  # Number of samples for marginal distribution
-            shapley_config=None             # Use default Shapley config
+            causal_model=self.causal_model,
+            target_node=target_node,
+            anomaly_samples=anomaly_samples,
+            anomaly_scorer=None,
+            attribute_mean_deviation=False,
+            num_distribution_samples=3000,
+            shapley_config=None
         )
 
-        # Convert results to a DataFrame
-        rows = []
-        for node, contributions in attribution_results.items():
-            rows.append({
+        # Convert results to DataFrame
+        df = pd.DataFrame([
+            {
                 "Node": node,
-                "MeanAttributionScore": np.mean(contributions),
-                "LowerCI": np.percentile(contributions, (1 - confidence_level) / 2 * 100),
-                "UpperCI": np.percentile(contributions, (1 + confidence_level) / 2 * 100)
-            })
+                "MeanAttributionScore": np.mean(scores),
+                "LowerCI": np.percentile(scores, (1 - confidence_level) / 2 * 100),
+                "UpperCI": np.percentile(scores, (1 + confidence_level) / 2 * 100)
+            }
+            for node, scores in attribution_results.items()
+        ]).sort_values("MeanAttributionScore", ascending=False)
 
-        df = pd.DataFrame(rows).sort_values("MeanAttributionScore", ascending=False)
+        if df.empty:
+            print("⚠️ No anomaly attribution results found, skipping plot generation.")
+        else:
+            plt.figure(figsize=(10, 6))
+            plt.barh(df["Node"], df["MeanAttributionScore"], 
+                    xerr=[df["MeanAttributionScore"] - df["LowerCI"], df["UpperCI"] - df["MeanAttributionScore"]],
+                    color='skyblue', height=0.7)
+            plt.title(f"Anomaly Attribution Scores for {target_node}")
+            plt.xlabel("Attribution Score")
+            plt.gca().invert_yaxis()
 
-        # Extract info for plotting
-        nodes = df["Node"]
-        scores = df["MeanAttributionScore"]
-        lower_bounds = df["LowerCI"]
-        upper_bounds = df["UpperCI"]
-        error = np.array([scores - lower_bounds, upper_bounds - scores])
+            attribution_path = f"{output_dir}/attribution_scores_{target_node}.png"
+            plt.savefig(attribution_path, bbox_inches='tight')
+            plt.show()
+            plt.close()
+            figs.append(attribution_path)
+            print(f"✅ Attribution scores plot saved: {attribution_path}")
 
-        # Create figure
-        plt.figure(figsize=(10, 6))  # Adjusted figure size for better readability
-        plt.bar(nodes, scores, yerr=error, align='center', ecolor='black', capsize=5, color='skyblue')
-        plt.xlabel("Nodes")
-        plt.ylabel("Mean Attribution Score")
-        plt.title(f"Anomaly Attribution for {target_node}")
-        plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
-        plt.tight_layout()
-
-        # Save figure
-        fig_path = f'{self.global_state.user_data.output_graph_dir}/attribution_plot.png'
-        plt.savefig(fig_path, bbox_inches='tight')
-        figs = [f'{self.global_state.user_data.output_graph_dir}/attribution_plot.png']
         return df, figs
     
     def attribute_distributional_changes(self, target_node, data_old, data_new, method='distribution_change', confidence_level=0.95):
         """
-        Perform distributional change attribution to identify which causal mechanisms changed between two datasets assuming to get the old data fom the user
+        Performing distributional change attribution to identify which causal mechanisms changed between two datasets.
+        - Limiting selected nodes to a maximum of 10 nodes including the Ancestors + Graph Nodes in the causal graph 
+        - Detecting and resolving cycles.
+        - Using GCM for causal model fitting.
+
         Parameters:
         - target_node: The target node whose distribution change we want to explain.
         - data_old: DataFrame representing the system before the change.
         - data_new: DataFrame representing the system after the change.
-        - method: distribution_change' (default) or 'distribution_change_robust'.
+        - method: 'distribution_change' (default) or 'distribution_change_robust'.
         - confidence_level: Confidence level for confidence intervals (default: 0.95).
 
         Returns:
@@ -393,92 +534,170 @@ class Analysis(object):
         print(f"Method: {method}")
         print("#"*60)
 
-        # Define the path where the plot will be saved
+        # Define the path where plots will be saved
         path = self.global_state.user_data.output_graph_dir
 
-        # Performs distributional change attribution
-        # distribution_change explain how the entire distribution of a target variable changed between two datasets.
-        if method == 'distribution_change':
-            attributions = gcm.distribution_change(
-                causal_model=self.causal_model,
-                old_data=data_old,
-                new_data=data_new,
-                target_node=target_node
-            )
-        # distribution_change_robust explains how the average of a target variable changed between two datasets
-        elif method == 'distribution_change_robust':
-            attributions = gcm.distribution_change_robust(
-                causal_model=self.causal_model,
-                data_old=data_old,
-                data_new=data_new,
-                target_node=target_node
-            )
-        else:
-            raise ValueError("Invalid method. Choose 'distribution_change' or 'distribution_change_robust'.")
+        # Detect and resolve cycles
+        graph_matrix = self.G  
 
-        # Convert results to a DataFrame
-        rows = []
-        for node, score in attributions.items():
-            rows.append({
-                "Node": node,
-                "AttributionScore": score
-            })
+        if isinstance(graph_matrix, nx.DiGraph):
+            graph_matrix = nx.to_numpy_array(graph_matrix)
 
-        df = pd.DataFrame(rows).sort_values("AttributionScore", ascending=False)
+        resolved_graph = check_cycle(self.args, self.data, graph_matrix)  
 
-        # Extract info for plotting
+        # Ensure the graph is fully acyclic
+        G = nx.from_numpy_array(resolved_graph, create_using=nx.DiGraph)
+
+        if not nx.is_directed_acyclic_graph(G):
+            print("❌ Cycle removal failed! The graph is still cyclic.")
+            raise ValueError("Cycle removal was unsuccessful. Graph must be a DAG.")
+        
+        # Store cycle detection results in global state
+        global_state.inference.cycle_detection_result = {
+            "detected_cycles": list(nx.simple_cycles(G)),  
+            "final_graph_after_resolution": nx.to_dict_of_lists(G)  
+        }
+
+        # Store editing history
+        global_state.inference.editing_history.append({
+        "removed_edges": "Stored inside check_cycle function",
+        "final_resolved_graph": nx.to_dict_of_lists(G)})
+
+        # Fix Node Naming Issue: Relabel Graph Nodes
+        column_names = list(self.data.columns)
+        mapping = {i: column_names[i] for i in range(len(column_names))}
+        G = nx.relabel_nodes(G, mapping)
+
+        # Ensure all nodes have assigned causal mechanisms
+        self.causal_model = gcm.InvertibleStructuralCausalModel(G)
+
+            
+        # Fix Node Naming Issue: Relabel Graph Nodes
+        column_names = list(self.data.columns)
+        mapping = {i: column_names[i] for i in range(len(column_names))}
+        G = nx.relabel_nodes(G, mapping)
+
+        # Limit selected nodes to a max of 10 (Ancestors + Graph Nodes)
+        ancestors = list(nx.ancestors(G, target_node))  
+        graph_nodes = list(G.nodes)  
+
+        if not ancestors:
+            print(f"❌ Target node {target_node} has no ancestors. Not possible to calculate distributional change attribution.")
+            return None, []
+
+        # Combine and limit nodes to max 10
+        selected_columns = list(set(ancestors + graph_nodes + [target_node]))
+        selected_columns = [col for col in selected_columns if col in column_names]
+
+        max_nodes = 10
+        if len(selected_columns) > max_nodes:
+            print(f"⚠️ More than {max_nodes} nodes selected. Reducing selection.")
+            selected_columns = [target_node] + ancestors[:max_nodes - 1]
+            remaining_slots = max_nodes - len(selected_columns)
+            extra_nodes = [node for node in graph_nodes if node not in selected_columns][:remaining_slots]
+            selected_columns.extend(extra_nodes)
+
+        print("✅ Final selected columns (max 10):", selected_columns)
+
+        # Save task info
+        global_state.inference.task_info.append({
+            "target_node": target_node,
+            "selected_columns": selected_columns
+        })
+
+        # Filter dataset
+        data_old = data_old[selected_columns].copy()
+        data_new = data_new[selected_columns].copy()
+        self.data = self.data[selected_columns].copy()
+        self.G = self.G.subgraph(selected_columns)
+
+        # Ensure all nodes have assigned causal mechanisms
+        self.causal_model = gcm.InvertibleStructuralCausalModel(self.G)
+
+        try:
+            gcm.auto.assign_causal_mechanisms(self.causal_model, self.data)
+            gcm.fit(self.causal_model, self.data)
+        except ValueError as e:
+            print(f"❌ Error assigning causal mechanisms: {e}")
+            missing_nodes = [node for node in self.causal_model.graph.nodes if node not in self.causal_model.causal_mechanism]
+            print(f"⚠️ Nodes missing causal mechanisms: {missing_nodes}")
+            raise
+
+        try:
+            gcm.auto.assign_causal_mechanisms(self.causal_model, self.data)
+            gcm.fit(self.causal_model, self.data)
+        except ValueError as e:
+            print(f"❌ Error assigning causal mechanisms: {e}")
+            missing_nodes = [node for node in self.causal_model.graph.nodes if node not in self.causal_model.causal_mechanism]
+            print(f"⚠️ Nodes missing causal mechanisms: {missing_nodes}")
+            raise
+
+        # Perform distributional change attribution
+        try:
+            if method == 'distribution_change':
+                attributions = gcm.distribution_change(
+                    causal_model=self.causal_model,
+                    old_data=data_old,
+                    new_data=data_new,
+                    target_node=target_node
+                )
+            elif method == 'distribution_change_robust':
+                attributions = gcm.distribution_change_robust(
+                    causal_model=self.causal_model,
+                    data_old=data_old,
+                    data_new=data_new,
+                    target_node=target_node
+                )
+            else:
+                raise ValueError("Invalid method. Choose 'distribution_change' or 'distribution_change_robust'.")
+        except Exception as e:
+            print(f"❌ Error during distribution change computation: {e}")
+            raise
+
+        # Convert results to DataFrame
+        df = pd.DataFrame([
+            {"Node": node, "AttributionScore": score}
+            for node, score in attributions.items()
+        ]).sort_values("AttributionScore", ascending=False)
+
+        # Extract data for plotting
         nodes = df["Node"]
         scores = df["AttributionScore"]
 
-        # Create figure
-        plt.figure(figsize=(10, 6))  
-        plt.bar(nodes, scores, align='center', color='skyblue')
+        # Create bar plot
+        plt.figure(figsize=(10, 6))
+        sns.barplot(x=nodes, y=scores, palette="coolwarm")
         plt.xlabel("Nodes")
         plt.ylabel("Attribution Score")
         plt.title(f"Distributional Change Attribution for {target_node}")
-        plt.xticks(rotation=45) 
+        plt.xticks(rotation=45, ha="right")
         plt.tight_layout()
 
-        # Save bar plot
-        try:
-            if not os.path.exists(path):
-                os.makedirs(path)
-            plot_filename = 'distribution_change_attribution_bar_plot.png'
-            plot_path = os.path.join(path, plot_filename)
-            print(f"Saving bar plot to {plot_path}")
-            plt.savefig(plot_path)
-        except Exception as e:
-            print(f"Error saving bar plot: {e}")
-        finally:
-            plt.close()
+        bar_plot_path = os.path.join(path, 'distribution_change_attribution_bar_plot.png')
+        plt.savefig(bar_plot_path, bbox_inches='tight')
+        plt.show()
+        plt.close()
+        print(f"✅ Saved bar plot: {bar_plot_path}")
 
         # Create violin plot
-        plt.figure(figsize=(10, 6))  
-        sns.violinplot(x=nodes, y=scores, inner="quartile", density_norm="width")
+        plt.figure(figsize=(10, 6))
+        sns.violinplot(x=nodes, y=scores, inner="quartile", palette="coolwarm")
         plt.xlabel("Nodes")
         plt.ylabel("Attribution Score")
         plt.title(f"Distributional Change Attribution for {target_node}")
-        plt.xticks(rotation=45) 
+        plt.xticks(rotation=45, ha="right")
         plt.tight_layout()
 
-        # Save violin plot
-        try:
-            if not os.path.exists(path):
-                os.makedirs(path)
-            plot_filename = 'distribution_change_attribution_violin_plot.png'
-            plot_path = os.path.join(path, plot_filename)
-            print(f"Saving violin plot to {plot_path}")
-            plt.savefig(plot_path)
-        except Exception as e:
-            print(f"Error saving violin plot: {e}")
-        finally:
-            plt.close()
+        violin_plot_path = os.path.join(path, 'distribution_change_attribution_violin_plot.png')
+        plt.savefig(violin_plot_path, bbox_inches='tight')
+        plt.show()
+        plt.close()
+        print(f"✅ Saved violin plot: {violin_plot_path}")
 
-        # Define figs as a list containing the file paths of the saved plots
-        figs = ['distribution_change_attribution_bar_plot.png', 'distribution_change_attribution_violin_plot.png']
-
+        # Return DataFrame and plot paths
+        figs = [bar_plot_path, violin_plot_path]
         return df, figs
-
+    
     def estimate_effect_dml(self, outcome, treatment, T0, T1, X_col, W_col, query):
         if len(W_col) == 0:
             W_col = ['W']
@@ -555,6 +774,7 @@ class Analysis(object):
                   'hte': [hte, hte_lower, hte_upper]}
         return result
     
+    # def Estimate_effect_MetaLearners
     def estimate_effect_linear(self, 
                                treatment, 
                                outcome, 
@@ -764,6 +984,18 @@ class Analysis(object):
         plt.savefig(os.path.join(path, 'shift_intervention_boxplot.jpg'))
         figs_boxplot = os.path.join(path, 'shift_intervention_boxplot.jpg')
         figs.append(figs_boxplot)
+
+        # Violin plot comparison
+        plt.figure(figsize=(8, 6))
+        plt.violinplot([self.data[response_name], shift_samples[response_name]], showmeans=True)
+        plt.xticks([1, 2], ["Observed Data", "Shift Intervention"])
+        plt.title(f'Shift Intervention Violin Plot: {response_name}')
+        plt.ylabel(response_name)
+        print(f"Saving violin plot comparison to {os.path.join(path, 'shift_intervention_violinplot.jpg')}")
+        plt.savefig(os.path.join(path, 'shift_intervention_violinplot.jpg'))
+        figs_violin = os.path.join(path, 'shift_intervention_violinplot.jpg')
+        figs.append(figs_violin)
+             
         return figs, shift_samples
 
 
@@ -858,6 +1090,8 @@ class Analysis(object):
                     chat_history.append((None, (f'{fig}',)))
                 chat_history.append((None, response[1]))
 
+            # TODO: Add MetaLearner Estimation
+                
             # TODO: Add IV Estimation
             if method == "iv":
                 result = self.estimate_effect_iv(outcome=key_node, treatment=treatment, instrument_variable=iv_variable, T0=control, T1=treat,
@@ -946,7 +1180,7 @@ if __name__ == '__main__':
         parser.add_argument(
             '--data-file',
             type=str,
-            default="demo_data/20250121_223113/lalonde/lalonde.csv",
+            default="./demo_data/20250130_130622/house_price.csv",
             help='Path to the input dataset file (e.g., CSV format or directory location)'
         )
 
@@ -1019,14 +1253,70 @@ if __name__ == '__main__':
         return args
     
     args = parse_args()
-    with open('demo_data/20250121_223113/lalonde/output_graph/PC_global_state.pkl', 'rb') as file:
-        global_state = pickle.load(file)
+    # with open('demo_data/20250121_223113/lalonde/output_graph/PC_global_state.pkl', 'rb') as file:
+    #     global_state = pickle.load(file)
     
+    # my_analysis = Analysis(global_state, args)
+    # # my_analysis.estimate_effect_dml(outcome='re78', treatment='treat', 
+    # #                                 T0=0, T1=1, 
+    # #                                 X_col=['age', 'nodegr'], 
+    # #                                 W_col=['educ', 'age', 'married', 'nodegr'], 
+    # #                                 query='What is the treatment effect of treat on re78')
+    # my_analysis.feature_importance(target_node='re78', linearity=False, visualize=True)
+    # #my_analysis.simulate_intervention(treatment_name = 'married', response_name = 're78', shift_intervention_val =1)
+    with open('./demo_data/20250130_130622/house_price/output_graph/PC_global_state.pkl', 'rb') as file:
+        global_state = pickle.load(file)
+
+    # Dynamically update `inference`
+    if not hasattr(global_state, "inference"):
+        global_state.inference = Inference()
+
+    if not hasattr(global_state.inference, "editing_history"):
+        global_state.inference.editing_history = []
+
+    if not hasattr(global_state.inference, "cycle_detection_result"):
+        global_state.inference.cycle_detection_result = {}
+
+    if not hasattr(global_state.inference, "task_info"):
+        global_state.inference.task_info = []
+    
+
+        
     my_analysis = Analysis(global_state, args)
     # my_analysis.estimate_effect_dml(outcome='re78', treatment='treat', 
     #                                 T0=0, T1=1, 
     #                                 X_col=['age', 'nodegr'], 
     #                                 W_col=['educ', 'age', 'married', 'nodegr'], 
     #                                 query='What is the treatment effect of treat on re78')
-    my_analysis.feature_importance(target_node='re78', linearity=False, visualize=True)
+    # my_analysis.feature_importance(target_node='SalePrice', linearity=False, visualize=True)
+    anomaly_samples = my_analysis.data.head(10)  # Replace with your anomaly DataFrame
+    anomaly_df, anomaly_figs = my_analysis.attribute_anomalies(
+        target_node='SalePrice', 
+        anomaly_samples=anomaly_samples, 
+        confidence_level=0.95
+    )
+    print("Anomaly Attribution Results:", anomaly_df)
     #my_analysis.simulate_intervention(treatment_name = 'married', response_name = 're78', shift_intervention_val =1)
+
+    # Initialize analysis
+    my_analysis = Analysis(global_state, args)
+
+    # Load dataset and split into `data_old` and `data_new`
+    full_data = my_analysis.data  # Load the full dataset
+    split_point = len(full_data) // 2  # Split into two halves
+    data_old = full_data.iloc[:split_point]  # First half as "old" data
+    data_new = full_data.iloc[split_point:]  # Second half as "new" data
+
+    # Test `attribute_distributional_changes`
+    target_node = 'SalePrice'  # Change to your variable of interest
+    method = 'distribution_change'  # or 'distribution_change_robust'
+    
+    dist_change_df, dist_change_figs = my_analysis.attribute_distributional_changes(
+        target_node=target_node,
+        data_old=data_old,
+        data_new=data_new,
+        method=method,
+        confidence_level=0.95
+    )
+
+    print("Distributional Change Attribution Results:\n", dist_change_df)

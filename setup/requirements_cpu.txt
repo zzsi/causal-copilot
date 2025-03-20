@@ -106,6 +106,7 @@ xges==0.1.6
 zipp==3.20.2
 graphviz==0.20.3
 dowhy==0.12
+xges==0.1.6
 causalnex==0.12.1
 gcastle==1.0.4
 causalnex==0.12.1
@@ -121,3 +122,5 @@ psy==0.0.1
 importlib_metadata==8.6.1
 zipp==3.21.0
 
+econml==0.15.1
+CEM-LinearInf==0.0.1

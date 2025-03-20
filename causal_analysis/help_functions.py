@@ -31,7 +31,7 @@ def coarsen_continuous_variables(data, cont_confounders, bins=5):
     return data
 
 def plot_hte_dist(hte, fig_path):
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(16, 12))
     sns.histplot(hte['hte'], bins=30, color=sns.color_palette("muted")[0], kde=True, alpha=0.7)
     plt.axvline(hte['hte'].mean(), color='firebrick', linestyle='--', label='Mean HTE')
     plt.xlabel("Heterogeneous Treatment Effect (HTE)")
@@ -45,12 +45,17 @@ def plot_cate_violin(global_state, hte, X_col, fig_path):
     cont_X_col = [var for var in X_col if global_state.statistics.data_type_column[var]=='Continuous']
     coarsen_data = coarsen_continuous_variables(data, cont_X_col)
     data = pd.concat([coarsen_data, hte], axis=1)
+    X_col = X_col[:6]
     num_groups = len(X_col)
-    fig, axes = plt.subplots(1, num_groups, figsize=(10 * num_groups, 6), sharex=False)
-    if num_groups == 1:
-        axes = [axes]  # Ensure axes is always a list for consistency
-
-    for ax, group_col in zip(axes, X_col):
+    n_rows = (num_groups + 2) // 3  # Calculate number of rows needed (3 plots per row)
+    n_cols = min(3, num_groups)
+    fig = plt.figure(figsize=(10*n_cols, 8*n_rows))
+    #fig, axes = plt.subplots(1, num_groups, figsize=(12 * num_groups, 8), sharex=False)
+    # if num_groups == 1:
+    #     axes = [axes]  # Ensure axes is always a list for consistency
+   
+    for idx, group_col in enumerate(X_col):
+        ax = plt.subplot(n_rows, n_cols, idx + 1)
         if group_col in cont_X_col:
             x=f'coarsen_{group_col}'
         else:
@@ -60,26 +65,35 @@ def plot_cate_violin(global_state, hte, X_col, fig_path):
                        inner="quartile", density_norm="width", 
                        hue=x, legend=False, palette=palette)
         # Customize the subplot
-        ax.set_title(f"CATE Distribution by {group_col.capitalize()}")
-        ax.set_xlabel(group_col.capitalize())
-        ax.set_ylabel("CATE")
+        ax.set_title(f"CATE Distribution by {group_col.capitalize()}", fontweight='bold', fontsize=18)
+        ax.set_xlabel('')
+        ax.set_ylabel("CATE", fontsize=18)
+        ax.tick_params(axis='x', which='major', labelsize=18)   
+        ax.tick_params(axis='y', which='major', labelsize=18)  
         ax.grid(True)
     # Adjust layout to prevent overlap
     plt.tight_layout()
     plt.savefig(fig_path)
 
 def plot_cate_bars_by_group(cate_result, fig_path):
+    # Limit to first 6 keys
+    if len(cate_result) > 6:
+        cate_result = dict(list(cate_result.items())[:6])
+    colors = sns.color_palette("Blues", 12)
     n_groups = len(cate_result)
     n_rows = (n_groups + 2) // 3  # Calculate number of rows needed (3 plots per row)
     n_cols = min(3, n_groups)
-    fig = plt.figure(figsize=(7*n_cols, 6*n_rows))
+    fig = plt.figure(figsize=(10*n_cols, 8*n_rows))
     for idx, group in enumerate(cate_result.keys()):
-        plt.subplot(n_rows, n_cols, idx + 1)
+        ax = plt.subplot(n_rows, n_cols, idx + 1)
         # Create bar plot for each group
-        sns.barplot(x=cate_result[group].index, y=cate_result[group].values, color='skyblue', alpha=0.7)
-        plt.title(f"CATE - {group}")
-        plt.xlabel("Group Label")
-        plt.ylabel("CATE")
+        sns.barplot(x=cate_result[group].index, y=cate_result[group].values, 
+                    palette=colors[2:len(cate_result[group])+2])
+        plt.title(f"CATE - {group}", fontweight='bold', fontsize=18)
+        ax.tick_params(axis='x', which='major', labelsize=18)   
+        ax.tick_params(axis='y', which='major', labelsize=18)   
+        plt.xlabel("")
+        #plt.ylabel("CATE")
     fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
     plt.tight_layout()
     plt.savefig(fig_path, bbox_inches='tight')
@@ -91,6 +105,7 @@ def generate_density_plot(global_state, data, matched_data, treatment, confounde
     Each row corresponds to a confounder, with treated and control groups in separate subplots.
     """
     sns.set_style("darkgrid")  
+    confounders = confounders[:3]
     num_confounders = len(confounders)
     fig, axes = plt.subplots(nrows=num_confounders, ncols=2, figsize=(20, 6 * num_confounders))
     
@@ -116,10 +131,10 @@ def generate_density_plot(global_state, data, matched_data, treatment, confounde
             alpha=0.3,  
             ax=ax_treated
         )
-        ax_treated.set_title(f'Before Matching: {confounder} ({title})')
-        ax_treated.set_xlabel(confounder)
-        ax_treated.set_ylabel('Density')
-        ax_treated.legend()
+        ax_treated.set_title(f'Before Matching: {confounder}', fontweight='bold', fontsize=16)
+        ax_treated.set_xlabel('')
+        ax_treated.set_ylabel('Density', fontsize=16)
+        ax_treated.legend(fontsize=16)
         ax_treated.grid(True)
 
         # Control group (right subplot)
@@ -140,10 +155,10 @@ def generate_density_plot(global_state, data, matched_data, treatment, confounde
             alpha=0.3,  
             ax=ax_control
         )
-        ax_control.set_title(f'After Matching: {confounder} ({title})')
-        ax_control.set_xlabel(confounder)
-        ax_control.set_ylabel('Density')
-        ax_control.legend()
+        ax_control.set_title(f'After Matching: {confounder}', fontweight='bold', fontsize=16)
+        ax_treated.set_xlabel('')
+        #ax_control.set_ylabel('Density', fontsize=16)
+        ax_control.legend(fontsize=16)
         ax_control.grid(True)
     plt.tight_layout()
 
