@@ -90,7 +90,7 @@ def parse_args():
     parser.add_argument(
         '--initial_query',
         type=str,
-        default= "do causal discovery on the data", # "selected algorithm: PCMCI",
+        default="selected algorithm: AcceleratedPC",
         help='Initial query for the algorithm'
     )
 

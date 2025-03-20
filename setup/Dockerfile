@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 pytorch/pytorch:2.2.2-cuda11.8-cudnn8-runtime
+FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-devel
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -29,11 +29,13 @@ RUN apt-get update && apt-get install -y \
     texlive-latex-extra \
     && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install -y python3-pip
+
 # Copy requirements file
-COPY requirements.txt .
+COPY requirements_gpu.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements_gpu.txt --no-deps
 
 # Copy application code
 COPY . .
@@ -41,12 +43,12 @@ COPY . .
 # Set Python path
 ENV PYTHONPATH=/app
 
-# Create a non-root user
-RUN useradd -m -s /bin/bash developer
-RUN chown -R developer:developer /app
+# # Create a non-root user
+# RUN useradd -m -s /bin/bash developer
+# RUN chown -R developer:developer /app
 
-# Switch to non-root user
-USER developer
+# # Switch to non-root user
+# USER developer
 
 # Set up bash as default shell with useful aliases
 RUN echo 'alias ll="ls -la"' >> ~/.bashrc && \

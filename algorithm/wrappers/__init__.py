@@ -39,21 +39,26 @@ from .dynotears import DYNOTEARS
 from .pcmci import PCMCI
 from .var_lingam import VARLiNGAM
 
-constraint_based_algorithms = ['PC', 'FCI', 'CDNOD', 'InterIAMB', 'BAMB', 'HitonMB', 'IAMBnPC', 'MBOR', 'PCParallel']
+from .accelerated_pc import AcceleratedPC
+
+constraint_based_algorithms = ['PC', 'FCI', 'CDNOD', 'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR', 'PCParallel', 'AcceleratedPC']
 score_based_algorithms = ['GES', 'FGES', 'XGES', 'NOTEARSLinear', 'NOTEARSNonlinear', 'CORL', 'CALM', 'GOLEM', 'DYNOTEARS']
 functional_model_based_algorithms = ['DirectLiNGAM', 'ICALiNGAM']
+
 permutation_based_algorithms = ['GRaSP']
 hybrid_algorithms = ['Hybrid']
 ts_algorithms = ['PCMCI', 'VARLiNGAM', 'DYNOTEARS']
 
+try:
+    from .accelerated_lingam import AcceleratedLiNGAM
+    functional_model_based_algorithms.append('AcceleratedLiNGAM')
+except Exception as e:
+    print(f"GPU is not available, {e}")
 
-if torch.cuda.is_available():
-    # If GPU is available, use gpu-accelerated algorithms
-    from .accelerated_lingam import AcceleratedLiNGAM 
+try:
     from .accelerated_pc import AcceleratedPC
-    accelerated_algorithms = ['AcceleratedLiNGAM', 'AcceleratedPC']
-    # If GPU is available, the continuous optimization based algorithms will use GPU instead of CPU
+    constraint_based_algorithms.append('AcceleratedPC')
+except Exception as e:
+    print(f"GPU is not available, {e}")
 
-    __all__ = constraint_based_algorithms + score_based_algorithms + functional_model_based_algorithms + permutation_based_algorithms + hybrid_algorithms + accelerated_algorithms + ts_algorithms
-else:
-    __all__ = constraint_based_algorithms + score_based_algorithms + functional_model_based_algorithms + permutation_based_algorithms + hybrid_algorithms + ts_algorithms
+__all__ = constraint_based_algorithms + score_based_algorithms + functional_model_based_algorithms + permutation_based_algorithms + hybrid_algorithms + ts_algorithms

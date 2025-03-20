@@ -130,9 +130,13 @@ def accelerated_pc(
     node_names = [str(i) for i in range(data.shape[1])]
 
     if indep_test == 'fisherz':
+        if depth == -1:
+            depth = data.shape[1]
         return fisherz_gpu_gpucsl(data, alpha, depth, node_names)
 
     elif indep_test == 'chi_square':
+        if depth == -1:
+            depth = data.shape[1]
         return chi_square_gpu_gpucsl(data, alpha, depth, node_names)
 
     elif indep_test == 'kci':
