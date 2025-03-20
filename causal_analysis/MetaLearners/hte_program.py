@@ -19,7 +19,7 @@ class HTE_Programming(object):
                           y_col=self.y_col, T_col=self.T_col, X_col=self.X_col, W_col=self.W_col,
                           T0=self.T0, T1=self.T1)
         self.model.fit(global_state.user_data.processed_data)
-    
+        
     def forward(self, global_state, task='hte'): 
         if task == 'ate':
            ate, ate_lower, ate_upper = self.model.ate(global_state.user_data.processed_data) 
