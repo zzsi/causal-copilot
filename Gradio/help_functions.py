@@ -19,8 +19,8 @@ def try_numeric(value):
 
 def generate_hyperparameter_text(global_state):
     hyperparameter_text = ""
-    for param in global_state.algorithm.algorithm_arguments.keys():
-        details = global_state.algorithm.algorithm_arguments_json['hyperparameters'][param]
+    print(global_state.algorithm.algorithm_arguments_json)
+    for param, details in global_state.algorithm.algorithm_arguments_json['hyperparameters'].items():
         value = details['value']
         explanation = details['explanation']
         hyperparameter_text += f"  Parameter: {param}\n"
@@ -111,7 +111,8 @@ def heterogeneity_query(global_state, message, chat_history, download_btn, CURRE
         global_state.user_data.heterogeneity = None
         CURRENT_STAGE = 'accept_CPDAG'
         chat_history.append((message, None))
-        return chat_history, download_btn, global_state, CURRENT_STAGE
+        var_list = []
+        return var_list, chat_history, download_btn, global_state, CURRENT_STAGE
     else:
         class VarList(BaseModel):
             variables: list[str]
@@ -120,6 +121,7 @@ def heterogeneity_query(global_state, message, chat_history, download_btn, CURRE
         "If there is only one variable, also save it in list variables"
         f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
         "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
+        "If they say 'all of them', 'all' or something like that, please save all the variable names in the list."
         "If you cannot find variable names, just return an empty list."
         parsed_vars = LLM_parse_query(VarList, prompt, message, args)
         var_list = parsed_vars.variables
@@ -139,7 +141,7 @@ def heterogeneity_query(global_state, message, chat_history, download_btn, CURRE
                 chat_history.append((message, "✅ Successfully parsed your provided heterogeneity indicator."))
                 CURRENT_STAGE = 'accept_CPDAG'
                 global_state.user_data.heterogeneity = var_list
-                return chat_history, download_btn, global_state, CURRENT_STAGE
+                return var_list, chat_history, download_btn, global_state, CURRENT_STAGE
 
 
 def accept_CPDAG_query(global_state, message, chat_history, download_btn, CURRENT_STAGE):
@@ -210,12 +212,13 @@ def parse_var_selection_query(message, chat_history, download_btn, next_step, ar
         variables: list[str]
     prompt = "You are a helpful assistant, please help me to understand user's need and extract variable names from their message."
     "I ask them whether in a dataset they have important features"
-    "If they say 'all of them', 'all' or something like that, please save all the variable names in the list."
-    "If they provide some variable names, please extract variable names as a list. \n"
-    "If there is only one variable, also save it in list variables"
+    "1. If they provide some variable names, please extract variable names as a list. \n"
+    "2. If there is only one variable, also save it in list variables"
+    "3. If they say 'all of them', 'all' or something like that, please save all the variable names in the list."
+    "4. If they say 'no', 'none', 'nothing' or something like that, just return an empty list."
     f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
     "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
-    "If they say 'no', 'none', 'nothing' or something like that, just return an empty list."
+    
     parsed_vars = LLM_parse_query(VarList, prompt, message, args)
     var_list = parsed_vars.variables
     if var_list == []:
@@ -327,7 +330,7 @@ def first_stage_sparsity_check(message, chat_history, download_btn, args, global
 def parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
     if message == '' or message.lower()=='no':
         chat_history.append((message, "💬 No algorithm is specified, will go to the next step..."))
-        CURRENT_STAGE = 'report_generation_check'      
+        CURRENT_STAGE = 'inference_analysis_check'     
     elif message not in ['PC', 'FCI', 'CDNOD', 'GES', 'DirectLiNGAM', 'ICALiNGAM', 'NOTEARS', 'FGES', 'XGES', 'AcceleratedDirectLiNGAM']:
         if torch.cuda.is_available():
             chat_history.append((message, "❌ The specified algorithm is not correct, please choose from the following: \n"
@@ -346,37 +349,37 @@ def parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED
     return message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
 def parse_hyperparameter_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
-            if message.lower()=='no' or message=='':
-                CURRENT_STAGE = 'algo_running'    
-                hyperparameter_text, global_state = generate_hyperparameter_text(global_state) 
-                chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Selected parameters: \n {hyperparameter_text}\n"))
-            else:
-                try:
-                    specified_params = {line.split(':')[0].strip(): line.split(':')[1].strip() for line in message.strip().split('\n')}
-                    print('specified_params',specified_params)
-                    original_params = global_state.algorithm.algorithm_arguments
-                    print('original_params',original_params)
-                    common_keys = original_params.keys() & specified_params.keys()
-                    if len(common_keys)==0:
-                        print(1)
-                        chat_history.append((None, "❌ The specified parameters are not correct, please follow the template!"))
-                        return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
+    if message.lower()=='no' or message=='':
+        CURRENT_STAGE = 'algo_running'    
+        hyperparameter_text, global_state = generate_hyperparameter_text(global_state) 
+        chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Selected parameters: \n {hyperparameter_text}\n"))
+    else:
+        try:
+            specified_params = {line.split(':')[0].strip(): line.split(':')[1].strip() for line in message.strip().split('\n')}
+            print('specified_params',specified_params)
+            original_params = global_state.algorithm.algorithm_arguments_json['hyperparameters']
+            print('original_params',original_params)
+            common_keys = original_params.keys() & specified_params.keys()
+            if len(common_keys)==0:
+                print(1)
+                chat_history.append((None, "❌ The specified parameters are not correct, please follow the template!"))
+                return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
-                    for key in common_keys:
-                        global_state.algorithm.algorithm_arguments_json['hyperparameters'][key]['value'] = try_numeric(specified_params[key])
-                        global_state.algorithm.algorithm_arguments_json['hyperparameters'][key]['explanation'] = 'User specified'
-                        global_state.algorithm.algorithm_arguments[key] = try_numeric(specified_params[key])
-                    print(global_state.algorithm.algorithm_arguments)
-                    hyperparameter_text, global_state = generate_hyperparameter_text(global_state) 
-                    chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Specified parameters: \n"
-                                         f"{hyperparameter_text}"))
-                    CURRENT_STAGE = 'algo_running' 
-                except Exception as e:
-                    print(e)
-                    print(str(e))
-                    traceback.print_exc()
-                    chat_history.append((None, "❌ The specified parameters are not correct, please follow the template!"))
-            return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
+            for key in common_keys:
+                global_state.algorithm.algorithm_arguments_json['hyperparameters'][key]['value'] = try_numeric(specified_params[key])
+                global_state.algorithm.algorithm_arguments_json['hyperparameters'][key]['explanation'] = 'User specified'
+                global_state.algorithm.algorithm_arguments[key] = try_numeric(specified_params[key])
+            print(global_state.algorithm.algorithm_arguments)
+            hyperparameter_text, global_state = generate_hyperparameter_text(global_state) 
+            chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Specified parameters: \n"
+                                    f"{hyperparameter_text}"))
+            CURRENT_STAGE = 'algo_running' 
+        except Exception as e:
+            print(e)
+            print(str(e))
+            traceback.print_exc()
+            chat_history.append((None, "❌ The specified parameters are not correct, please follow the template!"))
+    return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
 def parse_user_postprocess(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE):
     edges_dict = {

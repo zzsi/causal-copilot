@@ -8,7 +8,7 @@ from plumbum.cmd import latexmk
 from plumbum import local
 from report.help_functions import *
 import json 
-from report.report_generation import compile_tex_to_pdf_with_refs
+#from report.report_generation import compile_tex_to_pdf_with_refs
 
 class Inference_Report_generation(object):
     def __init__(self, global_state, args):
@@ -297,11 +297,12 @@ class Inference_Report_generation(object):
         for placeholder, value in replacement.items():
             context = context.replace(placeholder, value)
         # Save the context to a file
-        with open(f'{self.report_dir}/report.tex', 'w') as f:
+        with open(f'{self.report_dir}/inference_report.tex', 'w') as f:
             f.write(context)
-        print('start compilation')
-        compile_tex_to_pdf_with_refs(f'{self.report_dir}/report.tex', self.report_dir)
-        return f'{self.report_dir}/report.pdf'
+        # print('start compilation')
+        # compile_tex_to_pdf_with_refs(f'{self.report_dir}/report.tex', self.report_dir)
+        # return f'{self.report_dir}/report.pdf'
+        return context
 
 
 

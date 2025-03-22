@@ -10,6 +10,7 @@ import networkx as nx
 from postprocess.visualization import Visualization, convert_to_edges
 from postprocess.judge_functions import edges_to_relationship
 from report.help_functions import *
+from report.inference_report_generation import Inference_Report_generation
 import ast
 import json 
 
@@ -121,7 +122,7 @@ class Report_generation(object):
     
     def intro_prompt(self):
         prompt = f"""
-        I want to conduct a causal discovery on a dataset and write a report. There are some background knowledge about this dataset.
+        I want to conduct a causal discovery and inference on a dataset and write a report. There are some background knowledge about this dataset.
         1. Please write a brief introduction paragraph. I only need the paragraph, don't include any title.
         2. Do not include any Greek Letters, Please change any Greek Letter into Math Mode, for example, you should change γ into $\gamma$
         
@@ -747,6 +748,7 @@ Help me to write a comparison of the following causal discovery results of diffe
                      4. Graph Result Analysis: {self.graph_prompt},
                      5. Reliability Analysis: {self.reliability_prompt}
                      6. Comparision of different algorithms: {self.result_comparison}
+                     7. Inference Analysis: {self.inf_report}
                      """}
                 ]
             )
@@ -805,6 +807,7 @@ Help me to write a comparison of the following causal discovery results of diffe
                      4. Graph Revise Procesure: {self.revise_process}
                      5. Reliability Analysis: {self.reliability_prompt}
                      6. Comparision of different algorithms: {self.result_comparison}
+                     7. Inference Analysis: {self.inf_report}
                      """}
                 ]
             )
@@ -893,6 +896,14 @@ Help me to write a comparison of the following causal discovery results of diffe
             self.confidence_graph_prompt = self.confidence_graph_prompts()
             self.refutation_analysis = self.refutation_analysis_prompts()
             self.result_comparison_graph_text, self.result_comparison = self.comparision_prompt()
+            
+            # Causal Inference info
+            if global_state.inference.task_info != -1:
+                inf_report_generator = Inference_Report_generation(global_state, args)
+                self.inf_report = inf_report_generator.generation()
+            else:
+                self.inf_report = ''
+
             self.abstract = self.abstract_prompt()
             self.conclusion = self.conclusion_prompt()
             
@@ -925,7 +936,8 @@ Help me to write a comparison of the following causal discovery results of diffe
                 "[CONFIDENCE_GRAPH]": self.confidence_graph_prompt or "",
                 "[REFUTATION_GRAPH]": self.refutation_analysis or "",
                 "[RESULT_COMPARISION]": self.result_comparison.replace("&", r"\&") or "",
-                "[CONCLUSION]": self.conclusion.replace("&", r"\&") or ""
+                "[CONCLUSION]": self.conclusion.replace("&", r"\&") or "",
+                "[INFERENCE]": self.inf_report or ""
             }
             replacement2 = {
                 "[TITLE]": self.title or "",
