@@ -20,19 +20,20 @@ from algorithm.evaluation.evaluator import GraphEvaluator
 from algorithm.tests.benchmarking_config import get_config
 
 class BenchmarkRunner:
-    def __init__(self, debug_mode: bool = False, parallel: bool = False):
+    def __init__(self, algorithm, debug_mode: bool = False):
         self.config = get_config()
+        self.algorithm = algorithm
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.data_dir = self.config['data_dir']
         self.output_dir = os.path.join(self.config['output_dir'], self.timestamp)
         self.evaluator = GraphEvaluator()
         self.debug_mode = debug_mode
-        self.parallel = parallel
         os.makedirs(self.output_dir, exist_ok=True)
         print(f"Benchmarking data directory: {self.data_dir}")
         print(f"Benchmarking output directory: {self.output_dir}")
         # Load all algorithm classes from wrappers
-        self.algorithm_candidates = self.config['algorithms']
+        # self.algorithm_candidates = self.config['algorithms']
+        self.algorithm_candidates = [self.algorithm]
         self.algorithms = self._load_algorithms()
         
         # Index all available datasets
@@ -64,13 +65,20 @@ class BenchmarkRunner:
     def _index_datasets(self) -> List[Tuple[str, str, Dict]]:
         """Index all available datasets, including absolute paths and configs"""
         dataset_index = []
-        
-        # Find all dataset directories
-        dataset_dirs = os.listdir(self.data_dir)
+    
+        # heuristic: if there is a .json file in the dataset directory, it is a dataset instead of a subdirectory
+        if any('.json' in file for file in os.listdir(self.data_dir)):
+            dataset_dirs = [self.data_dir]
+        else:
+            dataset_dirs = os.listdir(self.data_dir)
         print(f"Found {len(dataset_dirs)} datasets")
-        
+            
+        # First collect all datasets with their configs
         for dataset_dir in dataset_dirs:
-            dataset_dir_abs = os.path.join(self.data_dir, dataset_dir)
+            if len(dataset_dirs) == 1:
+                dataset_dir_abs = self.data_dir
+            else:
+                dataset_dir_abs = os.path.join(self.data_dir, dataset_dir)
             config_file = [file for file in os.listdir(dataset_dir_abs) if 'config.json' in file][0]
             config_file = os.path.join(dataset_dir_abs, config_file)
             if not os.path.exists(config_file):
@@ -86,13 +94,25 @@ class BenchmarkRunner:
             config['seed'] = seed_num
             
             # Create dataset name with key configuration parameters
-            dataset_name = f"nodes{config['n_nodes']}_samples{config['n_samples']}_domains{config['n_domains']}_noise{config['noise_type']}_func{config['function_type']}_seed{seed_num}"
-            if 'edge_prob' in config:
-                dataset_name += f"_edgeprob{config['edge_prob']}"
+            dataset_name = f"nodes{config['n_nodes']}_samples{config['n_samples']}_domains{config['n_domains']}_noise{config['noise_type']}_func{config['function_type']}"
+            if 'edge_probability' in config and config['edge_probability'] is not None:
+                dataset_name += f"_edgeprob{config['edge_probability']}"
             if 'experiment_type' in config:
                 dataset_name = f"{config['experiment_type']}_{dataset_name}"
+            
+            if 'discrete_ratio' in config and config['discrete_ratio'] is not None:
+                dataset_name += f"_discrete{config['discrete_ratio']}"
+            if 'measurement_error' in config and config['measurement_error'] is not None:
+                dataset_name += f"_measurement{config['measurement_error']}"
+            if 'missing_rate' in config and config['missing_rate'] is not None:
+                dataset_name += f"_missing{config['missing_rate']}"
+            
+            dataset_name += f"_seed{seed_num}"
                 
             dataset_index.append((dataset_name, dataset_dir_abs, config))
+        
+        # Sort by n_nodes first, then by n_samples
+        dataset_index.sort(key=lambda x: (x[2]['n_nodes'], x[2]['n_samples']))
             
         return dataset_index
 
@@ -104,7 +124,7 @@ class BenchmarkRunner:
         true_graph = np.load(os.path.join(dataset_dir, true_graph))
         config_file = [file for file in os.listdir(dataset_dir) if 'config.json' in file][0]
         config = json.load(open(os.path.join(dataset_dir, config_file)))
-            
+
         return data, true_graph, config
 
     def _run_single_experiment(self, algo_instance: Any, data: pd.DataFrame, 
@@ -112,6 +132,16 @@ class BenchmarkRunner:
         """Run a single experiment with given algorithm and configuration"""
         start_time = time.time()
         try:
+            # fill the missing value if it is existed
+            data = data.fillna(0)
+
+            # Skip if the algorithm is not designed for heterogeneous data
+            if 'domain_index' in data.columns and "CDNOD" not in algo_instance.name:
+                data = data.drop(columns=['domain_index'])
+            if 'domain_index' not in data.columns and "CDNOD" in algo_instance.name:
+                # independent domain index randomly generated
+                data["domain_index"] = np.random.randn(data.shape[0])
+
             adj_matrix, info, _ = algo_instance.fit(data)
             runtime = time.time() - start_time
             metrics = self.evaluator.compute_metrics(true_graph, adj_matrix)
@@ -155,29 +185,16 @@ class BenchmarkRunner:
         for dataset_name, dataset_dir, config in tqdm(self.dataset_index, desc=f"Running {len(self.dataset_index)} experiments"):
             data, true_graph, _ = self._load_dataset(dataset_dir)
             
-            if self.parallel:
-                with ThreadPoolExecutor(max_workers=len(self.algorithms)) as executor:
-                    futures = {executor.submit(self._run_single_experiment, algo_class(), data, true_graph, config): algo_name 
-                             for algo_name, algo_class in self.algorithms.items()}
-                    for future in as_completed(futures):
-                        algo_name = futures[future]
-                        result = future.result()
-                        result['algorithm'] = algo_name
-                        result['dataset'] = dataset_name
-                        if algo_name not in all_results:
-                            all_results[algo_name] = []
-                        all_results[algo_name].append(result)
-                        self._save_result(algo_name, result)
-            else:
-                for algo_name, algo_class in self.algorithms.items():
-                    algo_instance = algo_class()
-                    result = self._run_single_experiment(algo_instance, data, true_graph, config)
-                    result['algorithm'] = algo_name
-                    result['dataset'] = dataset_name
-                    if algo_name not in all_results:
-                        all_results[algo_name] = []
-                    all_results[algo_name].append(result)
-                    self._save_result(algo_name, result)
+            for algo_name, algo_class in self.algorithms.items():
+                algo_instance = algo_class()
+                print(f"Running {algo_name} on {dataset_name}")
+                result = self._run_single_experiment(algo_instance, data, true_graph, config)
+                result['algorithm'] = algo_name
+                result['dataset'] = dataset_name
+                if algo_name not in all_results:
+                    all_results[algo_name] = []
+                all_results[algo_name].append(result)
+                self._save_result(algo_name, result)
                 
             if self.debug_mode:
                 break  # Only test the first dataset in debug mode
@@ -185,9 +202,12 @@ class BenchmarkRunner:
         print(f"Benchmark results saved to: {self.output_dir}")
 
 def main():
-    debug_mode = '--debug' in sys.argv
-    parallel = '--parallel' in sys.argv
-    runner = BenchmarkRunner(debug_mode=debug_mode, parallel=parallel)
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument("--algorithm", type=str, required=True)
+    parser.add_argument("--debug", action="store_true")
+    args = parser.parse_args()
+    runner = BenchmarkRunner(algorithm=args.algorithm, debug_mode=args.debug)
     runner.run_all_experiments()
 
 if __name__ == "__main__":

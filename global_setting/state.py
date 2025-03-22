@@ -23,6 +23,10 @@ class UserData:
     llm_drop_features: Optional[object] = None
     high_corr_drop_features: Optional[object] = None
     nan_indicator: Optional[str] = None
+    drop_important_var: Optional[bool] = None
+    meaningful_feature: Optional[bool] = None
+    heterogeneity: Optional[str] = None
+    accept_CPDAG: Optional[bool] = None
 
 @dataclass
 class Statistics:
@@ -64,6 +68,7 @@ class Algorithm:
     selected_algorithm: Optional[str] = None
     selected_reason: Optional[str] = None
     algorithm_candidates: Optional[Dict] = None
+    algorithm_optimum: Optional[str] = None
     algorithm_arguments: Optional[Dict] = None
     waiting_minutes: float = 1440.0
     algorithm_arguments_json: Optional[object] = None
@@ -95,6 +100,9 @@ class Inference:
     hte_model_y_json: Optional[Dict] = None
     hte_model_T_json: Optional[Dict] = None
     hte_model_param: Optional[Dict] = None
+    cycle_detection_result: Optional[Dict] = field(default_factory=dict)  # 🔹 Stores detected cycles
+    editing_history: List[Dict] = field(default_factory=list)  # 🔹 Tracks cycle resolution steps
+    inference_result: Optional[Dict] = field(default_factory=dict)  # 🔹 Stores final inference output
 
 @dataclass
 class GlobalState:

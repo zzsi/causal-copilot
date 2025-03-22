@@ -1,0 +1,63 @@
+Given a dataset with the following properties:
+
+1. Columns: Raf	Mek	Plcg	PIP2	PIP3	Erk	Akt	PKA	PKC	P38	Jnk
+2. Statistics:
+The dataset has the following characteristics:
+
+Data Type: The overall data type is Continuous.
+
+The sample size is 853 with 11 features. This dataset is not time-series data. Data Quality: There are no missing values in the dataset.
+
+Statistical Properties:
+- Linearity: The relationships between variables are predominantly linear.
+- Gaussian Errors: The errors in the data do follow a Gaussian distribution.
+- Heterogeneity: The dataset is not heterogeneous. 
+
+
+
+
+
+We have selected the following algorithm for causal discovery:
+
+Algorithm: PCMCI
+Description: 
+The user has already selected the algorithm: PCMCI
+
+Now, we need to set up the primary hyperparameters for this algorithm. Please consider the dataset characteristics and the algorithm requirements to suggest appropriate values for the following hyperparameters:
+
+[PRIMARY_HYPERPARAMETERS]
+
+For each primary hyperparameter, provide:
+1. The full name of the hyperparameter that is aligned with your understanding ('independence test', 'max depth', 'score function', etc.)
+2. The suggested value
+3. A brief explanation of why this value is appropriate given the dataset characteristics and algorithm requirements
+4. Each primary hyperparameter is provided with a default value, which should be adjusted based on the dataset characteristics and algorithm requirements
+
+Actively use and reason with the following information about each hyperparameter to inform your decisions:
+
+"{\n    \"algorithm_name\": \"PCMCI\",\n    \"cond_ind_test\": {\n        \"meaning\": \"Independence tests\",\n        \"suggested_values\": {\n        \"default\": \"parcorr\",\n        \"non_gaussian\": \"robustparcorr\",\n        \"non_linear\": \"gpdc\",\n        \"categorical\": \"gsq\",\n        \"mixed\": \"regression\",\n        \"accuracy\": \"cmi\"\n        },\n        \"reasoning\": \"parcorr, gpdc for non-linear causal relations, cmi for better accuracy but slow runtime, gsq for categorical, regression for mixed data\"\n    },\n    \"tau_min\": {\n        \"meaning\": \"Minimum time lag to consider\",\n        \"suggested_values\": {\n        \"default\": 0,\n        \"lagged\":1\n        },\n        \"reasoning\": \"Adjust if results are required for a specific time window\"\n    },\n    \"tau_max\": {\n        \"meaning\": \"Maximum time lag\",\n        \"suggested_values\": {\n        \"default\": 1,\n        \"short_term\": 5,\n        \"long_term\": 10\n        },\n        \"reasoning\": \"Usually adjusted based on pre-processing results\"\n    },\n    \"pc_alpha\": {\n        \"meaning\": \"Significance level of PC algorithm.\",\n        \"suggested_values\": {\n        \"default\": 0.05,\n        \"small_sample\": 0.1,\n        \"large_sample\": 0.01\n        },\n        \"reasoning\": \"Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\"\n    },\n    \"alpha_level\": {\n        \"meaning\": \"Significance level at which the p_matrix is thresholded to get graph.\",\n        \"suggested_values\": {\n        \"default\": 0.05,\n        \"small_sample\": 0.1,\n        \"large_sample\": 0.01\n        },\n        \"reasoning\": \"Adjust based on estimated time lag, number of nodes and sample size. Larger and denser graph means low alpha value.\"\n    },\n    \"fdr_method\": {\n        \"meaning\": \"Correction method, currently implemented is Benjamini-Hochberg False Discovery Rate method. \",\n        \"suggested_values\": {\n        \"default\": \"none\",\n        \"correction\": \"fdr_bh\"\n        },\n        \"reasoning\": \"Implement a false discovery rate correction over the PCMCI result, can be required for larger and denser graphs\"\n    },\n    \"link_assumptions\": {\n        \"meaning\": \"Background knowledge links added as a dict\",\n        \"suggested_values\": {\n        \"default\": null\n        },\n        \"reasoning\": \"Add some links as dictionary of form {j:{(i, -tau): link_type, ...}, ...} specifying assumptions about links. This initializes the graph with entries graph[i,j,tau] = link_type. For example, graph[i,j,0] = '-->' implies that a directed link from i to j at lag 0 must exist. Valid link types are 'o-o', '-->', '<--'.\"\n    },   \n    \"max_conds_dim\": {\n        \"meaning\": \"Maximum number of conditions to test.\",\n        \"suggested_values\": {\n        \"default\": null\n        },\n        \"reasoning\": \"Default none value means unrestricted testing, can be assigned a value for large datasets with sparse graphs to speed up the discovery\"\n    },\n    \"max_combinations\": {\n        \"meaning\": \"Maximum number of combinations of conditions of current cardinality to test in PC1 step.\",\n        \"suggested_values\": {\n        \"default\": 1\n        },\n        \"reasoning\": \"Adjust to increase accuracy by trading off processing speed\"\n    },\n    \"max_conds_py\": {\n        \"meaning\": \"Restricts the number of parent nodes to consider in the MCI step\",\n        \"suggested_values\": {\n        \"default\": null\n        },\n        \"reasoning\": \"Adjust to increase accuracy by trading off processing speed, none value means unrestricted\"\n    },\n    \"max_conds_px\": {\n        \"meaning\": \"Maximum number of variables to condition on\",\n        \"suggested_values\": {\n        \"default\": null\n        },\n        \"reasoning\": \"Adjust to increase accuracy by trading off processing speed, none value means unrestricted\"\n    }\n}       "
+
+Please provide your suggestions in a structured JSON format. Your response should look like this:
+
+{
+  "algorithm": "PCMCI",
+  "hyperparameters": {
+    "[HYPERPARAMETER_1_NAME]": {
+      "full_name": "[HYPERPARAMETER_1_FULL_NAME]",
+      "value": [SUGGESTED_VALUE],
+      "explanation": "[BRIEF_EXPLANATION]"
+    },
+    "[HYPERPARAMETER_2_NAME]": {
+      "full_name": "[HYPERPARAMETER_2_FULL_NAME]",
+      "value": [SUGGESTED_VALUE],
+      "explanation": "[BRIEF_EXPLANATION]"
+    },
+    ...
+  }
+}
+
+Please always determine the hyperparameters from its corresponding "Suggested Values" part, DO NOT use any values just exist in other context but not in "Suggested Values".
+
+Please consider the trade-offs between accuracy and computational efficiency when suggesting values. If you're unsure about a specific value, you may suggest using the default value and explain why.
+
+Please provide your hyperparameter suggestions following this JSON structure.

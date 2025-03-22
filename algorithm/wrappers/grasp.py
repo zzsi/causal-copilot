@@ -51,14 +51,8 @@ class GRaSP(CausalDiscoveryAlgorithm):
         data_values = data.values
 
         # Run GRaSP algorithm
-        cg = cl_grasp(
-            data_values,
-            score_func=self._params['score_func'],
-            depth=self._params['depth'],
-            parameters=self._params['parameters'],
-            verbose=self._params['verbose'],
-            node_names=node_names
-        )
+        all_params = {**self.get_primary_params(), **self.get_secondary_params(), 'node_names': node_names}
+        cg = cl_grasp(data_values, **all_params)
 
         # Convert the graph to adjacency matrix
         adj_matrix = self.convert_to_adjacency_matrix(cg)

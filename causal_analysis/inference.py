@@ -1,12 +1,13 @@
 import numpy as np
 import pandas as pd
 import networkx as nx
+import pickle
 
 # REMOVE or comment out the direct import of CausalModel from DoWhy:
 # from dowhy import gcm, CausalModel
 
 # Keep gcm if you still want anomaly attribution and interventions:
-from dowhy import gcm  
+from dowhy import gcm, CausalModel
 # Import econml classes instead of using DoWhy's linear_regression or DML
 from econml.dml import DML, LinearDML, SparseLinearDML, CausalForestDML
 
@@ -23,6 +24,8 @@ from CEM_LinearInf.cem import cem
 from CEM_LinearInf.balance import balance
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import NearestNeighbors
+from sklearn.ensemble import RandomForestRegressor
+from global_setting.state import Inference
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -32,9 +35,19 @@ from causal_analysis.DML.hte_program import HTE_Programming as DML_HTE_Programmi
 from causal_analysis.DRL.hte_filter import HTE_Filter as DRL_HTE_Filter
 from causal_analysis.DRL.hte_params import HTE_Param_Selector as DRL_HTE_Param_Selector
 from causal_analysis.DRL.hte_program import HTE_Programming as DRL_HTE_Programming
+from causal_analysis.IV.hte_filter import HTE_Filter as IV_HTE_Filter
+from causal_analysis.IV.hte_params import HTE_Param_Selector as IV_HTE_Param_Selector
+from causal_analysis.IV.hte_program import HTE_Programming as IV_HTE_Programming
 from causal_analysis.help_functions import *
 from causal_analysis.analysis import *
 from global_setting.Initialize_state import global_state_initialization
+from postprocess.judge_functions import *
+import seaborn as sns
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+
+
+# add imports for MetaLearners
 
 class Analysis(object):
     def __init__(self, global_state, args):
@@ -96,36 +109,42 @@ class Analysis(object):
         print("Please ensure your causal assumptions align with these column types.")
         print("="*60 + "\n")
 
-    def feature_importance(self, target_node, visualize=True):
+    def feature_importance(self, target_node, linearity, visualize=True):
         print('start feature importance analysis')
-        # parent_relevance, noise_relevance = gcm.parent_relevance(self.causal_model, target_node=target_node)
-        # parent_relevance, noise_relevance
         parent_nodes = list(self.G.predecessors(target_node))
 
         X = self.data.drop(columns=[target_node])
         y = self.data[[target_node]]
-        X100 = shap.utils.sample(X, 100)  # background distribution for SHAP
-
-        model_linear = sklearn.linear_model.LinearRegression()
-        model_linear.fit(X, y)
-        explainer_linear = shap.Explainer(model_linear.predict, X100)
-        shap_values_linear = explainer_linear(X)
-        
+        X_background = shap.utils.sample(X, int(len(X)*0.2))  # background distribution for SHAP
+        if linearity:
+            model_linear = sklearn.linear_model.LinearRegression()
+            model_linear.fit(X, y)
+            explainer_linear = shap.Explainer(model_linear.predict, X_background)
+            shap_values = explainer_linear(X)
+        else:
+            # Xd = xgboost.DMatrix(X, label=y)
+            # model_xgb = xgboost.train({"eta": 1, "max_depth": 3, "base_score": 0, "lambda": 0}, Xd, 1)
+            # pred = model_xgb.predict(Xd, output_margin=True)
+            model_rf = RandomForestRegressor()
+            model_rf.fit(X, y)
+            explainer_rf = shap.TreeExplainer(model_rf)
+            shap_values = explainer_rf(X)
         # Mean absolute SHAP values
-        shap_df = pd.DataFrame(np.abs(shap_values_linear.values), columns=X.columns)
+        shap_df = pd.DataFrame(np.abs(shap_values.values), columns=X.columns)
         mean_shap_values = shap_df.mean()
         shap_df.to_csv(f'{self.global_state.user_data.output_graph_dir}/shap_df.csv', index=False)
         
         figs = []
         if visualize == True:
             # 1st SHAP Plot beeswarm
-            ax = shap.plots.beeswarm(shap_values_linear, plot_size=(8,6), show=False)
+            fig, ax = plt.subplots(figsize=(8, 6))
+            ax = shap.plots.beeswarm(shap_values, show=False)
             plt.savefig(f'{self.global_state.user_data.output_graph_dir}/shap_beeswarm_plot.png', bbox_inches='tight')  # Save as PNG
             figs.append(f'{self.global_state.user_data.output_graph_dir}/shap_beeswarm_plot.png')
 
             # 2nd SHAP Plot Bar
             fig, ax = plt.subplots(figsize=(8, 6))
-            ax = shap.plots.bar(shap_values_linear, show=False)
+            ax = shap.plots.bar(shap_values, show=False)
             plt.savefig(f'{self.global_state.user_data.output_graph_dir}/shap_bar_plot.png', bbox_inches='tight')  # Save as PNG
             figs.append(f'{self.global_state.user_data.output_graph_dir}/shap_bar_plot.png')
             plt.close()
@@ -227,96 +246,27 @@ class Analysis(object):
             print("Warning: No valid continuous confounders found in the matched data.")
 
         # Generate density plot
-        self._generate_density_plot(data, matched_data, treatment, valid_confounders, title)
+        figs = generate_density_plot(self.global_state, data, matched_data, treatment, valid_confounders, title)
+        return figs
 
-    def _generate_density_plot(self, data, matched_data, treatment, confounders, title):
-        """
-        Generate a single density plot with subplots for different confounders.
-        Each row corresponds to a confounder, with treated and control groups in separate subplots.
-        """
-        sns.set_style("darkgrid")  
-        num_confounders = len(confounders)
-        fig, axes = plt.subplots(nrows=num_confounders, ncols=2, figsize=(20, 6 * num_confounders))
+    def _matched_treatment_effect(self, matched_data, treatment, outcome, treat, control, X_col):
+        treated_mean = matched_data[matched_data[treatment] == treat][outcome].mean()
+        control_mean = matched_data[matched_data[treatment] == control][outcome].mean()
+        ate = treated_mean - control_mean
+        cont_X_col = [var for var in X_col if self.global_state.statistics.data_type_column[var]=='Continuous']
+        coarsen_data = coarsen_continuous_variables(matched_data, cont_X_col)
+        cate_results = {}
+        for label in X_col:
+            if label in cont_X_col:
+                group_col = f'coarsen_{label}'
+            else:
+                group_col = label
+            cate = coarsen_data.groupby(group_col).apply(lambda x: x[x[treatment] == treat][outcome].mean() - x[x[treatment] == 0][outcome].mean())
+            cate_results[label] = cate
         
-        if num_confounders == 1:
-            axes = [axes]  
-
-        for i, confounder in enumerate(confounders):
-            # Treated group (left subplot)
-            ax_treated = axes[i][0]
-        # Generate density plot
-        self._generate_density_plot(data, matched_data, treatment, valid_confounders, title)
-
-    def _generate_density_plot(self, data, matched_data, treatment, confounders, title):
-        """
-        Generate a single density plot with subplots for different confounders.
-        Each row corresponds to a confounder, with treated and control groups in separate subplots.
-        """
-        sns.set_style("darkgrid")  
-        num_confounders = len(confounders)
-        fig, axes = plt.subplots(nrows=num_confounders, ncols=2, figsize=(20, 6 * num_confounders))
-        
-        if num_confounders == 1:
-            axes = [axes]  
-
-        for i, confounder in enumerate(confounders):
-            # Treated group (left subplot)
-            ax_treated = axes[i][0]
-            sns.kdeplot(
-                data[data[treatment] == 1][confounder], 
-                label='Treated (Unmatched)', 
-                color='blue', 
-                fill=True, 
-                alpha=0.3, 
-                ax=ax_treated
-            )
-            sns.kdeplot(
-                matched_data[matched_data[treatment] == 1][confounder], 
-                label='Treated (Matched)', 
-                color='orange', 
-                fill=True,  
-                alpha=0.3,  
-                ax=ax_treated
-            )
-            ax_treated.set_title(f'Treated Group: {confounder} ({title})')
-            ax_treated.set_xlabel(confounder)
-            ax_treated.set_ylabel('Density')
-            ax_treated.legend()
-            ax_treated.grid(True)
-
-            # Control group (right subplot)
-            ax_control = axes[i][1]
-            sns.kdeplot(
-                data[data[treatment] == 0][confounder], 
-                label='Control (Unmatched)', 
-                color='blue', 
-                fill=True,  
-                alpha=0.3,  
-                ax=ax_control
-            )
-            sns.kdeplot(
-                matched_data[matched_data[treatment] == 0][confounder], 
-                label='Control (Matched)', 
-                color='orange', 
-                fill=True, 
-                alpha=0.3,  
-                ax=ax_control
-            )
-            ax_control.set_title(f'Control Group: {confounder} ({title})')
-            ax_control.set_xlabel(confounder)
-            ax_control.set_ylabel('Density')
-            ax_control.legend()
-            ax_control.grid(True)
-
-        plt.tight_layout()
-
-        # Save the density plot
-        density_plot_filename = f'density_plot_{title.lower().replace(" ", "_")}.png'
-        density_plot_path = os.path.join(self.global_state.user_data.output_graph_dir, density_plot_filename)
-        plt.savefig(density_plot_path, bbox_inches='tight')
-        plt.close()
-
-    def estimate_causal_effect_matching(self, treatment, outcome, confounders, cont_confounders, method="propensity_score", visualize=True):
+        return ate, cate_results
+    
+    def estimate_causal_effect_matching(self, treatment, outcome, confounders, X_col, treat, control, cont_confounders, method="propensity_score", visualize=True):
         """
         Estimate the causal effect using matching methods.
         
@@ -353,7 +303,7 @@ class Analysis(object):
                 matched_data=matched_data,  # Matched dataframe (after matching)
                 treatment=treatment,
                 outcome=outcome,
-                confounders=confounders,
+                confounders=confounders, 
                 cont_confounders=cont_confounders,
                 title="Balance Checking"
             )
@@ -361,12 +311,12 @@ class Analysis(object):
             figs = []
 
         # Step 4: Estimate Treatment Effect
-        treated_mean = matched_data[matched_data[treatment] == 1][outcome].mean()
-        control_mean = matched_data[matched_data[treatment] == 0][outcome].mean()
-        ate = treated_mean - control_mean
-
+        ate, cate_results = self._matched_treatment_effect(matched_data, treatment, outcome, treat, control, X_col)
+        cate_plot_path = os.path.join(self.global_state.user_data.output_graph_dir, 'cate_plot.png')
+        plot_cate_bars_by_group(cate_results, cate_plot_path)
+        figs.append(cate_plot_path)
         print(f"\nAverage Treatment Effect (ATE) using {method}: {ate}")
-        return ate, matched_data, figs
+        return ate, cate_results, matched_data, figs
 
     def _generate_dowhy_graph(self):
         """
@@ -378,71 +328,201 @@ class Analysis(object):
             dot_format += f"{u} -> {v}; "
         dot_format += "}"
         return dot_format
-    
+        
     def attribute_anomalies(self, target_node, anomaly_samples, confidence_level=0.95):
         """
-        Perform anomaly attribution and save the bar chart with confidence intervals to ./auto_mpg_output.
+        Performing anomaly attribution with:
+        - Limiting selected nodes to a maximum of 10 nodes including the Ancestors + Graph Nodes in the causal graph 
+        - Detecting and resolving cycles.
+        - Using GCM for causal model fitting.
+        - Computing variance for the target node.
+        - Plotting causal graph with arrow strengths.
+        - Computing and visualizing anomaly attribution scores.
         """
-        print("\n" + "#"*60)
-        print(f"Performing Anomaly Attribution for target node: {target_node}")
-        print("#"*60)
-        gcm.auto.assign_causal_mechanisms(self.causal_model, self.data)
-        gcm.fit(self.causal_model, self.data)
-        # Call the attribute_anomalies function
+        print("\n" + "#" * 60)
+        print(f"Performing Anomaly Attribution for {target_node}")
+        print("#" * 60)
+
+        # Initialize directories
+        output_dir = self.global_state.user_data.output_graph_dir
+        column_names = list(self.data.columns)
+        figs = []
+
+        # Detect and resolve cycles
+        graph_matrix = self.causal_model.graph  
+
+        if isinstance(graph_matrix, nx.DiGraph):
+            graph_matrix = nx.to_numpy_array(graph_matrix)
+
+        resolved_graph = check_cycle(self.args, self.data, graph_matrix)  
+
+        # Ensure the graph is fully acyclic
+        G = nx.from_numpy_array(resolved_graph, create_using=nx.DiGraph)
+
+        if not nx.is_directed_acyclic_graph(G):
+            print("❌ Cycle removal failed! The graph is still cyclic.")
+            raise ValueError("Cycle removal was unsuccessful. Graph must be a DAG.")
+        
+        # Store cycle detection results in global state
+        global_state.inference.cycle_detection_result = {
+            "detected_cycles": list(nx.simple_cycles(G)),  # Store any remaining detected cycles
+            "final_graph_after_resolution": nx.to_dict_of_lists(G)  # Store resolved graph
+        }
+
+        # Store editing history
+        global_state.inference.editing_history.append({
+        "removed_edges": "Stored inside check_cycle function",  # Can be extracted from `check_cycle` if needed
+        "final_resolved_graph": nx.to_dict_of_lists(G)})
+
+
+        # Fix Node Naming Issue: Relabel Graph Nodes
+        column_names = list(self.data.columns)
+        mapping = {i: column_names[i] for i in range(len(column_names))}
+        G = nx.relabel_nodes(G, mapping)
+
+        # Ensure Ancestors + Graph Nodes Are Included (Limit to 10 nodes)
+        ancestors = list(nx.ancestors(G, target_node))  # Get ancestors of target node
+        graph_nodes = list(G.nodes)  # Get all nodes in the causal graph
+
+        if not ancestors:
+            print(f"❌ Target node {target_node} has no ancestors. Not possible to calculate anomaly attribution.")
+            return None, []
+
+        # Combine and limit nodes to max 10
+        selected_columns = list(set(ancestors + graph_nodes + [target_node]))
+
+        # Ensure selected columns exist in the dataset
+        selected_columns = [col for col in selected_columns if col in column_names]
+
+        max_nodes = 10
+        if len(selected_columns) > max_nodes:
+            print(f"⚠️ More than {max_nodes} nodes selected. Reducing selection.")
+
+            # Keep target node and prioritize ancestors
+            selected_columns = [target_node] + ancestors[:max_nodes - 1]
+
+            # Fill remaining slots with graph nodes
+            remaining_slots = max_nodes - len(selected_columns)
+            extra_nodes = [node for node in graph_nodes if node not in selected_columns][:remaining_slots]
+
+            selected_columns.extend(extra_nodes)
+
+        print("✅ Final selected columns (max 10):", selected_columns)
+
+        # Filter dataset
+        self.data = self.data[selected_columns].copy()
+        self.G = self.G.subgraph(selected_columns)
+
+        # Assign Causal Mechanisms using GCM
+        self.causal_model = gcm.InvertibleStructuralCausalModel(self.G)
+        
+        try:
+            gcm.auto.assign_causal_mechanisms(self.causal_model, self.data)
+            gcm.fit(self.causal_model, self.data)
+        except KeyError as e:
+            print(f"❌ KeyError: {e}. Possible mismatch between graph nodes and DataFrame columns.")
+            raise
+
+        # Variance Plot for Target Node
+        if self.data[target_node].isna().all():
+            print(f"⚠️ No data available for {target_node}, skipping variance plot.")
+        else:
+            plt.figure(figsize=(8, 5))
+            self.data[target_node].plot(ylabel=target_node, title=f"{target_node} Value Distribution", rot=45)
+            plt.grid(True)
+            var_plot_path = f"{output_dir}/variance_plot_{target_node}.png"
+            plt.savefig(var_plot_path, bbox_inches='tight')
+            plt.show()
+            plt.close()
+            figs.append(var_plot_path)
+            print(f"✅ Variance plot saved: {var_plot_path}")
+
+        # Causal Graph with Arrow Strengths
+        if len(list(self.G.predecessors(target_node))) == 0:
+            print(f"❌ Target node {target_node} has no ancestors. Not possible to compute anomaly attribution.")
+            return None, []
+
+        arrow_strengths = gcm.arrow_strength(self.causal_model, target_node=target_node)
+
+        plt.figure(figsize=(10, 7))
+        pos = nx.kamada_kawai_layout(self.G)  # Better node spacing
+        nx.draw(self.G, pos, with_labels=True, node_size=2500, node_color="lightblue", edge_color="gray", alpha=0.8)
+
+        # Add edge labels only for arrows that point to the target node
+        edge_labels = {
+            (u, v): f"{arrow_strengths.get((u, v), 0):.2f}"
+            for u, v in self.G.edges if v == target_node
+        }
+
+        # Draw edges with varying thickness based on strength
+        for (u, v) in self.G.edges:
+            strength = arrow_strengths.get((u, v), 0)
+            nx.draw_networkx_edges(self.G, pos, edgelist=[(u, v)], arrowstyle="->",
+                                arrowsize=20, edge_color="black", width=2 + 6 * strength, alpha=0.8)
+
+        nx.draw_networkx_edge_labels(self.G, pos, edge_labels=edge_labels, font_color="darkred", font_size=12, font_weight="bold")
+
+        causal_graph_path = f"{output_dir}/causal_graph_{target_node}.png"
+        plt.savefig(causal_graph_path, bbox_inches='tight')
+        plt.show()
+        plt.close()
+        figs.append(causal_graph_path)
+        print(f"✅ Causal graph saved: {causal_graph_path}")
+
+        #  Anomaly Attribution Scores
         attribution_results = gcm.attribute_anomalies(
-            causal_model=self.causal_model,  # Your fitted InvertibleStructuralCausalModel
-            target_node=target_node,        # The target node for anomaly attribution
-            anomaly_samples=anomaly_samples,  # DataFrame of anomalous samples
-            anomaly_scorer=None,            # Use default anomaly scorer
-            attribute_mean_deviation=False, # Attribute anomaly score (not mean deviation)
-            num_distribution_samples=3000,  # Number of samples for marginal distribution
-            shapley_config=None             # Use default Shapley config
+            causal_model=self.causal_model,
+            target_node=target_node,
+            anomaly_samples=anomaly_samples,
+            anomaly_scorer=None,
+            attribute_mean_deviation=False,
+            num_distribution_samples=3000,
+            shapley_config=None
         )
 
-        # Convert results to a DataFrame
-        rows = []
-        for node, contributions in attribution_results.items():
-            rows.append({
+        # Convert results to DataFrame
+        df = pd.DataFrame([
+            {
                 "Node": node,
-                "MeanAttributionScore": np.mean(contributions),
-                "LowerCI": np.percentile(contributions, (1 - confidence_level) / 2 * 100),
-                "UpperCI": np.percentile(contributions, (1 + confidence_level) / 2 * 100)
-            })
+                "MeanAttributionScore": np.mean(scores),
+                "LowerCI": np.percentile(scores, (1 - confidence_level) / 2 * 100),
+                "UpperCI": np.percentile(scores, (1 + confidence_level) / 2 * 100)
+            }
+            for node, scores in attribution_results.items()
+        ]).sort_values("MeanAttributionScore", ascending=False)
 
-        df = pd.DataFrame(rows).sort_values("MeanAttributionScore", ascending=False)
+        if df.empty:
+            print("⚠️ No anomaly attribution results found, skipping plot generation.")
+        else:
+            plt.figure(figsize=(10, 6))
+            plt.barh(df["Node"], df["MeanAttributionScore"], 
+                    xerr=[df["MeanAttributionScore"] - df["LowerCI"], df["UpperCI"] - df["MeanAttributionScore"]],
+                    color='skyblue', height=0.7)
+            plt.title(f"Anomaly Attribution Scores for {target_node}")
+            plt.xlabel("Attribution Score")
+            plt.gca().invert_yaxis()
 
-        # Extract info for plotting
-        nodes = df["Node"]
-        scores = df["MeanAttributionScore"]
-        lower_bounds = df["LowerCI"]
-        upper_bounds = df["UpperCI"]
-        error = np.array([scores - lower_bounds, upper_bounds - scores])
+            attribution_path = f"{output_dir}/attribution_scores_{target_node}.png"
+            plt.savefig(attribution_path, bbox_inches='tight')
+            plt.show()
+            plt.close()
+            figs.append(attribution_path)
+            print(f"✅ Attribution scores plot saved: {attribution_path}")
 
-        # Create figure
-        plt.figure(figsize=(10, 6))  # Adjusted figure size for better readability
-        plt.bar(nodes, scores, yerr=error, align='center', ecolor='black', capsize=5, color='skyblue')
-        plt.xlabel("Nodes")
-        plt.ylabel("Mean Attribution Score")
-        plt.title(f"Anomaly Attribution for {target_node}")
-        plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
-        plt.tight_layout()
-
-        # Save figure
-        fig_path = f'{self.global_state.user_data.output_graph_dir}/attribution_plot.png'
-        plt.savefig(fig_path, bbox_inches='tight')
-        figs = [f'{self.global_state.user_data.output_graph_dir}/attribution_plot.png']
-        # plt.show()  # Show the plot in the notebook or script
-        # plt.close()
         return df, figs
     
     def attribute_distributional_changes(self, target_node, data_old, data_new, method='distribution_change', confidence_level=0.95):
         """
-        Perform distributional change attribution to identify which causal mechanisms changed between two datasets assuming to get the old data fom the user
+        Performing distributional change attribution to identify which causal mechanisms changed between two datasets.
+        - Limiting selected nodes to a maximum of 10 nodes including the Ancestors + Graph Nodes in the causal graph 
+        - Detecting and resolving cycles.
+        - Using GCM for causal model fitting.
+
         Parameters:
         - target_node: The target node whose distribution change we want to explain.
         - data_old: DataFrame representing the system before the change.
         - data_new: DataFrame representing the system after the change.
-        - method: distribution_change' (default) or 'distribution_change_robust'.
+        - method: 'distribution_change' (default) or 'distribution_change_robust'.
         - confidence_level: Confidence level for confidence intervals (default: 0.95).
 
         Returns:
@@ -454,92 +534,170 @@ class Analysis(object):
         print(f"Method: {method}")
         print("#"*60)
 
-        # Define the path where the plot will be saved
+        # Define the path where plots will be saved
         path = self.global_state.user_data.output_graph_dir
 
-        # Performs distributional change attribution
-        # distribution_change explain how the entire distribution of a target variable changed between two datasets.
-        if method == 'distribution_change':
-            attributions = gcm.distribution_change(
-                causal_model=self.causal_model,
-                old_data=data_old,
-                new_data=data_new,
-                target_node=target_node
-            )
-        # distribution_change_robust explains how the average of a target variable changed between two datasets
-        elif method == 'distribution_change_robust':
-            attributions = gcm.distribution_change_robust(
-                causal_model=self.causal_model,
-                data_old=data_old,
-                data_new=data_new,
-                target_node=target_node
-            )
-        else:
-            raise ValueError("Invalid method. Choose 'distribution_change' or 'distribution_change_robust'.")
+        # Detect and resolve cycles
+        graph_matrix = self.G  
 
-        # Convert results to a DataFrame
-        rows = []
-        for node, score in attributions.items():
-            rows.append({
-                "Node": node,
-                "AttributionScore": score
-            })
+        if isinstance(graph_matrix, nx.DiGraph):
+            graph_matrix = nx.to_numpy_array(graph_matrix)
 
-        df = pd.DataFrame(rows).sort_values("AttributionScore", ascending=False)
+        resolved_graph = check_cycle(self.args, self.data, graph_matrix)  
 
-        # Extract info for plotting
+        # Ensure the graph is fully acyclic
+        G = nx.from_numpy_array(resolved_graph, create_using=nx.DiGraph)
+
+        if not nx.is_directed_acyclic_graph(G):
+            print("❌ Cycle removal failed! The graph is still cyclic.")
+            raise ValueError("Cycle removal was unsuccessful. Graph must be a DAG.")
+        
+        # Store cycle detection results in global state
+        global_state.inference.cycle_detection_result = {
+            "detected_cycles": list(nx.simple_cycles(G)),  
+            "final_graph_after_resolution": nx.to_dict_of_lists(G)  
+        }
+
+        # Store editing history
+        global_state.inference.editing_history.append({
+        "removed_edges": "Stored inside check_cycle function",
+        "final_resolved_graph": nx.to_dict_of_lists(G)})
+
+        # Fix Node Naming Issue: Relabel Graph Nodes
+        column_names = list(self.data.columns)
+        mapping = {i: column_names[i] for i in range(len(column_names))}
+        G = nx.relabel_nodes(G, mapping)
+
+        # Ensure all nodes have assigned causal mechanisms
+        self.causal_model = gcm.InvertibleStructuralCausalModel(G)
+
+            
+        # Fix Node Naming Issue: Relabel Graph Nodes
+        column_names = list(self.data.columns)
+        mapping = {i: column_names[i] for i in range(len(column_names))}
+        G = nx.relabel_nodes(G, mapping)
+
+        # Limit selected nodes to a max of 10 (Ancestors + Graph Nodes)
+        ancestors = list(nx.ancestors(G, target_node))  
+        graph_nodes = list(G.nodes)  
+
+        if not ancestors:
+            print(f"❌ Target node {target_node} has no ancestors. Not possible to calculate distributional change attribution.")
+            return None, []
+
+        # Combine and limit nodes to max 10
+        selected_columns = list(set(ancestors + graph_nodes + [target_node]))
+        selected_columns = [col for col in selected_columns if col in column_names]
+
+        max_nodes = 10
+        if len(selected_columns) > max_nodes:
+            print(f"⚠️ More than {max_nodes} nodes selected. Reducing selection.")
+            selected_columns = [target_node] + ancestors[:max_nodes - 1]
+            remaining_slots = max_nodes - len(selected_columns)
+            extra_nodes = [node for node in graph_nodes if node not in selected_columns][:remaining_slots]
+            selected_columns.extend(extra_nodes)
+
+        print("✅ Final selected columns (max 10):", selected_columns)
+
+        # Save task info
+        global_state.inference.task_info.append({
+            "target_node": target_node,
+            "selected_columns": selected_columns
+        })
+
+        # Filter dataset
+        data_old = data_old[selected_columns].copy()
+        data_new = data_new[selected_columns].copy()
+        self.data = self.data[selected_columns].copy()
+        self.G = self.G.subgraph(selected_columns)
+
+        # Ensure all nodes have assigned causal mechanisms
+        self.causal_model = gcm.InvertibleStructuralCausalModel(self.G)
+
+        try:
+            gcm.auto.assign_causal_mechanisms(self.causal_model, self.data)
+            gcm.fit(self.causal_model, self.data)
+        except ValueError as e:
+            print(f"❌ Error assigning causal mechanisms: {e}")
+            missing_nodes = [node for node in self.causal_model.graph.nodes if node not in self.causal_model.causal_mechanism]
+            print(f"⚠️ Nodes missing causal mechanisms: {missing_nodes}")
+            raise
+
+        try:
+            gcm.auto.assign_causal_mechanisms(self.causal_model, self.data)
+            gcm.fit(self.causal_model, self.data)
+        except ValueError as e:
+            print(f"❌ Error assigning causal mechanisms: {e}")
+            missing_nodes = [node for node in self.causal_model.graph.nodes if node not in self.causal_model.causal_mechanism]
+            print(f"⚠️ Nodes missing causal mechanisms: {missing_nodes}")
+            raise
+
+        # Perform distributional change attribution
+        try:
+            if method == 'distribution_change':
+                attributions = gcm.distribution_change(
+                    causal_model=self.causal_model,
+                    old_data=data_old,
+                    new_data=data_new,
+                    target_node=target_node
+                )
+            elif method == 'distribution_change_robust':
+                attributions = gcm.distribution_change_robust(
+                    causal_model=self.causal_model,
+                    data_old=data_old,
+                    data_new=data_new,
+                    target_node=target_node
+                )
+            else:
+                raise ValueError("Invalid method. Choose 'distribution_change' or 'distribution_change_robust'.")
+        except Exception as e:
+            print(f"❌ Error during distribution change computation: {e}")
+            raise
+
+        # Convert results to DataFrame
+        df = pd.DataFrame([
+            {"Node": node, "AttributionScore": score}
+            for node, score in attributions.items()
+        ]).sort_values("AttributionScore", ascending=False)
+
+        # Extract data for plotting
         nodes = df["Node"]
         scores = df["AttributionScore"]
 
-        # Create figure
-        plt.figure(figsize=(10, 6))  
-        plt.bar(nodes, scores, align='center', color='skyblue')
+        # Create bar plot
+        plt.figure(figsize=(10, 6))
+        sns.barplot(x=nodes, y=scores, palette="coolwarm")
         plt.xlabel("Nodes")
         plt.ylabel("Attribution Score")
         plt.title(f"Distributional Change Attribution for {target_node}")
-        plt.xticks(rotation=45) 
+        plt.xticks(rotation=45, ha="right")
         plt.tight_layout()
 
-        # Save bar plot
-        try:
-            if not os.path.exists(path):
-                os.makedirs(path)
-            plot_filename = 'distribution_change_attribution_bar_plot.png'
-            plot_path = os.path.join(path, plot_filename)
-            print(f"Saving bar plot to {plot_path}")
-            plt.savefig(plot_path)
-        except Exception as e:
-            print(f"Error saving bar plot: {e}")
-        finally:
-            plt.close()
+        bar_plot_path = os.path.join(path, 'distribution_change_attribution_bar_plot.png')
+        plt.savefig(bar_plot_path, bbox_inches='tight')
+        plt.show()
+        plt.close()
+        print(f"✅ Saved bar plot: {bar_plot_path}")
 
         # Create violin plot
-        plt.figure(figsize=(10, 6))  
-        sns.violinplot(x=nodes, y=scores, inner="quartile", density_norm="width")
+        plt.figure(figsize=(10, 6))
+        sns.violinplot(x=nodes, y=scores, inner="quartile", palette="coolwarm")
         plt.xlabel("Nodes")
         plt.ylabel("Attribution Score")
         plt.title(f"Distributional Change Attribution for {target_node}")
-        plt.xticks(rotation=45) 
+        plt.xticks(rotation=45, ha="right")
         plt.tight_layout()
 
-        # Save violin plot
-        try:
-            if not os.path.exists(path):
-                os.makedirs(path)
-            plot_filename = 'distribution_change_attribution_violin_plot.png'
-            plot_path = os.path.join(path, plot_filename)
-            print(f"Saving violin plot to {plot_path}")
-            plt.savefig(plot_path)
-        except Exception as e:
-            print(f"Error saving violin plot: {e}")
-        finally:
-            plt.close()
+        violin_plot_path = os.path.join(path, 'distribution_change_attribution_violin_plot.png')
+        plt.savefig(violin_plot_path, bbox_inches='tight')
+        plt.show()
+        plt.close()
+        print(f"✅ Saved violin plot: {violin_plot_path}")
 
-        # Define figs as a list containing the file paths of the saved plots
-        figs = ['distribution_change_attribution_bar_plot.png', 'distribution_change_attribution_violin_plot.png']
-
+        # Return DataFrame and plot paths
+        figs = [bar_plot_path, violin_plot_path]
         return df, figs
-
+    
     def estimate_effect_dml(self, outcome, treatment, T0, T1, X_col, W_col, query):
         if len(W_col) == 0:
             W_col = ['W']
@@ -577,6 +735,33 @@ class Analysis(object):
         reranker = DRL_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
         self.global_state = reranker.forward(self.global_state)
         programmer = DRL_HTE_Programming(self.args, y_col=outcome, T_col=treatment, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
+        programmer.fit_model(self.global_state)
+        # Estimate ate, att, hte
+        ate, ate_lower, ate_upper = programmer.forward(self.global_state, task='ate')
+        att, att_lower, att_upper = programmer.forward(self.global_state, task='att')
+        hte, hte_lower, hte_upper = programmer.forward(self.global_state, task='hte')
+        hte = pd.DataFrame({'hte': hte.flatten()})
+        hte.to_csv(f'{self.global_state.user_data.output_graph_dir}/hte.csv', index=False)
+
+        result = {'ate': [ate, ate_lower, ate_upper],
+                  'att': [att, att_lower, att_upper],
+                  'hte': [hte, hte_lower, hte_upper]}
+        return result
+    # TODO: Add def contains_iv() to check where the causal graph contains IV
+    
+    def estimate_effect_iv(self, outcome, treatment, instrument_variable, T0, T1, X_col, W_col, query):
+        if len(W_col) == 0:
+            W_col = ['W']
+            W = pd.DataFrame(np.zeros((len(self.data), 1)), columns=W_col)
+            self.data = pd.concat([self.data, W], axis=1)
+            self.global_state.user_data.processed_data = self.data
+        # Algorithm selection and deliberation
+        filter = IV_HTE_Filter(self.args)
+        self.global_state = filter.forward(self.global_state, query)
+        reranker = IV_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, Z_col=instrument_variable, X_col=X_col, W_col=W_col)
+        self.global_state = reranker.forward(self.global_state)
+        programmer = IV_HTE_Programming(self.args, y_col=outcome, T_col=treatment, Z_col=instrument_variable, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
+        programmer.fit_model(self.global_state)
         # Estimate ate, att, hte
         ate, ate_lower, ate_upper = programmer.forward(self.global_state, task='ate')
         att, att_lower, att_upper = programmer.forward(self.global_state, task='att')
@@ -589,8 +774,61 @@ class Analysis(object):
                   'hte': [hte, hte_lower, hte_upper]}
         return result
     
-    # TODO: Add def estimate_effect_iv()
-    
+    # def Estimate_effect_MetaLearners
+    def estimate_effect_linear(self, 
+                               treatment, 
+                               outcome, 
+                               control_value=0, 
+                               treatment_value=1):
+        """
+        Estimate the causal effect of a treatment on an outcome using
+        DoWhy (backdoor.linear_regression).
+
+        :param treatment: str, name of the treatment variable
+        :param outcome: str, name of the outcome variable
+        :param control_value: value representing 'control'
+        :param treatment_value: value representing 'treated'
+        :param target_units: 'ate' (default), 'treated', or a callable (lambda df: df[...] for subgroups)
+
+        :return: (causal_estimate, p_value)
+        """
+        print("\n" + "#"*60)
+        print(f"Estimating Causal Effect of Treatment: {treatment} on Outcome: {outcome}")
+        print(f"Method: backdoor.linear_regression | target_units='ate'")
+        print("#"*60)
+
+        print("\nCreating Causal Model...")
+        print(self.dot_graph)
+        model = CausalModel(
+            data=self.data,
+            treatment=treatment,
+            outcome=outcome,
+            graph=self.dot_graph  # The DOT-format graph
+        )
+
+        identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
+        # print("\nIdentified Estimand:")
+        # print(identified_estimand)
+        # Backdoor linear_regression
+        causal_estimate = model.estimate_effect(
+            identified_estimand,
+            method_name="backdoor.linear_regression",
+            control_value=control_value,
+            treatment_value=treatment_value,
+            target_units='ate'
+        )
+        print("\nCausal Estimate:")
+        print(causal_estimate)
+        # Significance Test
+        significance_results = causal_estimate.estimator.test_significance(
+            self.data, 
+            causal_estimate.value
+        )
+        p_value = significance_results['p_value'][0]
+        print("Significance Test Results:", p_value)
+
+        return causal_estimate, p_value
+
     def counterfactual_estimation(self, treatment_name, response_name, observed_val = None, intervened_treatment = None):
         # observed_val should be a df as the processed data
         if observed_val is None:
@@ -695,22 +933,23 @@ class Analysis(object):
         # Shift Intervention
         if shift_intervention_val is None:
             shift_intervention_val = 1
+        gcm.auto.assign_causal_mechanisms(self.causal_model, self.data)
+        gcm.fit(self.causal_model, self.data)
         shift_samples = gcm.interventional_samples(self.causal_model,
                                                     {treatment_name: lambda x: x + shift_intervention_val},
-                                                    num_samples_to_draw=1000)
+                                                    num_samples_to_draw=len(self.data))
 
-        plt.figure(figsize=(12, 6))
-
+        plt.figure(figsize=(8, 6))
         # Histogram for atomic_samples_org
         plt.subplot(1, 2, 1)
-        plt.hist(self.data[response_name], bins=30, color='blue', alpha=0.7)
+        plt.hist(self.data[response_name], bins=30, color='#409fde', alpha=0.7)
         plt.title(f'Observed Data: {response_name}')
         plt.xlabel(response_name)
         plt.ylabel('Frequency')
 
         # Histogram for atomic_samples_new
         plt.subplot(1, 2, 2)
-        plt.hist(shift_samples[response_name], bins=30, color='orange', alpha=0.7)
+        plt.hist(shift_samples[response_name], bins=30, color='#f77f3e', alpha=0.7)
         plt.title(f'Shift Intervention: {response_name}')
         plt.xlabel(response_name)
         plt.ylabel('Frequency')
@@ -724,6 +963,7 @@ class Analysis(object):
 
         print(f"Saving shift intervention comparison plot to {os.path.join(path, 'shift_intervention.jpg')}")
         plt.savefig(os.path.join(path, 'shift_intervention.jpg'))
+        figs = [os.path.join(path, 'shift_intervention.jpg')]
 
         # Save dataset
         # print(f"Saving simulated dataset {os.path.join(path, 'simulated_atomic_intervention_org.csv')}")
@@ -734,41 +974,18 @@ class Analysis(object):
 
         print(f"Saving simulated dataset {os.path.join(path, 'simulated_shift_intervention.csv')}")
         shift_samples.to_csv(os.path.join(path, 'simulated_shift_intervention.csv'), index=False)
+        # Boxplot Comparison to summarize distributions
+        plt.figure(figsize=(8, 6))
+        data_to_plot = [self.data[response_name], shift_samples[response_name]]
+        plt.boxplot(data_to_plot, labels=["Observed Data", "Shift Intervention"], patch_artist=True)
+        plt.title(f'Shift Intervention Comparison: {response_name}')
+        plt.ylabel(response_name)
+        print(f"Saving box-plot comparison plot to {os.path.join(path, 'shift_intervention_boxplot.jpg')}")
+        plt.savefig(os.path.join(path, 'shift_intervention_boxplot.jpg'))
+        figs_boxplot = os.path.join(path, 'shift_intervention_boxplot.jpg')
+        figs.append(figs_boxplot)
+        return figs, shift_samples
 
-    def evaluate_treatment_effect_metrics(self, true_value, estimations, cis):
-        """
-        Evaluate metrics for Treatment Effect Estimation: Bias, MSE, and CI Coverage Probability.
-
-        Parameters:
-        - true_value (float): The true treatment effect.
-        - estimations (np.ndarray): A 1D array of estimated treatment effects.
-        - cis (list of tuples): A list of confidence intervals, where each element is a tuple (lower_bound, upper_bound).
-
-        Returns:
-        - dict: A dictionary containing Bias, MSE, and Coverage Probability.
-        """
-        # Convert inputs to numpy arrays for vectorized operations
-        estimations = np.array(estimations)
-        cis = np.array(cis)
-
-        # Bias: Mean difference between estimation and true value
-        bias = np.mean(estimations - true_value)
-
-        # MSE: Mean squared error
-        mse = np.mean((estimations - true_value) ** 2)
-
-        # Coverage Probability: Proportion of CIs that contain the true value
-        lower_bounds = cis[:, 0]
-        upper_bounds = cis[:, 1]
-        coverage_count = np.sum((true_value >= lower_bounds) & (true_value <= upper_bounds))
-        coverage_probability = coverage_count / len(cis)
-
-        # Return metrics as a dictionary
-        return {
-            "Bias": bias,
-            "MSE": mse,
-            "Coverage Probability": coverage_probability
-        }
 
     def sensitivity_analysis(self, target_node, model, estimand, estimate, treatment, outcome):
         # if self.global_state.statistics.linearity:
@@ -802,87 +1019,120 @@ class Analysis(object):
         return refute, figs 
 
     
-    def forward(self, task, desc, key_node):
+    def forward(self, task, desc, key_node, chat_history):
         if task == 'Feature Importance':
-            parent_nodes, mean_shap_values, figs = self.feature_importance(key_node, visualize=True)
+            linearity = self.global_state.statistics.linearity
+            if linearity:
+                chat_history.append((None, "💡 We use the linear model to calculate SHAP Value because your dataset is linear."))
+            else:
+                chat_history.append((None, "💡 We use the non-linear model to calculate SHAP Value because your dataset is non-linear."))
+            parent_nodes, mean_shap_values, figs = self.feature_importance(key_node, linearity, visualize=True)
             response = generate_analysis_feature_importance(self.args, key_node, parent_nodes, mean_shap_values, desc)
-            return response, figs 
+            for fig in figs:
+                chat_history.append((None, (f'{fig}',)))
+            chat_history.append((None, response))
+            return response, figs, chat_history 
         
         elif task == 'Treatment Effect Estimation':
-            prompt = f"""
-            I'm doing the Treatment Effect Estimation analysis, please identify the Treatment Variable in this description:
-            {desc}
-            The variable name must be among these variables: {self.data.columns}
-            Only return me with the variable name, do not include anything else.
-            """
-            ### Check Treatment
-            treatment = LLM_parse_query(self.args, None, 'You are an expert in Causal Discovery.', prompt)
-            is_binary, treat, control = check_binary(self.data[treatment])
-            while not is_binary:
-                treatment_message = input(f"Your treatment column is not binary, please specify another variable name!")
-                is_binary, treat, control = check_binary(self.data[treatment_message.strip()])
-            treatment_message = input(f"Your treatment column is binary with treatment={treat} and control={control}\n"
-                                        "Is there anything you want to correct? ")
-            ### Check Confounder
+            task_info = self.global_state.inference.task_info[self.global_state.inference.task_index]
+            confounders = task_info['confounders']
+            cont_confounders = task_info['cont_confounders']
+            treatment = task_info['treatment']
+            treat = task_info['treat']
+            control = task_info['control']
+            hte_variables = task_info['X_col']
             parent_nodes = list(self.G.predecessors(key_node))
-            confounders = self._identify_confounders(treatment, key_node)
-            
-            remaining_var = list(set(self.data.columns) - set([treatment]) - set([key_node]) - set(confounders))
-            #TODO: No Confounder Case and Add LLM variable selection
-            add_confounder = input(f"These are Confounders between treatment {treatment} and outcome {key_node}: \n"
-                      f"{','.join(confounders)}\n"
-                      "Do you want to add any variables as confounders in your dataset? Please choose from the following:\n"
-                      f"{','.join(remaining_var)}\n")
-            add_confounder = [var.strip() for var in add_confounder.split(',') if var.strip() in remaining_var]
-            confounders += add_confounder
-            cont_confounders = [col for col in confounders if self.global_state.statistics.data_type_column[col]=='Continuous']
+            method = task_info['hte_method']
             ### Suggest method based on dataset characteristics
-            if len(confounders) > 5:
-                method = "dml" # Add drl here
-            if len(confounders) - len(cont_confounders) > len(cont_confounders):  # If more than half discrete confounders
-                method = "cem"
+            # TODO: Check for IV in the Causal Graph
+            exist_IV = False
+            if exist_IV:
+                iv_variable = None
+                global_state.inference.task_info[self.global_state.inference.task_index]['IV'] = iv_variable
+                method = "iv"
+
+            elif len(confounders) <= 5:
+                if len(confounders) - len(cont_confounders) > len(cont_confounders):  # If more than half discrete confounders
+                    method = "cem"
+                else:
+                    method = "propensity_score"
             else:
-                method = "propensity_score"
-            print("According to the characteristics of your data, we recommend you to use this Treatment Effect Estimation Method:\n"
-                  f"{method}.")
-            # TODO: Add logic for IV
+                if len(self.global_state.user_data.processed_data) > 2000:
+                    method = "dml"
+                else:
+                    method = "drl"
+
             ### Run algorithm
-            if method == "dml":
-                ### Check Heterogeneous Variable
-                hte_variable = input("Is there any heterogeneous variables you care about? If no, we can suggest some variables with LLM.\n")
-                #TODO: Add LLM variable selection
-                hte_variable = [var.strip() for var in hte_variable.split(',') if var.strip() in self.data.columns]
-                result = self.estimate_effect_dml(outcome=key_node, treatment=treatment, T0=control, T1=treat,
-                                                        X_col=hte_variable, W_col=confounders, query=desc)
-                response, figs = generate_analysis_econml(self.args, self.global_state, key_node, treatment, parent_nodes, hte_variable, confounders, result, desc)
+            if method in ["dml", "drl"]:
+                if method == "dml":
+                    result = self.estimate_effect_dml(outcome=key_node, treatment=treatment, T0=control, T1=treat,
+                                                            X_col=hte_variables, W_col=confounders, query=desc)
+                else:
+                    result = self.estimate_effect_drl(outcome=key_node, treatment=treatment, T0=control, T1=treat,
+                                                            X_col=hte_variables, W_col=confounders, query=desc)
+                response, figs = generate_analysis_econml(self.args, self.global_state, key_node, treatment, parent_nodes, hte_variables, confounders, result, desc)
+                chat_history.append(("📝 Analyze for ATE and ATT...", None))
+                chat_history.append((None, response[0]))
+                chat_history.append(("📝 Analyze for HTE...", None))
+                for fig in figs:
+                    chat_history.append((None, (f'{fig}',)))
+                chat_history.append((None, response[1]))
 
-            if method == "drl":
-                ### Check Heterogeneous Variable
-                hte_variable = input("Is there any heterogeneous variables you care about? If no, we can suggest some variables with LLM.\n")
-                #TODO: Add LLM variable selection
-                hte_variable = [var.strip() for var in hte_variable.split(',') if var.strip() in self.data.columns]
-                result = self.estimate_effect_drl(outcome=key_node, treatment=treatment, T0=control, T1=treat,
-                                                        X_col=hte_variable, W_col=confounders, query=desc)
-                response, figs = generate_analysis_econml(self.args, self.global_state, key_node, treatment, parent_nodes, hte_variable, confounders, result, desc)
-
+            # TODO: Add MetaLearner Estimation
+                
+            # TODO: Add IV Estimation
+            if method == "iv":
+                result = self.estimate_effect_iv(outcome=key_node, treatment=treatment, instrument_variable=iv_variable, T0=control, T1=treat,
+                                                            X_col=hte_variables, W_col=confounders, query=desc)
+                response, figs = generate_analysis_econml(self.args, self.global_state, key_node, treatment, parent_nodes, hte_variables, confounders, result, desc)
+                chat_history.append(("📝 Analyze for ATE and ATT...", None))
+                chat_history.append((None, response[0]))
+                chat_history.append(("📝 Analyze for HTE...", None))
+                for fig in figs:
+                    chat_history.append((None, (f'{fig}',)))
+                chat_history.append((None, response[1]))
+                
             elif method in ["cem", "propensity_score"]:
                 # Perform matching-based estimation
-                ate, matched_data, figs = self.estimate_causal_effect_matching(
+                ate, cate_result, matched_data, figs = self.estimate_causal_effect_matching(
                     treatment=treatment,
                     outcome=key_node,
                     confounders=confounders,
+                    X_col=hte_variables,
+                    treat=treat,
+                    control=control,
                     cont_confounders=cont_confounders,
                     method=method,
                     visualize=True
                 )
-                response = generate_analysis_matching(self.args, treatment, key_node, method, confounders, ate, desc)
-            return response, figs
+                response = generate_analysis_matching(self.args, treatment, key_node, method, confounders, ate, cate_result, desc)
+                chat_history.append(("📝 Matching Balance Checking...", None))
+                chat_history.append((None, (f'{figs[0]}',)))
+                chat_history.append((None, response[0]))
+                chat_history.append(("📝 Analyze for ATE...", None))
+                chat_history.append((None, response[1]))
+                chat_history.append(("📝 Analyze for CATE...", None))
+                chat_history.append((None, (f'{figs[1]}',)))
+                chat_history.append((None, response[2]))
+
+            elif method == 'linear_regression':
+                ate, p_value = self.estimate_effect_linear(
+                               treatment=treatment,
+                               outcome=key_node,
+                               control_value=control, 
+                               treatment_value=treat)
+                response = generate_analysis_linear_regression(args, treatment, key_node, ate, p_value, desc)
+            
+            return response, figs, chat_history
         
         elif task == 'Anormaly Attribution':
             df, figs = self.attribute_anomalies(target_node=key_node, anomaly_samples=self.data, confidence_level=0.95)
             parent_nodes = list(self.G.predecessors(key_node))
             response = generate_analysis_anormaly(self.args, df, key_node, parent_nodes, desc)
-            return response, figs
+            for fig in figs:
+                chat_history.append((None, (f'{fig}',)))
+            chat_history.append((None, response))
+            return response, figs, chat_history
                        
         elif task == 'Distributional Change Attribution':
             # Split the dataset into two subsets (data_old and data_new)
@@ -896,84 +1146,16 @@ class Analysis(object):
             return response, figs
 
         elif task == 'Counterfactual Estimation':
-            prompt = f"""
-                        I'm doing the Treatment Effect Estimation analysis, please identify the Treatment Variable in this description:
-                        {desc}
-                        The variable name must be among these variables: {self.data.columns}
-                        Only return me with the variable name, do not include anything else.
-                        """
-            treatment = LLM_parse_query(self.args, None, 'You are an expert in Causal Discovery.', prompt)
-            shift_intervention_val = input(f"""
-                In this simulation, we are applying a 'shift intervention' to study how changes in the {treatment} 
-                impact the {key_node}. A shift intervention involves modifying the value of a variable by a fixed
-                amount (the 'shift value') while keeping other variables unchanged.\n
-                For example, if we are studying the effect of increasing income on health outcomes, we might apply a
-                shift intervention where the income variable is increased by a fixed amount, such as $500, for all individuals.\n
-                Please enter the shift value:
-            """)
-            self.simulate_intervention(treatment_name = treatment, response_name = key_node, shift_intervention_val = shift_intervention_val)
-        
+            treatment = self.global_state.inference.task_info[self.global_state.inference.task_index]['treatment']
+            shift_intervention_val = self.global_state.inference.task_info[self.global_state.inference.task_index]['shift_value']
+            figs, shift_df = self.simulate_intervention(treatment_name = treatment, response_name = key_node, shift_intervention_val = shift_intervention_val)
+            response = generate_conterfactual_estimation(self.args, self.global_state, shift_intervention_val, shift_df, treatment, key_node, desc)
+            for fig in figs:
+                chat_history.append((None, (f'{fig}',)))
+            chat_history.append((None, response))
+            return response, figs, chat_history
         else:
-            return None, None
-
-
-def main(analysis, global_state):    
-##################           
-    results = analysis.estimate_effect_econml(
-        treatment='PIP2',
-        outcome='PIP3',
-        covariates=[],   # or e.g. ["X1","X2"] if you have them
-        controls=[]      # or e.g. ["W1","W2"] if needed
-    )
-    
-    ate_val, ate_ci = results["ATE"]
-    att_val, att_ci = results["ATT"]
-    cate_vals, cate_cis = results["CATE"]
-
-    print("EconML ATE:", ate_val, "CI:", ate_ci)
-    print("EconML ATT:", att_val, "CI:", att_ci)
-    if cate_vals is not None:
-        print("Mean CATE:", np.mean(cate_vals))
-
-    # Optional plot the distribution of the CATE:
-    if cate_vals is not None:
-        dist_fig_path = os.path.join(global_state.user_data.output_graph_dir, "cate_dist.png")
-        analysis.plot_cate_distribution(cate_vals, dist_fig_path)
-
-
-    # EXAMPLE: Compare with linear approach, specifying a different target_units
-    lin_estimate, lin_p_value, refutaion, figs = analysis.estimate_causal_effect(
-        treatment='PIP2',
-        outcome='PIP3',
-        target_units=lambda df: df[df['PIP2'] > 100].index  # example subgroup
-    )
-    print("Linear Subgroup Estimate (CATE approach):", lin_estimate.value)
-    print("p-value:", lin_p_value)
-    # Testing code to check the above functions replace it appropriately
-    # Perform Matching-Based Effect Estimation
-    response, figs = analysis.forward(
-        task='Matching-Based Effect Estimation',
-        desc='Analyze the effect of PIP2 on PIP3 using matching.',
-        key_node='PIP3'
-    )
-    print(response)
-    
-    # Example: Run CEM for treatment 'PIP2' and outcome 'PIP3'
-    treatment = 'PIP2'
-    outcome = 'PIP3'
-    confounders = analysis._identify_confounders(treatment, outcome)
-    cont_confounders = [col for col in confounders if analysis.data[col].nunique() > 10]  # Continuous confounders
-    
-    ate, matched_data = analysis.estimate_causal_effect_matching(
-        treatment=treatment,
-        outcome=outcome,
-        confounders=confounders,
-        cont_confounders=cont_confounders,
-        method="cem",
-        visualize=True
-    )
-    
-    print(f"Average Treatment Effect (ATE) using CEM: {ate}")
+            return None, None, chat_history
 
 
 if __name__ == '__main__':
@@ -986,7 +1168,7 @@ if __name__ == '__main__':
         parser.add_argument(
             '--data-file',
             type=str,
-            default="dataset/sachs/sachs.csv",
+            default="./demo_data/20250130_130622/house_price.csv",
             help='Path to the input dataset file (e.g., CSV format or directory location)'
         )
 
@@ -1055,33 +1237,74 @@ if __name__ == '__main__':
             default="selected algorithm: PC",
             help='Initial query for the algorithm'
         )
-
-        parser.add_argument(
-            '--parallel',
-            type=bool,
-            default=False,
-            help='Parallel computing for bootstrapping.'
-        )
-
-        parser.add_argument(
-            '--demo_mode',
-            type=bool,
-            default=False,
-            help='Demo mode'
-        )
-
-        parser.add_argument(
-            '--revised_graph',
-            type=str,
-            default='dataset/sachs/base_graph.npy',
-            help='Demo mode'
-        )
-
         args = parser.parse_args()
         return args
-    with open('report/test/args.pkl', 'rb') as file:
-        args = pickle.load(file)
-    with open('report/test/global_state.pkl', 'rb') as file:
+    
+    args = parse_args()
+    # with open('demo_data/20250121_223113/lalonde/output_graph/PC_global_state.pkl', 'rb') as file:
+    #     global_state = pickle.load(file)
+    
+    # my_analysis = Analysis(global_state, args)
+    # # my_analysis.estimate_effect_dml(outcome='re78', treatment='treat', 
+    # #                                 T0=0, T1=1, 
+    # #                                 X_col=['age', 'nodegr'], 
+    # #                                 W_col=['educ', 'age', 'married', 'nodegr'], 
+    # #                                 query='What is the treatment effect of treat on re78')
+    # my_analysis.feature_importance(target_node='re78', linearity=False, visualize=True)
+    # #my_analysis.simulate_intervention(treatment_name = 'married', response_name = 're78', shift_intervention_val =1)
+    with open('./demo_data/20250130_130622/house_price/output_graph/PC_global_state.pkl', 'rb') as file:
         global_state = pickle.load(file)
 
-    main(global_state, args)
+    # Dynamically update `inference`
+    if not hasattr(global_state, "inference"):
+        global_state.inference = Inference()
+
+    if not hasattr(global_state.inference, "editing_history"):
+        global_state.inference.editing_history = []
+
+    if not hasattr(global_state.inference, "cycle_detection_result"):
+        global_state.inference.cycle_detection_result = {}
+
+    if not hasattr(global_state.inference, "task_info"):
+        global_state.inference.task_info = []
+    
+
+        
+    my_analysis = Analysis(global_state, args)
+    # my_analysis.estimate_effect_dml(outcome='re78', treatment='treat', 
+    #                                 T0=0, T1=1, 
+    #                                 X_col=['age', 'nodegr'], 
+    #                                 W_col=['educ', 'age', 'married', 'nodegr'], 
+    #                                 query='What is the treatment effect of treat on re78')
+    # my_analysis.feature_importance(target_node='SalePrice', linearity=False, visualize=True)
+    anomaly_samples = my_analysis.data.head(10)  # Replace with your anomaly DataFrame
+    anomaly_df, anomaly_figs = my_analysis.attribute_anomalies(
+        target_node='SalePrice', 
+        anomaly_samples=anomaly_samples, 
+        confidence_level=0.95
+    )
+    print("Anomaly Attribution Results:", anomaly_df)
+    #my_analysis.simulate_intervention(treatment_name = 'married', response_name = 're78', shift_intervention_val =1)
+
+    # Initialize analysis
+    my_analysis = Analysis(global_state, args)
+
+    # Load dataset and split into `data_old` and `data_new`
+    full_data = my_analysis.data  # Load the full dataset
+    split_point = len(full_data) // 2  # Split into two halves
+    data_old = full_data.iloc[:split_point]  # First half as "old" data
+    data_new = full_data.iloc[split_point:]  # Second half as "new" data
+
+    # Test `attribute_distributional_changes`
+    target_node = 'SalePrice'  # Change to your variable of interest
+    method = 'distribution_change'  # or 'distribution_change_robust'
+    
+    dist_change_df, dist_change_figs = my_analysis.attribute_distributional_changes(
+        target_node=target_node,
+        data_old=data_old,
+        data_new=data_new,
+        method=method,
+        confidence_level=0.95
+    )
+
+    print("Distributional Change Attribution Results:\n", dist_change_df)

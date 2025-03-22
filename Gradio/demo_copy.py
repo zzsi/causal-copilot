@@ -71,6 +71,7 @@ from postprocess.judge import Judge
 from postprocess.visualization import Visualization, convert_to_edges
 from causal_analysis.inference import Analysis
 from report.report_generation import Report_generation
+from report.inference_report_generation import Inference_Report_generation
 from user.discuss import Discussion
 from openai import OpenAI
 from pydantic import BaseModel
@@ -293,11 +294,9 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
         
         if CURRENT_STAGE == "sparsity_drop_done":
             if global_state.statistics.sparsity_dict['high'] != []:
-                chat_history.append((None, f"📍 The missing ratios of the following variables are greater than 0.5: \n"
+                chat_history.append((None, f"📍 The missing ratios of the following variables are greater than 0.5, we will drop them: \n"
                                         f"{', '.join(global_state.statistics.sparsity_dict['high'])}"))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                if 
-                chat_history.append((None, f"⚠️ "))
                 ####### update variable list
                 global_state = drop_greater_miss_50_feature(global_state)
             if global_state.statistics.sparsity_dict['low'] != []:
@@ -817,17 +816,22 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn 
         if CURRENT_STAGE == 'parse_task': 
             print('parse_task')
-            tasks_list, descs_list, key_node_list, chat_history, download_btn, global_state, REQUIRED_INFO = parse_inference_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO)
+            reason, tasks_list, descs_list, key_node_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_inference_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             if tasks_list == []:
                 chat_history.append((None, "We cannot identify any supported task in your query, please retry or type 'NO' to skip this step."))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             else:
+                chat_history.append(("📝 Proposal for my causal inference task...", None))
+                chat_history.append((None, reason))
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+
                 global_state.inference.task_index += 1
                 global_state.inference.task_info[global_state.inference.task_index] = {'task':tasks_list,
                                                                                        'desc': descs_list,
-                                                                                       'key_node': key_node_list}
+                                                                                       'key_node': key_node_list,
+                                                                                       'result':{'proposal':reason}}
                 if "Treatment Effect Estimation" in tasks_list:
                     CURRENT_STAGE = "inference_info_collection_1"
                 if 'Counterfactual Estimation' in tasks_list:
@@ -852,12 +856,16 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             if shift_value is not None:
                 global_state.inference.task_info[global_state.inference.task_index]['shift_value'] = shift_value
                 chat_history.append((None, f"✅ Successfully parsed your provided value!"))
-                CURRENT_STAGE = "analyze_causal_task"
+                if 'Treatment Effect Estimation' in global_state.inference.task_info[global_state.inference.task_index]['task']:
+                    CURRENT_STAGE = "inference_info_collection_1"
+                else:
+                    CURRENT_STAGE = "analyze_causal_task"
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             else:
                 chat_history.append((None, f"❌ Cannot parse your provided value, please input numerical values!"))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+        
         if CURRENT_STAGE == "inference_info_collection_1":
             task_info = global_state.inference.task_info[global_state.inference.task_index]
             ### Check Treatment
@@ -940,6 +948,8 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
         if CURRENT_STAGE == "inference_info_collection_hte":
+            chat_history.append((message, None))
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             task_info = global_state.inference.task_info[global_state.inference.task_index]
             hte_variable = LLM_select_hte_var(args, task_info['treatment'], task_info['key_node'], message, global_state.user_data.processed_data)
             global_state.inference.task_info[global_state.inference.task_index]['X_col'] = hte_variable
@@ -986,23 +996,48 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             task_info = global_state.inference.task_info[global_state.inference.task_index]
             tasks_list, descs_list, key_node_list = task_info['task'], task_info['desc'], task_info['key_node']
             for i, (task, desc, key_node) in enumerate(zip(tasks_list, descs_list, key_node_list)):
+                chat_history.append((f"🔍 Analyzing for {task}...", None))
                 info, figs, chat_history = analysis.forward(task, desc, key_node, chat_history)
+                global_state.inference.task_info[global_state.inference.task_index]['result'][task] = {'response': info,
+                                                                                                       'figs': figs}
                 if info is None:
                     chat_history.append((None, 'Your query cannot be parsed, please ask again or reply NO to end this part.'))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 global_state.logging.downstream_discuss.append({"role": "system", "content": info})
             chat_history.append((None, "Do you have questions about this analysis? Or do you want to conduct other downstream analysis? \n"
                                         "Please reply NO if you want to end this part. Please describe your needs."))
+            global_state.inference.task_info[global_state.inference.task_index]['result']['discussion'] = {}
             CURRENT_STAGE = 'analysis_discussion'
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn    
             return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn         
     
         if CURRENT_STAGE == 'analysis_discussion':
-            chat_history, download_btn, global_state, REQUIRED_INFO =  parse_inf_discuss_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO)
+            chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE =  parse_inf_discuss_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-
+            if CURRENT_STAGE != 'report_generation_check':
+                print(CURRENT_STAGE)
+                return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            
         # Report Generation
         if CURRENT_STAGE == 'report_generation_check': # empty query or postprocess query parsed successfully
+            ######################
+            with open(f'{global_state.user_data.output_graph_dir}/inference_global_state.pkl', 'wb') as f:
+                pickle.dump(global_state, f)
+            print(f"{global_state.user_data.output_graph_dir}/inference_global_state.pkl")
+            inference_report_gen = Inference_Report_generation(global_state, args)
+            inference_report_path = inference_report_gen.generation()
+            chat_history.append((None, "🎉 Analysis complete!"))
+            chat_history.append((None, "📥 You can now download your detailed report using the download button below."))
+            download_btn = gr.DownloadButton(
+                "📥 Download Exclusive Report",
+                size="sm",
+                elem_classes=["icon-button"],
+                scale=1,
+                value=os.path.join(REQUIRED_INFO['output_dir'], 'output_report', 'report.pdf'),
+                interactive=True
+            )
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            ######################
             import glob
             global_state_files = glob.glob(f"{global_state.user_data.output_graph_dir}/*_global_state.pkl")
             global_state.logging.global_state_logging = []

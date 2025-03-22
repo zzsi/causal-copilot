@@ -1,0 +1,12 @@
+{
+  "algorithm_name": "CORL",
+  "iteration": {
+    "meaning": "Maximum number of dual ascent steps during optimization",
+    "suggested_values": {
+      "default": 500,
+      "medium": 1000,
+      "thorough": 5000
+    },
+    "reasoning": "Increase for more complex graphs and functional relationships, while more iterations is much more time-consuming."
+  }
+} 

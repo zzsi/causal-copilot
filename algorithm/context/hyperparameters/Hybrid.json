@@ -1,0 +1,40 @@
+{
+  "algorithm_name": "Hybrid",
+  "first_stage_algo": {
+    "meaning": "The algorithm to use in the first stage for learning the initial CPDAG",
+    "suggested_values": {
+      "default": "pc",
+      "effective": "ges",
+      "efficient": "pc"
+    },
+    "reasoning": "Use 'pc' for general cases and high-dimensional data due to its efficiency. Use 'ges' for slower but better empirical performance."
+  },
+  "second_stage_method": {
+    "meaning": "The functional model-based method to use for orienting remaining edges",
+    "suggested_values": {
+      "default": "pnl",
+      "simple_relations": "anm",
+      "complex_relations": "pnl",
+      "skip_second_stage": null
+    },
+    "reasoning": "Use 'pnl' for complex nonlinear relationships. Use 'anm' for simpler, mostly linear relationships. Set to null to skip second stage orientation."
+  },
+  "alpha": {
+      "meaning": "Desired significance level in (0, 1)",
+      "suggested_values": {
+        "default": 0.05,
+        "small_sample": 0.1,
+        "large_sample": 0.01
+      },
+      "reasoning": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
+  },
+  "m_max": {
+    "meaning": "Maximum number of potential confounders to consider in functional model-based tests",
+    "suggested_values": {
+      "default": 3,
+      "simple_graph": 1,
+      "complex_graph": 5
+    },
+    "reasoning": "Lower values (1) for high-dimensional data or efficiency. Higher values (5) for complex graphs with many confounders. Default (3) balances accuracy and computation."
+  }
+} 

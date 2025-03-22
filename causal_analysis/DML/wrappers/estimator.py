@@ -15,8 +15,8 @@ from .base import Estimator
 # - CausalForestDML
 
 class DML(Estimator):
-    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None):
-        super().__init__(params, y_col, T_col, X_col, W_col)
+    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int=0, T1: int=1):
+        super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
         self.model = Econ_DML(**self._params)
 
     @property
@@ -59,9 +59,9 @@ class DML(Estimator):
         pass
 
 class LinearDML(Estimator):
-    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None):
+    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int=0, T1: int=1):
         del params['model_final']
-        super().__init__(params, y_col, T_col, X_col, W_col)
+        super().__init__(params, y_col, T0, T1, T_col, X_col, W_col)
         self.model = Econ_LinearDML(**self._params)
 
     @property
@@ -104,9 +104,9 @@ class LinearDML(Estimator):
         pass
 
 class SparseLinearDML(Estimator):
-    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None):
+    def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int=0, T1: int=1):
         del params['model_final']
-        super().__init__(params, y_col, T_col, X_col, W_col)
+        super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
         self.model = Econ_SparseLinearDML(**self._params)
 
     @property

@@ -25,7 +25,7 @@ class BAMB(CausalDiscoveryAlgorithm):
             'alpha': 0.05,
             'indep_test': 'fisherz',
             'n_jobs': 4,
-            'n_subjobs': 4,
+            'n_subjobs': 1,
         }
         self._params.update(params)
 
@@ -37,11 +37,12 @@ class BAMB(CausalDiscoveryAlgorithm):
         return self._params
 
     def get_primary_params(self):
-        self._primary_param_keys = ['alpha', 'indep_test', 'n_jobs']
+        self._primary_param_keys = ['alpha', 'indep_test']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def get_secondary_params(self):
-        return {}  # No secondary params for BAMB
+        self._secondary_param_keys = ['n_jobs', 'n_subjobs']
+        return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict]:
         """
@@ -58,7 +59,7 @@ class BAMB(CausalDiscoveryAlgorithm):
         n_vars = data.shape[1]
         mb_dict = {}  # Dictionary to store MB results
         
-        params = self.get_primary_params()
+        params = {**self.get_primary_params(), **self.get_secondary_params()}
         total_ci_tests = 0
         
         from joblib import Parallel, delayed
@@ -74,7 +75,6 @@ class BAMB(CausalDiscoveryAlgorithm):
         for target, (mb, ci_num) in enumerate(results):
             mb_dict[target] = list(mb)
             total_ci_tests += ci_num
-        print(mb_dict)
 
         # Convert MB results to CPDAG
         adj_matrix = MB2CPDAG(
@@ -90,7 +90,7 @@ class BAMB(CausalDiscoveryAlgorithm):
             'mb_dict': mb_dict
         }
 
-        return adj_matrix, info
+        return adj_matrix, info, mb_dict
 
     def test_algorithm(self):
         """Run a simple test of the algorithm on synthetic data."""
@@ -106,7 +106,7 @@ class BAMB(CausalDiscoveryAlgorithm):
         df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
 
         print("Testing BAMB algorithm with synthetic data:")
-        adj_matrix, info = self.fit(df)
+        adj_matrix, info, mb_dict = self.fit(df)
         
         print("\nAdjacency Matrix:")
         print(adj_matrix)

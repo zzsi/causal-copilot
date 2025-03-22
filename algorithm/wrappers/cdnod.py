@@ -12,7 +12,7 @@ if not os.path.exists(causal_learn_dir):
 algorithm_dir = os.path.join(root_dir, 'algorithm')
 sys.path.append(root_dir)
 sys.path.append(algorithm_dir)
-sys.path.append(causal_learn_dir)
+sys.path.insert(0, causal_learn_dir)
 
 
 from causallearn.graph.GraphClass import CausalGraph
@@ -30,7 +30,7 @@ class CDNOD(CausalDiscoveryAlgorithm):
             'stable': True,
             'uc_rule': 0,
             'uc_priority': 2,
-            'depth': -1,
+            'depth': 3, #-1,
             'mvcdnod': False,
             'correction_name': 'MV_Crtn_Fisher_Z',
             'background_knowledge': None,
@@ -99,6 +99,9 @@ class CDNOD(CausalDiscoveryAlgorithm):
                 # undirected edge: j -- i
                 if inferred_flat[j, i] == 0:
                     inferred_flat[i, j] = 2
+
+        # remove the domain index column
+        inferred_flat = inferred_flat[:-1, :-1]
         return inferred_flat
 
     def test_algorithm(self):
@@ -137,10 +140,15 @@ class CDNOD(CausalDiscoveryAlgorithm):
 
         # Use GraphEvaluator to compute metrics
         evaluator = GraphEvaluator()
-        metrics = evaluator.compute_metrics(gt_graph, adj_matrix[:-1, :-1])
+        metrics = evaluator.compute_metrics(gt_graph, adj_matrix)
 
         print("\nMetrics:")
         print(f"F1 Score: {metrics['f1']:.4f}")
         print(f"Precision: {metrics['precision']:.4f}")
         print(f"Recall: {metrics['recall']:.4f}")
         print(f"SHD: {metrics['shd']:.4f}")
+
+
+if __name__ == "__main__":
+    cdnod = CDNOD()
+    cdnod.test_algorithm()

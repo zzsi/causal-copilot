@@ -12,6 +12,7 @@ from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
 from castle.algorithms.gradient.corl.torch import CORL as TrustAI_CORL
 
+
 class CORL(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
@@ -21,15 +22,15 @@ class CORL(CausalDiscoveryAlgorithm):
             'embed_dim': 256,
             'normalize': False,
             'encoder_name': 'transformer',
-            'encoder_heads': 8,
-            'encoder_blocks': 3,
+            'encoder_heads': 2,  # default: 8
+            'encoder_blocks': 3,  # default: 3
             'encoder_dropout_rate': 0.1,
             'decoder_name': 'lstm',
             'reward_mode': 'episodic',
             'reward_score_type': 'BIC',
             'reward_regression_type': 'LR',
             'reward_gpr_alpha': 1.0,
-            'iteration': 5000,
+            'iteration': 500, # default: 5000
             'lambda_iter_num': 500,
             'actor_lr': 1e-4,
             'critic_lr': 1e-3,
@@ -37,12 +38,12 @@ class CORL(CausalDiscoveryAlgorithm):
             'init_baseline': -1.0,
             'random_seed': 0,
             'device_type': 'auto',
-            'device_ids': None
+            'device_ids': 0
         }
         self._params.update(params)
         # Automatically decide device_type if set to 'auto'
         if self._params.get('device_type', 'cpu') == 'auto':
-            self._params['device_type'] = 'cuda' if torch.cuda.is_available() else 'cpu'
+            self._params['device_type'] = 'gpu' if torch.cuda.is_available() else 'cpu'
 
     @property
     def name(self):
@@ -52,11 +53,11 @@ class CORL(CausalDiscoveryAlgorithm):
         return self._params
 
     def get_primary_params(self):
-        self._primary_param_keys = ['batch_size', 'iteration']
+        self._primary_param_keys = ['iteration']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def get_secondary_params(self):
-        self._secondary_param_keys = ['embed_dim', 'reward_mode', 'reward_score_type', 
+        self._secondary_param_keys = ['batch_size', 'embed_dim', 'reward_mode', 'reward_score_type', 
                                       'actor_lr', 'critic_lr', 'input_dim', 'normalize', 
                                       'encoder_name', 'encoder_heads', 'encoder_blocks', 
                                       'encoder_dropout_rate', 'decoder_name', 
@@ -73,7 +74,7 @@ class CORL(CausalDiscoveryAlgorithm):
         corl.learn(data)
         
         # Get the causal matrix
-        causal_matrix = np.array(corl.causal_matrix)
+        causal_matrix = np.array(corl.causal_matrix).T
         
         # Prepare additional information
         info = {
@@ -103,15 +104,9 @@ class CORL(CausalDiscoveryAlgorithm):
         })
 
         print("Testing CORL algorithm with synthetic data:")
-        params = {
-            'batch_size': 64,
-            'embed_dim': 256,
-            'iteration': 2000,  # Reduced for testing
-            'device_type': 'gpu'
-        }
         
         # Create instance with test parameters
-        corl_test = CORL(params)
+        corl_test = CORL()
         
         # Fit the model
         adj_matrix, info, _ = corl_test.fit(data)

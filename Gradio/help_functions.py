@@ -89,8 +89,72 @@ def sample_size_check(n_row, n_col, chat_history, download_btn, REQUIRED_INFO, C
     else:
         chat_history.append((None, "Sample Size Check Summary: \n"\
                              "✅ The sample size is enough for the following analysis. \n"))
-        CURRENT_STAGE = 'important_feature_selection'
+        CURRENT_STAGE = 'meaningful_feature' #'important_feature_selection'
     return chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE
+
+def meaningful_feature_query(global_state, message, chat_history, download_btn, CURRENT_STAGE):
+    if message.lower() == 'yes':
+        global_state.user_data.meaningful_feature = True
+        CURRENT_STAGE = 'heterogeneity'
+        chat_history.append((message, None))
+    elif message.lower() == 'no' or message == '':
+        global_state.user_data.meaningful_feature = False
+        CURRENT_STAGE = 'heterogeneity'
+        chat_history.append((message, None))
+    else:
+        chat_history.append((None, "❌ Invalid input, please try again!"))
+    return chat_history, download_btn, global_state, CURRENT_STAGE
+
+
+def heterogeneity_query(global_state, message, chat_history, download_btn, CURRENT_STAGE,args):
+    if message.lower() == 'no' or message == '':
+        global_state.user_data.heterogeneity = None
+        CURRENT_STAGE = 'accept_CPDAG'
+        chat_history.append((message, None))
+        return chat_history, download_btn, global_state, CURRENT_STAGE
+    else:
+        class VarList(BaseModel):
+            variables: list[str]
+
+        prompt = "You are a helpful assistant, please extract variable names as a list. \n"
+        "If there is only one variable, also save it in list variables"
+        f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
+        "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
+        "If you cannot find variable names, just return an empty list."
+        parsed_vars = LLM_parse_query(VarList, prompt, message, args)
+        var_list = parsed_vars.variables
+        if var_list == []:
+            chat_history.append((message,
+                                 "❌ Your heterogeneity indicator cannot be parsed, please make sure variables are among your dataset features and retry. \n"
+                                 ))
+            return var_list, chat_history, download_btn, global_state, CURRENT_STAGE
+        else:
+            missing_vars = [var for var in var_list if var not in global_state.user_data.raw_data.columns and var != '']
+            if missing_vars != []:
+                chat_history.append((message, "❌ Variables " + ", ".join(
+                    missing_vars) + " are not in the dataset, please check it and retry.\n"
+                                    "Note that it's CASE SENSITIVE."))
+                return var_list, chat_history, download_btn, global_state, CURRENT_STAGE
+            else:
+                chat_history.append((message, "✅ Successfully parsed your provided heterogeneity indicator."))
+                CURRENT_STAGE = 'accept_CPDAG'
+                global_state.user_data.heterogeneity = var_list
+                return chat_history, download_btn, global_state, CURRENT_STAGE
+
+
+def accept_CPDAG_query(global_state, message, chat_history, download_btn, CURRENT_STAGE):
+    if message.lower() == 'yes':
+        global_state.user_data.accept_CPDAG = True
+        CURRENT_STAGE = 'important_feature_selection'
+        chat_history.append((message, None))
+    elif message.lower() == 'no' or message == '':
+        global_state.user_data.accept_CPDAG = False
+        CURRENT_STAGE = 'important_feature_selection'
+        chat_history.append((message, None))
+    else:
+        chat_history.append((None, "❌ Invalid input, please try again!"))
+    return chat_history, download_btn, global_state, CURRENT_STAGE
+
 
 def parse_reupload_query(message, chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE):
     print('reupload query:', message)
@@ -106,6 +170,8 @@ def parse_reupload_query(message, chat_history, download_btn, REQUIRED_INFO, CUR
 def process_initial_query(message, chat_history, download_btn, args, REQUIRED_INFO, CURRENT_STAGE):
     # TODO: check if the initial query is valid or satisfies the requirements
     print('initial query:', message)
+    # algorithm 
+    # 
     if 'yes' in message.lower():
         args.data_mode = 'real'
         REQUIRED_INFO['initial_query'] = True
@@ -142,11 +208,14 @@ def parse_mode_query(message, chat_history, download_btn, REQUIRED_INFO, CURRENT
 def parse_var_selection_query(message, chat_history, download_btn, next_step, args, global_state, REQUIRED_INFO, CURRENT_STAGE):
     class VarList(BaseModel):
         variables: list[str]
-    prompt = "You are a helpful assistant, please extract variable names as a list. \n"
+    prompt = "You are a helpful assistant, please help me to understand user's need and extract variable names from their message."
+    "I ask them whether in a dataset they have important features"
+    "If they say 'all of them', 'all' or something like that, please save all the variable names in the list."
+    "If they provide some variable names, please extract variable names as a list. \n"
     "If there is only one variable, also save it in list variables"
     f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
     "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
-    "If you cannot find variable names, just return an empty list."
+    "If they say 'no', 'none', 'nothing' or something like that, just return an empty list."
     parsed_vars = LLM_parse_query(VarList, prompt, message, args)
     var_list = parsed_vars.variables
     if var_list == []:
@@ -154,8 +223,6 @@ def parse_var_selection_query(message, chat_history, download_btn, next_step, ar
                              ))
         return var_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
     else:
-        print('var_list:', var_list)
-        print('global_state:', global_state.user_data.raw_data.columns)
         missing_vars = [var for var in var_list if var not in global_state.user_data.raw_data.columns and var!='']
         if missing_vars != []:
             chat_history.append((message, "❌ Variables " + ", ".join(missing_vars) + " are not in the dataset, please check it and retry.\n"
@@ -388,98 +455,77 @@ def parse_report_algo_query(message, chat_history, download_btn, args, global_st
         CURRENT_STAGE = 'report_generation'
     return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
-def parse_inference_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO):
+def parse_inference_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE):
     chat_history.append((message, None))
     message = message.strip()
     if message.lower() == 'no' or message == '':
         chat_history.append((None, "✅ No need for downstream analysis, continue to the next section..."))
-        REQUIRED_INFO["current_stage"] = 'report_generation_check'
-        return None, None, None, None, chat_history, download_btn, global_state, REQUIRED_INFO
+        CURRENT_STAGE = 'report_generation_check'
+        return None, None, None, None, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
     else:
         class InfList(BaseModel):
-                    tasks: list[str]
-                    descriptions: list[str]
-                    key_node: list[str]
-                    reasons: str
-        prompt = f"""You are a helpful assistant, please do the following tasks:
-    **Tasks*
-    # Firstly please identify what tasks the user want to do and save them as a list in tasks.
-    Please choose among the following causal tasks, if there's no matched task just return an empty list 
-    You can only choose from the following tasks, and you can choose more than one task: 
-    1. Average Treatment Effect Estimation; 2. Heterogeneous Treatment Effect Estimation 3. Anormaly Attribution; 4. Feature Importance
-    # Secondly, save user's description for their tasks as a list in descriptions, the length of description list must be the same with task list
-    # Thirdly, save the key result variable user care about as a list, each task must have a key result variable and they can be the same, the length of result variable list must be the same with task list
-    key result variable must be among this list! {global_state.user_data.processed_data.columns}
-    # Fourthly, save the reasons why you choose these tasks to address user's question, and save it as a string in reasons.
-    Please write your reasons in 1-2 paragraphs as a brief proposal, you can use some bullet points to list your steps
-    
-    **Question Examples**
-    1. Average Treatment Effect Estimation:
-    What is the causal effect of introducing coding classes in schools on students' future career prospects?
-    What is the average treatment effect of a minimum wage increase on employment rates?
-    How much does the availability of free internet in rural areas improve educational outcomes?
-    How does access to affordable childcare affect women’s labor force participation?
-    What is the impact of reforestation programs on air quality in urban areas?
-    2. Heterogeneous Treatment Effect Estimation:
-    What is the heterogeneity in the impact of reforestation programs on air quality across neighborhoods with varying traffic density?
-    How does the introduction of mental health support programs in schools impact academic performance differently for students with varying levels of pre-existing stress?
-    Which demographic groups benefit most from telemedicine adoption in terms of reduced healthcare costs and improved health outcomes?
-    How does the effectiveness of renewable energy subsidies vary for households with different income levels or geographic locations?
-    3. Anormaly Attribution
-    How can we attribute a sudden increase in stock market volatility to specific economic events or market sectors?
-    Which variables (e.g., transaction amount, location, time) explain anomalies in loan repayment behavior?
-    What factors explain unexpected delays in surgery schedules or patient discharge times?
-    What are the root causes of deviations in supply chain delivery times?
-    What factors contribute most to unexpected drops in product sales during a specific period?
-    4. Feature Importance
-    What are the most influential factors driving credit score predictions?
-    What are the key factors influencing the effectiveness of a specific treatment or medication?
-    Which product attributes (e.g., price, brand, reviews) are the most influential in predicting online sales?
-    Which environmental variables (e.g., humidity, temperature, CO2 levels) are most important for predicting weather patterns?
-    What customer behaviors (e.g., browsing time, cart size) contribute most to predicting cart abandonment?
-    """
+                tasks: list[str]
+                reason: str
+                descriptions: list[str]
+                key_node: list[str]
+        columns = global_state.user_data.processed_data.columns
+        with open('causal_analysis/context/query_prompt.txt', 'r') as file:
+            query_prompt = file.read()
+            query_prompt = query_prompt.replace('[COLUMNS]', f",".join(columns))
+        
         global_state.logging.downstream_discuss.append({"role": "user", "content": message})
-        parsed_response = LLM_parse_query(InfList, prompt, message, args)
-        tasks_list, descs_list, key_node_list, reasons = parsed_response.tasks, parsed_response.descriptions, parsed_response.key_node, parsed_response.reasons
-        print(tasks_list, descs_list, key_node_list, reasons)
-        return tasks_list, descs_list, key_node_list, reasons, chat_history, download_btn, global_state, REQUIRED_INFO
+        parsed_response = LLM_parse_query(InfList, query_prompt, message, args)
+        reason, tasks_list, descs_list, key_node_list = parsed_response.reason, parsed_response.tasks, parsed_response.descriptions, parsed_response.key_node
+        print(tasks_list, descs_list, key_node_list)
+        chat_history.append((None, "✅ Successfully parsed your query. We will analyze it in the following perspectives:\n"
+                                    f"{', '.join(tasks_list)}\n"))
+        return reason, tasks_list, descs_list, key_node_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
 
-def parse_inf_discuss_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO):
+def parse_inf_discuss_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE):
     chat_history.append((message, None))
     global_state.logging.downstream_discuss.append({"role": "user", "content": message})
     message = message.strip()
     if message.lower() == 'no' or message == '':
         print('go to report_generation')
         chat_history.append((None, "✅ No need for downstream analysis, continue to the next section..."))
-        REQUIRED_INFO["current_stage"] = 'report_generation_check'
+        CURRENT_STAGE = 'report_generation_check'
     else:
         class DiscussList(BaseModel):
-                    indicator: bool
                     answer: str
         prompt = f"""You are a helpful assistant, here is the previous conversation history for your reference:
                 ** Conversation History **
                 {global_state.logging.downstream_discuss}
                 ** Your Task **
-                Firstly identify whether you can answer user's question based on the given history and save the boolean result in indicator. 
-                If the given history is enough to answer the question, set the indicator to True, otherwise set it to False.
-                Secondly, if indicator is True, save your answer to user's question in answer, your answer should be in bullet points; Otherwise set the answer to be None.
+                Answer user's question based on the given history in bullet points.
+                Your answer must be based on the given history, DO NOT include any fake information.
                 """
         global_state.logging.downstream_discuss.append({"role": "user", "content": message})
         parsed_response = LLM_parse_query(DiscussList, prompt, message, args)
-        answer_ind, answer_info = parsed_response.indicator, parsed_response.answer 
-        print(answer_ind, answer_info)
+        answer_info = parsed_response.answer 
+        global_state.inference.task_info[global_state.inference.task_index]['result']['discussion'][message] = answer_info
+        print(answer_info)
     
-        if answer_ind:
-            chat_history.append((None, answer_info))
-            global_state.logging.downstream_discuss.append({"role": "system", "content": answer_info})
-            chat_history.append((None, "Do you have questions about this analysis? Or do you want to conduct other downstream analysis? \n"
-                                        "You can also input 'NO' to end this part. Please describe your needs."))
-        else:
-            REQUIRED_INFO["current_stage"] = 'inference_analysis'
-            # chat_history.append((None, "Receive your question! Input 'yes' to analyze it..."))
-            # return process_message(message, chat_history, download_btn)  
-            tasks_list, descs_list, key_node_list, reasons, chat_history, download_btn, global_state, REQUIRED_INFO = parse_inference_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO)                   
-    return chat_history, download_btn, global_state, REQUIRED_INFO            
+        chat_history.append((None, answer_info))
+        global_state.logging.downstream_discuss.append({"role": "system", "content": answer_info})
+        chat_history.append((None, "Do you have questions about this analysis?  Please describe your questions.\n"
+                                    "You can also input 'NO' to end this discussion."))
+    return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE            
                 
 
+def parse_treatment(desc, global_state, args):
+    prompt = f"""
+    I'm doing the Treatment Effect Estimation analysis, please identify the Treatment Variable in this description:
+    {desc}
+    The variable name must be among these variables: {global_state.user_data.processed_data.columns}
+    Only return me with the variable name, do not include anything else.
+    """
+    treatment = LLM_parse_query(None, 'You are an expert in Causal Discovery.', prompt, args)
+    return treatment
+
+def parse_shift_value(desc, args):
+    class ShiftValue(BaseModel):
+        shift_value: float
+    parsed_response = LLM_parse_query(ShiftValue, "Extract the numerical value from the query and save it in shift_value", desc, args)
+    shift_value = parsed_response.shift_value
+    return shift_value

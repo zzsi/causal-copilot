@@ -16,8 +16,6 @@ algorithm_dir = os.path.join(root_dir, 'algorithm')
 sys.path.append(root_dir)
 sys.path.append(causal_learn_dir)
 
-
-
 from causallearn.graph.GraphClass import CausalGraph
 from causallearn.search.ConstraintBased.FCI import fci as cl_fci
 
@@ -30,7 +28,7 @@ class FCI(CausalDiscoveryAlgorithm):
         self._params = {
             'alpha': 0.05,
             'indep_test': 'fisherz',
-            'depth': -1,
+            'depth': 3, # -1,
             'max_path_length': -1,
             'verbose': False,
             'background_knowledge': None,

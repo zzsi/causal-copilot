@@ -15,7 +15,7 @@ sys.path.append(root_dir)
 from CBD.MBs.MBOR import MBOR as Mbor
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
-from utils.conversion import MB2CPDAG
+from algorithm.wrappers.utils.conversion import MB2CPDAG
 
 class MBOR(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
@@ -24,7 +24,7 @@ class MBOR(CausalDiscoveryAlgorithm):
             'alpha': 0.05,
             'indep_test': 'fisherz',
             'n_jobs': 4,
-            'n_subjobs': 4,
+            'n_subjobs': 1,
         }
         self._params.update(params)
 
@@ -36,11 +36,12 @@ class MBOR(CausalDiscoveryAlgorithm):
         return self._params
 
     def get_primary_params(self):
-        self._primary_param_keys = ['alpha', 'indep_test', 'n_jobs']
+        self._primary_param_keys = ['alpha', 'indep_test']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def get_secondary_params(self):
-        return {}
+        self._secondary_param_keys = ['n_jobs', 'n_subjobs']
+        return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict]:
         """
@@ -57,7 +58,7 @@ class MBOR(CausalDiscoveryAlgorithm):
         n_vars = data.shape[1]
         adj_matrix = np.zeros((n_vars, n_vars))
         
-        params = self.get_primary_params()
+        params = {**self.get_primary_params(), **self.get_secondary_params()}
         total_ci_tests = 0
         
         from joblib import Parallel, delayed
@@ -89,7 +90,7 @@ class MBOR(CausalDiscoveryAlgorithm):
             'total_ci_tests': total_ci_tests,
         }
 
-        return adj_matrix, info
+        return adj_matrix, info, mb_dict
 
     def test_algorithm(self):
         """Run a simple test of the algorithm on synthetic data."""
@@ -105,7 +106,7 @@ class MBOR(CausalDiscoveryAlgorithm):
         df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
 
         print("Testing InterIAMB algorithm with synthetic data:")
-        adj_matrix, info = self.fit(df)
+        adj_matrix, info, mb_dict = self.fit(df)
         
         print("\nAdjacency Matrix:")
         print(adj_matrix)

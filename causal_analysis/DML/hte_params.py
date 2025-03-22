@@ -76,8 +76,6 @@ class HTE_Param_Selector(object):
         client = OpenAI(organization=self.args.organization, project=self.args.project, api_key=self.args.apikey)
         # Set up the Hyperparameters
         # Load hyperparameters prompt template
-        import json
-        import DML.wrappers as wrappers
 
         y_prompt, discrete_y = self.prompt_generation(self.y_col, global_state)
         T_prompt, discrete_T = self.prompt_generation(self.T_col, global_state)
