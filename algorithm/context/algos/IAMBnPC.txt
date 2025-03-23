@@ -121,37 +121,7 @@ Below is a comprehensive seven-dimensional profile of the IAMBnPC algorithm, int
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Summary
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-IAMBnPC is a Markov Blanket discovery algorithm that integrates the iterative conditional independence testing strategy of IAMB with backward-phase refinements inspired by the PC algorithm. Its primary hyperparameter (alpha) controls the strictness of conditional independence tests; tuning this in conjunction with the independence test choice (e.g., fisherz, chisq, kci) is crucial. Though generally robust and interpretable, its performance can diminish with high data noise, missingness, or unfaithful structures. Parallelization or approximate testing can improve scalability, and domain knowledge often helps prune extraneous edges and increase interpretability. Overall, IAMBnPC is a solid and often competitive choice for applications—especially those where identifying relevant predictors for a target variable is paramount—provided its underlying assumptions align reasonably well with the data-generating process.────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 7.1 | 2.59 | 3.0 | 4.0 | 3.0 |
-| Heterogeneity | 8.0 | 1.73 | 3.0 | 2.0 | 3.0 |
-| Measurement Error | 11.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-| Noise Type | 8.5 | 2.50 | 2.0 | 3.0 | 2.0 |
-| Missing Data | 11.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 9.13
-  – Average standard deviation: 1.36
-
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Scalability scenario (rank 7.1)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
+IAMBnPC is a Markov Blanket discovery algorithm that integrates the iterative conditional independence testing strategy of IAMB with backward-phase refinements inspired by the PC algorithm. Its primary hyperparameter (alpha) controls the strictness of conditional independence tests; tuning this in conjunction with the independence test choice (e.g., fisherz, chisq, kci) is crucial. Though generally robust and interpretable, its performance can diminish with high data noise, missingness, or unfaithful structures. Parallelization or approximate testing can improve scalability, and domain knowledge often helps prune extraneous edges and increase interpretability. Overall, IAMBnPC is a solid and often competitive choice for applications—especially those where identifying relevant predictors for a target variable is paramount—provided its underlying assumptions align reasonably well with the data-generating process.
 
 ────────────────────────────────────────────────────────
 Benchmarking Results
@@ -159,59 +129,24 @@ Benchmarking Results
 
 • Comparative Performance
   – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics, which are represented as level scores from 1-5, with 5 being the best.
+  – Levels scores of composite metrics combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+[NOTE] The ranking is smaller, the better. The level score is higher, the better.
 
 • Algorithm Rankings
 
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
+| Scenario | Rank (Mean) | Rank (Std Dev) | Performance (Level) | Efficiency (Level) | Composite (Level) |
 |----------|-----------|---------|-------------|------------|------------|
-| Scalability | 7.1 | 2.59 | 3.0 | 4.0 | 3.0 |
-| Heterogeneity | 8.0 | 1.73 | 3.0 | 2.0 | 3.0 |
-| Measurement Error | 11.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-| Noise Type | 8.5 | 2.50 | 2.0 | 3.0 | 2.0 |
-| Missing Data | 11.0 | 0.00 | 3.0 | 2.0 | 3.0 |
+| Scalability | 7.4 | 3.90 | 4.0 | 3.0 | 4.0 |
+| Heterogeneity | 3.5 | 2.69 | 4.0 | 5.0 | 5.0 |
+| Measurement Error | 6.8 | 0.83 | 3.0 | 5.0 | 4.0 |
+| Noise Type | 8.5 | 0.50 | 3.0 | 5.0 | 3.0 |
+| Missing Data | 3.8 | 2.49 | 5.0 | 3.0 | 5.0 |
+| Edge Probability | 6.0 | 1.41 | 4.0 | 5.0 | 4.0 |
+| Discrete Ratio | 6.7 | 0.94 | 4.0 | 5.0 | 4.0 |
 
 • Analysis
 
-  – Overall mean ranking across 5 scenarios: 9.13
-  – Average standard deviation: 1.36
+  – Overall mean ranking across 7 scenarios: 6.08
+  – Average standard deviation: 1.82
 
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Scalability scenario (rank 7.1)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
-
-────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 7.1 | 2.59 | 3.0 | 4.0 | 3.0 |
-| Heterogeneity | 8.0 | 1.73 | 3.0 | 2.0 | 3.0 |
-| Measurement Error | 11.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-| Noise Type | 8.5 | 2.50 | 2.0 | 3.0 | 2.0 |
-| Missing Data | 11.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 9.13
-  – Average standard deviation: 1.36
-
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Scalability scenario (rank 7.1)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*

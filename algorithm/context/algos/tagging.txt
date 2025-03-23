@@ -12,8 +12,7 @@ Below is a concise description of each tag category and its possible values:
    - Score-based: Leverages score metrics for structure learning.
    - Functional Model-based: Employs functional models (e.g., LiNGAM) to capture relationships.
    - Hybrid: Integrates Constraint-based and Functional Model-based approaches to combine strengths.
-   - Invariances: Exploits invariance properties under distribution shifts.
-   - MB-based: Focuses on discovering the Markov Blanket.
+   - MB-based: Finding causal graph mainly by discovering, aggregating and orienting Markov Blankets.
    - Continuous-optimization: Uses continuous optimization techniques to learn causal structure.
 
 3. Functional form: Describes the assumed relationship between variables.
@@ -50,8 +49,9 @@ Below is a concise description of each tag category and its possible values:
    - Extreme Slow: Significantly slow due to complex computations.
 
 9. Empirical Performance: Summarizes reliability and robustness based on experiments.
-   - Robust: Consistently strong performance.
-   - Moderate: Generally reliable with some variability.
+   - Robust: Consistently strong performance (Level 4-5 in benchmarks).
+   - Moderate: Generally reliable with some variability (Level 2-3 in benchmarks).
+   - Limited: Weaker performance with significant variability (Level 1 in benchmarks).
 
 10. Output Format: Specifies the graph structure produced.
     - DAG: Directed Acyclic Graph with full directional information.
@@ -71,7 +71,7 @@ PC: {
     Distribution Shift: Homogenous,
     Scalability: Medium-to-large-scale,
     Efficiency: Fast (CPU),
-    Empirical Performance: Robust,
+    Empirical Performance: Moderate,
     Output Format: CPDAG
 }
 
@@ -84,7 +84,7 @@ PCParallel: {
     Distribution Shift: Homogenous,
     Scalability: Large-scale,
     Efficiency: Fast (CPU),
-    Empirical Performance: Robust,
+    Empirical Performance: Moderate,
     Output Format: CPDAG
 }
 
@@ -97,7 +97,7 @@ FCI: {
     Distribution Shift: Homogenous,
     Scalability: Medium-to-large-scale,
     Efficiency: Fast (CPU),
-    Empirical Performance: Robust,
+    Empirical Performance: Moderate,
     Output Format: CPDAG
 }
 
@@ -110,7 +110,7 @@ CDNOD: {
     Distribution Shift: Heterogenous,
     Scalability: Medium-to-large-scale,
     Efficiency: Fast (CPU),
-    Empirical Performance: Robust (can only be applied to heterogenous data),
+    Empirical Performance: Moderate,
     Output Format: CPDAG
 }
 
@@ -123,7 +123,7 @@ AcceleratedPC: {
     Distribution Shift: Homogenous,
     Scalability: Large-scale,
     Efficiency: Extreme Fast (GPU),
-    Empirical Performance: Robust,
+    Empirical Performance: Limited,
     Output Format: CPDAG
 }
 
@@ -136,7 +136,7 @@ AcceleratedCDNOD: {
     Distribution Shift: Heterogenous,
     Scalability: Large-scale,
     Efficiency: Extreme Fast (GPU),
-    Empirical Performance: Robust (can only be applied to heterogenous data),
+    Empirical Performance: Moderate,
     Output Format: CPDAG
 }
 
@@ -164,7 +164,7 @@ BAMB: {
     Distribution Shift: Homogenous,
     Scalability: Medium-scale,
     Efficiency: Moderate,
-    Empirical Performance: Robust,
+    Empirical Performance: Limited,
     Output Format: CPDAG
 }
 
@@ -177,7 +177,7 @@ HITONMB: {
     Distribution Shift: Homogenous,
     Scalability: Medium-scale,
     Efficiency: Moderate,
-    Empirical Performance: Robust,
+    Empirical Performance: Limited,
     Output Format: CPDAG
 }
 
@@ -190,7 +190,7 @@ IAMBnPC: {
     Distribution Shift: Homogenous,
     Scalability: Medium-to-large-scale,
     Efficiency: Fast (CPU),
-    Empirical Performance: Moderate,
+    Empirical Performance: Robust,
     Output Format: CPDAG
 }
 
@@ -203,7 +203,7 @@ MBOR: {
     Distribution Shift: Homogenous,
     Scalability: Medium-scale,
     Efficiency: Moderate,
-    Empirical Performance: Robust,
+    Empirical Performance: Moderate,
     Output Format: CPDAG
 }
 
@@ -218,7 +218,7 @@ GES: {
     Distribution Shift: Homogenous,
     Scalability: Medium-scale,
     Efficiency: Slow,
-    Empirical Performance: Robust,
+    Empirical Performance: Limited,
     Output Format: CPDAG
 }
 
@@ -298,7 +298,7 @@ CORL: {
     Distribution Shift: Homogenous,
     Scalability: Small-scale,
     Efficiency: Extreme Slow,
-    Empirical Performance: Robust,
+    Empirical Performance: Moderate,
     Output Format: DAG
 }
 
@@ -311,7 +311,7 @@ NOTEARSLinear: {
     Distribution Shift: Homogenous,
     Scalability: Medium-scale,
     Efficiency: Moderate,
-    Empirical Performance: Moderate,
+    Empirical Performance: Robust,
     Output Format: DAG
 }
 
@@ -324,7 +324,7 @@ NOTEARSNonlinear: {
     Distribution Shift: Homogenous,
     Scalability: Medium-scale,
     Efficiency: Slow,
-    Empirical Performance: Robust,
+    Empirical Performance: Moderate,
     Output Format: DAG
 }
 
@@ -339,7 +339,7 @@ DirectLiNGAM: {
     Distribution Shift: Homogenous,
     Scalability: Large-scale,
     Efficiency: Fast (CPU),
-    Empirical Performance: Robust (only when noise is not Gaussian),
+    Empirical Performance: Limited,
     Output Format: DAG
 }
 
@@ -352,7 +352,7 @@ AcceleratedLiNGAM: {
     Distribution Shift: Homogenous,
     Scalability: Large-scale,
     Efficiency: Fast (GPU),
-    Empirical Performance: Robust (only when noise is not Gaussian),
+    Empirical Performance: Limited,
     Output Format: DAG
 }
 
@@ -380,6 +380,6 @@ Hybrid: {
     Distribution Shift: Homogenous,
     Scalability: Small-scale,
     Efficiency: Slow,
-    Empirical Performance: Robust,
+    Empirical Performance: Moderate,
     Output Format: DAG
 }

@@ -132,37 +132,7 @@ Below is an in-depth profile of the AcceleratedPC (GPUCSL) algorithm, structured
 
 ────────────────────────────────────────────────────────────────────────
 
-Overall, AcceleratedPC (GPUCSL) stands out for its GPU-based acceleration of the PC algorithm, combining a familiar constraint-based structure with comparatively faster processing on large-scale or high-dimensional datasets. Its hyperparameter defaults (especially alpha, indep_test, and depth) are chosen to suit various sample sizes and graph complexities. Careful parameter tuning, data preprocessing, and (when possible) domain knowledge are recommended to achieve the best trade-off between runtime and accuracy.────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 7.9 | 2.93 | 2.0 | 4.0 | 2.0 |
-| Heterogeneity | 8.0 | 3.46 | 2.0 | 1.0 | 2.0 |
-| Measurement Error | 14.0 | 0.00 | 2.0 | 2.0 | 2.0 |
-| Noise Type | 11.5 | 2.50 | 2.0 | 4.0 | 2.0 |
-| Missing Data | 14.0 | 0.00 | 2.0 | 2.0 | 2.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 11.07
-  – Average standard deviation: 1.78
-
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Scalability scenario (rank 7.9)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
+Overall, AcceleratedPC (GPUCSL) stands out for its GPU-based acceleration of the PC algorithm, combining a familiar constraint-based structure with comparatively faster processing on large-scale or high-dimensional datasets. Its hyperparameter defaults (especially alpha, indep_test, and depth) are chosen to suit various sample sizes and graph complexities. Careful parameter tuning, data preprocessing, and (when possible) domain knowledge are recommended to achieve the best trade-off between runtime and accuracy.
 
 ────────────────────────────────────────────────────────
 Benchmarking Results
@@ -170,59 +140,24 @@ Benchmarking Results
 
 • Comparative Performance
   – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics, which are represented as level scores from 1-5, with 5 being the best.
+  – Levels scores of composite metrics combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+[NOTE] The ranking is smaller, the better. The level score is higher, the better.
 
 • Algorithm Rankings
 
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
+| Scenario | Rank (Mean) | Rank (Std Dev) | Performance (Level) | Efficiency (Level) | Composite (Level) |
 |----------|-----------|---------|-------------|------------|------------|
-| Scalability | 7.9 | 2.93 | 2.0 | 4.0 | 2.0 |
-| Heterogeneity | 8.0 | 3.46 | 2.0 | 1.0 | 2.0 |
-| Measurement Error | 14.0 | 0.00 | 2.0 | 2.0 | 2.0 |
-| Noise Type | 11.5 | 2.50 | 2.0 | 4.0 | 2.0 |
-| Missing Data | 14.0 | 0.00 | 2.0 | 2.0 | 2.0 |
+| Scalability | 10.5 | 2.96 | 2.0 | 5.0 | 2.0 |
+| Heterogeneity | 10.8 | 1.09 | 2.0 | 5.0 | 2.0 |
+| Measurement Error | 12.2 | 0.43 | 2.0 | 5.0 | 2.0 |
+| Noise Type | 13.0 | 1.00 | 1.0 | 5.0 | 1.0 |
+| Missing Data | 10.5 | 1.12 | 2.0 | 5.0 | 2.0 |
+| Edge Probability | 11.0 | 2.94 | 2.0 | 5.0 | 2.0 |
+| Discrete Ratio | 12.3 | 0.47 | 2.0 | 5.0 | 2.0 |
 
 • Analysis
 
-  – Overall mean ranking across 5 scenarios: 11.07
-  – Average standard deviation: 1.78
+  – Overall mean ranking across 7 scenarios: 11.48
+  – Average standard deviation: 1.43
 
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Scalability scenario (rank 7.9)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
-
-────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 7.9 | 2.93 | 2.0 | 4.0 | 2.0 |
-| Heterogeneity | 8.0 | 3.46 | 2.0 | 1.0 | 2.0 |
-| Measurement Error | 14.0 | 0.00 | 2.0 | 2.0 | 2.0 |
-| Noise Type | 11.5 | 2.50 | 2.0 | 4.0 | 2.0 |
-| Missing Data | 14.0 | 0.00 | 2.0 | 2.0 | 2.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 11.07
-  – Average standard deviation: 1.78
-
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Scalability scenario (rank 7.9)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*

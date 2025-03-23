@@ -133,37 +133,7 @@ Below is a detailed profile of the Fast Greedy Equivalence Search (FGES) algorit
 ────────────────────────────────────────────────────────────────────────
 Overall Summary
 ────────────────────────────────────────────────────────────────────────
-FGES is a well-regarded scoring-based causal discovery algorithm that scales efficiently to large numbers of variables, especially in relatively sparse causal networks. Its key “sparsity” (penalty discount) parameter is crucial for balancing graph complexity and model fit, and is relatively straightforward to tune around sensible defaults. FGES’s reliance on linear-Gaussian assumptions (for continuous data) and its assumption of no hidden confounders are important limitations; however, the algorithm’s speed and the clarity of its partially directed graphical outputs make it a popular choice in real-world applications. For best results, users often combine FGES with parallelization techniques, data-cleaning/preprocessing steps, and (when possible) domain knowledge to confirm or refine ambiguously oriented edges.────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 8.4 | 4.14 | 2.0 | 5.0 | 2.0 |
-| Heterogeneity | 9.8 | 1.30 | 2.0 | 3.0 | 2.0 |
-| Measurement Error | 12.0 | 0.00 | 2.0 | 3.0 | 2.0 |
-| Noise Type | 11.5 | 0.50 | 2.0 | 5.0 | 2.0 |
-| Missing Data | 12.0 | 0.00 | 2.0 | 3.0 | 2.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 10.74
-  – Average standard deviation: 1.19
-
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Scalability scenario (rank 8.4)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
+FGES is a well-regarded scoring-based causal discovery algorithm that scales efficiently to large numbers of variables, especially in relatively sparse causal networks. Its key “sparsity” (penalty discount) parameter is crucial for balancing graph complexity and model fit, and is relatively straightforward to tune around sensible defaults. FGES’s reliance on linear-Gaussian assumptions (for continuous data) and its assumption of no hidden confounders are important limitations; however, the algorithm’s speed and the clarity of its partially directed graphical outputs make it a popular choice in real-world applications. For best results, users often combine FGES with parallelization techniques, data-cleaning/preprocessing steps, and (when possible) domain knowledge to confirm or refine ambiguously oriented edges.
 
 ────────────────────────────────────────────────────────
 Benchmarking Results
@@ -171,59 +141,24 @@ Benchmarking Results
 
 • Comparative Performance
   – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics, which are represented as level scores from 1-5, with 5 being the best.
+  – Levels scores of composite metrics combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+[NOTE] The ranking is smaller, the better. The level score is higher, the better.
 
 • Algorithm Rankings
 
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
+| Scenario | Rank (Mean) | Rank (Std Dev) | Performance (Level) | Efficiency (Level) | Composite (Level) |
 |----------|-----------|---------|-------------|------------|------------|
-| Scalability | 8.4 | 4.14 | 2.0 | 5.0 | 2.0 |
-| Heterogeneity | 9.8 | 1.30 | 2.0 | 3.0 | 2.0 |
-| Measurement Error | 12.0 | 0.00 | 2.0 | 3.0 | 2.0 |
-| Noise Type | 11.5 | 0.50 | 2.0 | 5.0 | 2.0 |
-| Missing Data | 12.0 | 0.00 | 2.0 | 3.0 | 2.0 |
+| Scalability | 9.6 | 4.50 | 3.0 | 3.0 | 2.0 |
+| Heterogeneity | 8.0 | 2.12 | 3.0 | 5.0 | 3.0 |
+| Measurement Error | 10.5 | 0.87 | 2.0 | 5.0 | 3.0 |
+| Noise Type | 11.5 | 1.50 | 2.0 | 5.0 | 2.0 |
+| Missing Data | 8.0 | 1.87 | 3.0 | 5.0 | 3.0 |
+| Edge Probability | 10.0 | 1.63 | 2.0 | 5.0 | 2.0 |
+| Discrete Ratio | 10.0 | 0.82 | 3.0 | 5.0 | 3.0 |
 
 • Analysis
 
-  – Overall mean ranking across 5 scenarios: 10.74
-  – Average standard deviation: 1.19
+  – Overall mean ranking across 7 scenarios: 9.66
+  – Average standard deviation: 1.90
 
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Scalability scenario (rank 8.4)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
-
-────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 8.4 | 4.14 | 2.0 | 5.0 | 2.0 |
-| Heterogeneity | 9.8 | 1.30 | 2.0 | 3.0 | 2.0 |
-| Measurement Error | 12.0 | 0.00 | 2.0 | 3.0 | 2.0 |
-| Noise Type | 11.5 | 0.50 | 2.0 | 5.0 | 2.0 |
-| Missing Data | 12.0 | 0.00 | 2.0 | 3.0 | 2.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 10.74
-  – Average standard deviation: 1.19
-
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Scalability scenario (rank 8.4)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*

@@ -10,7 +10,7 @@
                 "expression": "p**4 * M**3"
             }
         ],
-        "min_runtime": 10,
+        "min_runtime": 60,
         "log_transform": false,
         "param_calculations": {
             "M": {
@@ -30,7 +30,7 @@
                 "expression": "p**4 * M**3"
             }
         ],
-        "min_runtime": 10,
+        "min_runtime": 60,
         "log_transform": false,
         "param_calculations": {
             "M": {
@@ -58,7 +58,7 @@
                 "expression": "log(N)"
             }
         ],
-        "min_runtime": 10,
+        "min_runtime": 60,
         "log_transform": true,
         "param_calculations": {
             "d": {
@@ -86,7 +86,7 @@
                 "expression": "log(E)"
             }
         ],
-        "min_runtime": 10,
+        "min_runtime": 60,
         "log_transform": true,
         "param_calculations": {
             "E": {
@@ -118,7 +118,7 @@
                 "expression": "log(N)"
             }
         ],
-        "min_runtime": 10,
+        "min_runtime": 60,
         "log_transform": true,
         "param_calculations": {
             "d": {
@@ -138,7 +138,7 @@
                 "expression": "p * log(2)"
             }
         ],
-        "min_runtime": 10,
+        "min_runtime": 60,
         "log_transform": true,
         "param_calculations": {
             "E": {
@@ -166,7 +166,7 @@
                 "expression": "log(E)"
             }
         ],
-        "min_runtime": 10,
+        "min_runtime": 60,
         "log_transform": true,
         "param_calculations": {
             "E": {
@@ -198,7 +198,7 @@
                 "expression": "log(E)"
             }
         ],
-        "min_runtime": 10,
+        "min_runtime": 60,
         "log_transform": true,
         "param_calculations": {
             "E": {
@@ -222,7 +222,7 @@
                 "expression": "log(N)"
             }
         ],
-        "min_runtime": 10,
+        "min_runtime": 60,
         "log_transform": true,
         "param_calculations": {}
     },
@@ -252,7 +252,7 @@
                 "expression": "max(1, int(p / 5))"
             }
         },
-        "min_runtime": 10
+        "min_runtime": 60
     },
     "BAMB": {
         "terms": [
@@ -275,7 +275,7 @@
         ],
         "log_transform": false,
         "param_calculations": {},
-        "min_runtime": 10
+        "min_runtime": 60
     },
     "GOLEM": {
         "terms": [
@@ -294,7 +294,7 @@
         ],
         "log_transform": false,
         "param_calculations": {},
-        "min_runtime": 10
+        "min_runtime": 60
     },
     "GRaSP": {
         "terms": [
@@ -330,7 +330,7 @@
                 "expression": "int(p * (p - 1) / 2)"
             }
         },
-        "min_runtime": 10
+        "min_runtime": 60
     },
     "IAMBnPC": {
         "terms": [
@@ -349,7 +349,7 @@
         ],
         "log_transform": false,
         "param_calculations": {},
-        "min_runtime": 10
+        "min_runtime": 60
     },
     "InterIAMB": {
         "terms": [
@@ -368,7 +368,7 @@
         ],
         "log_transform": false,
         "param_calculations": {},
-        "min_runtime": 10
+        "min_runtime": 60
     },
     "MBOR": {
         "terms": [
@@ -391,6 +391,30 @@
         ],
         "log_transform": false,
         "param_calculations": {},
-        "min_runtime": 10
+        "min_runtime": 60
+    },
+    "PCParallel": {
+        "terms": [
+            {
+                "name": "data_preprocessing_term",
+                "expression": "N * p"
+            },
+            {
+                "name": "ci_tests_term",
+                "expression": "N * p**2 * (2 ** d)"
+            },
+            {
+                "name": "orientation_term",
+                "expression": "p**3"
+            }
+        ],
+        "log_transform": false,
+        "param_calculations": {
+            "d": {
+                "type": "degree",
+                "expression": "max(1, int(p/5))"
+            }
+        },
+        "min_runtime": 60
     }
 }

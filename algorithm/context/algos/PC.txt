@@ -135,37 +135,7 @@ The PC algorithm remains a flagship approach in constraint-based causal discover
 • The graph is not excessively dense.  
 • The data generally meet Markov and faithfulness assumptions.  
 • There are no severe missing data or measurement error problems, or these issues are pre-processed/handled externally.  
-Recent developments in parallelization, alternative independence tests, and specialized PC variants help address non-linearities, mixed data, and large-scale settings. Nonetheless, potential users must keep in mind the algorithm’s sensitivity to significance thresholds, data assumptions, and the combinatorial explosion of conditional tests in bigger or denser networks.────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 7.4 | 3.00 | 2.0 | 3.0 | 2.0 |
-| Heterogeneity | 5.5 | 4.33 | 2.0 | 2.0 | 2.0 |
-| Measurement Error | 13.0 | 0.00 | 2.0 | 3.0 | 2.0 |
-| Noise Type | 11.5 | 1.50 | 2.0 | 4.0 | 2.0 |
-| Missing Data | 13.0 | 0.00 | 2.0 | 3.0 | 2.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 10.07
-  – Average standard deviation: 1.77
-
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Heterogeneity scenario (rank 5.5)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
+Recent developments in parallelization, alternative independence tests, and specialized PC variants help address non-linearities, mixed data, and large-scale settings. Nonetheless, potential users must keep in mind the algorithm’s sensitivity to significance thresholds, data assumptions, and the combinatorial explosion of conditional tests in bigger or denser networks.
 
 ────────────────────────────────────────────────────────
 Benchmarking Results
@@ -173,59 +143,24 @@ Benchmarking Results
 
 • Comparative Performance
   – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics, which are represented as level scores from 1-5, with 5 being the best.
+  – Levels scores of composite metrics combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+[NOTE] The ranking is smaller, the better. The level score is higher, the better.
 
 • Algorithm Rankings
 
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
+| Scenario | Rank (Mean) | Rank (Std Dev) | Performance (Level) | Efficiency (Level) | Composite (Level) |
 |----------|-----------|---------|-------------|------------|------------|
-| Scalability | 7.4 | 3.00 | 2.0 | 3.0 | 2.0 |
-| Heterogeneity | 5.5 | 4.33 | 2.0 | 2.0 | 2.0 |
-| Measurement Error | 13.0 | 0.00 | 2.0 | 3.0 | 2.0 |
-| Noise Type | 11.5 | 1.50 | 2.0 | 4.0 | 2.0 |
-| Missing Data | 13.0 | 0.00 | 2.0 | 3.0 | 2.0 |
+| Scalability | 8.1 | 2.47 | 3.0 | 5.0 | 3.0 |
+| Heterogeneity | 8.2 | 1.30 | 3.0 | 5.0 | 3.0 |
+| Measurement Error | 9.0 | 0.00 | 3.0 | 5.0 | 3.0 |
+| Noise Type | 10.5 | 1.50 | 2.0 | 5.0 | 2.0 |
+| Missing Data | 6.5 | 1.80 | 3.0 | 4.0 | 4.0 |
+| Edge Probability | 7.7 | 3.40 | 3.0 | 5.0 | 3.0 |
+| Discrete Ratio | 10.0 | 0.82 | 3.0 | 5.0 | 3.0 |
 
 • Analysis
 
-  – Overall mean ranking across 5 scenarios: 10.07
-  – Average standard deviation: 1.77
+  – Overall mean ranking across 7 scenarios: 8.58
+  – Average standard deviation: 1.61
 
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Heterogeneity scenario (rank 5.5)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
-
-────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 7.4 | 3.00 | 2.0 | 3.0 | 2.0 |
-| Heterogeneity | 5.5 | 4.33 | 2.0 | 2.0 | 2.0 |
-| Measurement Error | 13.0 | 0.00 | 2.0 | 3.0 | 2.0 |
-| Noise Type | 11.5 | 1.50 | 2.0 | 4.0 | 2.0 |
-| Missing Data | 13.0 | 0.00 | 2.0 | 3.0 | 2.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 10.07
-  – Average standard deviation: 1.77
-
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Heterogeneity scenario (rank 5.5)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*

@@ -143,37 +143,7 @@ Summary
 ────────────────────────────────────────────────────────────────────
 FCI (Fast Causal Inference) is a widely respected causal discovery algorithm that relaxes the assumption of no hidden confounders, making it especially valuable when latent variables or selection bias may be present. Its key hyperparameters—significance level (α), independence test choice, and depth constraint—all substantially affect how many edges are retained and how computationally heavy the procedure becomes. Although FCI can handle both continuous and discrete data (and even mixed types) via different independence tests, its runtime grows quickly with the number of variables and the complexity of the network.
 
-Because FCI outputs a Partial Ancestral Graph (PAG), it can reveal potential latent confounding, but this representation may contain uncertain or bidirected edges requiring careful interpretation. This complexity can also make it challenging to tune parameters optimally without domain or statistical expertise. When properly configured, FCI has proven effective in real-world applications like genetics, climate science, and social networks—domains where hidden confounders often lurk. Overall, its flexibility and ability to account for unobserved variables are balanced by higher computational demands and some interpretability challenges relative to simpler methods.────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 6.0 | 2.19 | 3.0 | 5.0 | 4.0 |
-| Heterogeneity | 10.0 | 2.00 | 4.0 | 4.0 | 4.0 |
-| Measurement Error | 7.0 | 0.00 | 4.0 | 5.0 | 4.0 |
-| Noise Type | 7.0 | 0.00 | 3.0 | 5.0 | 4.0 |
-| Missing Data | 7.0 | 0.00 | 4.0 | 5.0 | 4.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 7.40
-  – Average standard deviation: 0.84
-
-• Key Observations
-  – Very stable performance across scenarios (low variance)
-  – Best performance in Scalability scenario (rank 6.0)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
+Because FCI outputs a Partial Ancestral Graph (PAG), it can reveal potential latent confounding, but this representation may contain uncertain or bidirected edges requiring careful interpretation. This complexity can also make it challenging to tune parameters optimally without domain or statistical expertise. When properly configured, FCI has proven effective in real-world applications like genetics, climate science, and social networks—domains where hidden confounders often lurk. Overall, its flexibility and ability to account for unobserved variables are balanced by higher computational demands and some interpretability challenges relative to simpler methods.
 
 ────────────────────────────────────────────────────────
 Benchmarking Results
@@ -181,59 +151,24 @@ Benchmarking Results
 
 • Comparative Performance
   – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics, which are represented as level scores from 1-5, with 5 being the best.
+  – Levels scores of composite metrics combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+[NOTE] The ranking is smaller, the better. The level score is higher, the better.
 
 • Algorithm Rankings
 
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
+| Scenario | Rank (Mean) | Rank (Std Dev) | Performance (Level) | Efficiency (Level) | Composite (Level) |
 |----------|-----------|---------|-------------|------------|------------|
-| Scalability | 6.0 | 2.19 | 3.0 | 5.0 | 4.0 |
-| Heterogeneity | 10.0 | 2.00 | 4.0 | 4.0 | 4.0 |
-| Measurement Error | 7.0 | 0.00 | 4.0 | 5.0 | 4.0 |
-| Noise Type | 7.0 | 0.00 | 3.0 | 5.0 | 4.0 |
-| Missing Data | 7.0 | 0.00 | 4.0 | 5.0 | 4.0 |
+| Scalability | 6.1 | 1.96 | 4.0 | 4.0 | 4.0 |
+| Heterogeneity | 5.0 | 0.71 | 4.0 | 4.0 | 5.0 |
+| Measurement Error | 6.5 | 0.50 | 4.0 | 4.0 | 4.0 |
+| Noise Type | 8.0 | 2.00 | 3.0 | 4.0 | 3.0 |
+| Missing Data | 7.5 | 4.39 | 4.0 | 2.0 | 3.0 |
+| Edge Probability | 6.3 | 2.05 | 4.0 | 4.0 | 4.0 |
+| Discrete Ratio | 7.0 | 0.82 | 4.0 | 4.0 | 4.0 |
 
 • Analysis
 
-  – Overall mean ranking across 5 scenarios: 7.40
-  – Average standard deviation: 0.84
+  – Overall mean ranking across 7 scenarios: 6.64
+  – Average standard deviation: 1.78
 
-• Key Observations
-  – Very stable performance across scenarios (low variance)
-  – Best performance in Scalability scenario (rank 6.0)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
-
-────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 6.0 | 2.19 | 3.0 | 5.0 | 4.0 |
-| Heterogeneity | 10.0 | 2.00 | 4.0 | 4.0 | 4.0 |
-| Measurement Error | 7.0 | 0.00 | 4.0 | 5.0 | 4.0 |
-| Noise Type | 7.0 | 0.00 | 3.0 | 5.0 | 4.0 |
-| Missing Data | 7.0 | 0.00 | 4.0 | 5.0 | 4.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 7.40
-  – Average standard deviation: 0.84
-
-• Key Observations
-  – Very stable performance across scenarios (low variance)
-  – Best performance in Scalability scenario (rank 6.0)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*

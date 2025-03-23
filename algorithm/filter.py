@@ -3,7 +3,7 @@ import os
 import torch
 from algorithm.llm_client import LLMClient
 
-TOP_K = 3
+TOP_K = 5
 
 class Filter(object):
     def __init__(self, args):
@@ -40,6 +40,8 @@ class Filter(object):
 
         print(algorithm_candidates)
 
+        print(output['algorithms_unwanted'])
+
         global_state.algorithm.algorithm_candidates = algorithm_candidates
         global_state.logging.select_conversation.append({
             "prompt": prompt,
@@ -70,7 +72,6 @@ class Filter(object):
         return algo_context, select_prompt
     
 
-
     def create_prompt(self, user_query, data, statistics_desc, accept_CPDAG):
         algo_context, prompt_template = self.load_prompt_context()
         replacements = {
@@ -80,7 +81,7 @@ class Filter(object):
             "[ALGO_CONTEXT]": algo_context,
             "[CUDA_WARNING]": "" if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.",
             "[TOP_K]": str(TOP_K),
-            "[ACCEPT_CPDAG]": "Yes" if accept_CPDAG else "No"
+            "[ACCEPT_CPDAG]": "The user accepts the output graph including undirected edges/undeterministic directions (CPDAG/PAG)" if accept_CPDAG else "The user does not accept the output graph including undirected edges/undeterministic directions (CPDAG/PAG), so the output graph should be a DAG."
         }
 
         for placeholder, value in replacements.items():

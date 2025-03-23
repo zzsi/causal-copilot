@@ -6,6 +6,7 @@ import os
 from typing import Dict, List, Any
 from openai import OpenAI
 import scipy.special
+import requests
 
 # Unified time complexity units
 # N: number of samples
@@ -326,12 +327,22 @@ class RuntimeEstimator:
         code_contents = ""
         root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         for file_path in code_files:
-            file_path = file_path.replace("[root_dir]", root_dir)
-            if os.path.exists(file_path):
-                with open(file_path, 'r') as code_file:
-                    code_contents += f"Here is the code for {algorithm_name}, code file: {file_path}:\n\n" + code_file.read() + "\n\n"
+            # Check if the path is a URL
+            if file_path.startswith(('http://', 'https://')):
+                try:
+                    response = requests.get(file_path)
+                    response.raise_for_status()  # Raise an exception for HTTP errors
+                    code_contents += f"Here is the code for {algorithm_name}, code URL: {file_path}:\n\n" + response.text + "\n\n"
+                except requests.exceptions.RequestException as e:
+                    print(f"Warning: Failed to fetch code from URL {file_path}: {e}")
             else:
-                print(f"Warning: Code file {file_path} not found.")
+                # Handle local file path
+                file_path = file_path.replace("[root_dir]", root_dir)
+                if os.path.exists(file_path):
+                    with open(file_path, 'r') as code_file:
+                        code_contents += f"Here is the code for {algorithm_name}, code file: {file_path}:\n\n" + code_file.read() + "\n\n"
+                else:
+                    print(f"Warning: Code file {file_path} not found.")
                 
         # Load the prompt template used to ask the LLM.
         prompt_template_path = os.path.join(self.algorithm_dir, 'runtime_estimators', 'time_complexity_prompt.txt')
@@ -348,7 +359,7 @@ class RuntimeEstimator:
         complexity_info = self._query_llm(full_prompt)
 
         # Add the default minimum runtime and log transform.
-        complexity_info['min_runtime'] = 10
+        complexity_info['min_runtime'] = 60
         
         # Update the complexity_terms.json file with the new algorithm information.
         all_configs[algorithm_name] = complexity_info
@@ -381,14 +392,14 @@ class RuntimeEstimator:
             # Fallback to default response if parsing fails
             return {
                 "terms": [{"name": "default_term", "expression": "N * p"}],
-                "min_runtime": 10,
+                "min_runtime": 60,
                 "log_transform": False,
                 "param_calculations": {}
             }
 
 if __name__ == "__main__":
     # Test all algorithms
-    algorithms = ['AcceleratedPC', 'BAMB', 'GOLEM', 'GRaSP', 'IAMBnPC', 'InterIAMB', 'MBOR', 'NOTEARSLinear', 'AcceleratedLiNGAM', 'DirectLiNGAM', 'PC', 'GES', 'FGES', 'XGES', 'FCI', 'CDNOD']
+    algorithms = ['PCParallel'] # 'AcceleratedPC', 'BAMB', 'GOLEM', 'GRaSP', 'IAMBnPC', 'InterIAMB', 'MBOR', 'NOTEARSLinear', 'AcceleratedLiNGAM', 'DirectLiNGAM', 'PC', 'GES', 'FGES', 'XGES', 'FCI', 'CDNOD']
     overall_error = 0
     
     for algo in algorithms:

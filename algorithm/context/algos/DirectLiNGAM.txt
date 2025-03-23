@@ -127,37 +127,7 @@ Summary
 ────────────────────────────────────────────────────────────────
 DirectLiNGAM is a specialized causal discovery algorithm well-suited to scenarios where linearity and non-Gaussianity of errors hold. Its minimal hyperparameter set eases tuning, though the choice of independence measure (especially “pwling” vs. “kernel”) can significantly affect performance and runtime. It is relatively robust to moderate noise but is more sensitive than some alternatives to missing data and measurement error. Its theoretical runtime complexity is on the higher side (O(n^4)), but in practice it remains efficient for moderate-scale problems, especially with fast variants or parallelization.
 
-The algorithm’s outputs—a causal ordering and an adjacency matrix—are generally straightforward to interpret, but they rely on strong assumptions: linear effects, non-Gaussian noise, and no unobserved confounders. In real-world applications where these assumptions hold, DirectLiNGAM can accurately identify causal direction, often surpassing methods that assume Gaussian noise. Users should, however, exercise caution when facing hidden confounders, complex non-linearities, or severe data-quality issues.────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 11.1 | 5.18 | 1.0 | 4.0 | 1.0 |
-| Heterogeneity | 6.8 | 4.76 | 1.0 | 3.0 | 2.0 |
-| Measurement Error | 15.0 | 0.00 | 1.0 | 3.0 | 2.0 |
-| Noise Type | 8.0 | 7.00 | 3.0 | 5.0 | 3.0 |
-| Missing Data | 15.0 | 0.00 | 1.0 | 3.0 | 2.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 11.18
-  – Average standard deviation: 3.39
-
-• Key Observations
-  – Performance varies notably between scenarios
-  – Best performance in Heterogeneity scenario (rank 6.8)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
+The algorithm’s outputs—a causal ordering and an adjacency matrix—are generally straightforward to interpret, but they rely on strong assumptions: linear effects, non-Gaussian noise, and no unobserved confounders. In real-world applications where these assumptions hold, DirectLiNGAM can accurately identify causal direction, often surpassing methods that assume Gaussian noise. Users should, however, exercise caution when facing hidden confounders, complex non-linearities, or severe data-quality issues.
 
 ────────────────────────────────────────────────────────
 Benchmarking Results
@@ -165,59 +135,24 @@ Benchmarking Results
 
 • Comparative Performance
   – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics, which are represented as level scores from 1-5, with 5 being the best.
+  – Levels scores of composite metrics combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+[NOTE] The ranking is smaller, the better. The level score is higher, the better.
 
 • Algorithm Rankings
 
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
+| Scenario | Rank (Mean) | Rank (Std Dev) | Performance (Level) | Efficiency (Level) | Composite (Level) |
 |----------|-----------|---------|-------------|------------|------------|
-| Scalability | 11.1 | 5.18 | 1.0 | 4.0 | 1.0 |
-| Heterogeneity | 6.8 | 4.76 | 1.0 | 3.0 | 2.0 |
-| Measurement Error | 15.0 | 0.00 | 1.0 | 3.0 | 2.0 |
-| Noise Type | 8.0 | 7.00 | 3.0 | 5.0 | 3.0 |
-| Missing Data | 15.0 | 0.00 | 1.0 | 3.0 | 2.0 |
+| Scalability | 11.6 | 4.69 | 1.0 | 5.0 | 2.0 |
+| Heterogeneity | 12.8 | 0.83 | 1.0 | 4.0 | 2.0 |
+| Measurement Error | 13.8 | 0.43 | 1.0 | 4.0 | 1.0 |
+| Noise Type | 7.5 | 6.50 | 3.0 | 4.0 | 4.0 |
+| Missing Data | 12.0 | 1.41 | 1.0 | 5.0 | 2.0 |
+| Edge Probability | 13.3 | 0.94 | 1.0 | 4.0 | 1.0 |
+| Discrete Ratio | 13.7 | 0.47 | 1.0 | 4.0 | 1.0 |
 
 • Analysis
 
-  – Overall mean ranking across 5 scenarios: 11.18
-  – Average standard deviation: 3.39
+  – Overall mean ranking across 7 scenarios: 12.09
+  – Average standard deviation: 2.18
 
-• Key Observations
-  – Performance varies notably between scenarios
-  – Best performance in Heterogeneity scenario (rank 6.8)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
-
-────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 11.1 | 5.18 | 1.0 | 4.0 | 1.0 |
-| Heterogeneity | 6.8 | 4.76 | 1.0 | 3.0 | 2.0 |
-| Measurement Error | 15.0 | 0.00 | 1.0 | 3.0 | 2.0 |
-| Noise Type | 8.0 | 7.00 | 3.0 | 5.0 | 3.0 |
-| Missing Data | 15.0 | 0.00 | 1.0 | 3.0 | 2.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 11.18
-  – Average standard deviation: 3.39
-
-• Key Observations
-  – Performance varies notably between scenarios
-  – Best performance in Heterogeneity scenario (rank 6.8)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*

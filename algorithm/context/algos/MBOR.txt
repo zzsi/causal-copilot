@@ -55,7 +55,6 @@ Below is an in-depth profile of the MBOR (Markov Boundary OR) causal discovery a
 • Complex Functional Forms  
   – By selecting 'kci', 'fastkci', or 'rcit', MBOR can detect nonlinear relationships. However, using these advanced tests may increase computational time.  
 
-
 • Critique/Extension  
   – If the user defaults to simpler tests (e.g., 'fisherz'), MBOR behaves more like a linear/gaussian assumption method. For highly nonlinear problems, specialized tests are beneficial but more costly computationally.  
   – Overfitting can occur in small-sample scenarios if overly flexible tests are used (like advanced kernel-based tests) without adjusting α accordingly.  
@@ -124,37 +123,7 @@ Below is an in-depth profile of the MBOR (Markov Boundary OR) causal discovery a
 
 ────────────────────────────────────────────────────────
 
-Overall, MBOR is a constraint-based method that localizes causal structure discovery via Markov boundaries and can adapt its independence tests to different data types and complexities. Its built-in handling of missing or noisy data and relatively efficient scalability with respect to both variables and samples make it a strong candidate for many real-world scenarios. However, like all constraint-based approaches, it relies on standard assumptions (e.g., faithfulness and sufficiency), so careful tuning of α and choosing an appropriate independence test are crucial to ensuring reliable and interpretable outcomes.────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 8.6 | 1.74 | 3.0 | 3.0 | 4.0 |
-| Heterogeneity | 11.5 | 2.50 | 4.0 | 4.0 | 4.0 |
-| Measurement Error | 8.0 | 0.00 | 4.0 | 5.0 | 4.0 |
-| Noise Type | 8.0 | 0.00 | 4.0 | 2.0 | 3.0 |
-| Missing Data | 8.0 | 0.00 | 4.0 | 5.0 | 4.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 8.82
-  – Average standard deviation: 0.85
-
-• Key Observations
-  – Very stable performance across scenarios (low variance)
-  – Best performance in Measurement Error scenario (rank 8.0)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
+Overall, MBOR is a constraint-based method that localizes causal structure discovery via Markov boundaries and can adapt its independence tests to different data types and complexities. Its built-in handling of missing or noisy data and relatively efficient scalability with respect to both variables and samples make it a strong candidate for many real-world scenarios. However, like all constraint-based approaches, it relies on standard assumptions (e.g., faithfulness and sufficiency), so careful tuning of α and choosing an appropriate independence test are crucial to ensuring reliable and interpretable outcomes.
 
 ────────────────────────────────────────────────────────
 Benchmarking Results
@@ -162,59 +131,24 @@ Benchmarking Results
 
 • Comparative Performance
   – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics, which are represented as level scores from 1-5, with 5 being the best.
+  – Levels scores of composite metrics combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+[NOTE] The ranking is smaller, the better. The level score is higher, the better.
 
 • Algorithm Rankings
 
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
+| Scenario | Rank (Mean) | Rank (Std Dev) | Performance (Level) | Efficiency (Level) | Composite (Level) |
 |----------|-----------|---------|-------------|------------|------------|
-| Scalability | 8.6 | 1.74 | 3.0 | 3.0 | 4.0 |
-| Heterogeneity | 11.5 | 2.50 | 4.0 | 4.0 | 4.0 |
-| Measurement Error | 8.0 | 0.00 | 4.0 | 5.0 | 4.0 |
-| Noise Type | 8.0 | 0.00 | 4.0 | 2.0 | 3.0 |
-| Missing Data | 8.0 | 0.00 | 4.0 | 5.0 | 4.0 |
+| Scalability | 10.0 | 3.64 | 3.0 | 2.0 | 3.0 |
+| Heterogeneity | 5.5 | 1.50 | 5.0 | 2.0 | 4.0 |
+| Measurement Error | 8.2 | 1.09 | 4.0 | 2.0 | 3.0 |
+| Noise Type | 7.5 | 0.50 | 4.0 | 2.0 | 3.0 |
+| Missing Data | 7.5 | 3.91 | 5.0 | 1.0 | 4.0 |
+| Edge Probability | 8.0 | 2.16 | 3.0 | 2.0 | 3.0 |
+| Discrete Ratio | 8.3 | 1.25 | 3.0 | 2.0 | 3.0 |
 
 • Analysis
 
-  – Overall mean ranking across 5 scenarios: 8.82
-  – Average standard deviation: 0.85
+  – Overall mean ranking across 7 scenarios: 7.87
+  – Average standard deviation: 2.01
 
-• Key Observations
-  – Very stable performance across scenarios (low variance)
-  – Best performance in Measurement Error scenario (rank 8.0)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
-
-────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 8.6 | 1.74 | 3.0 | 3.0 | 4.0 |
-| Heterogeneity | 11.5 | 2.50 | 4.0 | 4.0 | 4.0 |
-| Measurement Error | 8.0 | 0.00 | 4.0 | 5.0 | 4.0 |
-| Noise Type | 8.0 | 0.00 | 4.0 | 2.0 | 3.0 |
-| Missing Data | 8.0 | 0.00 | 4.0 | 5.0 | 4.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 8.82
-  – Average standard deviation: 0.85
-
-• Key Observations
-  – Very stable performance across scenarios (low variance)
-  – Best performance in Measurement Error scenario (rank 8.0)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*

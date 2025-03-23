@@ -1,10 +1,10 @@
-You will conduct causal discovery on the Tabular Dataset dataset/sachs/sachs.csv containing the following Columns:
+You will conduct causal discovery on the Tabular Dataset simulated_data/algorithm_benchmarking_v2/20250207_030930_scale_samples_1000_seed_0_nodes25_samples1000 containing the following Columns:
 
-Raf	Mek	Plcg	PIP2	PIP3	Erk	Akt	PKA	PKC	P38	Jnk
+X1	X2	X3	X4	X5	X6	X7	X8	X9	X10	X11	X12	X13	X14	X15	X16	X17	X18	X19	X20	X21	X22	X23	X24	X25
 
 The Detailed Background Information is listed below:
 
-This is fake domain knowledge for debugging purposes.
+['No Knowledge']
 
 The Statistics Information about the dataset is:
 
@@ -12,7 +12,7 @@ The dataset has the following characteristics:
 
 Data Type: The overall data type is Continuous.
 
-The sample size is 853 with 11 features. This dataset is not time-series data. Data Quality: There are no missing values in the dataset.
+The sample size is 1000 with 25 features. This dataset is not time-series data. Data Quality: There are no missing values in the dataset.
 
 Statistical Properties:
 - Linearity: The relationships between variables are predominantly linear.
@@ -25,15 +25,17 @@ Statistical Properties:
 
 Based on the above information, please select the best-suited algorithm from the following candidate (the order of the algorithm candidates is not important):
 
-dict_keys(['PC', 'FCI', 'InterIAMB'])
+dict_keys(['PC', 'PCParallel', 'FCI', 'FGES', 'GOLEM'])
 
 ===============================================
 Note that the user can only wait for 1440.0 minutes for the algorithm execution, please ensure the time cost of the selected algorithm would not exceed it!
 The estimated time costs of the following algorithms are below. Consider the time cost wisely when selecting the algorithm, it is critical but less important than the performance when the time cost does not exceed the waiting time, the importance ratio to the performance is 1:2:
 
 PC: 0.2 minutes
+PCParallel: inf minutes
 FCI: 0.2 minutes
-InterIAMB: 0.5 minutes
+FGES: 0.2 minutes
+GOLEM: 20.7 minutes
 
 ===============================================
 Detailed Profiles of the algorithm candidates are shown here. You MUST actively combine and reason with them:
@@ -272,6 +274,151 @@ Benchmarking Results
 
 *Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
 
+
+# PCParallel
+
+
+────────────────────────────────────────────────────────────────────────
+1. HYPER-PARAMETERS SENSITIVITY
+────────────────────────────────────────────────────────────────────────
+• Number of Key Hyperparameters  
+  - The PC algorithm has three main hyperparameters:  
+    1. α (alpha): Significance level for conditional independence tests.  
+    2. indep_test: Choice of conditional independence test (e.g., Fisher’s Z, chi-square, G-square).  
+    3. cores: Number of CPU cores to be utilized for parallel computation. 
+    4. memory_efficient: Boolean variable to use a more memory efficient computation algorithm, tradeoff with running time. 
+
+• Tuning Difficulty  
+  - α is typically the most critical parameter, with recommended defaults in the provided file (e.g., 0.05 for moderate sample sizes, 0.1 for smaller samples, 0.01 for very large samples). These guidelines simplify tuning for different dataset sizes.  
+  - The choice of indep_test can be straightforward (Fisher’s Z for continuous data, chi-square for discrete data, etc.). Current implementation uses only the mentioned independence tests.
+  - cores should ideally be set based on hardware availability (e.g., setting it too high may cause thread contention).
+  - memory_efficient mode should only be used for very large datasets with large number of nodes (e.g. number of variables > 2000 and the number of available samples are > 500)
+
+• Sensitivity  
+  - Small changes in α can produce noticeable effects on edge detection: lower α yields more conservative edge selection (fewer false positives) but may lead to more false negatives.  
+  - Using too few threads results in minimal speedup, while excessive parallelization may cause memory bottlenecks.
+  - For very large datasets, where memory usage could be an issue, a tradeoff can be made on runtime to utilize the memory more efficiently.
+
+• Critique/Extension  
+  - Parallelization improves runtime but does not mitigate statistical limitations (e.g., incorrect edge detection due to faithfulness violations).
+  - Performance benefits are hardware-dependent—some systems experience diminishing returns beyond a certain number of threads.
+
+────────────────────────────────────────────────────────────────────────
+2. ROBUSTNESS & SCALABILITY
+────────────────────────────────────────────────────────────────────────
+• Tolerance to Bad Data Quality  
+  - Parallel-PC inherits PC’s lack of built-in missing data handling.
+  - Errors in CI tests are not corrected by parallelization, meaning missing or noisy data still degrade performance. 
+
+• Tolerance to Sparse vs. Dense Connected Systems  
+  - Parallelization helps in denser graphs, where the number of CI tests grows combinatorially.
+  - Benchmarks suggest speed gains of up to 10× on dense networks, but correctness depends on CI test quality.
+
+• Scalability  
+  - Can handle higher-dimensional problems than standard PC.
+  - Linear scalability up to a certain number of cores (12-14), after which performance gains diminish due to memory overhead.
+
+• Critique/Extension  
+  - Unlike the standard PC, Parallel-PC is explicitly designed for large graphs.
+  - Despite parallelism, datasets with thousands of variables may still require heuristic modifications like early stopping or approximate skeleton pruning.
+  
+────────────────────────────────────────────────────────────────────────
+3. MIXED DATA & COMPLEX FUNCTIONS
+────────────────────────────────────────────────────────────────────────
+• Noise Type  
+  - The PC algorithm’s traditional setup often presupposes approximately Gaussian errors for continuous data, but other independence tests allow for broader noise distributions.  
+  - Benchmarks (File #2) suggested that PC performed somewhat lower when confronted with more diverse or non-Gaussian noise, although advanced tests (KCI, RCIT) can address non-linearity.  
+
+• Mixed Data (Continuous & Discrete)  
+  - PC can integrate different conditional independence tests: Fisher’s Z or partial correlation for continuous variables; chi-square or G-square for discrete; or a mix for hybrid data.  
+  - Some PC implementations provide direct support for mixed data via specialized tests like G-square, allowing simultaneous handling of continuous and categorical variables.  
+
+• Heterogeneous Data  
+  - Benchmark results (File #2) show it scored in the middle ranges under “Heterogeneity.” It can handle moderate changes in distribution across variables, provided a suitable test is chosen.  
+  - Marked shifts across subsets of data may require domain-driven adjustments or advanced versions (like FCI for partial latent confounding).  
+
+• Complex Functional Forms  
+  - The standard PC algorithm is tailored for linear (or near-linear) dependencies, but employing a kernel-based test (e.g., KCI) can detect non-linear relationships.  
+  - Non-linear extensions usually come with higher computational burdens, which can be partially offset by “fastKCI” or “RCIT.”  
+
+• Critique/Extension  
+  - Users often underestimate how crucial the independence test choice is when dealing with non-linear patterns. A robust non-parametric test can significantly improve detection of non-linear causal links.  
+  - Overfitting concerns can arise in small samples if a highly flexible test is used without proper regularization or multiple testing corrections.  
+
+────────────────────────────────────────────────────────────────────────
+4. COMPUTATIONAL COMPLEXITY
+────────────────────────────────────────────────────────────────────────
+• Theoretical Time Complexity  
+  - The worst-case complexity of PC is <temp>[O(n^(k+2))]</temp>, parallelization does not change this, but distributes the workload to achieve better practical runtime.
+
+• Variability in Practical Usage  
+  - On modern multi-core CPUs, speed improvements scale well up to 16–32 cores, after which performance gains saturate.
+  - memory_efficient mode can be deployed for very large datasets, trading off some runtime over memory consumption. 
+
+• Critique/Extension  
+  - Parallelization does not reduce worst-case complexity, but makes real-world execution feasible for larger graphs.
+  - Works best when CPU utilization is optimized—thread scheduling inefficiencies can arise with suboptimal configurations.
+
+────────────────────────────────────────────────────────────────────────
+5. INTERPRETABILITY
+────────────────────────────────────────────────────────────────────────
+• Output Format  
+  - Parallel-PC outputs a CPDAG (Completed Partially Directed Acyclic Graph). This graph shows which edges are definitely directed, as well as edges uncertain about orientation.  
+
+• Strength of the Output Format  
+  - CPDAGs are considered quite interpretable: they clarify which directions are inferred and which remain undetermined.  
+  - Many software packages (e.g., Tetrad, pcalg) provide visualization tools to help interpret a CPDAG.  
+
+• Limitations of the Output Format  
+  - Edges in the “partially” directed region can generate ambiguity, as the algorithm leaves some edges unoriented if the data are insufficiently informative.  
+  - In high-dimensional or complex domains, the resulting graph might still be large and cumbersome to interpret without additional domain knowledge.  
+
+• Critique/Extension  
+  - Domain experts frequently refine or manually orient ambiguous edges, especially in specialized fields such as genomics or neuroscience.  
+  - Some suggest performing a stability or bootstrap analysis to highlight edges that are consistently inferred across subsamples.  
+
+────────────────────────────────────────────────────────────────────────
+6. ASSUMPTIONS
+────────────────────────────────────────────────────────────────────────
+• Critical Assumptions  
+  - Causal Markov condition: Each variable is conditionally independent of its non-descendants, given its parents.  
+  - Faithfulness: All and only the conditional independencies in the true structure are reflected in the data.  
+  - Causal sufficiency: No unobserved confounders of the measured variables.  
+  - Acyclicity: The underlying causal structure forms a Directed Acyclic Graph (DAG).  
+
+• Violation Impact  
+  - Missing confounders can lead to spurious or missing edges.  
+  - Unfaithful data-generating mechanisms can hide true edges or create extra independencies.  
+  - Feedback loops or cyclic structures break the acyclicity assumption, causing the algorithm to infer incomplete or incorrect edges.  
+
+• Critique/Extension  
+  - When hidden variable confounding is suspected, variants like FCI (Fast Causal Inference) or RFCI are recommended instead of basic PC.  
+  - Many real-world systems include some feedback or non-stationary behavior, so partial violations are not uncommon. Users often need to test sensitivity or adopt extended algorithms.  
+
+────────────────────────────────────────────────────────────────────────
+7. (OPTIONAL) REAL-WORLD BENCHMARKS
+────────────────────────────────────────────────────────────────────────
+• Performance on Real Datasets  
+  - Parallel-PC demonstrates significantly better runtime than standard PC, with similar accuracy. Gains are most prominent in high-dimensional datasets, where speedup factors of 5× to 10× are common.
+  - Since Parallel-PC implements the PC-stable version of the algorithm, the performance will be similar if not better than traditional PC. 
+
+• Practical Tips  
+  - Combining PC with domain knowledge (e.g., known biological pathways) often yields improved orientation of edges.  
+  - Ensure correct number of cores—too many parallel cores may cause contention.
+  - Discussion forums and user groups consistently recommend verifying the sample size is sufficient for the chosen α level, or considering small-sample corrections if data are limited.  
+
+────────────────────────────────────────────────────────────────────────
+CONCLUSION
+────────────────────────────────────────────────────────────────────────
+Parallel-PC retains the interpretability and theoretical foundations of the standard PC algorithm while significantly improving scalability and runtime through parallelization of CI tests. The key benefits include:
+ • Faster execution on multi-core CPUs.
+ • Better handling of large graphs, particularly dense structures.
+ • Maintains correctness guarantees from PC, but does not solve its statistical limitations.
+However, Parallel-PC still faces similar challenges to standard PC, such as:
+ • High sensitivity to significance thresholds (α).
+ • Limited robustness to missing data and confounding.
+ • No explicit handling of cyclic or feedback systems.
+────────────────────────────────────────────────────────
 
 # FCI
 
@@ -516,132 +663,144 @@ Benchmarking Results
 *Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
 
 
-# InterIAMB
+# FGES
 
-Below is an in-depth profile of InterIAMB, organized around the seven dimensions (or “degrees”) specified in the meta-prompt. The following draws on the provided hyperparameter definitions, the comparative benchmarking results, external online information about InterIAMB, and general knowledge of Markov blanket (MB) and causal discovery methods.
+Below is a detailed profile of the Fast Greedy Equivalence Search (FGES) algorithm, organized according to the seven requested dimensions. This profile integrates the provided hyperparameter JSON, benchmarking results, external knowledge, and general expertise on causal discovery methods.
 
-────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 1. Hyper-Parameters Sensitivity
-────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 
 • Number of Key Hyperparameters  
-  InterIAMB’s foundational hyperparameter is the alpha (α) significance level for conditional independence testing. In practice, there are also choices of which independence test (fisherz, chisq, etc.) to use, but α is by far the most impactful parameter guiding the algorithm. Hence, we can consider two main critical hyperparameters for InterIAMB:  
-  1) alpha (the significance threshold).  
-  2) indep_test (choice of independence test).  
+  – From the provided hyperparameter JSON, a primary FGES parameter is “sparsity” (often referred to as the penalty discount factor).  
+  – In practice, FGES may include other parameters (e.g., search depth, heuristic speedups, handling of faithfulness) depending on the implementation, but the main one highlighted here is the sparsity/penalty factor.  
 
 • Tuning Difficulty  
-  – Alpha: Default guidance is straightforward. For small samples (<500), a higher alpha (e.g., 0.1) is often suggested to avoid missing significant edges. For moderate sample sizes (500–10,000), α = 0.05 is a common setting. For very large datasets (>10,000), α = 0.01 is recommended to reduce false positives.  
-  – Independence Test: The algorithm offers recommended defaults (e.g., “fisherz” for continuous data, “chisq” for discrete, “gsq” for simpler mixed data). These guidelines limit the tuning difficulty because the user can often select the test based on data type.  
+  – The “sparsity” parameter (sometimes called penaltyDiscount) typically has a default value (10 in the JSON). This default is often serviceable, giving users a straightforward starting point.  
+  – Adjusting it requires some domain knowledge: a high value encourages more edges, potentially uncovering more relationships at the risk of overfitting, whereas a low value enforces stricter parsimony.  
+  – Tuning can be guided by domain experts or automated methods (e.g., cross-validation). In simpler cases, a general-purpose LLM or heuristic search can also help explore plausible values.  
 
-• Sensitivity  
-  – Alpha: Small changes to α can shift how many conditional independencies are declared. Lower α typically yields a more conservative MB, with fewer false positives but potentially more false negatives. Higher α can speed up execution slightly (fewer re-checks needed), but can also add spurious edges.  
-  – Independence Test Choice: Selecting a more advanced non-linear test (e.g., “kci” or “fastkci”) can improve detection of complex relationships but typically increases computation.  
+• Sensitivity to Changes  
+  – Small shifts around the default (e.g., from 10 to 8 or 12) may mildly alter the number of discovered edges. However, larger swings (e.g., from 10 down to 2, or up to 20+) can drastically change both the runtime and the number of inferred causal connections.  
+  – According to the benchmarking data, FGES can show moderate variability in performance under different parameter configurations, but it remains relatively stable if parameters are tuned within a sensible range.  
 
 • Critique/Extension  
-  – For InterIAMB, most of the effect is from parameters controlling the significance testing step (especially α), rather than from search complexity parameters (it follows an iterative MB strategy). Thus, adjustments in significance threshold often dominate performance changes in practice.  
+  – Parameters affecting search complexity (e.g., if search depth or heuristic flags were exposed) directly impact runtime and how exhaustively FGES explores the graph space.  
+  – The sparsity parameter more directly influences the scoring function’s trade-off between model complexity and fit.  
 
-────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 2. Robustness & Scalability
-────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 
 • Tolerance to Bad Data Quality  
-  – Missing Data: Benchmarks suggest InterIAMB is not particularly robust when data are missing at random in large portions, indicating a drop in performance and efficiency compared to scenarios without missing data. Handling missingness usually requires either imputation or specialized independence tests, neither of which is a built-in feature of the standard InterIAMB formulation.  
-  – Measurement/Observation Error: In the presence of moderate noise or errors, InterIAMB tends to remain fairly stable, but severe measurement error can compromise the correctness of the conditional independence checks—leading to more false edges or missing edges in the identified MB.  
+  – Missing Data: The benchmark summary suggests FGES does not rank strongly under high rates of missing data. It can still run, but performance typically drops if the user does not employ external imputation or specialized handling.  
+  – Measurement/Observation Error: FGES appears moderately tolerant to mild noise but sensitive to high levels of measurement error. The benchmarking data (“Measurement Error” category) indicates it tends to be at an intermediate or lower tier of performance when error rates soar.  
 
 • Tolerance to Sparse/Dense Connected Systems  
-  – Overall, InterIAMB’s performance is typically quite solid for moderately dense networks. For highly sparse networks, it can sometimes require carefully tuning α since the algorithm might be overly conservative and fail to detect weaker associations. Conversely, in highly dense networks, the iterative MB approach can become more computationally expensive as more variables must be checked for conditional independence.  
+  – FGES often excels in relatively sparse networks, as the scoring-based approach efficiently prunes edges. For highly dense or complex graphs, performance can still be good but may require more careful parameter tuning and more computational time.  
+  – Benchmark trends show FGES doesn’t sharply degrade in moderately dense networks, though extremely dense structures may slow the search.  
 
 • Scalability  
-  – Sample Size: InterIAMB can process thousands of samples efficiently, particularly with optimized independence tests. However, extremely large sample sizes (>10,000) often warrant a stricter α to limit false positives.  
-  – Number of Variables: InterIAMB improves on the original IAMB, but can still encounter computational bottlenecks with very high-dimensional data. Some parallelized or optimized implementations exist, which help scale to larger variable sets by parallel independence testing.  
+  – FGES is praised for its ability to scale to thousands of variables, particularly when the underlying data-generating graph is not overly dense.  
+  – In practice, the provided benchmarks indicate FGES’s efficiency is in a middle-to-favorable range compared to other algorithms, but once the number of variables grows very large, ensuring sufficient computational resources (CPU cores, memory) becomes essential.  
 
 • Critique/Extension  
-  – Parallelization: Because InterIAMB’s main cost arises from repeated conditional independence tests, parallel or distributed strategies can alleviate runtime issues in large datasets if computing resources permit.  
+  – FGES can often be parallelized, which significantly reduces runtime on multi-core machines.  
+  – For extremely large datasets with many variables, users sometimes employ approximate or heuristic versions of FGES that prune edges early or limit search depth.  
 
-────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 3. Mixed Data & Complex Functions
-────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 
 • Noise Type  
-  – InterIAMB itself does not strictly assume Gaussian noise; rather, the performance depends on the independence tests. If the user chooses “fisherz,” a linear-Gaussian assumption is made. For more general or non-Gaussian data, tests like “kci” or “rcit” allow detecting more complex dependencies.  
+  – Classic FGES implementations generally assume Gaussian noise for continuous variables. This assumption can be robust for moderate noise, but extremely non-Gaussian distributions may reduce accuracy unless specialized tests or scores are integrated.  
 
 • Mixed Data (Continuous & Discrete)  
-  – The algorithm can accommodate both types of variables by selecting, for instance, “gsq” or other specialized tests. The recommended practice is to carefully match data types to an appropriate test method so that the underlying assumptions are not violated.  
+  – Standard FGES variants typically handle continuous or discrete data (with separate scoring functions such as BIC on Gaussians vs. BDeu on discrete). Some libraries provide a “mixed” scoring approach, though it may require advanced configuration.  
+  – Users aiming to combine continuous and discrete variables sometimes turn to specialized FGES extensions that adapt the scoring function accordingly.  
 
 • Heterogeneous Data  
-  – Benchmarks reflect moderate performance for heterogeneous datasets (e.g., multiple types of variables). InterIAMB can handle such data if the independence test is chosen appropriately, but advanced scenarios (massive amounts of unbalanced continuous/discrete variables) might require more carefully tuned hyperparameters or specialized tests.  
+  – According to the benchmarks (“Heterogeneity” category), FGES maintains moderate performance and efficiency across varying data sources, as long as users consistently handle or merge the data into a single table.  
+  – Distribution shifts across datasets may require caution, since FGES typically assumes a single underlying causal structure for the entire dataset.  
 
 • Complex Functional Forms  
-  – In principle, InterIAMB can uncover non-linear associations if a corresponding non-linear independence test is used. However, if a purely linear test (“fisherz”) is chosen, strong non-linear relationships may be missed or misinterpreted.  
+  – Out of the box, standard FGES is most comfortable with linear relationships. Strongly nonlinear causal links might be approximated but not perfectly captured by linear or discrete scoring.  
+  – Community forums suggest users sometimes replace the default scoring function with a more flexible or nonparametric alternative, though that is not always plug-and-play.  
 
 • Critique/Extension  
-  – As a constraint-based method, InterIAMB does not inherently model functional forms; it relies on the independence test’s ability to detect conditional dependencies. To capture very complex relationships, users are advised to select robust non-linear tests (e.g., “kci,” “rcit”).  
+  – When confronted with significantly nonlinear phenomena, adding domain knowledge or using extended FGES variants (e.g., kernel-based independence tests) may be advisable.  
+  – Overfitting can occur if the search is too permissive, especially under a high penalty discount (low sparsity).  
 
-────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 4. Computational Complexity
-────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 
 • Theoretical Time Complexity  
-  – The complexity is often cited as <temp>[O(n^2)]</temp> in many references, though in practice it can grow faster if repeated independence tests become more extensive for large n or for complex network structures.  
+  – Commonly cited as <temp>[O(p^2 × n_log(n))]</temp> or a similar polynomial function, depending on implementation. Exact expressions vary, but many references describe FGES as roughly quadratic in the number of variables (p), with additional factors for sample size (n) and repeated scoring.  
+  – The provided external information indicates FGES has proven feasible on extremely large datasets, although the worst-case complexity can still be high if numerous potential edges are retained.  
 
 • Variability in Practical Usage  
-  – Increasing the number of variables or choosing more computationally heavy tests (e.g., kernel-based ones) can significantly expand runtime. Tighter α thresholds can also add overhead by requiring additional checks to confirm or reject a conditional independence.  
-  – In benchmarks, InterIAMB was not the slowest method tested but does experience performance degradation with many variables and repeated conditional testing.  
+  – Search constraints (e.g., limiting maximum parent set size or search depth) can drastically cut computational cost.  
+  – Parallelization further reduces wall-clock time, a recommended approach if the dataset is large.  
 
 • Critique/Extension  
-  – InterIAMB’s worst-case behavior can be higher than the quoted O(n^2) depending on the network’s connectivity and iterative test expansions. Typical implementations, however, are optimized for average-case performance.  
-  – Modern computing platforms (multi-core, GPU) can reduce bottlenecks if code is parallelized for independence tests.  
+  – Worst-case run times can be higher than typical usage if the number of edges tested is very high and no speedups are employed.  
+  – Heuristic speedups, especially early-edge pruning, can bring the practical runtime closer to manageable levels for large-scale data.  
 
-────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 5. Interpretability
-────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 
 • Output Format  
-  – Rather than outputting a full causal structure (like a DAG), InterIAMB focuses on the Markov blanket for each target variable: the minimal set of variables that shield the target from all other variables.  
+  – FGES typically produces a partially directed acyclic graph (PDAG) or CPDAG, in which some edges are oriented while others may remain ambiguous (undirected).  
+  – Users can also convert this to adjacency matrices with confidence scores if the software supports scoring edges in detail.  
 
 • Strength of the Output Format  
-  – The Markov blanket is highly interpretable: users see exactly which variables are directly relevant (parents, children, and co-parents) to a target. This can be ideal for feature selection or local neighborhood discovery in a causal sense.  
+  – Graphical outputs (via adjacency lists or GraphML file formats) are generally intuitive for domain experts, making it easier to visualize and discuss potential causal paths.  
 
 • Limitations of the Output Format  
-  – The direction or orientation of edges is not inherently guaranteed. Thus, while InterIAMB indicates local dependencies, it does not by itself fully resolve causal directions or detect hidden confounders.  
-  – Confidence metrics or p-values for edges can be parsed from the conditional independence tests, but are not always aggregated in a single “score.”  
+  – FGES often leaves certain edges undirected if the direction is not definitively supported by statistical evidence.  
+  – Confidence intervals or p-values for edges may not be directly reported in certain toolkits; users wanting uncertainty measures sometimes need additional bootstrap or resampling procedures.  
 
 • Critique/Extension  
-  – For broader causal conclusions, many users combine InterIAMB with a separate orientation step (e.g., a scoring-based method or domain-expert input). This pipeline approach often yields improved interpretability of causal relations.  
+  – Post-processing or domain knowledge can help orient ambiguous edges.  
+  – Some practitioners supplement FGES outputs with more sophisticated or domain-tailored constraint checks to refine orientation.  
 
-────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 6. Assumptions
-────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 
 • Critical Assumptions  
-  – Causal Sufficiency: No significant latent confounders that connect variables in unobserved ways.  
-  – Markov Condition: Each variable is conditionally independent of its non-descendants given its parents.  
-  – Faithfulness (or “No cancellations”): The observed independencies in the data reflect the true underlying causal structure.  
+  – Causal Markov and Faithfulness: The observed independencies are assumed to faithfully represent the underlying causal structure.  
+  – Causal Sufficiency: All relevant causes of the variables are measured (i.e., no major hidden confounders).  
+  – No Cycles: The true causal structure is assumed to be acyclic.  
+  – Data Generation Process: For continuous data, linear-Gaussian relationships are typically assumed unless otherwise modified.  
 
 • Violation Impact  
-  – Violating causal sufficiency or faithfulness can degrade correctness of the discovered MB. This might result in missing edges or spurious associations if hidden confounders violate these assumptions.  
-  – In some community-reported evaluations, small omissions to faithfulness did not drastically degrade InterIAMB, but major violations (e.g., strong confounding) caused significant inaccuracies.  
+  – Missing or unmodeled confounders can result in erroneous edge directions or spurious connections.  
+  – Strong non-linearities may reduce accuracy if only standard linear scoring is used.  
 
 • Critique/Extension  
-  – Certain InterIAMB variants relax these assumptions partially, but the standard InterIAMB remains a constraint-based approach relying heavily on them. Users encountering potential hidden confounding often resort to domain knowledge or extended algorithms for adjustments.  
+  – If hidden confounding is suspected, one might move to FGES variants that allow latent variables (e.g., GFCI).  
+  – Moderate violations of faithfulness often lead to small performance drops, but severe violations undercut the reliability of the discovered structure.  
 
-────────────────────────────────────────────────────────
-7. (Optional) Real-World Benchmarks
-────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
+7. Real-World Benchmarks (Optional)
+────────────────────────────────────────────────────────────────────────
 
 • Performance on Real Datasets  
-  – InterIAMB has performed competitively in several MB discovery benchmarks, frequently matching or outperforming earlier IAMB variants. In moderately sized real-world datasets, it often demonstrates a good balance between precision (avoiding false edges) and recall (identifying true associations).  
-  – Compared to specialized high-dimensional methods, InterIAMB can be outpaced when the number of variables becomes extremely large, but remains quite practical for many standard real-world settings.  
+  – In various broad benchmarks, FGES often places in an upper-mid range regarding both speed and structural accuracy.  
+  – It has been successfully deployed for high-dimensional tasks in fields like neuroscience and genomics, often producing clearer structures than simpler constraint-based methods when sample sizes are sufficiently large.  
 
 • Practical Tips  
-  – Combining InterIAMB with a subsequent orientation step or domain expertise is often recommended to interpret directions.  
-  – Users handling data with highly non-linear relationships frequently choose a kernel-based, non-linear independence test.  
-  – Missing data remain a common pitfall; pre-processing or specialized tests can alleviate performance dips.  
+  – Users commonly rely on parallel processing to keep runtime manageable with many variables.  
+  – Incorporating domain knowledge (e.g., known biologically relevant pathways in genomics) can help prune the search space and clarify ambiguous edges.  
+  – Care must be taken with large or messy real-world data sets containing missingness, as FGES may need explicit data preprocessing.  
 
-────────────────────────────────────────────────────────
-Final Remarks
-────────────────────────────────────────────────────────
-InterIAMB is a notable variant of the IAMB family, offering iterative refinements that often improve speed and accuracy over the original. Its main hyperparameter, α, is easy to tune based on data size, and its flexible independence test options allow it to handle various data types or noise structures. The algorithm works well for moderate-dimensional problems and moderate levels of missing or noisy data, especially if paired with robust tests and parallel computing resources. However, it does not natively provide edge orientations or handle severe assumption violations, so further post-processing or hybrid approaches may be required for complete causal insights.────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
+Overall Summary
+────────────────────────────────────────────────────────────────────────
+FGES is a well-regarded scoring-based causal discovery algorithm that scales efficiently to large numbers of variables, especially in relatively sparse causal networks. Its key “sparsity” (penalty discount) parameter is crucial for balancing graph complexity and model fit, and is relatively straightforward to tune around sensible defaults. FGES’s reliance on linear-Gaussian assumptions (for continuous data) and its assumption of no hidden confounders are important limitations; however, the algorithm’s speed and the clarity of its partially directed graphical outputs make it a popular choice in real-world applications. For best results, users often combine FGES with parallelization techniques, data-cleaning/preprocessing steps, and (when possible) domain knowledge to confirm or refine ambiguously oriented edges.────────────────────────────────────────────────────────
 Benchmarking Results
 ────────────────────────────────────────────────────────
 
@@ -655,20 +814,20 @@ Benchmarking Results
 
 | Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
 |----------|-----------|---------|-------------|------------|------------|
-| Scalability | 7.0 | 2.77 | 4.0 | 4.0 | 5.0 |
-| Heterogeneity | 6.2 | 2.17 | 3.0 | 2.0 | 3.0 |
-| Measurement Error | 10.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-| Noise Type | 7.5 | 2.50 | 3.0 | 3.0 | 3.0 |
-| Missing Data | 10.0 | 0.00 | 3.0 | 2.0 | 3.0 |
+| Scalability | 8.4 | 4.14 | 2.0 | 5.0 | 2.0 |
+| Heterogeneity | 9.8 | 1.30 | 2.0 | 3.0 | 2.0 |
+| Measurement Error | 12.0 | 0.00 | 2.0 | 3.0 | 2.0 |
+| Noise Type | 11.5 | 0.50 | 2.0 | 5.0 | 2.0 |
+| Missing Data | 12.0 | 0.00 | 2.0 | 3.0 | 2.0 |
 
 • Analysis
 
-  – Overall mean ranking across 5 scenarios: 8.15
-  – Average standard deviation: 1.49
+  – Overall mean ranking across 5 scenarios: 10.74
+  – Average standard deviation: 1.19
 
 • Key Observations
   – Moderately stable performance across scenarios
-  – Best performance in Heterogeneity scenario (rank 6.2)
+  – Best performance in Scalability scenario (rank 8.4)
 
 *Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
 
@@ -687,20 +846,20 @@ Benchmarking Results
 
 | Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
 |----------|-----------|---------|-------------|------------|------------|
-| Scalability | 7.0 | 2.77 | 4.0 | 4.0 | 5.0 |
-| Heterogeneity | 6.2 | 2.17 | 3.0 | 2.0 | 3.0 |
-| Measurement Error | 10.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-| Noise Type | 7.5 | 2.50 | 3.0 | 3.0 | 3.0 |
-| Missing Data | 10.0 | 0.00 | 3.0 | 2.0 | 3.0 |
+| Scalability | 8.4 | 4.14 | 2.0 | 5.0 | 2.0 |
+| Heterogeneity | 9.8 | 1.30 | 2.0 | 3.0 | 2.0 |
+| Measurement Error | 12.0 | 0.00 | 2.0 | 3.0 | 2.0 |
+| Noise Type | 11.5 | 0.50 | 2.0 | 5.0 | 2.0 |
+| Missing Data | 12.0 | 0.00 | 2.0 | 3.0 | 2.0 |
 
 • Analysis
 
-  – Overall mean ranking across 5 scenarios: 8.15
-  – Average standard deviation: 1.49
+  – Overall mean ranking across 5 scenarios: 10.74
+  – Average standard deviation: 1.19
 
 • Key Observations
   – Moderately stable performance across scenarios
-  – Best performance in Heterogeneity scenario (rank 6.2)
+  – Best performance in Scalability scenario (rank 8.4)
 
 *Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
 
@@ -719,20 +878,254 @@ Benchmarking Results
 
 | Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
 |----------|-----------|---------|-------------|------------|------------|
-| Scalability | 7.0 | 2.77 | 4.0 | 4.0 | 5.0 |
-| Heterogeneity | 6.2 | 2.17 | 3.0 | 2.0 | 3.0 |
-| Measurement Error | 10.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-| Noise Type | 7.5 | 2.50 | 3.0 | 3.0 | 3.0 |
-| Missing Data | 10.0 | 0.00 | 3.0 | 2.0 | 3.0 |
+| Scalability | 8.4 | 4.14 | 2.0 | 5.0 | 2.0 |
+| Heterogeneity | 9.8 | 1.30 | 2.0 | 3.0 | 2.0 |
+| Measurement Error | 12.0 | 0.00 | 2.0 | 3.0 | 2.0 |
+| Noise Type | 11.5 | 0.50 | 2.0 | 5.0 | 2.0 |
+| Missing Data | 12.0 | 0.00 | 2.0 | 3.0 | 2.0 |
 
 • Analysis
 
-  – Overall mean ranking across 5 scenarios: 8.15
-  – Average standard deviation: 1.49
+  – Overall mean ranking across 5 scenarios: 10.74
+  – Average standard deviation: 1.19
 
 • Key Observations
   – Moderately stable performance across scenarios
-  – Best performance in Heterogeneity scenario (rank 6.2)
+  – Best performance in Scalability scenario (rank 8.4)
+
+*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
+
+
+# GOLEM
+
+Below is a seven‑part profile of the GOLEM causal discovery algorithm, synthesizing the provided hyperparameter definitions (File #1), benchmarking results (File #2), external information (File #3), and general knowledge of causal discovery methods.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Hyper-Parameters Sensitivity
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Number of Key Hyperparameters  
+  GOLEM, as presented, has three principal hyperparameters:
+  1) λ₁ (lambda_1): L1 regularization weight on the adjacency matrix.  
+  2) num_iter: The maximum number of iterations in the optimization routine.  
+  3) graph_thres: A threshold for pruning edges in the learned adjacency matrix.
+
+• Tuning Difficulty  
+  – Default and Suggested Values:  
+    The default for λ₁ is 0.01, with sparser or denser graphs encouraged by values 0.1 or 0.001, respectively. num_iter defaults to 10,000 but can be increased if the graph is more complex or if learning non-trivial functional relationships (50,000 to 100,000). graph_thres typically defaults to 0.3 and can be raised (e.g., 0.5) to prune weaker edges or lowered (e.g., 0.1) to keep more edges.  
+  – Who Can Tune:  
+    In many cases, domain experts or automated tuning approaches (including LLMs) can set these parameters based on practical constraints (e.g., target sparsity level or runtime limits).
+
+• Sensitivity  
+  – λ₁ (lambda_1): Even modest changes can shift the discovered structure toward fewer or more edges. In scenarios where λ₁ is too large, important causal links might be pruned. When too small, the algorithm may infer overly dense graphs.  
+  – num_iter: Under certain benchmark settings, insufficient iterations can degrade the final structure’s accuracy, while very large values lead to longer runtimes with diminishing returns in performance.  
+  – graph_thres: Acts as a final filter for edge selection. A higher threshold can produce fewer edges and reduce false positives, but risks discarding weaker true links.  
+
+• Critique/Extension  
+  – Graph-Search vs. Statistical Regularization:  
+    λ₁ directly affects the optimization objective and hence the overall graph sparsity, while graph_thres is a simpler post-processing cut-off that can drastically alter the final adjacency matrix. By contrast, num_iter primarily governs how thoroughly the algorithm converges to a solution.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. Robustness & Scalability
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Tolerance to Bad Data Quality  
+  – Missing Data:  
+    From the benchmarking results, GOLEM shows a moderate to good composite score when data are partially missing. It can handle missingness reasonably well but may require imputation or a carefully designed data preprocessing step to maintain consistency.  
+  – Measurement/Observation Error:  
+    The algorithm’s performance metrics under moderate noise are fairly strong, indicating it remains stable. Severe measurement error can still degrade performance, but benchmark evidence suggests it handles such noise at least comparably to other popular methods.
+
+• Tolerance to Sparse/Dense Connected Systems  
+  – In extremely sparse networks, a suitably larger λ₁ or higher graph_thres can help reduce false positives.  
+  – In denser networks, adopting a smaller λ₁ or lowering graph_thres can uncover more edges, though it may increase runtime and the risk of overfitting.
+
+• Scalability  
+  – GOLEM shows decent performance for moderately high-dimensional datasets, but according to one efficiency metric from the benchmarks, it may be less resource-efficient than some competitors.  
+  – For extremely large numbers of variables, runtime can spike—especially if num_iter is also set very high. Practitioners often tune these settings or apply warm starts to manage complexity.
+
+• Critique/Extension  
+  – Parallelization or Approximation Strategies:  
+    While not necessarily built in by default, the gradient-based nature of GOLEM could, in principle, benefit from distributed optimization across multiple cores or machines. Some users combine adjacency-threshold techniques with mini-batch approaches to manage memory usage on very large datasets.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. Mixed Data & Complex Functions
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Noise Type  
+  – Benchmarks suggest GOLEM adapts to various noise distributions (including non-Gaussian), though it may trade off some computational efficiency if the noise is highly non-standard.  
+  – A strong “performance” level for noise handling (as shown in the benchmark’s composite rating) indicates it recovers edges reliably even under moderate departures from Gaussian assumptions.
+
+• Mixed Data: Continuous & Discrete  
+  – GOLEM is primarily designed for continuous data under a differentiable structural equation modeling framework.  
+  – Extensions or custom modifications could handle mixed data, but such usage typically requires specialized modifications to the learning objective or the independence-testing modules.
+
+• Heterogeneous Data  
+  – The benchmark results labeled “Heterogeneity” signal that GOLEM can operate with shifts or variations in distributions, scoring relatively high. However, large domain shifts (e.g., drastically different variable scales) may still need careful normalization or weighting schemes.
+
+• Complex Functional Forms  
+  – The default GOLEM formulation is well-suited to linear or mildly non-linear relationships. In practice, it can detect non-linearities if the user’s implementation includes appropriate penalty structures or transformations of the variables.  
+  – Overfitting concerns arise if one lowers λ₁ too aggressively on small samples, potentially forcing the algorithm to fit intricate but spurious relationships.
+
+• Critique/Extension  
+  – Most standard GOLEM implementations target a linear or partly non-linear SEM. For highly non-linear real-world phenomena, domain experts sometimes add non-linear basis expansions or kernels to strengthen the algorithm’s expressiveness.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. Computational Complexity
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Theoretical Time Complexity  
+  A common expression for gradient-based DAG learning like GOLEM may be represented as:  
+  <temp>[O(d² · n · α)]</temp>  
+  Here, d is the number of variables, n is the sample size, and α captures overhead from iterative optimization. The exact form can vary based on the implementation details and optimization approach.
+
+• Variability in Practical Usage  
+  – Increasing num_iter raises computational time proportionally, as more gradient steps are taken.  
+  – Larger λ₁ (i.e., stronger regularization) can sometimes lead to faster convergence (fewer edges to optimize), while smaller λ₁ generally requires more fine-grained optimization.
+
+• Critique/Extension  
+  – Worst-case scenarios can grow quickly in complexity, albeit typical real-world usage might remain within polynomial time for moderate d.  
+  – If employing parallel or GPU-based methods, the practical runtime can be significantly reduced, but naive single-threaded operation may be relatively slow for large d.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. Interpretability
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Output Format  
+  – GOLEM typically returns a weighted adjacency matrix from which the user extracts a directed acyclic graph (DAG) via a threshold step (graph_thres).
+
+• Strength of the Output Format  
+  – The adjacency matrix is straightforward to interpret: each cell’s value indicates the discovered influence from one variable to another.  
+  – Users often appreciate direct control over the threshold that yields a final binary adjacency.
+
+• Limitations of the Output Format  
+  – If the threshold is ill-chosen, important edges might be pruned (or unimportant edges retained).  
+  – GOLEM does not inherently provide p-values or confidence intervals; instead, it relies on the optimization landscape dictated by the regularization terms.
+
+• Critique/Extension  
+  – Practitioners commonly supplement the adjacency matrix output with domain knowledge or further stability selection techniques (e.g., re-running the algorithm on bootstrapped samples) to increase orientation confidence.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. Assumptions
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Critical Assumptions  
+  – The causal relationships among variables can be represented by a DAG (Markov and faithfulness conditions).  
+  – Causal sufficiency: typically assumes no unmeasured confounders.  
+  – Errors or noise terms are often treated as independent across variables (though GOLEM can be robust to moderate deviations).
+
+• Violation Impact  
+  – If hidden confounders or strong feedback loops exist, performance can deteriorate, leading to mis-specified or partially oriented edges.  
+  – When the faithfulness condition is violated (e.g., canceling effects in the data), many causal discovery methods—including GOLEM—may struggle to identify the true structure.
+
+• Critique/Extension  
+  – Some implementations incorporate penalty adjustments or domain input for partial confounder correction.  
+  – Mild assumption violations often degrade results gradually; severe violations can invalidate critical parts of the inferred graph.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. Real-World Benchmarks
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Performance on Real Datasets  
+  – According to the summary data (File #2), GOLEM has overall mid-to-high scores on a variety of empirical benchmarks involving missing data, measurement noise, and heterogeneous sources. Its performance is typically competitive with other state-of-the-art approaches for structure learning.
+
+• Practical Tips  
+  – Users frequently set a moderate λ₁ for typical usage, then refine graph_thres based on domain knowledge of likely causal strengths.  
+  – Parallelizing gradient steps or restricting search depth can mitigate runtime overhead on larger datasets.  
+  – Overly small λ₁ sometimes leads to denser, less interpretable graphs—so pilot runs and domain insight help optimize hyperparameters for clarity and accuracy.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Overall, GOLEM is a gradient-based causal discovery algorithm that balances regularization with iterative optimization to recover causal structures. It is moderately robust to data imperfections, supports adjustable sparsity (through λ₁ and graph_thres), and can scale to a fair number of variables if tuned properly. Its reliance on standard DAG assumptions is typical in causal discovery, and while it offers a direct adjacency matrix output, users may wish to combine it with domain expertise or post-processing methods to finalize and interpret causal edges.────────────────────────────────────────────────────────
+Benchmarking Results
+────────────────────────────────────────────────────────
+
+• Comparative Performance
+  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
+  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+  – Metrics are scored from 1-5, with 5 being the best.
+
+• Algorithm Rankings
+
+| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
+|----------|-----------|---------|-------------|------------|------------|
+| Scalability | 5.2 | 5.95 | 4.0 | 2.0 | 4.0 |
+| Heterogeneity | 3.0 | 1.73 | 4.0 | 5.0 | 4.0 |
+| Measurement Error | 6.0 | 0.00 | 4.0 | 4.0 | 4.0 |
+| Noise Type | 4.0 | 2.00 | 5.0 | 2.0 | 5.0 |
+| Missing Data | 6.0 | 0.00 | 4.0 | 4.0 | 4.0 |
+
+• Analysis
+
+  – Overall mean ranking across 5 scenarios: 4.85
+  – Average standard deviation: 1.94
+
+• Key Observations
+  – Moderately stable performance across scenarios
+  – Best performance in Heterogeneity scenario (rank 3.0)
+
+*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
+
+
+────────────────────────────────────────────────────────
+Benchmarking Results
+────────────────────────────────────────────────────────
+
+• Comparative Performance
+  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
+  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+  – Metrics are scored from 1-5, with 5 being the best.
+
+• Algorithm Rankings
+
+| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
+|----------|-----------|---------|-------------|------------|------------|
+| Scalability | 5.2 | 5.95 | 4.0 | 2.0 | 4.0 |
+| Heterogeneity | 3.0 | 1.73 | 4.0 | 5.0 | 4.0 |
+| Measurement Error | 6.0 | 0.00 | 4.0 | 4.0 | 4.0 |
+| Noise Type | 4.0 | 2.00 | 5.0 | 2.0 | 5.0 |
+| Missing Data | 6.0 | 0.00 | 4.0 | 4.0 | 4.0 |
+
+• Analysis
+
+  – Overall mean ranking across 5 scenarios: 4.85
+  – Average standard deviation: 1.94
+
+• Key Observations
+  – Moderately stable performance across scenarios
+  – Best performance in Heterogeneity scenario (rank 3.0)
+
+*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
+
+
+────────────────────────────────────────────────────────
+Benchmarking Results
+────────────────────────────────────────────────────────
+
+• Comparative Performance
+  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
+  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+  – Metrics are scored from 1-5, with 5 being the best.
+
+• Algorithm Rankings
+
+| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
+|----------|-----------|---------|-------------|------------|------------|
+| Scalability | 5.2 | 5.95 | 4.0 | 2.0 | 4.0 |
+| Heterogeneity | 3.0 | 1.73 | 4.0 | 5.0 | 4.0 |
+| Measurement Error | 6.0 | 0.00 | 4.0 | 4.0 | 4.0 |
+| Noise Type | 4.0 | 2.00 | 5.0 | 2.0 | 5.0 |
+| Missing Data | 6.0 | 0.00 | 4.0 | 4.0 | 4.0 |
+
+• Analysis
+
+  – Overall mean ranking across 5 scenarios: 4.85
+  – Average standard deviation: 1.94
+
+• Key Observations
+  – Moderately stable performance across scenarios
+  – Best performance in Heterogeneity scenario (rank 3.0)
 
 *Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
 

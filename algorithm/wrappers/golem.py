@@ -70,11 +70,11 @@ class GOLEM(CausalDiscoveryAlgorithm):
         adj_matrix = model.causal_matrix.T
 
         info = {
-            'model': model,
+            'adj_matrix': adj_matrix,
             'node_names': node_names
         }
 
-        return adj_matrix, info, model
+        return adj_matrix, info, adj_matrix
 
     def test_algorithm(self):
         # Generate sample data
