@@ -26,7 +26,7 @@ class UserData:
     drop_important_var: Optional[bool] = None
     meaningful_feature: Optional[bool] = None
     heterogeneity: Optional[str] = None
-    accept_CPDAG: Optional[bool] = None
+    accept_CPDAG: Optional[bool] = True
 
 @dataclass
 class Statistics:

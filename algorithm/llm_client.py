@@ -4,14 +4,10 @@ from openai import OpenAI
 
 class LLMClient:
     def __init__(self, args):
-        self.client = OpenAI(
-            organization=args.organization, 
-            project=args.project, 
-            api_key=args.apikey
-        )
+        self.client = OpenAI()
         self.model = "gpt-4o-mini"  # Default model
 
-    def chat_completion(self, prompt, system_prompt="You are a helpful assistant.", json_response=False):
+    def chat_completion(self, prompt, system_prompt="You are a helpful assistant.", json_response=False, model=None):
         """
         Send a chat completion request to the LLM.
         
@@ -29,7 +25,7 @@ class LLMClient:
         ]
         
         kwargs = {
-            "model": self.model,
+            "model": self.model if model is None else model,
             "messages": messages,
         }
         

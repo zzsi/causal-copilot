@@ -52,6 +52,8 @@ def kci_dask_cupy(X: int, Y: int, Z: list, data: da.Array, alpha: float, gamma: 
 
 # Fisher-Z with GPU acceleration using gpucsl
 def fisherz_gpu_gpucsl(data: np.ndarray, alpha: float, depth: int, node_names: list) -> Tuple[np.ndarray, Dict, CausalGraph]:
+    if depth < 0:
+        depth = data.shape[1]
     pc_result = GaussianPC(data, depth, alpha).set_distribution_specific_options().execute()
     ((directed_graph, separation_sets, _, _, _, _), pc_runtime) = pc_result
 
@@ -83,6 +85,8 @@ def fisherz_gpu_gpucsl(data: np.ndarray, alpha: float, depth: int, node_names: l
 
 # Chi-Square with GPU acceleration using gpucsl
 def chi_square_gpu_gpucsl(data: np.ndarray, alpha: float, depth: int, node_names: list) -> Tuple[np.ndarray, Dict, CausalGraph]:
+    if depth < 0:
+        depth = data.shape[1]
     pc_result = DiscretePC(data, depth, alpha).set_distribution_specific_options().execute()
     ((directed_graph, separation_sets, _, _, _, _), pc_runtime) = pc_result
     # Convert directed graph to adjacency matrix

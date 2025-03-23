@@ -16,7 +16,7 @@ Based on the above information, please select the best-suited algorithm from the
 
 ===============================================
 Note that the user can only wait for [WAIT_TIME] minutes for the algorithm execution, please ensure the time cost of the selected algorithm would not exceed it!
-The estimated time costs of the following algorithms are below. Consider the time cost wisely when selecting the algorithm, it is critical but less important than the performance when the time cost does not exceed the waiting time, the importance ratio to the performance is 1:2:
+The estimated time costs of the following algorithms are below. Consider the time cost wisely when selecting the algorithm, it is critical but less important than the performance when the time cost does not exceed the waiting time. As long as the timecost difference is not that large (> 1 min), you should pivot more on the performance.
 
 [TIME_INFO]
 
@@ -27,7 +27,7 @@ Detailed Profiles of the algorithm candidates are shown here. You MUST actively 
 
 ===============================================
 
-Think in-depth and thoroughly step by step. Please include the reasoning process, the ultimate reason why the picked algorithm beats the others and finally the selected algorithm in the JSON format. Do not return any other text or comments:
+Think in-depth and thoroughly step by step. Please include the reasoning process, the ultimate reason why the picked algorithm beats the others and finally the selected algorithm in the JSON format. Cite/Quote quantity/number and references for the evidences of analyzing using one specific algorithm or not. Do not return any other text or comments:
 
 {
   "reasoning": "reasoning process",

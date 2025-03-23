@@ -10,16 +10,33 @@ And the following statistics:
 All candidate algorithms, their descriptions and tags:
 [ALGO_CONTEXT]
 
-Please choose the top [TOP_K] most suitable causal discovery algorithms for the data user provided and explain why these algorithms were chosen over the others.
+Please choose the most suitable causal discovery algorithms up to top [TOP_K], for the data user provided and explain why these algorithms were chosen over the others. For the unselected algorithms, illustrate the reasons for each of them, why we do not choose it.
 
 [CUDA_WARNING]
 
-The user accepts the output graph including undirected edges/undeterministic directions (CPDAG/PAG): [ACCEPT_CPDAG].
+[ACCEPT_CPDAG].
 
 Think in-depth and thoroughly step by step. Please include the justifications, the descriptions and finally the selected algorithms in a JSON object. For example:
 
 {
   "algorithms": [
+    {
+      "justification": "Explanation of why this algorithm is suitable for the given dataset.",
+      "description": "Brief description of the algorithm.", 
+      "name": "Algorithm Name",
+    },
+    {
+      "justification": "Explanation of why this algorithm is suitable for the given dataset.",
+      "description": "Brief description of the algorithm.", 
+      "name": "Algorithm Name",
+    },
+    {
+      "justification": "Explanation of why this algorithm is suitable for the given dataset.",
+      "description": "Brief description of the algorithm.", 
+      "name": "Algorithm Name",
+    }
+  ],
+  "algorithms_unwanted": [
     {
       "justification": "Explanation of why this algorithm is suitable for the given dataset.",
       "description": "Brief description of the algorithm.", 

@@ -1,6 +1,3 @@
-import json
-import os
-from openai import OpenAI
 from .hyperparameter_selector import HyperparameterSelector
 from .runtime_estimators.runtime_estimator import RuntimeEstimator
 from .llm_client import LLMClient
@@ -35,13 +32,13 @@ class Reranker:
         for algo in global_state.algorithm.algorithm_candidates:
             profile_path = f"algorithm/context/algos/{algo}.txt"
             with open(profile_path, "r", encoding="utf-8") as f:
-                algorithm_profiles += f"# {algo}\n\n" + f.read() + "\n\n"
+                algorithm_profiles += f"======================================\n\n" + f"# {algo}\n\n" + f.read() + "\n\n"
 
 
         replacements = {
             "[TABLE_NAME]": self.args.data_file,
             "[COLUMNS]": '\t'.join(global_state.user_data.processed_data.columns._data),
-            "[KNOWLEDGE_INFO]": global_state.user_data.knowledge_docs,
+            "[KNOWLEDGE_INFO]": str(global_state.user_data.knowledge_docs),
             "[STATISTICS_INFO]": global_state.statistics.description,
             "[ALGORITHM_CANDIDATES]": str(global_state.algorithm.algorithm_candidates.keys()),
             "[WAIT_TIME]": str(global_state.algorithm.waiting_minutes),
@@ -94,7 +91,7 @@ class Reranker:
         time_info = self.runtime_estimate(algo_candidates, global_state.statistics.sample_size, global_state.statistics.feature_number)
         
         prompt = self.create_prompt(global_state, algo_info, time_info)
-        output = self.llm_client.chat_completion(prompt, json_response=True)
+        output = self.llm_client.chat_completion(prompt, json_response=True, model="gpt-4o")
         print("-"*25, "\n", "The received answer for rerank is: ", "\n", output)
         selected_algo = output['algorithm']
         global_state.algorithm.algorithm_optimum = output

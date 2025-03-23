@@ -26,8 +26,6 @@ class AcceleratedCDNOD(CausalDiscoveryAlgorithm):
         self._params = {
             'alpha': 0.05,
             'indep_test': 'fisherz',
-            'uc_rule': 0,
-            'uc_priority': 2,
             'depth': -1,
         }
         self._params.update(params)
@@ -44,7 +42,7 @@ class AcceleratedCDNOD(CausalDiscoveryAlgorithm):
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def get_secondary_params(self):
-        secondary_param_keys = ['uc_rule', 'uc_priority']
+        secondary_param_keys = []
         return {k: v for k, v in self._params.items() if k in secondary_param_keys}
 
     def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, CausalGraph]:
@@ -58,28 +56,25 @@ class AcceleratedCDNOD(CausalDiscoveryAlgorithm):
         if 'domain_index' not in data.columns:
             raise ValueError("Dataset must contain a 'domain_index' column for CDNOD.")
         c_indx = data['domain_index'].values.reshape(-1, 1)
-
-        # **Append c_index to data before passing it to CDNOD**
-        data_aug = np.concatenate((data_values, c_indx), axis=1)
+        data = data.drop(columns=['domain_index'])
 
         # **Combine parameters**
         all_params = {**self.get_primary_params(), **self.get_secondary_params()}
 
         # **Run GPU-Accelerated CDNOD**
-        cg = accelerated_cdnod(data_aug, c_indx, **all_params)
+        cg = accelerated_cdnod(data, c_indx, **all_params)
 
         # **Convert graph to adjacency matrix**
         adj_matrix = self.convert_to_adjacency_matrix(cg)
 
         info = {
             'graph': cg,
-            'CDNOD_elapsed': cg.CDNOD_elapsed,
         }
 
         return adj_matrix, info, cg
 
     def convert_to_adjacency_matrix(self, cg: CausalGraph) -> np.ndarray:
-        adj_matrix = cg.G.graph
+        adj_matrix = cg[:-1, :-1]
         inferred_flat = np.zeros_like(adj_matrix)
         indices = np.where(adj_matrix == 1)
         for i, j in zip(indices[0], indices[1]):
@@ -100,31 +95,9 @@ class AcceleratedCDNOD(CausalDiscoveryAlgorithm):
                     inferred_flat[i, j] = 2
         return inferred_flat
 
-    def apply_orientation(self, cg: CausalGraph, c_indx: np.ndarray) -> CausalGraph:
-        """
-        Apply UCSepset & Meek rules to orient edges in CDNOD.
-        """
-        c_indx_id = c_indx.shape[1] - 1
-
-        # **Ensure `c_index` has directed edges to all adjacent nodes**
-        for i in cg.G.get_adjacent_nodes(cg.G.nodes[c_indx_id]):
-            cg.G.add_directed_edge(cg.G.nodes[c_indx_id], i)
-
-        uc_rule = self._params['uc_rule']
-        uc_priority = self._params['uc_priority']
-
-        if uc_rule == 0:
-            cg = UCSepset.uc_sepset(cg, uc_priority)
-        elif uc_rule == 1:
-            cg = UCSepset.maxp(cg, uc_priority)
-        elif uc_rule == 2:
-            cg = Meek.meek(UCSepset.definite_maxp(cg, self._params['alpha'], uc_priority))
-        else:
-            raise ValueError("uc_rule should be in [0, 1, 2]")
-
-        return cg
 
     def test_algorithm(self):
+        # Generate sample data with linear relationships
         np.random.seed(42)
         n_samples = 1000
         X1 = np.random.normal(0, 1, n_samples)
@@ -132,26 +105,35 @@ class AcceleratedCDNOD(CausalDiscoveryAlgorithm):
         X3 = 0.3 * X1 + 0.7 * X2 + np.random.normal(0, 0.3, n_samples)
         X4 = 0.6 * X2 + np.random.normal(0, 0.4, n_samples)
         X5 = 0.4 * X3 + 0.5 * X4 + np.random.normal(0, 0.2, n_samples)
-        domain_index = np.ones_like(X1)
 
-        df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5, 'domain_index': domain_index})
+        c = np.ones_like(X1)
+        
+        df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5, 'domain_index': c})
 
-        print("Testing Accelerated CDNOD with pandas DataFrame:")
+        print("Testing PC algorithm with pandas DataFrame:")
         params = {
             'alpha': 0.05,
             'depth': 2,
-            'uc_rule': 1,
-            'uc_priority': 2,
-            'verbose': False
+            'indep_test': 'fisherz',
+            'verbose': False,
+            'show_progress': False
         }
         adj_matrix, info, _ = self.fit(df)
-
         print("Adjacency Matrix:")
         print(adj_matrix)
-        print(f"CDNOD elapsed time: {info['CDNOD_elapsed']:.4f} seconds")
 
+        # Ground truth graph
+        gt_graph = np.array([
+            [0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0],
+            [1, 1, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 1, 1, 0]
+        ])
+
+        # Use GraphEvaluator to compute metrics
         evaluator = GraphEvaluator()
-        metrics = evaluator.compute_metrics(adj_matrix[:-1, :-1], adj_matrix[:-1, :-1])
+        metrics = evaluator.compute_metrics(gt_graph, adj_matrix)
 
         print("\nMetrics:")
         print(f"F1 Score: {metrics['f1']:.4f}")

@@ -230,7 +230,11 @@ Write a brief 1 paragraph analysis for the causal graph refutation test based on
 **Test Introduction**
 The results of falsify_graph show the output of two tests. The first measures whether the LMCs implied by the graph are satisfied by the data. It compares the number of LMCs violated by the given graph to the number of LMCs violated by random graphs. For a significance value of 0.05, if the number of LMC violations by the given graph is lower than the 5% best random graphs, then we do not reject the graph. The second test (tPa) checks whether the graph is falsifiable. That is, assuming that the given graph is correct, how many other graphs share the same number of LMC violations? Since the graph is assumed to be correct, the correct LMCs are those that are implied by the graph and hence the reference number of violations is zero. For a significance value of 0.05, if less than 5% of random graphs have zero LMC violations, then it indicates that the LMCs implied by the graph can falsify (or refute) the graph.
 """
+<<<<<<< HEAD
+        client = OpenAI()
+=======
         client = OpenAI(api_key=self.args.apikey)
+>>>>>>> c7a5867eaeecbeadc676a4828fc5eec15ef713e7
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[

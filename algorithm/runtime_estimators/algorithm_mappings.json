@@ -1,5 +1,6 @@
 {
     "AcceleratedPC": ["[root_dir]/externals/causal-learn/causallearn/search/ConstraintBased/PC.py", "[root_dir]/externals/causal-learn/causallearn/utils/PCUtils/SkeletonDiscovery.py"],
+    "PCParallel": ["https://github.com/huawei-noah/trustworthyAI/blob/master/gcastle/castle/algorithms/pc/pc.py#L255"],
     "BAMB": "[root_dir]/externals/pyCausalFS/CBD/MBs/BAMB.py",
     "GOLEM": "[root_dir]/externals/trustworthyAI/gcastle/castle/algorithms/gradient/notears/torch/golem.py",
     "GRaSP": "[root_dir]/externals/causal-learn/causallearn/search/PermutationBased/GRaSP.py",

@@ -121,37 +121,7 @@ Below is an in-depth profile of InterIAMB, organized around the seven dimensions
 ────────────────────────────────────────────────────────
 Final Remarks
 ────────────────────────────────────────────────────────
-InterIAMB is a notable variant of the IAMB family, offering iterative refinements that often improve speed and accuracy over the original. Its main hyperparameter, α, is easy to tune based on data size, and its flexible independence test options allow it to handle various data types or noise structures. The algorithm works well for moderate-dimensional problems and moderate levels of missing or noisy data, especially if paired with robust tests and parallel computing resources. However, it does not natively provide edge orientations or handle severe assumption violations, so further post-processing or hybrid approaches may be required for complete causal insights.────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 7.0 | 2.77 | 4.0 | 4.0 | 5.0 |
-| Heterogeneity | 6.2 | 2.17 | 3.0 | 2.0 | 3.0 |
-| Measurement Error | 10.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-| Noise Type | 7.5 | 2.50 | 3.0 | 3.0 | 3.0 |
-| Missing Data | 10.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 8.15
-  – Average standard deviation: 1.49
-
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Heterogeneity scenario (rank 6.2)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
+InterIAMB is a notable variant of the IAMB family, offering iterative refinements that often improve speed and accuracy over the original. Its main hyperparameter, α, is easy to tune based on data size, and its flexible independence test options allow it to handle various data types or noise structures. The algorithm works well for moderate-dimensional problems and moderate levels of missing or noisy data, especially if paired with robust tests and parallel computing resources. However, it does not natively provide edge orientations or handle severe assumption violations, so further post-processing or hybrid approaches may be required for complete causal insights.
 
 ────────────────────────────────────────────────────────
 Benchmarking Results
@@ -159,59 +129,24 @@ Benchmarking Results
 
 • Comparative Performance
   – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics, which are represented as level scores from 1-5, with 5 being the best.
+  – Levels scores of composite metrics combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+[NOTE] The ranking is smaller, the better. The level score is higher, the better.
 
 • Algorithm Rankings
 
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
+| Scenario | Rank (Mean) | Rank (Std Dev) | Performance (Level) | Efficiency (Level) | Composite (Level) |
 |----------|-----------|---------|-------------|------------|------------|
-| Scalability | 7.0 | 2.77 | 4.0 | 4.0 | 5.0 |
-| Heterogeneity | 6.2 | 2.17 | 3.0 | 2.0 | 3.0 |
-| Measurement Error | 10.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-| Noise Type | 7.5 | 2.50 | 3.0 | 3.0 | 3.0 |
-| Missing Data | 10.0 | 0.00 | 3.0 | 2.0 | 3.0 |
+| Scalability | 5.4 | 1.73 | 4.0 | 4.0 | 4.0 |
+| Heterogeneity | 3.2 | 1.09 | 5.0 | 3.0 | 5.0 |
+| Measurement Error | 5.0 | 0.00 | 4.0 | 3.0 | 4.0 |
+| Noise Type | 6.0 | 1.00 | 4.0 | 3.0 | 4.0 |
+| Missing Data | 2.2 | 1.64 | 5.0 | 3.0 | 5.0 |
+| Edge Probability | 6.3 | 2.62 | 4.0 | 3.0 | 4.0 |
+| Discrete Ratio | 5.0 | 0.00 | 4.0 | 3.0 | 4.0 |
 
 • Analysis
 
-  – Overall mean ranking across 5 scenarios: 8.15
-  – Average standard deviation: 1.49
+  – Overall mean ranking across 7 scenarios: 4.74
+  – Average standard deviation: 1.15
 
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Heterogeneity scenario (rank 6.2)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
-
-────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 7.0 | 2.77 | 4.0 | 4.0 | 5.0 |
-| Heterogeneity | 6.2 | 2.17 | 3.0 | 2.0 | 3.0 |
-| Measurement Error | 10.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-| Noise Type | 7.5 | 2.50 | 3.0 | 3.0 | 3.0 |
-| Missing Data | 10.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 8.15
-  – Average standard deviation: 1.49
-
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Heterogeneity scenario (rank 6.2)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*

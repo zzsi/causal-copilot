@@ -125,37 +125,7 @@ Below is a comprehensive profile of the XGES (Extremely Greedy Equivalence Searc
   – Some users report that while the algorithm is fast, interpreting partially directed edges or uncertain orientations can require extra effort or domain expertise.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Overall, XGES stands out as a promising evolution of the GES framework, prioritizing faster searches and improved recovery in denser causal networks. Its primary tuning lever, alpha, is user-friendly yet influential. Although XGES does not radically expand the family of data types or functional forms supported, it provides a solid basis for many real-world causal discovery tasks, particularly when combined with domain knowledge, robust data preprocessing, and, if needed, extensions to handle discrete or non-linear settings.────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 4.9 | 3.94 | 5.0 | 3.0 | 5.0 |
-| Heterogeneity | 8.5 | 2.60 | 3.0 | 2.0 | 3.0 |
-| Measurement Error | 9.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-| Noise Type | 6.5 | 2.50 | 4.0 | 3.0 | 4.0 |
-| Missing Data | 9.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 7.57
-  – Average standard deviation: 1.81
-
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Scalability scenario (rank 4.9)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
+Overall, XGES stands out as a promising evolution of the GES framework, prioritizing faster searches and improved recovery in denser causal networks. Its primary tuning lever, alpha, is user-friendly yet influential. Although XGES does not radically expand the family of data types or functional forms supported, it provides a solid basis for many real-world causal discovery tasks, particularly when combined with domain knowledge, robust data preprocessing, and, if needed, extensions to handle discrete or non-linear settings.
 
 ────────────────────────────────────────────────────────
 Benchmarking Results
@@ -163,59 +133,24 @@ Benchmarking Results
 
 • Comparative Performance
   – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics, which are represented as level scores from 1-5, with 5 being the best.
+  – Levels scores of composite metrics combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+[NOTE] The ranking is smaller, the better. The level score is higher, the better.
 
 • Algorithm Rankings
 
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
+| Scenario | Rank (Mean) | Rank (Std Dev) | Performance (Level) | Efficiency (Level) | Composite (Level) |
 |----------|-----------|---------|-------------|------------|------------|
-| Scalability | 4.9 | 3.94 | 5.0 | 3.0 | 5.0 |
-| Heterogeneity | 8.5 | 2.60 | 3.0 | 2.0 | 3.0 |
-| Measurement Error | 9.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-| Noise Type | 6.5 | 2.50 | 4.0 | 3.0 | 4.0 |
-| Missing Data | 9.0 | 0.00 | 3.0 | 2.0 | 3.0 |
+| Scalability | 6.8 | 4.24 | 5.0 | 3.0 | 5.0 |
+| Heterogeneity | 7.8 | 2.49 | 3.0 | 3.0 | 4.0 |
+| Measurement Error | 2.5 | 1.50 | 5.0 | 3.0 | 5.0 |
+| Noise Type | 4.5 | 0.50 | 5.0 | 3.0 | 5.0 |
+| Missing Data | 7.2 | 2.38 | 3.0 | 4.0 | 4.0 |
+| Edge Probability | 4.0 | 2.45 | 5.0 | 3.0 | 5.0 |
+| Discrete Ratio | 2.3 | 1.25 | 5.0 | 3.0 | 5.0 |
 
 • Analysis
 
-  – Overall mean ranking across 5 scenarios: 7.57
-  – Average standard deviation: 1.81
+  – Overall mean ranking across 7 scenarios: 5.01
+  – Average standard deviation: 2.11
 
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Scalability scenario (rank 4.9)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
-
-────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 4.9 | 3.94 | 5.0 | 3.0 | 5.0 |
-| Heterogeneity | 8.5 | 2.60 | 3.0 | 2.0 | 3.0 |
-| Measurement Error | 9.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-| Noise Type | 6.5 | 2.50 | 4.0 | 3.0 | 4.0 |
-| Missing Data | 9.0 | 0.00 | 3.0 | 2.0 | 3.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 7.57
-  – Average standard deviation: 1.81
-
-• Key Observations
-  – Moderately stable performance across scenarios
-  – Best performance in Scalability scenario (rank 4.9)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*

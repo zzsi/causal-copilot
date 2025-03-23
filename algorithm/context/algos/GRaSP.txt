@@ -135,37 +135,7 @@ Below is a consolidated profile of the GRaSP causal discovery algorithm, organiz
 ────────────────────────────────────────────────────────────────────────
 CONCLUSION
 ────────────────────────────────────────────────────────────────────────
-GRaSP emerges as a flexible causal discovery algorithm with two central hyperparameters—score_func (ranging from standard BIC/BDeu to more advanced nonparametric scores) and depth (controlling search breadth). Benchmarks indicate robust performance under missing data, noise, and heterogeneous conditions, although runtime can escalate when depth is set too high or when nonparametric scoring is enabled for large datasets. The algorithm’s output is a directed or partially directed graphical structure, which is generally interpretable but may require domain expertise to confirm edge orientations. Like most causal discovery tools, GRaSP assumes no unobserved confounders and that the data-generating processes follow certain Markov and faithfulness properties. Recent external references to a similarly named graph-based method in protein-ligand binding prediction suggest that graph-centric approaches can excel in complex, real-world settings—underscoring GRaSP’s promise for broader domain applications, provided that users are mindful of hyperparameter tuning and assumption checks.────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 2.5 | 0.96 | 5.0 | 2.0 | 5.0 |
-| Heterogeneity | 2.0 | 0.00 | 5.0 | 4.0 | 5.0 |
-| Measurement Error | 2.0 | 0.00 | 5.0 | 4.0 | 5.0 |
-| Noise Type | 2.0 | 0.00 | 5.0 | 2.0 | 5.0 |
-| Missing Data | 2.0 | 0.00 | 5.0 | 4.0 | 5.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 2.10
-  – Average standard deviation: 0.19
-
-• Key Observations
-  – Very stable performance across scenarios (low variance)
-  – Best performance in Heterogeneity scenario (rank 2.0)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
+GRaSP emerges as a flexible causal discovery algorithm with two central hyperparameters—score_func (ranging from standard BIC/BDeu to more advanced nonparametric scores) and depth (controlling search breadth). Benchmarks indicate robust performance under missing data, noise, and heterogeneous conditions, although runtime can escalate when depth is set too high or when nonparametric scoring is enabled for large datasets. The algorithm’s output is a directed or partially directed graphical structure, which is generally interpretable but may require domain expertise to confirm edge orientations. Like most causal discovery tools, GRaSP assumes no unobserved confounders and that the data-generating processes follow certain Markov and faithfulness properties. Recent external references to a similarly named graph-based method in protein-ligand binding prediction suggest that graph-centric approaches can excel in complex, real-world settings—underscoring GRaSP’s promise for broader domain applications, provided that users are mindful of hyperparameter tuning and assumption checks.
 
 ────────────────────────────────────────────────────────
 Benchmarking Results
@@ -173,59 +143,24 @@ Benchmarking Results
 
 • Comparative Performance
   – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics, which are represented as level scores from 1-5, with 5 being the best.
+  – Levels scores of composite metrics combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+[NOTE] The ranking is smaller, the better. The level score is higher, the better.
 
 • Algorithm Rankings
 
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
+| Scenario | Rank (Mean) | Rank (Std Dev) | Performance (Level) | Efficiency (Level) | Composite (Level) |
 |----------|-----------|---------|-------------|------------|------------|
-| Scalability | 2.5 | 0.96 | 5.0 | 2.0 | 5.0 |
-| Heterogeneity | 2.0 | 0.00 | 5.0 | 4.0 | 5.0 |
-| Measurement Error | 2.0 | 0.00 | 5.0 | 4.0 | 5.0 |
-| Noise Type | 2.0 | 0.00 | 5.0 | 2.0 | 5.0 |
-| Missing Data | 2.0 | 0.00 | 5.0 | 4.0 | 5.0 |
+| Scalability | 4.1 | 4.75 | 5.0 | 2.0 | 5.0 |
+| Heterogeneity | 6.8 | 3.96 | 4.0 | 2.0 | 4.0 |
+| Measurement Error | 1.5 | 0.50 | 5.0 | 2.0 | 5.0 |
+| Noise Type | 2.0 | 1.00 | 5.0 | 2.0 | 5.0 |
+| Missing Data | 5.5 | 2.69 | 4.0 | 3.0 | 5.0 |
+| Edge Probability | 1.3 | 0.47 | 5.0 | 2.0 | 5.0 |
+| Discrete Ratio | 1.3 | 0.47 | 5.0 | 2.0 | 5.0 |
 
 • Analysis
 
-  – Overall mean ranking across 5 scenarios: 2.10
-  – Average standard deviation: 0.19
+  – Overall mean ranking across 7 scenarios: 3.22
+  – Average standard deviation: 1.98
 
-• Key Observations
-  – Very stable performance across scenarios (low variance)
-  – Best performance in Heterogeneity scenario (rank 2.0)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*
-
-
-────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics.
-  – Composite scores combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-  – Metrics are scored from 1-5, with 5 being the best.
-
-• Algorithm Rankings
-
-| Scenario | Mean Rank | Std Dev | Performance | Efficiency | Composite |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 2.5 | 0.96 | 5.0 | 2.0 | 5.0 |
-| Heterogeneity | 2.0 | 0.00 | 5.0 | 4.0 | 5.0 |
-| Measurement Error | 2.0 | 0.00 | 5.0 | 4.0 | 5.0 |
-| Noise Type | 2.0 | 0.00 | 5.0 | 2.0 | 5.0 |
-| Missing Data | 2.0 | 0.00 | 5.0 | 4.0 | 5.0 |
-
-• Analysis
-
-  – Overall mean ranking across 5 scenarios: 2.10
-  – Average standard deviation: 0.19
-
-• Key Observations
-  – Very stable performance across scenarios (low variance)
-  – Best performance in Heterogeneity scenario (rank 2.0)
-
-*Note: Rankings are relative positions among all tested algorithms, while level scores are absolute quantitized measures of capability.*

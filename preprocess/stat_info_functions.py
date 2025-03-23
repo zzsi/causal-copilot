@@ -118,7 +118,7 @@ def drop_greater_miss_50_feature(global_state):
 def llm_select_dropped_features(global_state, args):
     ratio_between_05_03 = [k for k, v in global_state.statistics.miss_ratio.items() if 0.5 > v >= 0.3]
 
-    client = OpenAI(api_key=args.apikey)
+    client = OpenAI()
     prompt = (f'Given the list of features of a dataset: {global_state.user_data.selected_features} \n\n,'
               f'which features listed below do you think may be potential confounders: \n\n {ratio_between_05_03}?'
               'Your response should be given in a list format, and the name of features should be exactly the same as the feature names I gave.'

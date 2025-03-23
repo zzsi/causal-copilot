@@ -1,6 +1,4 @@
 import json
-import os
-from openai import OpenAI
 import algorithm.wrappers as wrappers
 from algorithm.llm_client import LLMClient
 
