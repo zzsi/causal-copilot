@@ -917,11 +917,10 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
         if CURRENT_STAGE == "inference_info_collection_confounder1":
             if message=='' or message.lower()=='no':
-                chat_history.append((message, None))
-                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 CURRENT_STAGE = "inference_info_collection_confounder2"
             else:
-                add_confounder, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_var_selection_query(message, chat_history, download_btn,                                                                                                                                "inference_info_collection_confounder2", 
+                add_confounder, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_var_selection_query(message, chat_history, download_btn, 
+                                                                                                                                "inference_info_collection_confounder2", 
                                                                                                                                 args, global_state, REQUIRED_INFO, CURRENT_STAGE)
                 global_state.inference.task_info[global_state.inference.task_index]['confounders'] += add_confounder
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn

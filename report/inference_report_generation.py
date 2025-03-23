@@ -8,7 +8,7 @@ from plumbum.cmd import latexmk
 from plumbum import local
 from report.help_functions import *
 import json 
-from report.report_generation import compile_tex_to_pdf_with_refs
+#from report.report_generation import compile_tex_to_pdf_with_refs
 
 class Inference_Report_generation(object):
     def __init__(self, global_state, args):
@@ -16,11 +16,9 @@ class Inference_Report_generation(object):
         :param global_state: a dict containing global variables and information
         :param args: arguments for the report generation
         """
-
-        #self.client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
         self.global_state = global_state
         self.args = args 
-        self.client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+        self.client = OpenAI(api_key=args.apikey)
         self.statistics_desc = global_state.statistics.description
         self.knowledge_docs = global_state.user_data.knowledge_docs[0]
         # Data info
@@ -297,11 +295,14 @@ class Inference_Report_generation(object):
         for placeholder, value in replacement.items():
             context = context.replace(placeholder, value)
         # Save the context to a file
-        with open(f'{self.report_dir}/report.tex', 'w') as f:
+        if not os.path.exists(self.report_dir):
+            os.makedirs(self.report_dir)
+        with open(f'{self.report_dir}/inference_report.tex', 'w') as f:
             f.write(context)
-        print('start compilation')
-        compile_tex_to_pdf_with_refs(f'{self.report_dir}/report.tex', self.report_dir)
-        return f'{self.report_dir}/report.pdf'
+        # print('start compilation')
+        # compile_tex_to_pdf_with_refs(f'{self.report_dir}/report.tex', self.report_dir)
+        # return f'{self.report_dir}/report.pdf'
+        return context
 
 
 

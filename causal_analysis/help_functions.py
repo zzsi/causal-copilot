@@ -171,7 +171,7 @@ def generate_density_plot(global_state, data, matched_data, treatment, confounde
     return figs
 
 def LLM_parse_query(args, format, prompt, message):
-    client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+    client = OpenAI(api_key=args.apikey)
     if format:
         completion = client.beta.chat.completions.parse(
         model="gpt-4o-mini-2024-07-18",

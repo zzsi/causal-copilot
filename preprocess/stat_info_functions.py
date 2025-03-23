@@ -103,9 +103,9 @@ def missing_ratio_table(global_state):
 def drop_greater_miss_50_feature(global_state):
     # Step 1: Drop features whose ratio is greater than 0.5
     ratio_greater_05 = [k for k, v in global_state.statistics.miss_ratio.items() if v >= 0.5]
-    if global_state.user_data.drop_important_var:
-        ratio_greater_05_drop = [element for element in ratio_greater_05 if
-                             element not in global_state.user_data.important_features]  # keep important features
+    #if global_state.user_data.drop_important_var:
+    ratio_greater_05_drop = [element for element in ratio_greater_05 if
+                            element not in global_state.user_data.important_features]  # keep important features
 
     # Update global state
     global_state.user_data.selected_features = [element for element in global_state.user_data.selected_features if
@@ -193,8 +193,10 @@ def correlation_check(global_state):
 
     # Update global state
     global_state.user_data.high_corr_drop_features = drop_feature
-    global_state.user_data.selected_features = [element for element in global_state.user_data.selected_features if
-                                                element not in drop_feature]
+    selected_set = set(global_state.user_data.selected_features) - set(drop_feature)
+    selected_set.update(global_state.user_data.important_features)
+    # Convert back to list
+    global_state.user_data.selected_features = list(selected_set)
 
     global_state.user_data.processed_data = global_state.user_data.raw_data[global_state.user_data.selected_features]
 

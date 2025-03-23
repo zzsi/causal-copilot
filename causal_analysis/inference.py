@@ -1200,21 +1200,6 @@ if __name__ == '__main__':
             help='Directory to save the output graph'
         )
 
-        # OpenAI Settings
-        parser.add_argument(
-            '--organization',
-            type=str,
-            default="org-gw7mBMydjDsOnDlTvNQWXqPL",
-            help='Organization ID'
-        )
-
-        parser.add_argument(
-            '--project',
-            type=str,
-            default="proj_SIDtemBJMHUWG7CPdU7yRjsn",
-            help='Project ID'
-        )
-
         parser.add_argument(
             '--apikey',
             type=str,

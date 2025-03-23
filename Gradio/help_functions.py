@@ -15,12 +15,12 @@ def try_numeric(value):
         return float(value)
     except ValueError:
         # Return original string if both conversions fail
-        return value.strip()
+        return value.strip().lower()
 
 def generate_hyperparameter_text(global_state):
     hyperparameter_text = ""
-    for param in global_state.algorithm.algorithm_arguments.keys():
-        details = global_state.algorithm.algorithm_arguments_json['hyperparameters'][param]
+    print(global_state.algorithm.algorithm_arguments_json)
+    for param, details in global_state.algorithm.algorithm_arguments_json['hyperparameters'].items():
         value = details['value']
         explanation = details['explanation']
         hyperparameter_text += f"  Parameter: {param}\n"
@@ -29,7 +29,7 @@ def generate_hyperparameter_text(global_state):
     return hyperparameter_text, global_state
 
 def LLM_parse_query(format, prompt, message, args):
-    client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+    client = OpenAI(api_key=args.apikey)
     if format:
         completion = client.beta.chat.completions.parse(
         model="gpt-4o-mini-2024-07-18",
@@ -51,6 +51,27 @@ def LLM_parse_query(format, prompt, message, args):
         parsed_response = completion.choices[0].message.content
     return parsed_response
 
+def parse_drop_high_miss_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
+    class Bool(BaseModel):
+        yes_or_no: bool=None
+    prompt = """You are a helpful assistant, please extract the user's query as a boolean value. 
+    If user's input is like 'yes', 'Yes', 'YES', 'y', 'Y', the boolean should be True. 
+    Otherwise, the boolean should be False.
+    If you cannot determine yes or no, save yes_or_no as None.
+    """
+    parsed_response = LLM_parse_query(Bool, prompt, message, global_state.args)
+    yes = parsed_response.yes_or_no
+    if yes is None:
+        chat_history.append((message, "❌ Your query cannot be parsed, please follow the templete and retry."))
+    else:
+        if yes:
+            global_state.statistics.drop_important_var = True
+            chat_history.append((message, "✅ We will drop important variables with missing values greater than 50%."))
+        else:
+            global_state.statistics.drop_important_var = False
+            chat_history.append((message, "✅ We will not drop important variables with missing values greater than 50%, but it may lead to unreliable result."))
+        CURRENT_STAGE = 'impute_smaller_miss_30'
+    return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 # process functions
 def sample_size_check(n_row, n_col, chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE):
     ## Few sample case: give warning
@@ -90,7 +111,8 @@ def heterogeneity_query(global_state, message, chat_history, download_btn, CURRE
         global_state.user_data.heterogeneity = None
         CURRENT_STAGE = 'accept_CPDAG'
         chat_history.append((message, None))
-        return chat_history, download_btn, global_state, CURRENT_STAGE
+        var_list = []
+        return var_list, chat_history, download_btn, global_state, CURRENT_STAGE
     else:
         class VarList(BaseModel):
             variables: list[str]
@@ -99,6 +121,7 @@ def heterogeneity_query(global_state, message, chat_history, download_btn, CURRE
         "If there is only one variable, also save it in list variables"
         f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
         "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
+        "If they say 'all of them', 'all' or something like that, please save all the variable names in the list."
         "If you cannot find variable names, just return an empty list."
         parsed_vars = LLM_parse_query(VarList, prompt, message, args)
         var_list = parsed_vars.variables
@@ -118,7 +141,7 @@ def heterogeneity_query(global_state, message, chat_history, download_btn, CURRE
                 chat_history.append((message, "✅ Successfully parsed your provided heterogeneity indicator."))
                 CURRENT_STAGE = 'accept_CPDAG'
                 global_state.user_data.heterogeneity = var_list
-                return chat_history, download_btn, global_state, CURRENT_STAGE
+                return var_list, chat_history, download_btn, global_state, CURRENT_STAGE
 
 
 def accept_CPDAG_query(global_state, message, chat_history, download_btn, CURRENT_STAGE):
@@ -189,12 +212,13 @@ def parse_var_selection_query(message, chat_history, download_btn, next_step, ar
         variables: list[str]
     prompt = "You are a helpful assistant, please help me to understand user's need and extract variable names from their message."
     "I ask them whether in a dataset they have important features"
-    "If they say 'all of them', 'all' or something like that, please save all the variable names in the list."
-    "If they provide some variable names, please extract variable names as a list. \n"
-    "If there is only one variable, also save it in list variables"
+    "1. If they provide some variable names, please extract variable names as a list. \n"
+    "2. If there is only one variable, also save it in list variables"
+    "3. If they say 'all of them', 'all' or something like that, please save all the variable names in the list."
+    "4. If they say 'no', 'none', 'nothing' or something like that, just return an empty list."
     f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
     "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
-    "If they say 'no', 'none', 'nothing' or something like that, just return an empty list."
+    
     parsed_vars = LLM_parse_query(VarList, prompt, message, args)
     var_list = parsed_vars.variables
     if var_list == []:
@@ -306,7 +330,7 @@ def first_stage_sparsity_check(message, chat_history, download_btn, args, global
 def parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
     if message == '' or message.lower()=='no':
         chat_history.append((message, "💬 No algorithm is specified, will go to the next step..."))
-        CURRENT_STAGE = 'report_generation_check'      
+        CURRENT_STAGE = 'inference_analysis_check'     
     elif message not in ['PC', 'FCI', 'CDNOD', 'GES', 'DirectLiNGAM', 'ICALiNGAM', 'NOTEARS', 'FGES', 'XGES', 'AcceleratedDirectLiNGAM']:
         if torch.cuda.is_available():
             chat_history.append((message, "❌ The specified algorithm is not correct, please choose from the following: \n"
@@ -324,38 +348,53 @@ def parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED
         #process_message(message, chat_history, download_btn)
     return message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
-def parse_hyperparameter_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
-            if message.lower()=='no' or message=='':
-                CURRENT_STAGE = 'algo_running'    
-                hyperparameter_text, global_state = generate_hyperparameter_text(global_state) 
-                chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Selected parameters: \n {hyperparameter_text}\n"))
-            else:
-                try:
-                    specified_params = {line.split(':')[0].strip(): line.split(':')[1].strip() for line in message.strip().split('\n')}
-                    print('specified_params',specified_params)
-                    original_params = global_state.algorithm.algorithm_arguments
-                    print('original_params',original_params)
-                    common_keys = original_params.keys() & specified_params.keys()
-                    if len(common_keys)==0:
-                        print(1)
-                        chat_history.append((None, "❌ The specified parameters are not correct, please follow the template!"))
-                        return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
+def parse_hyperparameter_query(args, message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
+    if message.lower()=='no' or message=='':
+        CURRENT_STAGE = 'algo_running'    
+        hyperparameter_text, global_state = generate_hyperparameter_text(global_state) 
+        chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Selected parameters: \n {hyperparameter_text}\n"))
+    else:
+        try:
+            class Param_Selector(BaseModel):
+                param_keys: list
+                param_values: list
+            prompt = """You are a helpful assistant, please do the following tasks based on the provided context:
+            **Context**
+            We ask the user: Do you want to specify values for parameters instead of the selected one? If so, please specify your parameter.
+            Now we need to parse the user's input.
+            **Task**
+            Firstly, save the parameter keys and values in the list param_keys and param_values respectively.
+            keys and values should be save in list format, and the order of keys and values should be matched.
+            If the user does not specify the parameter, just return an empty list.
+            If the value is a number, please save it as a number, otherwise save it as a string.
+            """
+            parsed_response = LLM_parse_query(Param_Selector, prompt, message, args)
+            param_keys, param_values = parsed_response.param_keys, parsed_response.param_values
+            specified_params = {param_keys[i]: param_values[i] for i in range(len(param_keys))}
+            print('specified_params',specified_params)
+            original_params = global_state.algorithm.algorithm_arguments_json['hyperparameters']
+            print('original_params',original_params)
+            common_keys = original_params.keys() & specified_params.keys()
+            if len(common_keys)==0:
+                print(1)
+                chat_history.append((None, "❌ The specified parameters are not correct, please follow the template!"))
+                return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
-                    for key in common_keys:
-                        global_state.algorithm.algorithm_arguments_json['hyperparameters'][key]['value'] = try_numeric(specified_params[key])
-                        global_state.algorithm.algorithm_arguments_json['hyperparameters'][key]['explanation'] = 'User specified'
-                        global_state.algorithm.algorithm_arguments[key] = try_numeric(specified_params[key])
-                    print(global_state.algorithm.algorithm_arguments)
-                    hyperparameter_text, global_state = generate_hyperparameter_text(global_state) 
-                    chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Specified parameters: \n"
-                                         f"{hyperparameter_text}"))
-                    CURRENT_STAGE = 'algo_running' 
-                except Exception as e:
-                    print(e)
-                    print(str(e))
-                    traceback.print_exc()
-                    chat_history.append((None, "❌ The specified parameters are not correct, please follow the template!"))
-            return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
+            for key in common_keys:
+                global_state.algorithm.algorithm_arguments_json['hyperparameters'][key]['value'] = try_numeric(specified_params[key])
+                global_state.algorithm.algorithm_arguments_json['hyperparameters'][key]['explanation'] = 'User specified'
+                global_state.algorithm.algorithm_arguments[key] = try_numeric(specified_params[key])
+            print(global_state.algorithm.algorithm_arguments)
+            hyperparameter_text, global_state = generate_hyperparameter_text(global_state) 
+            chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Specified parameters: \n"
+                                    f"{hyperparameter_text}"))
+            CURRENT_STAGE = 'algo_running' 
+        except Exception as e:
+            print(e)
+            print(str(e))
+            traceback.print_exc()
+            chat_history.append((None, "❌ The specified parameters are not correct, please follow the template!"))
+    return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
 def parse_user_postprocess(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE):
     edges_dict = {
@@ -448,9 +487,20 @@ def parse_inference_query(message, chat_history, download_btn, args, global_stat
                 descriptions: list[str]
                 key_node: list[str]
         columns = global_state.user_data.processed_data.columns
+        binary = False
+        for col in columns:
+            unique_values = global_state.user_data.processed_data[col].unique()
+            if len(unique_values) == 2:
+                binary = True
+                break
+        if not binary:
+            binary_condition = "The dataset does not contain binary variables, DO NOT choose Treatment Effect Estimation!"
+        else:
+            binary_condition = ""
         with open('causal_analysis/context/query_prompt.txt', 'r') as file:
             query_prompt = file.read()
             query_prompt = query_prompt.replace('[COLUMNS]', f",".join(columns))
+            query_prompt = query_prompt.replace('[BINARY]', binary_condition)
         
         global_state.logging.downstream_discuss.append({"role": "user", "content": message})
         parsed_response = LLM_parse_query(InfList, query_prompt, message, args)

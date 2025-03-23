@@ -77,7 +77,7 @@ class HyperparameterSelector:
 
         hyper_suggest = response
         global_state.algorithm.algorithm_arguments_json = hyper_suggest
-        print(hyper_suggest)
+        print('hyper_suggest', hyper_suggest)
         hyper_suggest = {k: v['value'] for k, v in hyper_suggest['hyperparameters'].items() if k in primary_params}
 
         global_state.logging.argument_conversation.append({

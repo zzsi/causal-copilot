@@ -9,7 +9,7 @@ class UpliftFilter:
     """
     def __init__(self, args):
         self.args = args
-        self.client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+        self.client = OpenAI(api_key=args.apikey)
         
     def load_algo_context(self, outcome_type):
         """Load the appropriate algorithm context based on outcome type"""

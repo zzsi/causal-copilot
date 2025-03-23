@@ -85,6 +85,7 @@ class Filter(object):
         }
 
         for placeholder, value in replacements.items():
+            print(placeholder, value)
             prompt_template = prompt_template.replace(placeholder, value)
 
         return prompt_template

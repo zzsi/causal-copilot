@@ -6,7 +6,7 @@ import os
 class HTE_Filter(object):
     def __init__(self, args):
         self.args = args
-        self.client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+        self.client = OpenAI(api_key=args.apikey)
 
     def load_algo_context(self):
         return open(f"causal_analysis/DML/context/hte_algo.txt", "r").read()
