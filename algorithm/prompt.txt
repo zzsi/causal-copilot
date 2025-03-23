@@ -1,15 +1,15 @@
 Given the following user query:
-YES. Discover causal relationships between protein signaling molecules. The data contains flow cytometry measurements of proteins and phospholipids.
+YES. Find causal relationships between physical measurements and age of abalone. The dataset contains numerical measurements of physical characteristics.
 
 For the data that have the following variables:
-PIP2, Raf, Jnk, Plcg, P38, Akt, Erk, PKA, PKC, PIP3, Mek
+Height, Age, Shell_weight, Length, Diameter
 
 And the following statistics:
 The dataset has the following characteristics:
 
 Data Type: The overall data type is Continuous.
 
-The sample size is 853 with 11 features. This dataset is not time-series data. Data Quality: There are no missing values in the dataset.
+The sample size is 4177 with 5 features. This dataset is not time-series data. Data Quality: There are no missing values in the dataset.
 
 Statistical Properties:
 - Linearity: The relationships between variables are not predominantly linear.

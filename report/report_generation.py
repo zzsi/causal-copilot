@@ -74,6 +74,7 @@ class Report_generation(object):
                 with open(f'{global_state.user_data.output_graph_dir}/{algo}_global_state.pkl', 'rb') as f:
                     self.global_state_list.append(pickle.load(f))
             global_state = self.global_state_list[global_state.results.report_selected_index]
+            inference_global_state = self.global_state_list[-1]
         else:
             self.global_state_list = [global_state]
             global_state.logging.global_state_logging = [global_state.algorithm.selected_algorithm]
@@ -82,6 +83,7 @@ class Report_generation(object):
         self.data_mode = args.data_mode
         self.data_file = args.data_file
         self.global_state = global_state
+        self.inference_global_state = inference_global_state
         self.args = args 
         self.statistics_desc = global_state.statistics.description
         self.knowledge_docs = global_state.user_data.knowledge_docs[0]
@@ -898,8 +900,8 @@ Help me to write a comparison of the following causal discovery results of diffe
             self.result_comparison_graph_text, self.result_comparison = self.comparision_prompt()
             
             # Causal Inference info
-            if self.global_state.inference.task_info != -1:
-                inf_report_generator = Inference_Report_generation(self.global_state, self.args)
+            if self.inference_global_state.inference.task_index != -1:
+                inf_report_generator = Inference_Report_generation(self.inference_global_state, self.args)
                 self.inf_report = inf_report_generator.generation()
             else:
                 self.inf_report = ''

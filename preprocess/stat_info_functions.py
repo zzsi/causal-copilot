@@ -192,9 +192,10 @@ def correlation_check(global_state):
                         drop_feature.append(var2)
 
     # Update global state
-    global_state.user_data.high_corr_drop_features = drop_feature
     selected_set = set(global_state.user_data.selected_features) - set(drop_feature)
     selected_set.update(global_state.user_data.important_features)
+    final_drop_feature = list(set(drop_feature) - set(global_state.user_data.important_features))
+    global_state.user_data.high_corr_drop_features = final_drop_feature
     # Convert back to list
     global_state.user_data.selected_features = list(selected_set)
 

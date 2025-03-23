@@ -6,16 +6,26 @@ import traceback
 from preprocess.stat_info_functions import *
 from openai import OpenAI
 from pydantic import BaseModel
+from typing import List, Union, Any
 import torch 
 
 def try_numeric(value):
-    """Convert string to int or float if possible, otherwise return string"""
+    """Convert string to int first, then float if possible, otherwise return string"""
     try:
-        # Try converting to float
-        return float(value)
+        # First try converting to int
+        int_val = int(value)
+        return int_val
     except ValueError:
-        # Return original string if both conversions fail
-        return value.strip().lower()
+        try:
+            # If int conversion fails, try float
+            float_val = float(value)
+            # Check if the float is actually an integer
+            if float_val.is_integer():
+                return int(float_val)
+            return float_val
+        except ValueError:
+            # Return original string if both conversions fail
+            return value.strip().lower()
 
 def generate_hyperparameter_text(global_state):
     hyperparameter_text = ""
@@ -356,8 +366,8 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
     else:
         try:
             class Param_Selector(BaseModel):
-                param_keys: list
-                param_values: list
+                param_keys: list[str]
+                param_values: list[Union[str, int, float]] 
             prompt = """You are a helpful assistant, please do the following tasks based on the provided context:
             **Context**
             We ask the user: Do you want to specify values for parameters instead of the selected one? If so, please specify your parameter.
@@ -376,7 +386,6 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
             print('original_params',original_params)
             common_keys = original_params.keys() & specified_params.keys()
             if len(common_keys)==0:
-                print(1)
                 chat_history.append((None, "❌ The specified parameters are not correct, please follow the template!"))
                 return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
@@ -430,9 +439,9 @@ def parse_user_postprocess(message, chat_history, download_btn, args, global_sta
             """
             parsed_response = LLM_parse_query(EditList, prompt, message, args)
             add_edges, forbid_edges, orient_edges = parsed_response.add_edges, parsed_response.forbid_edges, parsed_response.orient_edges
-            edges_dict["add_edges"] = [(pair.split('->')[0].strip(' '), pair.split('->')[1].strip(' ')) for pair in add_edges]
-            edges_dict["forbid_edges"] = [(pair.split('->')[0].strip(' '), pair.split('->')[1].strip(' ')) for pair in forbid_edges]
-            edges_dict["orient_edges"] = [(pair.split('->')[0].strip(' '), pair.split('->')[1].strip(' ')) for pair in orient_edges]
+            edges_dict["add_edges"] = [(pair.split('->')[0].strip(' '), pair.split('->')[1].strip(' ')) for pair in add_edges] if add_edges != [] else []
+            edges_dict["forbid_edges"] = [(pair.split('->')[0].strip(' '), pair.split('->')[1].strip(' ')) for pair in forbid_edges] if forbid_edges != [] else []
+            edges_dict["orient_edges"] = [(pair.split('->')[0].strip(' '), pair.split('->')[1].strip(' ')) for pair in orient_edges] if orient_edges != [] else []
             # Check whether all these variables exist
             variables = [item for sublist in edges_dict.values() for pair in sublist for item in pair]
             missing_vars = [var for var in variables if var not in global_state.user_data.raw_data.columns]

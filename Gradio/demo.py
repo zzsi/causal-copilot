@@ -556,10 +556,14 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 message: {message}
                 file: {file_content}
                 """
-                parsed_response = LLM_parse_query(None, prompt, message, args)
+                parsed_response = LLM_parse_query(args, None, prompt, message)
                 try:
                     changes = json.loads(parsed_response)
-                    global_state.statistics.update(changes)
+                    for key, value in changes.items():
+                        if hasattr(global_state.statistics, key):
+                            setattr(global_state.statistics, key, value)
+                        else:
+                            print(f"Warning: Statistics has no attribute '{key}'")
                     print(global_state.statistics)
                 except RuntimeError as e:
                     print(e)
@@ -604,14 +608,20 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 if REQUIRED_INFO["interactive_mode"]:
                     CURRENT_STAGE = 'user_algo_selection'
                     if torch.cuda.is_available():
-                        chat_history.append((None, "Do you want to specify an algorithm instead of the selected one? If so, please choose one from the following: \n"
-                                                "PC, FCI, CDNOD, GES, DirectLiNGAM, ICALiNGAM, NOTEARS\n"
-                                                "Fast Version: FGES, XGES, AcceleratedDirectLiNGAM\n"
+                        chat_history.append((None, "Do you want to retry other algorithms? If so, please choose one from the following: \n"
+                                                "- **Constraint-based Methods**: PC, PCParallel, AcceleratedPC, FCI, CDNOD, AcceleratedCDNOD;\n"
+                                                "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
+                                                "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
+                                                "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
+                                                 "- ** Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
                                                 "Otherwise please reply NO."))
                     else:
-                        chat_history.append((None, "Do you want to specify an algorithm instead of the selected one? If so, please choose one from the following: \n"
-                                                "PC, FCI, CDNOD, GES, DirectLiNGAM, ICALiNGAM, NOTEARS\n"
-                                                "Fast Version: FGES, XGES.\n"
+                        chat_history.append((None, "Do you want to retry other algorithms? If so, please choose one from the following: \n"
+                                                "- **Constraint-based Methods**: PC, PCParallel, AcceleratedPC, FCI, CDNOD, AcceleratedCDNOD;\n"
+                                                "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
+                                                "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
+                                                "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
+                                                 "- ** Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
                                                 "Otherwise please reply NO."))
                     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                     return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -632,7 +642,12 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 CURRENT_STAGE = 'hyperparameter_selection'     
                 chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Selected algorithm: {global_state.algorithm.selected_algorithm}\n"))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-            elif message in ['PC', 'FCI', 'CDNOD', 'GES', 'DirectLiNGAM', 'ICALiNGAM', 'NOTEARS', 'FGES', 'XGES', 'AcceleratedDirectLiNGAM']:
+                
+            elif message in ['PC', 'PCParallel', 'AcceleratedPC', 'FCI', 'CDNOD', 'AcceleratedCDNOD',
+                             'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
+                             'GES', 'FGES', 'XGES', 'GRaSP',
+                             'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
+                             'DirectLiNGAM', 'AcceleratedLiNGAM', 'ICALiNGAM']:
                 global_state.algorithm.selected_algorithm = message
                 global_state.algorithm.algorithm_arguments = None 
                 CURRENT_STAGE = 'hyperparameter_selection'     
@@ -856,13 +871,19 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 #global_state.logging.global_state_logging.append(global_state.algorithm.selected_algorithm)
                 if torch.cuda.is_available():
                     chat_history.append((None, "Do you want to retry other algorithms? If so, please choose one from the following: \n"
-                                                "PC, FCI, CDNOD, GES, DirectLiNGAM, ICALiNGAM, NOTEARS\n"
-                                                "Fast Version: FGES, XGES, AcceleratedDirectLiNGAM\n"
+                                                "- **Constraint-based Methods**: PC, PCParallel, AcceleratedPC, FCI, CDNOD, AcceleratedCDNOD;\n"
+                                                "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
+                                                "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
+                                                "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
+                                                 "- ** Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
                                                 "Otherwise please reply NO."))
                 else:
                     chat_history.append((None, "Do you want to retry other algorithms? If so, please choose one from the following: \n"
-                                                "PC, FCI, CDNOD, GES, DirectLiNGAM, ICALiNGAM, NOTEARS\n"
-                                                "Fast Version: FGES, XGES.\n"
+                                                "- **Constraint-based Methods**: PC, PCParallel, AcceleratedPC, FCI, CDNOD, AcceleratedCDNOD;\n"
+                                                "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
+                                                "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
+                                                "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
+                                                 "- ** Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
                                                 "Otherwise please reply NO."))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -873,6 +894,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             if CURRENT_STAGE == 'algo_selection':
                 print(CURRENT_STAGE)
                 print(global_state.algorithm.selected_algorithm)
+                global_state.algorithm.algorithm_arguments = None
                 return process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn)
         
         if CURRENT_STAGE == 'inference_analysis_check':
@@ -1086,7 +1108,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                     chat_history.append((None, 'Your query cannot be parsed, please ask again or reply NO to end this part.'))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 global_state.logging.downstream_discuss.append({"role": "system", "content": info})
-            chat_history.append((None, "Do you have questions about this analysis? Or do you want to conduct other downstream analysis? \n"
+            chat_history.append((None, "Do you have questions about this analysis?\n"
                                         "Please reply NO if you want to end this part. Please describe your needs."))
             global_state.inference.task_info[global_state.inference.task_index]['result']['discussion'] = {}
             CURRENT_STAGE = 'analysis_discussion'
