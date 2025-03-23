@@ -44,21 +44,6 @@ def parse_args():
         help='Directory to save the output graph'
     )
 
-    # OpenAI Settings
-    parser.add_argument(
-        '--organization',
-        type=str,
-        default="org-Xa9VGT8plP28JBRKtqBRjG5l",
-        help='Organization ID'
-    )
-
-    parser.add_argument(
-        '--project',
-        type=str,
-        default="proj_t78xpJomilJJu5qtuOK4vWfR",
-        help='Project ID'
-    )
-
     parser.add_argument(
         '--apikey',
         type=str,

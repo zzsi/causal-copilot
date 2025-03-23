@@ -49,7 +49,7 @@ class UpliftParamSelector:
 
     def forward(self, global_state):
         from openai import OpenAI
-        client = OpenAI(organization=self.args.organization, project=self.args.project, api_key=self.args.apikey)
+        client = OpenAI(api_key=self.args.apikey)
         model_prompt = self.prompt_generation(global_state)
 
         global_state.inference.uplift_model_json = None

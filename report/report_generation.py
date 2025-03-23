@@ -78,7 +78,7 @@ class Report_generation(object):
             self.global_state_list = [global_state]
             global_state.logging.global_state_logging = [global_state.algorithm.selected_algorithm]
 
-        self.client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+        self.client = OpenAI(api_key=args.apikey)
         self.data_mode = args.data_mode
         self.data_file = args.data_file
         self.global_state = global_state
@@ -898,8 +898,8 @@ Help me to write a comparison of the following causal discovery results of diffe
             self.result_comparison_graph_text, self.result_comparison = self.comparision_prompt()
             
             # Causal Inference info
-            if global_state.inference.task_info != -1:
-                inf_report_generator = Inference_Report_generation(global_state, args)
+            if self.global_state.inference.task_info != -1:
+                inf_report_generator = Inference_Report_generation(self.global_state, self.args)
                 self.inf_report = inf_report_generator.generation()
             else:
                 self.inf_report = ''

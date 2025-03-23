@@ -120,7 +120,7 @@ def global_state_initialization(args: argparse.Namespace = None) -> GlobalState:
 
     print(algorithms)
 
-    client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+    client = OpenAI(api_key=args.apikey)
     prompt = (f"Based on the query that I provided: {user_query} \n\n; "
               "extract the following information and summarize them in a json format, and output this json object."
               "Within the output, the key, the corresponding value options and their meanings are: \n\n "

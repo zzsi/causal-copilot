@@ -16,11 +16,9 @@ class Inference_Report_generation(object):
         :param global_state: a dict containing global variables and information
         :param args: arguments for the report generation
         """
-
-        #self.client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
         self.global_state = global_state
         self.args = args 
-        self.client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+        self.client = OpenAI(api_key=args.apikey)
         self.statistics_desc = global_state.statistics.description
         self.knowledge_docs = global_state.user_data.knowledge_docs[0]
         # Data info
@@ -297,6 +295,8 @@ class Inference_Report_generation(object):
         for placeholder, value in replacement.items():
             context = context.replace(placeholder, value)
         # Save the context to a file
+        if not os.path.exists(self.report_dir):
+            os.makedirs(self.report_dir)
         with open(f'{self.report_dir}/inference_report.tex', 'w') as f:
             f.write(context)
         # print('start compilation')

@@ -687,7 +687,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             if REQUIRED_INFO["interactive_mode"]:
                 chat_history.append((message, None))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_hyperparameter_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE)
+                chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_hyperparameter_query(args, message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE)
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 if CURRENT_STAGE != 'algo_running':
                     return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -741,7 +741,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             class Indicator(BaseModel):
                         indicator: bool
             prompt = """You are a helpful assistant, please identify whether user want to further continue the task and save the boolean result in indicator. """
-            parsed_response = LLM_parse_query(Indicator, prompt, message, args)
+            parsed_response = LLM_parse_query(args, Indicator, prompt, message)
             indicator = parsed_response.indicator
             if indicator:
                 CURRENT_STAGE = 'revise_graph'
@@ -910,6 +910,8 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                     CURRENT_STAGE = "inference_info_collection_1"
                 if 'Counterfactual Estimation' in tasks_list:
                     CURRENT_STAGE = "counterfactual_info_collection1"
+                else:
+                    CURRENT_STAGE = "analyze_causal_task"
         
         if CURRENT_STAGE == "counterfactual_info_collection1":
             task_info = global_state.inference.task_info[global_state.inference.task_index]

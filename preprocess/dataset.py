@@ -88,7 +88,7 @@ def knowledge_info(args, global_state):
     :return: GlobalState
     '''
     from openai import OpenAI
-    client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+    client = OpenAI(api_key=args.apikey)
 
     data = global_state.user_data.processed_data
     table_name = args.data_file

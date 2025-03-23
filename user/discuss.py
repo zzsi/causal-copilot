@@ -3,7 +3,7 @@ class Discussion(object):
     # Kun Zhou Implemented
     def __init__(self, args, report):
         self.args = args
-        self.client = OpenAI(organization=self.args.organization, project=self.args.project, api_key=self.args.apikey)
+        self.client = OpenAI(api_key=self.args.apikey)
 
         # Extract the text information from the Latex file
         response = self.client.chat.completions.create(

@@ -15,7 +15,7 @@ def try_numeric(value):
         return float(value)
     except ValueError:
         # Return original string if both conversions fail
-        return value.strip()
+        return value.strip().lower()
 
 def generate_hyperparameter_text(global_state):
     hyperparameter_text = ""
@@ -29,7 +29,7 @@ def generate_hyperparameter_text(global_state):
     return hyperparameter_text, global_state
 
 def LLM_parse_query(format, prompt, message, args):
-    client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+    client = OpenAI(api_key=args.apikey)
     if format:
         completion = client.beta.chat.completions.parse(
         model="gpt-4o-mini-2024-07-18",
@@ -348,14 +348,29 @@ def parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED
         #process_message(message, chat_history, download_btn)
     return message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
-def parse_hyperparameter_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
+def parse_hyperparameter_query(args, message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
     if message.lower()=='no' or message=='':
         CURRENT_STAGE = 'algo_running'    
         hyperparameter_text, global_state = generate_hyperparameter_text(global_state) 
         chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Selected parameters: \n {hyperparameter_text}\n"))
     else:
         try:
-            specified_params = {line.split(':')[0].strip(): line.split(':')[1].strip() for line in message.strip().split('\n')}
+            class Param_Selector(BaseModel):
+                param_keys: list
+                param_values: list
+            prompt = """You are a helpful assistant, please do the following tasks based on the provided context:
+            **Context**
+            We ask the user: Do you want to specify values for parameters instead of the selected one? If so, please specify your parameter.
+            Now we need to parse the user's input.
+            **Task**
+            Firstly, save the parameter keys and values in the list param_keys and param_values respectively.
+            keys and values should be save in list format, and the order of keys and values should be matched.
+            If the user does not specify the parameter, just return an empty list.
+            If the value is a number, please save it as a number, otherwise save it as a string.
+            """
+            parsed_response = LLM_parse_query(Param_Selector, prompt, message, args)
+            param_keys, param_values = parsed_response.param_keys, parsed_response.param_values
+            specified_params = {param_keys[i]: param_values[i] for i in range(len(param_keys))}
             print('specified_params',specified_params)
             original_params = global_state.algorithm.algorithm_arguments_json['hyperparameters']
             print('original_params',original_params)
@@ -472,9 +487,20 @@ def parse_inference_query(message, chat_history, download_btn, args, global_stat
                 descriptions: list[str]
                 key_node: list[str]
         columns = global_state.user_data.processed_data.columns
+        binary = False
+        for col in columns:
+            unique_values = global_state.user_data.processed_data[col].unique()
+            if len(unique_values) == 2:
+                binary = True
+                break
+        if not binary:
+            binary_condition = "The dataset does not contain binary variables, DO NOT choose Treatment Effect Estimation!"
+        else:
+            binary_condition = ""
         with open('causal_analysis/context/query_prompt.txt', 'r') as file:
             query_prompt = file.read()
             query_prompt = query_prompt.replace('[COLUMNS]', f",".join(columns))
+            query_prompt = query_prompt.replace('[BINARY]', binary_condition)
         
         global_state.logging.downstream_discuss.append({"role": "user", "content": message})
         parsed_response = LLM_parse_query(InfList, query_prompt, message, args)

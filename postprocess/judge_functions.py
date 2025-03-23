@@ -364,7 +364,7 @@ def bootstrap_recommend(raw_graph, boot_edges_prob):
 
 
 def get_json(args, prompt):
-        client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+        client = OpenAI(api_key=args.apikey)
         response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
@@ -386,7 +386,7 @@ def call_llm_new(args, prompt, prompt_type):
         cot_context = file.read()
     
     # initiate a client
-    client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+    client = OpenAI(api_key=args.apikey)
     client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -637,7 +637,7 @@ def edges_to_relationship(data, edges_dict, boot_edges_prob=None):
 
 
 def LLM_remove_cycles(args, message):
-    client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
+    client = OpenAI(api_key=args.apikey)
     class VarList(BaseModel):
         nodes: list[str]
     
