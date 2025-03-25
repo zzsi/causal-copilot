@@ -59,7 +59,7 @@ class Analysis(object):
         self.args = args
         self.data = global_state.user_data.processed_data
         #TODO: graph format
-        self.graph = convert_adj_mat(global_state.results.converted_graph)
+        self.graph = convert_adj_mat(global_state.results.revised_graph)
         self.G = nx.from_numpy_array(self.graph, create_using=nx.DiGraph) # convert adj matrix into DiGraph
         self.G = nx.relabel_nodes(self.G, {i: name for i, name in enumerate(self.data.columns)})
         self.dot_graph = self._generate_dowhy_graph()
@@ -364,13 +364,13 @@ class Analysis(object):
             raise ValueError("Cycle removal was unsuccessful. Graph must be a DAG.")
         
         # Store cycle detection results in global state
-        global_state.inference.cycle_detection_result = {
+        self.global_state.inference.cycle_detection_result = {
             "detected_cycles": list(nx.simple_cycles(G)),  # Store any remaining detected cycles
             "final_graph_after_resolution": nx.to_dict_of_lists(G)  # Store resolved graph
         }
 
         # Store editing history
-        global_state.inference.editing_history.append({
+        self.global_state.inference.editing_history.append({
         "removed_edges": "Stored inside check_cycle function",  # Can be extracted from `check_cycle` if needed
         "final_resolved_graph": nx.to_dict_of_lists(G)})
 
@@ -553,13 +553,13 @@ class Analysis(object):
             raise ValueError("Cycle removal was unsuccessful. Graph must be a DAG.")
         
         # Store cycle detection results in global state
-        global_state.inference.cycle_detection_result = {
+        self.global_state.inference.cycle_detection_result = {
             "detected_cycles": list(nx.simple_cycles(G)),  
             "final_graph_after_resolution": nx.to_dict_of_lists(G)  
         }
 
         # Store editing history
-        global_state.inference.editing_history.append({
+        self.global_state.inference.editing_history.append({
         "removed_edges": "Stored inside check_cycle function",
         "final_resolved_graph": nx.to_dict_of_lists(G)})
 
@@ -600,7 +600,7 @@ class Analysis(object):
         print("✅ Final selected columns (max 10):", selected_columns)
 
         # Save task info
-        global_state.inference.task_info.append({
+        self.global_state.inference.task_info.append({
             "target_node": target_node,
             "selected_columns": selected_columns
         })
@@ -963,7 +963,7 @@ class Analysis(object):
 
         print(f"Saving shift intervention comparison plot to {os.path.join(path, 'shift_intervention.jpg')}")
         plt.savefig(os.path.join(path, 'shift_intervention.jpg'))
-        figs = [os.path.join(path, 'shift_intervention.jpg')]
+        # figs = [os.path.join(path, 'shift_intervention.jpg')]
 
         # Save dataset
         # print(f"Saving simulated dataset {os.path.join(path, 'simulated_atomic_intervention_org.csv')}")
@@ -983,7 +983,7 @@ class Analysis(object):
         print(f"Saving box-plot comparison plot to {os.path.join(path, 'shift_intervention_boxplot.jpg')}")
         plt.savefig(os.path.join(path, 'shift_intervention_boxplot.jpg'))
         figs_boxplot = os.path.join(path, 'shift_intervention_boxplot.jpg')
-        figs.append(figs_boxplot)
+        # figs.append(figs_boxplot)
 
         # Violin plot comparison
         plt.figure(figsize=(8, 6))
@@ -994,7 +994,7 @@ class Analysis(object):
         print(f"Saving violin plot comparison to {os.path.join(path, 'shift_intervention_violinplot.jpg')}")
         plt.savefig(os.path.join(path, 'shift_intervention_violinplot.jpg'))
         figs_violin = os.path.join(path, 'shift_intervention_violinplot.jpg')
-        figs.append(figs_violin)
+        figs = [figs_violin]
              
         return figs, shift_samples
 
@@ -1060,7 +1060,7 @@ class Analysis(object):
             exist_IV = False
             if exist_IV:
                 iv_variable = None
-                global_state.inference.task_info[self.global_state.inference.task_index]['IV'] = iv_variable
+                self.global_state.inference.task_info[self.global_state.inference.task_index]['IV'] = iv_variable
                 method = "iv"
 
             elif len(confounders) <= 5:
@@ -1140,6 +1140,9 @@ class Analysis(object):
         elif task == 'Anormaly Attribution':
             df, figs = self.attribute_anomalies(target_node=key_node, anomaly_samples=self.data, confidence_level=0.95)
             parent_nodes = list(self.G.predecessors(key_node))
+            if len(parent_nodes) == 0:
+                chat_history.append((None, "⚠️ No parent nodes found for the target node."))
+                return None, None, chat_history
             response = generate_analysis_anormaly(self.args, df, key_node, parent_nodes, desc)
             for fig in figs:
                 chat_history.append((None, (f'{fig}',)))

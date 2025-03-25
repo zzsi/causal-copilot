@@ -1,0 +1,63 @@
+Given a dataset with the following properties:
+
+1. Columns: region	year	area	deaths	richter	day	month
+2. Statistics:
+The dataset has the following characteristics:
+
+Data Type: The overall data type is Mixture.
+
+The sample size is 123 with 7 features. This dataset is not time-series data. Data Quality: There are missing values in the dataset.
+
+Statistical Properties:
+- Linearity: The relationships between variables are not predominantly linear.
+- Gaussian Errors: The errors in the data do not follow a Gaussian distribution.
+- Heterogeneity: The dataset is not heterogeneous. 
+
+
+
+
+
+We have selected the following algorithm for causal discovery:
+
+Algorithm: MBOR
+Description: MBOR is a Markov blanket-based causal discovery algorithm that identifies key features while accommodating flexible relationships in the data, producing a CPDAG output.
+MBOR's comprehensive handling of noise, mixed data, and missing values with a strong focus on interpretability and efficiency makes it superior for this specific dataset. Its performance in benchmark scenarios similar to the dataset's properties outcompetes others, offering balanced accuracy and runtime.
+
+Now, we need to set up the primary hyperparameters for this algorithm. Please consider the dataset characteristics and the algorithm requirements to suggest appropriate values for the following hyperparameters:
+
+[PRIMARY_HYPERPARAMETERS]
+
+For each primary hyperparameter, provide:
+1. The full name of the hyperparameter that is aligned with your understanding ('independence test', 'max depth', 'score function', etc.)
+2. The suggested value
+3. A brief explanation of why this value is appropriate given the dataset characteristics and algorithm requirements
+4. Each primary hyperparameter is provided with a default value, which should be adjusted based on the dataset characteristics and algorithm requirements
+
+Actively use and reason with the following information about each hyperparameter to inform your decisions:
+
+"{\n  \"algorithm_name\": \"MBOR\",\n  \"alpha\": {\n    \"meaning\": \"Desired significance level in (0, 1)\",\n    \"suggested_values\": {\n      \"default\": 0.05,\n      \"small_sample\": 0.1,\n      \"large_sample\": 0.01\n    },\n    \"reasoning\": \"Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\"\n  },\n  \"indep_test\": {\n    \"meaning\": \"Independence test method\",\n    \"suggested_values\": {\n      \"default\": \"fisherz\",\n      \"continuous\": \"fisherz\",\n      \"discrete\": \"chisq\",\n      \"mixed\": \"gsq\",\n      \"robust_nonlinear\": \"kci\",\n      \"fast_robust_nonlinear\": \"fastkci\",\n      \"approximate_fast_nonlinear\": \"rcit\"\n    },\n    \"reasoning\": \"Choose based on data type: 'fisherz' for linear continuous; 'chisq' for discrete; 'gsq' for simplied mixed data types; 'kci' for general nonlinear data; 'fastkci' is a fast version of kci for nonlinear data; 'rcit' is a fast version of kci approximation for nonlinear data. Note [IMPORTANT]: Some nonlinear tests are extremely slow. Only consider 'kci' and 'fastkci' only if when the variable size is less than 5, consider 'rcit' only if the variable size is less than 10.\"\n  }\n} "
+
+Please provide your suggestions in a structured JSON format. Your response should look like this:
+
+{
+  "algorithm": "MBOR",
+  "hyperparameters": {
+    "[HYPERPARAMETER_1_NAME]": {
+      "full_name": "[HYPERPARAMETER_1_FULL_NAME]",
+      "value": [SUGGESTED_VALUE],
+      "explanation": "[BRIEF_EXPLANATION]"
+    },
+    "[HYPERPARAMETER_2_NAME]": {
+      "full_name": "[HYPERPARAMETER_2_FULL_NAME]",
+      "value": [SUGGESTED_VALUE],
+      "explanation": "[BRIEF_EXPLANATION]"
+    },
+    ...
+  }
+}
+
+Please always determine the hyperparameters from its corresponding "Suggested Values" part, DO NOT use any values just exist in other context but not in "Suggested Values".
+
+Please consider the trade-offs between accuracy and computational efficiency when suggesting values. If you're unsure about a specific value, you may suggest using the default value and explain why.
+
+Please provide your hyperparameter suggestions following this JSON structure.

@@ -5,6 +5,8 @@ import pandas as pd
 from openai import OpenAI
 import os
 from pydantic import BaseModel
+from dotenv import load_dotenv
+load_dotenv('/Users/wwy/Documents/Project/Causal-Copilot/.env')
 
 def convert_adj_mat(mat):
     # In downstream analysis, we only keep direct edges and ignore all undirected edges
@@ -171,7 +173,7 @@ def generate_density_plot(global_state, data, matched_data, treatment, confounde
     return figs
 
 def LLM_parse_query(args, format, prompt, message):
-    client = OpenAI(api_key=args.apikey)
+    client = OpenAI()
     if format:
         completion = client.beta.chat.completions.parse(
         model="gpt-4o-mini-2024-07-18",

@@ -73,7 +73,7 @@ class HTE_Param_Selector(object):
         :return: A doc containing the selected algorithm and its hyperparameter settings
         '''
         from openai import OpenAI
-        client = OpenAI(api_key=self.args.apikey)
+        client = OpenAI()
         # Set up the Hyperparameters
         # Load hyperparameters prompt template
 

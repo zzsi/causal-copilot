@@ -21,8 +21,6 @@ def simulate_user_query(args):
           - "selected_algorithm": the algorithm chosen in simulation (initially None),
           - "fake_data": a pandas DataFrame containing the generated fake dataset.
     """
-    # Get organization, project, and API key from environment variables
-    apikey = args.apikey
     
     # Load the high-performance structured meta-prompt from file
     meta_prompt_file = "user_simulation_meta_prompt.txt"
@@ -47,11 +45,7 @@ def simulate_user_query(args):
     meta_prompt = meta_prompt.replace("[application_fields]", json.dumps(application_fields))
     meta_prompt = meta_prompt.replace("[num_users]", str(args.num_users))
 
-<<<<<<< HEAD
     client = OpenAI()
-=======
-    client = OpenAI(api_key=apikey)
->>>>>>> c7a5867eaeecbeadc676a4828fc5eec15ef713e7
     
     # Call the LLM using the meta-prompt to simulate a user query and statistics
     response = client.chat.completions.create(

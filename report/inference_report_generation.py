@@ -208,7 +208,7 @@ class Inference_Report_generation(object):
         cf_template = load_context("report/context/inference/counterfact.tex")
         replacement = {'[METHOD]': method, 
                        '[RESULTS]': response.replace('\$','$'), 
-                       '[GRAPH1]': figs[1]}
+                       '[GRAPH1]': figs[0]}
         for placeholder, value in replacement.items():
             cf_template = cf_template.replace(placeholder, value)
         print('3rd response', replacement)

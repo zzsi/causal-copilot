@@ -103,6 +103,8 @@ class Inference:
     cycle_detection_result: Optional[Dict] = field(default_factory=dict)  # 🔹 Stores detected cycles
     editing_history: List[Dict] = field(default_factory=list)  # 🔹 Tracks cycle resolution steps
     inference_result: Optional[Dict] = field(default_factory=dict)  # 🔹 Stores final inference output
+    task_index: Optional[int] = -1
+    task_info: Optional[Dict] = None
 
 @dataclass
 class GlobalState:

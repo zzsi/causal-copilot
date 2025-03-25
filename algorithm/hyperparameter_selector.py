@@ -10,9 +10,12 @@ class HyperparameterSelector:
     def forward(self, global_state):
         selected_algo = global_state.algorithm.selected_algorithm
         hp_context = self.load_hp_context(selected_algo)
-        algorithm_description = global_state.algorithm.algorithm_candidates[selected_algo]['description']
-        algorithm_optimum_reason = global_state.algorithm.algorithm_optimum['reason']
-        algorithm_optimum_reason = algorithm_description + "\n" + algorithm_optimum_reason
+        try:
+            algorithm_description = global_state.algorithm.algorithm_candidates[selected_algo]['description']
+            algorithm_optimum_reason = global_state.algorithm.algorithm_optimum['reason']
+            algorithm_optimum_reason = algorithm_description + "\n" + algorithm_optimum_reason
+        except:
+            algorithm_optimum_reason = "User specifies this algorithm."
 
         # Select hyperparameters
         hyper_suggest = self.select_hyperparameters(global_state, selected_algo, hp_context, algorithm_optimum_reason)
