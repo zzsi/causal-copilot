@@ -325,6 +325,10 @@ class GraphEvaluator:
         Returns:
             Dictionary containing precision, recall, F1, and SHD metrics
         """
+        # Allow the homogenous predictor is used for the heterogeneous data
+        if true_graph.shape[0] - pred_graph.shape[0] == 1:
+            pred_graph = pred_graph[:-1, :-1]
+
         # Convert to binary adjacency matrices
         true_edges = (true_graph != self.EDGE_TYPES['no_edge']).astype(int)
         pred_edges = (pred_graph != self.EDGE_TYPES['no_edge']).astype(int)

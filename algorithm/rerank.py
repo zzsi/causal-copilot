@@ -1,3 +1,4 @@
+from .wrappers import __all__ as all_algos
 from .hyperparameter_selector import HyperparameterSelector
 from .runtime_estimators.runtime_estimator import RuntimeEstimator
 from .llm_client import LLMClient
@@ -69,7 +70,7 @@ class Reranker:
 
         # filter out algorithm candidates that are not in the hp_context
         algo_candidates = global_state.algorithm.algorithm_candidates
-        algo_candidates = {algo: algo_candidates[algo] for algo in algo_candidates}
+        algo_candidates = {algo: algo_candidates[algo] for algo in algo_candidates if algo in all_algos}
 
         # if user has already selected an algorithm, only keep the selected algorithm in the algo_candidates
         if global_state.algorithm.selected_algorithm is not None:

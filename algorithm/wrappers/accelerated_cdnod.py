@@ -25,7 +25,7 @@ class AcceleratedCDNOD(CausalDiscoveryAlgorithm):
         super().__init__(params)
         self._params = {
             'alpha': 0.05,
-            'indep_test': 'fisherz',
+            'indep_test': 'cmiknn',
             'depth': -1,
         }
         self._params.update(params)
@@ -97,20 +97,52 @@ class AcceleratedCDNOD(CausalDiscoveryAlgorithm):
 
 
     def test_algorithm(self):
-        # Generate sample data with linear relationships
+        # Generate sample data with linear relationships and multiple domains
         np.random.seed(42)
         n_samples = 1000
-        X1 = np.random.normal(0, 1, n_samples)
-        X2 = 0.5 * X1 + np.random.normal(0, 0.5, n_samples)
-        X3 = 0.3 * X1 + 0.7 * X2 + np.random.normal(0, 0.3, n_samples)
-        X4 = 0.6 * X2 + np.random.normal(0, 0.4, n_samples)
-        X5 = 0.4 * X3 + 0.5 * X4 + np.random.normal(0, 0.2, n_samples)
-
-        c = np.ones_like(X1)
+        n_domains = 3
         
-        df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5, 'domain_index': c})
-
-        print("Testing PC algorithm with pandas DataFrame:")
+        # Create base variables with different distributions per domain
+        X1 = np.zeros(n_samples)
+        X2 = np.zeros(n_samples)
+        X3 = np.zeros(n_samples)
+        X4 = np.zeros(n_samples)
+        X5 = np.zeros(n_samples)
+        
+        # Create domain indices
+        domain_indices = np.random.choice(range(n_domains), size=n_samples)
+        
+        # Generate data with domain-specific parameters
+        for domain in range(n_domains):
+            domain_mask = domain_indices == domain
+            n_domain_samples = np.sum(domain_mask)
+            
+            # Domain-specific noise scales
+            noise_scale = 0.5 + domain * 0.2
+            
+            # Domain-specific causal strengths
+            coef_scale = 0.5 + domain * 0.1
+            
+            # Generate data for this domain
+            X1[domain_mask] = np.random.normal(domain * 0.5, 1, n_domain_samples)
+            X2[domain_mask] = coef_scale * X1[domain_mask] + np.random.normal(0, noise_scale, n_domain_samples)
+            X3[domain_mask] = (0.3 + domain * 0.1) * X1[domain_mask] + (0.7 - domain * 0.1) * X2[domain_mask] + np.random.normal(0, noise_scale * 0.6, n_domain_samples)
+            X4[domain_mask] = (0.6 + domain * 0.05) * X2[domain_mask] + np.random.normal(0, noise_scale * 0.8, n_domain_samples)
+            X5[domain_mask] = (0.4 - domain * 0.05) * X3[domain_mask] + (0.5 + domain * 0.05) * X4[domain_mask] + np.random.normal(0, noise_scale * 0.4, n_domain_samples)
+        
+        # Create DataFrame with domain indices
+        df = pd.DataFrame({
+            'X1': X1, 
+            'X2': X2, 
+            'X3': X3, 
+            'X4': X4, 
+            'X5': X5, 
+            'domain_index': domain_indices
+        })
+        
+        print(f"Testing CDNOD algorithm with {n_domains} domains:")
+        print(f"Domain distribution: {np.bincount(domain_indices)}")
+        
         params = {
             'alpha': 0.05,
             'depth': 2,

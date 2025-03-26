@@ -3,7 +3,7 @@ import os
 import torch
 from algorithm.llm_client import LLMClient
 
-TOP_K = 5
+TOP_K = 3
 
 class Filter(object):
     def __init__(self, args):
@@ -31,9 +31,10 @@ class Filter(object):
             f.write(prompt)
 
         output = self.llm_client.chat_completion(
-            prompt=prompt,
-            system_prompt="",
-            json_response=True
+            prompt="Please choose the most suitable algorithms up to top 3, for the data user provided and explain why these algorithms were chosen over the others. For the unselected algorithms, illustrate the reasons for each of them, why we do not choose it.",
+            system_prompt=prompt,
+            json_response=True,
+            model="gpt-4o"
         )
 
         algorithm_candidates = self.parse_response(output)

@@ -5,9 +5,9 @@ from algorithm.program import Programming
 from algorithm.rerank import Reranker
 from algorithm.hyperparameter_selector import HyperparameterSelector
 from postprocess.judge import Judge
-from postprocess.visualization import Visualization, convert_to_edges
+# from postprocess.visualization import Visualization, convert_to_edges
 from preprocess.eda_generation import EDA
-from report.report_generation import Report_generation
+# from report.report_generation import Report_generation
 from global_setting.Initialize_state import global_state_initialization, load_data
 
 import json
@@ -70,7 +70,7 @@ def parse_args():
     parser.add_argument(
         '--initial_query',
         type=str,
-        default="Do causal discovery on this dataset",
+        default="Use CDNOD on this dataset",
         help='Initial query for the algorithm'
     )
 

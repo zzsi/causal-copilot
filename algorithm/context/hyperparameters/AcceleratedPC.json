@@ -15,9 +15,9 @@
         "default": "fisherz",
         "continuous": "fisherz",
         "discrete": "chisq",
-        "robust_nonlinear": "kci"
+        "robust_nonlinear": "cmiknn"
       },
-      "reasoning": "Choose based on data type: 'fisherz' for linear continuous; 'chisq' for discrete; 'kci' for general nonlinear data."
+      "reasoning": "Choose based on data type: 'fisherz' for linear continuous; 'chisq' for discrete; 'cmiknn' for general nonlinear data."
     },
     "depth": {
       "meaning": "Maximum depth for skeleton search",

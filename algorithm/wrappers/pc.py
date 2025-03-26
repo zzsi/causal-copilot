@@ -27,7 +27,7 @@ class PC(CausalDiscoveryAlgorithm):
         super().__init__(params)
         self._params = {
             'alpha': 0.05,
-            'indep_test': 'fisherz',
+            'indep_test': 'fastkci',
             'depth': 3, # -1,
             'stable': True,
             'uc_rule': 0,
@@ -64,7 +64,7 @@ class PC(CausalDiscoveryAlgorithm):
         all_params = {**self.get_primary_params(), **self.get_secondary_params(), 'node_names': node_names}
 
         # Run PC algorithm
-        cg = cl_pc(data_values, **all_params)
+        cg = cl_pc(data_values, **all_params, n_jobs=1)
 
         # Convert the graph to adjacency matrix
         adj_matrix = self.convert_to_adjacency_matrix(cg)
@@ -110,17 +110,30 @@ class PC(CausalDiscoveryAlgorithm):
         X3 = 0.3 * X1 + 0.7 * X2 + np.random.normal(0, 0.3, n_samples)
         X4 = 0.6 * X2 + np.random.normal(0, 0.4, n_samples)
         X5 = 0.4 * X3 + 0.5 * X4 + np.random.normal(0, 0.2, n_samples)
+        X6 = 0.3 * X4 + 0.2 * X5 + np.random.normal(0, 0.3, n_samples)
+        X7 = 0.5 * X1 + 0.3 * X6 + np.random.normal(0, 0.4, n_samples)
+        X8 = 0.6 * X3 + 0.4 * X7 + np.random.normal(0, 0.3, n_samples)
+        X9 = 0.2 * X6 + 0.7 * X8 + np.random.normal(0, 0.25, n_samples)
+        X10 = 0.8 * X9 + 0.1 * X5 + np.random.normal(0, 0.2, n_samples)
+
+        # Ground truth graph (10×10 adjacency matrix)
+        gt_graph = np.array([
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # X1
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # X2
+            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0],  # X3
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],  # X4
+            [0, 0, 1, 1, 0, 0, 0, 0, 0, 0],  # X5
+            [0, 0, 0, 1, 1, 0, 0, 0, 0, 0],  # X6
+            [1, 0, 0, 0, 0, 1, 0, 0, 0, 0],  # X7
+            [0, 0, 1, 0, 0, 0, 1, 0, 0, 0],  # X8
+            [0, 0, 0, 0, 0, 1, 0, 1, 0, 0],  # X9
+            [0, 0, 0, 0, 1, 0, 0, 0, 1, 0]   # X10
+        ])
         
-        df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
+        df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5, 'X6': X6, 'X7': X7, 'X8': X8, 'X9': X9, 'X10': X10})
 
         print("Testing PC algorithm with pandas DataFrame:")
-        params = {
-            'alpha': 0.05,
-            'depth': 2,
-            'indep_test': 'fisherz',
-            'verbose': False,
-            'show_progress': False
-        }
+
         adj_matrix, info, _ = self.fit(df)
         print("Adjacency Matrix:")
         print(adj_matrix)
@@ -129,14 +142,6 @@ class PC(CausalDiscoveryAlgorithm):
         print(f"Number of definite unshielded colliders: {len(info['definite_UC'])}")
         print(f"Number of definite non-unshielded colliders: {len(info['definite_non_UC'])}")
 
-        # Ground truth graph
-        gt_graph = np.array([
-            [0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0],
-            [1, 1, 0, 0, 0],
-            [0, 1, 0, 0, 0],
-            [0, 0, 1, 1, 0]
-        ])
 
         # Use GraphEvaluator to compute metrics
         evaluator = GraphEvaluator()

@@ -76,7 +76,7 @@ PC: {
 }
 
 PCParallel: {
-    Availability: Available,
+    Availability: Unavailable,
     Method Type: Constraint-based,
     Functional form: Flexible,
     Noise: Flexible,
@@ -123,7 +123,7 @@ AcceleratedPC: {
     Distribution Shift: Homogenous,
     Scalability: Large-scale,
     Efficiency: Extreme Fast (GPU),
-    Empirical Performance: Limited,
+    Empirical Performance: Moderate,
     Output Format: CPDAG
 }
 

@@ -49,7 +49,7 @@ class BenchmarkRunner:
         
         # Get all available algorithm classes
         available_algorithms = {}
-        for name in wrappers.__all__:
+        for name in self.algorithm_candidates: # wrappers.__all__:
             available_algorithms[name] = getattr(wrappers, name)
             
         # Only keep algorithms specified in config

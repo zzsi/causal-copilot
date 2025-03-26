@@ -20,7 +20,6 @@ class GOLEM(CausalDiscoveryAlgorithm):
             'lambda_1': 2e-2,  # L1 penalty coefficient
             'lambda_2': 5.0,  # DAG penalty coefficient
             'equal_variances': True,  # Whether to assume equal noise variances
-            'non_equal_variances': True,  # Whether to assume non-equal noise variances
             'learning_rate': 1e-3,  # Learning rate for Adam optimizer
             'max_iter': 1e4,  # Number of training iterations (default: 1e5)
             'checkpoint_iter': 5000,  # Iterations between checkpoints
@@ -50,7 +49,7 @@ class GOLEM(CausalDiscoveryAlgorithm):
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
     
     def get_secondary_params(self):
-        self._secondary_param_keys = ['lambda_2', 'learning_rate', 'equal_variances', 'non_equal_variances', 
+        self._secondary_param_keys = ['lambda_2', 'learning_rate', 'equal_variances',
                                       'checkpoint_iter', 'seed', 'device_type', 'device_ids']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 

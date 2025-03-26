@@ -32,6 +32,11 @@ import logging
 
 import networkx as nx
 
+# Add path for GPU-accelerated CMIknn
+sys.path.append(os.path.join(root_dir, 'externals', 'pc_adjacency_search'))
+import gpucmiknn
+import globals
+
 
 def apply_rules(dag: nx.DiGraph):
     def non_adjacent(g, v_1, v_2):
@@ -121,10 +126,14 @@ def apply_rules(dag: nx.DiGraph):
 
 def orient_v_structure(
     dag: nx.DiGraph,
-    separation_sets: np.ndarray,
+    separation_sets: dict,
     skeleton: nx.Graph = None,
 ) -> None:
     def in_separation_set(v, v_1, v_2):
+        if v_1 not in separation_sets:
+            return False
+        if v_2 not in separation_sets[v_1]:
+            return False
         return v in separation_sets[v_1][v_2]
 
     if skeleton is None:
@@ -150,24 +159,20 @@ def orient_v_structure(
 
 
 # **GPU-Accelerated Skeleton Discovery**
-def skeleton_discovery_gpu(data: np.ndarray, alpha: float, indep_test: str = 'fisherz', max_level: int = -1) -> Tuple[CausalGraph, np.ndarray, np.ndarray]:
+def skeleton_discovery_gpu(data: np.ndarray, alpha: float, indep_test: str = 'fisherz', max_level: int = -1) -> Tuple[nx.Graph, dict]:
     """
-    Perform skeleton discovery using `discover_skeleton_gpu_gaussian`.
+    Perform skeleton discovery using GPU-accelerated methods.
     
     Args:
         data: Input dataset as a NumPy array (samples, variables)
         alpha: Significance level
-        indep_test: Independence test to use ('fisherz' or 'discrete')
+        indep_test: Independence test to use ('fisherz', 'discrete', or 'cmiknn')
         max_level: Maximum conditioning set size
         
     Returns:
-        Tuple containing CausalGraph object, separation sets, and pmax matrix
+        Tuple containing skeleton graph and separation sets
     """
     num_vars = data.shape[1]
-    num_observations = data.shape[0]
-    
-    # Initialize skeleton with complete undirected graph
-    skeleton = np.ones((num_vars, num_vars), dtype=np.ushort)
     
     # Run GPU-accelerated skeleton discovery
     if indep_test == 'fisherz':
@@ -175,47 +180,73 @@ def skeleton_discovery_gpu(data: np.ndarray, alpha: float, indep_test: str = 'fi
             max_level = num_vars
         from gpucsl.pc.pc import GaussianPC
         pc = GaussianPC(data=data, alpha=alpha, max_level=max_level, should_log=False)
-        ((result, separation_sets, pmax, _), discover_skeleton_time) = pc.set_distribution_specific_options().discover_skeleton()
+        ((result, separation_sets, _, _), _) = pc.set_distribution_specific_options().discover_skeleton()
+        skeleton = nx.DiGraph(result)
     elif indep_test == 'discrete':
         if max_level < 0:
             max_level = num_vars
         from gpucsl.pc.pc import DiscretePC
         pc = DiscretePC(data=data, alpha=alpha, max_level=max_level, should_log=False)
-        ((result, separation_sets, pmax, _), discover_skeleton_time) = pc.set_distribution_specific_options().discover_skeleton()
+        ((result, separation_sets, _, _), _) = pc.set_distribution_specific_options().discover_skeleton()
+        skeleton = nx.DiGraph(result)
+    elif indep_test == 'cmiknn':
+        # Initialize globals for CMIknn
+        globals.init()
+        globals.alpha = alpha
+        globals.vertices = data.shape[1]
+        globals.permutations = 100
+        globals.max_sepset_size = data.shape[1] - 2 if max_level < 0 else min(max_level, data.shape[1] - 2)
+        globals.start_level = 0
+        globals.split_size = None
+        globals.k_cmi = min(int(data.shape[0] * 0.07), 200)
+        
+        # Initialize GPU
+        gpucmiknn.init_gpu()
+        
+        # Get skeleton and sepsets using GPU-accelerated CMIknn
+        from gpu_ci import gpu_single
+        adj_matrix, separation_sets = gpu_single(data)
+
+        for i in range(num_vars):
+            adj_matrix[i, i] = 0
+            if adj_matrix[-1, i] == 1:
+                adj_matrix[i, -1] = 0            
+        # Convert to networkx graph
+        skeleton = nx.DiGraph(adj_matrix)
     else:
         raise ValueError(f"Unsupported independence test: {indep_test}")
         
-
-    skeleton = nx.DiGraph(result)
     return skeleton, separation_sets
 
 
 def orient_edges(
     skeleton: nx.Graph,
-    separation_sets: np.ndarray,
+    separation_sets: dict,
     c_indx: np.ndarray,
-) -> nx.DiGraph:
+) -> np.ndarray:
     dag = skeleton.to_directed()
     
     # Get the indices of domain variables (c_indx)
-    domain_idx = list(skeleton.nodes())[-1]
+    domain_idx = skeleton.number_of_nodes() - 1
     
-    # First, orient all edges between domain indices and other variables
-    # Domain indices should be the parents of other variables
-    for node in skeleton.nodes():
-        if node == domain_idx:
-            continue
-        if skeleton.has_edge(domain_idx, node):
-            # Ensure the edge is directed from domain index to other variable
-            if dag.has_edge(node, domain_idx):
-                dag.remove_edge(node, domain_idx)
-            dag.add_edge(domain_idx, node)
+    # # First, orient all edges between domain indices and other variables
+    # # Domain indices should be the parents of other variables
+    # for node in skeleton.nodes():
+    #     if node == domain_idx:
+    #         continue
+    #     if skeleton.has_edge(domain_idx, node):
+    #         # Ensure the edge is directed from domain index to other variable
+    #         if dag.has_edge(node, domain_idx):
+    #             dag.remove_edge(node, domain_idx)
+    #         dag.add_edge(domain_idx, node)
     
     # Then orient v-structures based on the separation sets
     orient_v_structure(dag, separation_sets, skeleton)
     
     # Apply Meek rules to orient remaining edges
     apply_rules(dag)
+
+    print(dag.edges())
 
     # Convert directed graph to adjacency matrix
     adj_matrix = np.zeros((dag.number_of_nodes(), dag.number_of_nodes()))
@@ -252,12 +283,12 @@ def accelerated_cdnod(
     """
 
     # Append `c_indx` to data
-    data_aug = np.concatenate((data, c_indx), axis=1)
+    data_aug = np.concatenate((data, c_indx.reshape(-1, 1)), axis=1)
 
     # **Perform GPU-Accelerated Skeleton Discovery**
     skeleton, separation_sets = skeleton_discovery_gpu(data_aug, alpha, indep_test, depth)
 
     # **Orient edges using UCSepset and Meek**
-    causal_graph = orient_edges(skeleton, separation_sets, c_indx)
-
-    return causal_graph
+    adj_matrix = orient_edges(skeleton, separation_sets, c_indx)
+    
+    return adj_matrix

@@ -701,7 +701,7 @@ def convert_stat_info_to_text(statistics):
     text = f"The dataset has the following characteristics:\n\n"
     text += f"Data Type: The overall data type is {statistics.data_type}.\n\n"
     text += f"The sample size is {statistics.sample_size} with {statistics.feature_number} features. "
-    text += f"This dataset is {'time-series' if statistics.data_type == 'Time-series' else 'not time-series'} data. "
+    text += f"This dataset is {'time-series' if statistics.data_type == 'Time-series' else 'not time-series'} data. \n\n"
     text += f"Data Quality: {'There are' if statistics.missingness else 'There are no'} missing values in the dataset.\n\n"
     
     text += "Statistical Properties:\n"

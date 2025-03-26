@@ -12,7 +12,7 @@
   "indep_test": {
     "meaning": "Independence test method",
     "suggested_values": {
-      "default": "fisherz",
+      "default": "kci",
       "continuous": "fisherz",
       "discrete": "chisq",
       "mixed": "gsq",
@@ -20,7 +20,7 @@
       "fast_robust_nonlinear": "fastkci",
       "approximate_fast_nonlinear": "rcit"
     },
-    "reasoning": "Choose based on data type: 'fisherz' for linear continuous; 'chisq' for discrete; 'gsq' for simplied mixed data types; 'kci' for general nonlinear data; 'fastkci' is a fast version of kci for nonlinear data; 'rcit' is a fast version of kci approximation for nonlinear data. Note [IMPORTANT]: Some nonlinear tests are extremely slow. Only consider 'kci' and 'fastkci' only if when the variable size is less than 5, consider 'rcit' only if the variable size is less than 10."
+    "reasoning": "Including the domain index, the data is naturally mixed and the independence test should be robust nonlinear if the variable size (<= 10) and sample size (< 1500) are tolerable. Choose based on data type: 'fisherz' for linear continuous; 'chisq' for discrete; 'gsq' for simplied mixed data types; 'kci' for general nonlinear data; 'fastkci' is a fast version of kci for nonlinear data; 'rcit' is a fast version of kci approximation for nonlinear data. Note [IMPORTANT]: Some nonlinear tests are extremely slow. Only consider 'kci' and 'fastkci' only if when the variable size is less than 10, consider 'rcit' only if the variable size is less than 15."
   },
   "depth": {
     "meaning": "Maximum depth for skeleton search",

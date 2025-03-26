@@ -31,6 +31,7 @@ def pc(
     verbose: bool = False, 
     show_progress: bool = True,
     node_names: List[str] | None = None,
+    n_jobs: int = 4,
     **kwargs
 ):
     if data.shape[0] < data.shape[1]:
@@ -42,11 +43,11 @@ def pc(
         return mvpc_alg(data=data, node_names=node_names, alpha=alpha, indep_test=indep_test, depth=depth, correction_name=correction_name, stable=stable,
                         uc_rule=uc_rule, uc_priority=uc_priority, background_knowledge=background_knowledge, 
                         verbose=verbose,
-                        show_progress=show_progress, **kwargs)
+                        show_progress=show_progress, n_jobs=n_jobs,**kwargs)
     else:
         return pc_alg(data=data, node_names=node_names, alpha=alpha, indep_test=indep_test, depth=depth, stable=stable, uc_rule=uc_rule,
                       uc_priority=uc_priority, background_knowledge=background_knowledge, verbose=verbose,
-                      show_progress=show_progress, **kwargs)
+                      show_progress=show_progress, n_jobs=n_jobs,**kwargs)
 
 
 def pc_alg(
@@ -61,6 +62,7 @@ def pc_alg(
     background_knowledge: BackgroundKnowledge | None = None,
     verbose: bool = False,
     show_progress: bool = True,
+    n_jobs: int = 4,
     **kwargs
 ) -> CausalGraph:
     """
@@ -106,7 +108,8 @@ def pc_alg(
     indep_test = CIT(data, indep_test, **kwargs)
     cg_1 = SkeletonDiscovery.skeleton_discovery(data, alpha, indep_test, stable, depth=depth,
                                                 background_knowledge=background_knowledge, verbose=verbose,
-                                                show_progress=show_progress, node_names=node_names)
+                                                show_progress=show_progress, node_names=node_names,
+                                                n_jobs=n_jobs)
 
     if background_knowledge is not None:
         orient_by_background_knowledge(cg_1, background_knowledge)
@@ -154,6 +157,7 @@ def mvpc_alg(
     background_knowledge: BackgroundKnowledge | None = None,
     verbose: bool = False,
     show_progress: bool = True,
+    n_jobs: int = 4,
     **kwargs,
 ) -> CausalGraph:
     """
@@ -208,7 +212,8 @@ def mvpc_alg(
     ## a) Run PC algorithm with the 1st step skeleton;
     cg_pre = SkeletonDiscovery.skeleton_discovery(data, alpha, indep_test, stable, depth=depth,
                                                   background_knowledge=background_knowledge, 
-                                                  verbose=verbose, show_progress=show_progress, node_names=node_names)
+                                                  verbose=verbose, show_progress=show_progress, node_names=node_names,
+                                                  n_jobs=n_jobs)
     if background_knowledge is not None:
         orient_by_background_knowledge(cg_pre, background_knowledge)
 

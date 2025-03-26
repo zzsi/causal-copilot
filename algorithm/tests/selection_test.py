@@ -107,11 +107,7 @@ async def select_algorithm(simulation):
     # Use asyncopenai's asynchronous chat completion with the o1-mini model.
     try:
         args = generate_dummy_args()
-<<<<<<< HEAD
         client = AsyncOpenAI()
-=======
-        client = AsyncOpenAI(api_key=args.apikey)
->>>>>>> c7a5867eaeecbeadc676a4828fc5eec15ef713e7
         response = await client.chat.completions.create(
             model=BASELINE_MODEL,
             messages=[

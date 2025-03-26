@@ -89,7 +89,7 @@ class AcceleratedPC(PC):
     def test_algorithm(self):
         # Generate sample data with linear relationships
         np.random.seed(42)
-        n_samples = 1000
+        n_samples = 2000
         X1 = np.random.normal(0, 1, n_samples)
         X2 = 0.5 * X1 + np.random.normal(0, 0.5, n_samples)
         X3 = 0.3 * X1 + 0.7 * X2 + np.random.normal(0, 0.3, n_samples)
@@ -255,5 +255,4 @@ class AcceleratedPC(PC):
 
 if __name__ == "__main__":
     pc_algo = AcceleratedPC({})
-    # pc_algo.test_algorithm()
-    pc_algo.stress_test()
+    pc_algo.test_algorithm()

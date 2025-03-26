@@ -45,10 +45,7 @@ class GaussianKernel(Kernel):
         else:
             width = 0.4
         theta = 1.0 / (width ** 2)
-        try:
-            self.width = theta / X.shape[1]
-        except ZeroDivisionError:
-            self.width = theta
+        self.width = theta / X.shape[1]
 
     def set_width_empirical_hsic(self, X: ndarray):
         n = shape(X)[0]
