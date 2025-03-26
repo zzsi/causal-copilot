@@ -8,6 +8,8 @@ from openai import OpenAI
 from pydantic import BaseModel
 from typing import List, Union, Any
 import torch 
+from dotenv import load_dotenv
+load_dotenv('/Users/wwy/Documents/Project/Causal-Copilot/.env')
 
 def try_numeric(value):
     """Convert string to int first, then float if possible, otherwise return string"""
@@ -38,8 +40,8 @@ def generate_hyperparameter_text(global_state):
         hyperparameter_text += f"  Explanation: {explanation}\n\n"
     return hyperparameter_text, global_state
 
-def LLM_parse_query(format, prompt, message, args):
-    client = OpenAI(api_key=args.apikey)
+def LLM_parse_query(format, prompt, message):
+    client = OpenAI()
     if format:
         completion = client.beta.chat.completions.parse(
         model="gpt-4o-mini-2024-07-18",
@@ -69,7 +71,7 @@ def parse_drop_high_miss_query(message, chat_history, download_btn, global_state
     Otherwise, the boolean should be False.
     If you cannot determine yes or no, save yes_or_no as None.
     """
-    parsed_response = LLM_parse_query(Bool, prompt, message, global_state.args)
+    parsed_response = LLM_parse_query(Bool, prompt, message)
     yes = parsed_response.yes_or_no
     if yes is None:
         chat_history.append((message, "❌ Your query cannot be parsed, please follow the templete and retry."))
@@ -131,9 +133,10 @@ def heterogeneity_query(global_state, message, chat_history, download_btn, CURRE
         "If there is only one variable, also save it in list variables"
         f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
         "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
+        "If user's input is not Case Sensitive, please map them into correct CASE SENSITIVE variable names."
         "If they say 'all of them', 'all' or something like that, please save all the variable names in the list."
         "If you cannot find variable names, just return an empty list."
-        parsed_vars = LLM_parse_query(VarList, prompt, message, args)
+        parsed_vars = LLM_parse_query(VarList, prompt, message)
         var_list = parsed_vars.variables
         if var_list == []:
             chat_history.append((message,
@@ -196,8 +199,7 @@ def process_initial_query(message, chat_history, download_btn, args, REQUIRED_IN
         print('not feature indicator')
         chat_history.append((message,
                                 """Please enter your initial query first before proceeding. 
-                             Please indicate if your dataset has meaningful feature names using 'YES' or 'NO', 
-                             and you can also provide some information about the background/context/prior/statistical information about the dataset,
+                             You can also provide some information about the background/context/prior/statistical information about the dataset,
                              which would help us generate appropriate report for you.
                              """))
     return chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE, args    
@@ -229,7 +231,7 @@ def parse_var_selection_query(message, chat_history, download_btn, next_step, ar
     f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
     "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
     
-    parsed_vars = LLM_parse_query(VarList, prompt, message, args)
+    parsed_vars = LLM_parse_query(VarList, prompt, message)
     var_list = parsed_vars.variables
     if var_list == []:
         chat_history.append((message, "❌ Your variable selection query cannot be parsed, please make sure variables are among your dataset features and retry. \n"
@@ -248,6 +250,23 @@ def parse_var_selection_query(message, chat_history, download_btn, next_step, ar
             chat_history.append((message, "✅ Successfully parsed your provided variables."))
             CURRENT_STAGE = next_step
             return var_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
+
+def LLM_var_selection(message, global_state, chat_history):
+    class VarList(BaseModel):
+        variables: list[str]
+    prompt = f"""
+    You are a helpful assistant, these are many variables in the dataset, please help me to select some variables.
+    Only select 10 variables, and the variables must be among this list! {global_state.user_data.processed_data.columns}
+    variables in the returned list MUST be among the list above, and it's CASE SENSITIVE.
+    Save the selected variables in the list variables.
+    """
+    parsed_vars = LLM_parse_query(VarList, prompt, message)
+    var_list = parsed_vars.variables
+    missing_vars = [var for var in var_list if var not in global_state.user_data.raw_data.columns]
+    var_list = list(set(var_list)-set(missing_vars))
+    chat_history.append((None, f"Suggested by LLM, we will visualize the following variables: {', '.join(var_list)}"))
+    return var_list, chat_history
+
         
 def parse_ts_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
     message = message.strip()
@@ -272,9 +291,9 @@ def parse_sparsity_query(message, chat_history, download_btn, args, global_state
     # Select features based on LLM
     if message.upper() == 'LLM' or message == '':
         try:
-            global_state = llm_select_dropped_features(global_state=global_state, args=args)
+            global_state = llm_select_dropped_features(global_state, args=args)
         except:
-            global_state = llm_select_dropped_features(global_state=global_state, args=args)
+            global_state = llm_select_dropped_features(global_state, args=args)
         if message.upper() == 'LLM':
             chat_history.append((None, "The following sparse variables suggested by LLM will be dropped: \n"
                                             ", ".join(global_state.user_data.llm_drop_features)))
@@ -293,7 +312,7 @@ def parse_sparsity_query(message, chat_history, download_btn, args, global_state
         f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
         "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
         "If you cannot find variable names, just return an empty list."
-        parsed_vars = LLM_parse_query(VarList, prompt, message, args)
+        parsed_vars = LLM_parse_query(VarList, prompt, message)
         var_list = parsed_vars.variables
         if var_list == []:
             chat_history.append((None, "⚠️ Your sparse variable dropping query cannot be parsed, Please follow the templete below and retry. \n"
@@ -322,7 +341,7 @@ def first_stage_sparsity_check(message, chat_history, download_btn, args, global
     If user answers 'no' or something like that, the boolean should be **True!**
     If the user provide the na_indicator, the boolean should be **False!**
     Secondly if user provide the na_indicator, identify the indicator user specified in the query, and save the string result in na_indicator. """
-    parsed_response = LLM_parse_query(NA_Indicator, prompt, message, args)
+    parsed_response = LLM_parse_query(NA_Indicator, prompt, message)
     indicator, na_indicator = parsed_response.indicator, parsed_response.na_indicator
     print(indicator, na_indicator)
     if indicator:
@@ -378,7 +397,7 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
             If the user does not specify the parameter, just return an empty list.
             If the value is a number, please save it as a number, otherwise save it as a string.
             """
-            parsed_response = LLM_parse_query(Param_Selector, prompt, message, args)
+            parsed_response = LLM_parse_query(Param_Selector, prompt, message)
             param_keys, param_values = parsed_response.param_keys, parsed_response.param_values
             specified_params = {param_keys[i]: param_values[i] for i in range(len(param_keys))}
             print('specified_params',specified_params)
@@ -437,11 +456,14 @@ def parse_user_postprocess(message, chat_history, download_btn, args, global_sta
             forbid_edges = [(Length, Height)]
             orient_edges = [(Age, Diameter)]
             """
-            parsed_response = LLM_parse_query(EditList, prompt, message, args)
-            add_edges, forbid_edges, orient_edges = parsed_response.add_edges, parsed_response.forbid_edges, parsed_response.orient_edges
-            edges_dict["add_edges"] = [(pair.split('->')[0].strip(' '), pair.split('->')[1].strip(' ')) for pair in add_edges] if add_edges != [] else []
-            edges_dict["forbid_edges"] = [(pair.split('->')[0].strip(' '), pair.split('->')[1].strip(' ')) for pair in forbid_edges] if forbid_edges != [] else []
-            edges_dict["orient_edges"] = [(pair.split('->')[0].strip(' '), pair.split('->')[1].strip(' ')) for pair in orient_edges] if orient_edges != [] else []
+            def parse_query(message, edges_dict):
+                parsed_response = LLM_parse_query(EditList, prompt, message)
+                add_edges, forbid_edges, orient_edges = parsed_response.add_edges, parsed_response.forbid_edges, parsed_response.orient_edges
+                edges_dict["add_edges"] = [(pair.split('->')[0].strip(' '), pair.split('->')[1].strip(' ')) for pair in add_edges] if add_edges != [] else []
+                edges_dict["forbid_edges"] = [(pair.split('->')[0].strip(' '), pair.split('->')[1].strip(' ')) for pair in forbid_edges] if forbid_edges != [] else []
+                edges_dict["orient_edges"] = [(pair.split('->')[0].strip(' '), pair.split('->')[1].strip(' ')) for pair in orient_edges] if orient_edges != [] else []
+                return edges_dict
+            edges_dict = parse_query(message, edges_dict)
             # Check whether all these variables exist
             variables = [item for sublist in edges_dict.values() for pair in sublist for item in pair]
             missing_vars = [var for var in variables if var not in global_state.user_data.raw_data.columns]
@@ -449,8 +471,12 @@ def parse_user_postprocess(message, chat_history, download_btn, args, global_sta
             print(variables)
             print(global_state.user_data.raw_data.columns)
             if missing_vars != []:
-                chat_history.append((None, "❌ Variables " + ", ".join(missing_vars) + " are not in the dataset, please check it and retry."))
-                return edges_dict, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
+                edges_dict = parse_query(message, edges_dict)
+                variables = [item for sublist in edges_dict.values() for pair in sublist for item in pair]
+                missing_vars = [var for var in variables if var not in global_state.user_data.raw_data.columns]
+                if missing_vars != []:
+                    chat_history.append((None, "❌ Variables " + ", ".join(missing_vars) + " are not in the dataset, please check it and retry."))
+                    return edges_dict, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
             CURRENT_STAGE = 'postprocess_parse_done'
             return edges_dict, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
     except Exception as e:
@@ -469,7 +495,7 @@ def parse_report_algo_query(message, chat_history, download_btn, args, global_st
     2. If there's no algorithm, just return an empty list.
     3. You can only choose from the following algorithms! {', '.join(algos)}
     """
-    parsed_response = LLM_parse_query(AlgoList, prompt, message, args)
+    parsed_response = LLM_parse_query(AlgoList, prompt, message)
     algo_list = parsed_response.algorithms
     if algo_list == []:
         chat_history.append((message, "❌ Your algorithm query cannot be parsed, please choose from the following algorithms!\n"
@@ -512,7 +538,7 @@ def parse_inference_query(message, chat_history, download_btn, args, global_stat
             query_prompt = query_prompt.replace('[BINARY]', binary_condition)
         
         global_state.logging.downstream_discuss.append({"role": "user", "content": message})
-        parsed_response = LLM_parse_query(InfList, query_prompt, message, args)
+        parsed_response = LLM_parse_query(InfList, query_prompt, message)
         reason, tasks_list, descs_list, key_node_list = parsed_response.reason, parsed_response.tasks, parsed_response.descriptions, parsed_response.key_node
         print(tasks_list, descs_list, key_node_list)
         chat_history.append((None, "✅ Successfully parsed your query. We will analyze it in the following perspectives:\n"
@@ -539,7 +565,7 @@ def parse_inf_discuss_query(message, chat_history, download_btn, args, global_st
                 Your answer must be based on the given history, DO NOT include any fake information.
                 """
         global_state.logging.downstream_discuss.append({"role": "user", "content": message})
-        parsed_response = LLM_parse_query(DiscussList, prompt, message, args)
+        parsed_response = LLM_parse_query(DiscussList, prompt, message)
         answer_info = parsed_response.answer 
         global_state.inference.task_info[global_state.inference.task_index]['result']['discussion'][message] = answer_info
         print(answer_info)
@@ -558,12 +584,12 @@ def parse_treatment(desc, global_state, args):
     The variable name must be among these variables: {global_state.user_data.processed_data.columns}
     Only return me with the variable name, do not include anything else.
     """
-    treatment = LLM_parse_query(None, 'You are an expert in Causal Discovery.', prompt, args)
+    treatment = LLM_parse_query(None, 'You are an expert in Causal Discovery.', prompt)
     return treatment
 
 def parse_shift_value(desc, args):
     class ShiftValue(BaseModel):
         shift_value: float
-    parsed_response = LLM_parse_query(ShiftValue, "Extract the numerical value from the query and save it in shift_value", desc, args)
+    parsed_response = LLM_parse_query(ShiftValue, "Extract the numerical value from the query and save it in shift_value", desc)
     shift_value = parsed_response.shift_value
     return shift_value

@@ -78,6 +78,7 @@ class Report_generation(object):
         else:
             self.global_state_list = [global_state]
             global_state.logging.global_state_logging = [global_state.algorithm.selected_algorithm]
+            inference_global_state = global_state 
 
         self.client = OpenAI()
         self.data_mode = args.data_mode

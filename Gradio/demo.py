@@ -348,25 +348,26 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
         
         if CURRENT_STAGE == "sparsity_drop_done":
             if global_state.statistics.sparsity_dict['high'] != []:
-                chat_history.append((None, f"📍 The missing ratios of the following variables are greater than 0.5: \n"
+                chat_history.append((None, f"📍 The missing ratios of the following variables are greater than 0.5, we will drop them: \n"
                                         f"{', '.join(global_state.statistics.sparsity_dict['high'])}"))
+                CURRENT_STAGE = "drop_greater_miss_50"
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 if set(global_state.user_data.important_features) & set(global_state.statistics.sparsity_dict['high']) != set():
                     chat_history.append((None, "⚠️ Important features are detected with high missing ratios, we suggest you to drop them otherwise the result can be unreliable.\n"
                                          "Do you want to drop them? Please enter 'YES' or 'NO'."))
-                    CURRENT_STAGE = "drop_greater_miss_50"
                     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                     return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             else:
                 CURRENT_STAGE = "impute_smaller_miss_30"
         if CURRENT_STAGE == "drop_greater_miss_50":
-            chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_drop_high_miss_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE)
-            if CURRENT_STAGE != "impute_smaller_miss_30":
-                return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-            else:
-                ####### update variable list
-                global_state = drop_greater_miss_50_feature(global_state)
-                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            if set(global_state.user_data.important_features) & set(global_state.statistics.sparsity_dict['high']) != set():
+                chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_drop_high_miss_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE)
+                if CURRENT_STAGE != "impute_smaller_miss_30":
+                    return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            ####### update variable list
+            CURRENT_STAGE = "impute_smaller_miss_30"
+            global_state = drop_greater_miss_50_feature(global_state)
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
         if CURRENT_STAGE == "impute_smaller_miss_30":
             if global_state.statistics.sparsity_dict['low'] != []:
                 # impute variables with sparsity<0.3 in the following
@@ -433,7 +434,8 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                                                 "1. Please seperate each variables with a semicolon and restrict the number within 10; \n"
                                                 "2. Please choose among the following variables: \n"
                                                 f"{';'.join(global_state.user_data.processed_data.columns)} \n"
-                                                "3. Templete: PKA; Jnk; PIP2; PIP3; Mek"))
+                                                "3. Templete: PKA; Jnk; PIP2; PIP3; Mek \n"
+                                                "4. If you want LLM help you to decide, please enter 'LLM'."))
                         yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                         return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                     else: 
@@ -467,10 +469,17 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
         if CURRENT_STAGE == 'variable_selection':
             print('select variable')
             if REQUIRED_INFO["interactive_mode"]:
-                var_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_var_selection_query(message, chat_history, download_btn, 'stat_analysis', args, global_state, REQUIRED_INFO, CURRENT_STAGE)
+                chat_history.append((message, None))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                if message.upper() == 'LLM' or message == '':
+                    var_list, chat_history = LLM_var_selection(message, global_state, chat_history)
+                    CURRENT_STAGE = 'stat_analysis'
+                else:
+                    var_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_var_selection_query(message, chat_history, download_btn, 'stat_analysis', args, global_state, REQUIRED_INFO, CURRENT_STAGE)
                 # Update the selected variables
                 global_state.user_data.visual_selected_features = var_list
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                
             else: 
                 CURRENT_STAGE = 'ts_check_done'
                 try:
@@ -613,15 +622,15 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                                                 "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
                                                 "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
                                                 "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                 "- ** Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
+                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
                                                 "Otherwise please reply NO."))
                     else:
                         chat_history.append((None, "Do you want to retry other algorithms? If so, please choose one from the following: \n"
-                                                "- **Constraint-based Methods**: PC, PCParallel, AcceleratedPC, FCI, CDNOD, AcceleratedCDNOD;\n"
+                                                "- **Constraint-based Methods**: PC, PCParallel, FCI, CDNOD;\n"
                                                 "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
                                                 "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
                                                 "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                 "- ** Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
+                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, ICALiNGAM;"
                                                 "Otherwise please reply NO."))
                     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                     return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -635,6 +644,19 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
         if CURRENT_STAGE == 'user_algo_selection':  
+            if torch.cuda.is_available():
+                permitted_algo_list= ['PC', 'PCParallel', 'AcceleratedPC', 'FCI', 'CDNOD', 'AcceleratedCDNOD',
+                                'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
+                                'GES', 'FGES', 'XGES', 'GRaSP',
+                                'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
+                                'DirectLiNGAM', 'AcceleratedLiNGAM', 'ICALiNGAM']
+            else:
+                permitted_algo_list= ['PC', 'PCParallel', 'FCI', 'CDNOD',
+                                'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
+                                'GES', 'FGES', 'XGES', 'GRaSP',
+                                'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
+                                'DirectLiNGAM', 'ICALiNGAM']
+                
             if REQUIRED_INFO["interactive_mode"]:
                 chat_history.append((message, None))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -642,26 +664,16 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 CURRENT_STAGE = 'hyperparameter_selection'     
                 chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Selected algorithm: {global_state.algorithm.selected_algorithm}\n"))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                
-            elif message in ['PC', 'PCParallel', 'AcceleratedPC', 'FCI', 'CDNOD', 'AcceleratedCDNOD',
-                             'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
-                             'GES', 'FGES', 'XGES', 'GRaSP',
-                             'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
-                             'DirectLiNGAM', 'AcceleratedLiNGAM', 'ICALiNGAM']:
+            elif message in permitted_algo_list:
                 global_state.algorithm.selected_algorithm = message
                 global_state.algorithm.algorithm_arguments = None 
                 CURRENT_STAGE = 'hyperparameter_selection'     
                 chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Selected algorithm: {global_state.algorithm.selected_algorithm}\n"))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             else: 
-                if torch.cuda.is_available():
-                    chat_history.append((None, "❌ The specified algorithm is not correct, please choose from the following: \n"
-                                        "PC, FCI, CDNOD, GES, DirectLiNGAM, ICALiNGAM, NOTEARS\n"
-                                        "Fast Version: FGES, XGES, AcceleratedDirectLiNGAM\n"))
-                else:
-                    chat_history.append((None, "❌ The specified algorithm is not correct, please choose from the following: \n"
-                                        "PC, FCI, CDNOD, GES, DirectLiNGAM, ICALiNGAM, NOTEARS\n"
-                                        "Fast Version: FGES, XGES.\n"))
+                chat_history.append((None, "❌ The specified algorithm is not correct, please choose from the following: \n"
+                                        f"{', '.join(permitted_algo_list)}\n"
+                                        "Otherwise please reply NO."))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
@@ -875,7 +887,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                                                 "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
                                                 "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
                                                 "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                 "- ** Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
+                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
                                                 "Otherwise please reply NO."))
                 else:
                     chat_history.append((None, "Do you want to retry other algorithms? If so, please choose one from the following: \n"
@@ -883,7 +895,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                                                 "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
                                                 "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
                                                 "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                 "- ** Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
+                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
                                                 "Otherwise please reply NO."))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -904,9 +916,13 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                                         "Otherwise please input 'NO'.\n"
                                            "We support the following tasks: \n"
                                            "1️⃣ Treatment Effect Estimation\n"
+                                           "e.g. 'I want to estimate the treatment effect of variable A on variable B'\n"
                                            "2️⃣ Anormaly Attribution\n"
+                                             "e.g. 'I want to identify the cause of the anomaly in variable A'\n"
                                            "3️⃣ Feature Importance\n"
-                                           "4️⃣ Conterfactual Simulation\n")) 
+                                           "e.g. 'I want to identify the most important feature for variable A in the dataset'\n"
+                                           "4️⃣ Conterfactual Simulation\n"
+                                           "e.g. 'I want to simulate the counterfactual scenario of variable B if I increase variable A'\n")) 
             CURRENT_STAGE = 'parse_task'
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn 
             return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn 
@@ -914,27 +930,29 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             print('parse_task')
             reason, tasks_list, descs_list, key_node_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_inference_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-            if tasks_list == []:
-                chat_history.append((None, "We cannot identify any supported task in your query, please retry or type 'NO' to skip this step."))
-                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-            else:
-                chat_history.append(("📝 Proposal for my causal inference task...", None))
-                chat_history.append((None, reason))
-                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-
-                global_state.inference.task_index += 1
-                global_state.inference.task_info[global_state.inference.task_index] = {'task':tasks_list,
-                                                                                       'desc': descs_list,
-                                                                                       'key_node': key_node_list,
-                                                                                       'result':{'proposal':reason}}
-                if "Treatment Effect Estimation" in tasks_list:
-                    CURRENT_STAGE = "inference_info_collection_1"
-                if 'Counterfactual Estimation' in tasks_list:
-                    CURRENT_STAGE = "counterfactual_info_collection1"
+            if CURRENT_STAGE != 'report_generation_check':
+                if tasks_list == []:
+                    chat_history.append((None, "We cannot identify any supported task in your query, please retry or type 'NO' to skip this step."
+                                        "Reason: " + reason))
+                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                    return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 else:
-                    CURRENT_STAGE = "analyze_causal_task"
-        
+                    chat_history.append(("📝 Proposal for my causal inference task...", None))
+                    chat_history.append((None, reason))
+                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+
+                    global_state.inference.task_index += 1
+                    global_state.inference.task_info[global_state.inference.task_index] = {'task':tasks_list,
+                                                                                        'desc': descs_list,
+                                                                                        'key_node': key_node_list,
+                                                                                        'result':{'proposal':reason}}
+                    if "Treatment Effect Estimation" in tasks_list:
+                        CURRENT_STAGE = "inference_info_collection_1"
+                    if 'Counterfactual Estimation' in tasks_list:
+                        CURRENT_STAGE = "counterfactual_info_collection1"
+                    else:
+                        CURRENT_STAGE = "analyze_causal_task"
+            
         if CURRENT_STAGE == "counterfactual_info_collection1":
             task_info = global_state.inference.task_info[global_state.inference.task_index]
             treatment = parse_treatment(task_info['desc'][0], global_state, args)

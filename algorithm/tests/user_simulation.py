@@ -21,8 +21,6 @@ def simulate_user_query(args):
           - "selected_algorithm": the algorithm chosen in simulation (initially None),
           - "fake_data": a pandas DataFrame containing the generated fake dataset.
     """
-    # Get organization, project, and API key from environment variables
-    apikey = args.apikey
     
     # Load the high-performance structured meta-prompt from file
     meta_prompt_file = "user_simulation_meta_prompt.txt"
