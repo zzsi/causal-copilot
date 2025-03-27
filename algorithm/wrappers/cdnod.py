@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from typing import Dict, Tuple
+import time
 
 # use the local causal-learn package
 import sys
@@ -14,23 +15,32 @@ sys.path.append(root_dir)
 sys.path.append(algorithm_dir)
 sys.path.insert(0, causal_learn_dir)
 
-
 from causallearn.graph.GraphClass import CausalGraph
 from causallearn.search.ConstraintBased.CDNOD import cdnod as cl_cdnod
-
+from data.simulation.dummy import DataSimulator
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
+from algorithm.wrappers.pc import PC
 from algorithm.evaluation.evaluator import GraphEvaluator
+
+import torch
+cuda_available = torch.cuda.is_available()
+try:
+    from externals.acceleration.cdnod.cdnod import accelerated_cdnod
+except ImportError:
+    if not cuda_available:
+        print("CUDA is not available, will not use GPU acceleration")
+
 
 class CDNOD(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
         self._params = {
             'alpha': 0.05,
-            'indep_test': 'fisherz',
+            'indep_test': 'fisherz_cpu',  # Default to CPU KCI
             'stable': True,
             'uc_rule': 0,
             'uc_priority': 2,
-            'depth': 3, #-1,
+            'depth': 4, #-1,
             'mvcdnod': False,
             'correction_name': 'MV_Crtn_Fisher_Z',
             'background_knowledge': None,
@@ -57,30 +67,60 @@ class CDNOD(CausalDiscoveryAlgorithm):
 
     def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, CausalGraph]:
         node_names = list(data.columns)
+        
         # Extract c_indx (assuming it's the last column)
+        if 'domain_index' not in data.columns:
+            raise ValueError("Dataset must contain a 'domain_index' column for CDNOD.")
         c_indx = data['domain_index'].values.reshape(-1, 1)
         data = data.drop(columns=['domain_index'])
         data_values = data.values
 
-        # Combine primary and secondary parameters
-        all_params = {**self.get_primary_params(), **self.get_secondary_params(), 'node_names': node_names}
-
-        # Run CD-NOD algorithm
-        cg = cl_cdnod(data_values, c_indx, **all_params)
-
-        # Convert the graph to adjacency matrix
-        adj_matrix = self.convert_to_adjacency_matrix(cg)
-
-        # Prepare additional information
-        info = {
-            'graph': cg,
-            'PC_elapsed': cg.PC_elapsed,
-        }
+        # Check if GPU implementation should be used
+        if cuda_available and 'gpu' in self._params['indep_test']:
+            use_gpu = True
+            self._params['indep_test'] = self._params['indep_test'].replace('_gpu', '')
+        else:
+            use_gpu = False
+            self._params['indep_test'] = self._params['indep_test'].replace('_cpu', '')
+        
+        start_time = time.time()
+        
+        if use_gpu:
+            # Use GPU implementation
+            all_params = {
+                'alpha': self._params['alpha'],
+                'indep_test': self._params['indep_test'],
+                'depth': self._params['depth'],
+            }
+            cg = accelerated_cdnod(data_values, c_indx, **all_params)
+            # Convert the graph to adjacency matrix
+            adj_matrix = self.convert_to_adjacency_matrix(cg)
+            
+            # Prepare additional information
+            info = {
+                'graph': cg,
+                'PC_elapsed': time.time() - start_time,
+            }
+        else:
+            # Use CPU implementation
+            # Combine primary and secondary parameters
+            all_params = {**self.get_primary_params(), **self.get_secondary_params(), 'node_names': node_names}
+            
+            # Run CD-NOD algorithm
+            cg = cl_cdnod(data_values, c_indx, **all_params)
+            
+            # Convert the graph to adjacency matrix
+            adj_matrix = self.convert_to_adjacency_matrix(cg.G.graph)
+            
+            # Prepare additional information
+            info = {
+                'graph': cg,
+                'PC_elapsed': cg.PC_elapsed if hasattr(cg, 'PC_elapsed') else time.time() - start_time,
+            }
 
         return adj_matrix, info, cg
 
-    def convert_to_adjacency_matrix(self, cg: CausalGraph) -> np.ndarray:
-        adj_matrix = cg.G.graph
+    def convert_to_adjacency_matrix(self, adj_matrix) -> np.ndarray:
         inferred_flat = np.zeros_like(adj_matrix)
         indices = np.where(adj_matrix == 1)
         for i, j in zip(indices[0], indices[1]):
@@ -101,53 +141,67 @@ class CDNOD(CausalDiscoveryAlgorithm):
                     inferred_flat[i, j] = 2
 
         # remove the domain index column
+        print(inferred_flat)
+
         inferred_flat = inferred_flat[:-1, :-1]
         return inferred_flat
 
     def test_algorithm(self):
-        # Generate sample data with linear relationships and domain index
+        # Generate sample data with linear relationships and multiple domains
         np.random.seed(42)
         n_samples = 1000
-        X1 = np.random.normal(0, 1, n_samples)
-        X2 = 0.5 * X1 + np.random.normal(0, 0.5, n_samples)
-        X3 = 0.3 * X1 + 0.7 * X2 + np.random.normal(0, 0.3, n_samples)
-        X4 = 0.6 * X2 + np.random.normal(0, 0.4, n_samples)
-        X5 = 0.4 * X3 + 0.5 * X4 + np.random.normal(0, 0.2, n_samples)
-        domain_index = np.ones_like(X1)
+        n_nodes = 5
+        n_domains = 3
+        edge_probability = 0.3
         
-        df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5, 'domain_index': domain_index})
+        # Create a DataSimulator instance
+        simulator = DataSimulator()
+                
+        # Generate multi-domain data with the same graph structure but domain-specific parameters
+        gt_graph, df = simulator.generate_dataset(n_samples=n_samples, n_nodes=n_nodes, noise_type='gaussian',
+                               function_type='linear', edge_probability=edge_probability, n_domains=n_domains)
+                
+        print(f"Testing CDNOD algorithm with {n_domains} domains:")
+        print(f"Domain distribution: {df['domain_index'].value_counts().sort_index().values}")
+        print(f"Ground truth graph structure:")
+        print(gt_graph)
 
-        print("Testing CD-NOD algorithm with pandas DataFrame:")
-        params = {
-            'alpha': 0.05,
-            'indep_test': 'fisherz',
-            'verbose': False,
-            'show_progress': False
-        }
-        adj_matrix, info, _ = self.fit(df)
-        print("Adjacency Matrix:")
-        print(adj_matrix)
-        print(f"CD-NOD elapsed time: {info['PC_elapsed']:.4f} seconds")
+        cdnod = CDNOD()
+        print("Indep test: ", cdnod._params['indep_test'])
+        # Test CPU implementation
+        print("\nRunning CPU implementation:")
+        start_time = time.time()
+        adj_matrix, info, _ = cdnod.fit(df)
+        time_elapsed = time.time() - start_time
+        print(f"Time elapsed: {time_elapsed:.4f} seconds")
 
-        # Ground truth graph
-        gt_graph = np.array([
-            [0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0],
-            [1, 1, 0, 0, 0],
-            [0, 1, 0, 0, 0],
-            [0, 0, 1, 1, 0]
-        ])
+        cdnod_nl = CDNOD({'indep_test': 'kci_cpu'})
+        print("Indep test: ", cdnod_nl._params['indep_test'])
+        # Test CPU implementation
+        print("\nRunning CPU implementation:")
+        start_time = time.time()
+        adj_matrix_nl, info_nl, _ = cdnod_nl.fit(df)
+        time_elapsed = time.time() - start_time
+        print(f"Time elapsed: {time_elapsed:.4f} seconds")
+
+        cdnod_cmi = CDNOD({'indep_test': 'cmiknn_gpu'})
+        print("Indep test: ", cdnod_cmi._params['indep_test'])
+        # Test CPU implementation
+        print("\nRunning CPU implementation:")
+        start_time = time.time()
+        adj_matrix_cmi, info_cmi, _ = cdnod_cmi.fit(df)
+        time_elapsed = time.time() - start_time
+        print(f"Time elapsed: {time_elapsed:.4f} seconds")
 
         # Use GraphEvaluator to compute metrics
         evaluator = GraphEvaluator()
         metrics = evaluator.compute_metrics(gt_graph, adj_matrix)
+        metrics_nl = evaluator.compute_metrics(gt_graph, adj_matrix_nl)
+        metrics_cmi = evaluator.compute_metrics(gt_graph, adj_matrix_cmi)
 
-        print("\nMetrics:")
-        print(f"F1 Score: {metrics['f1']:.4f}")
-        print(f"Precision: {metrics['precision']:.4f}")
-        print(f"Recall: {metrics['recall']:.4f}")
-        print(f"SHD: {metrics['shd']:.4f}")
-
+        print(f"\nMetrics: {'|'.join([f'{k}: {v:.3f}' for k, v in metrics.items() if k != 'best_graph'])}")
+        print(f"NL Metrics: {'|'.join([f'{k}: {v:.3f}' for k, v in metrics_nl.items() if k != 'best_graph'])}")
+        print(f"CMI Metrics: {'|'.join([f'{k}: {v:.3f}' for k, v in metrics_cmi.items() if k != 'best_graph'])}")
 
 if __name__ == "__main__":
     cdnod = CDNOD()

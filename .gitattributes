@@ -134,6 +134,7 @@ dmypy.json
 
 # data/simulation/dummy
 data/simulation/simulated_data
+data/simulation/evaluation.py
 preprocess/result
 postprocess/test_result
 causal_analysis/test_result
@@ -155,5 +156,7 @@ algorithm/context/algos/utils/
 algorithm/context/algos/profiles/
 test_output/
 externals/trustworthyAI/
+externals/acceleration
+externals/pc_adjacency_search
 
 

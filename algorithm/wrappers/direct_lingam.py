@@ -13,12 +13,18 @@ algorithm_dir = os.path.join(root_dir, 'algorithm')
 sys.path.append(root_dir)
 sys.path.append(causal_learn_dir)
 
-
-
 from causallearn.search.FCMBased.lingam.direct_lingam import DirectLiNGAM as CLDirectLiNGAM
 
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
+
+import torch
+cuda_available = torch.cuda.is_available()
+try:
+    from culingam.directlingam import DirectLiNGAM as AcDirectLiNGAM
+except ImportError:
+    if not cuda_available:
+        print("CUDA is not available, will not use GPU acceleration")
 
 class DirectLiNGAM(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
@@ -27,7 +33,8 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
             'random_state': None,
             'prior_knowledge': None,
             'apply_prior_knowledge_softly': False,
-            'measure': 'pwling'
+            'measure': 'pwling',
+            'gpu': False
         }
         self._params.update(params)
 
@@ -39,7 +46,7 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
         return self._params
 
     def get_primary_params(self):
-        self._primary_param_keys = ['measure']
+        self._primary_param_keys = ['measure', 'gpu']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def get_secondary_params(self):
@@ -52,9 +59,13 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
 
         # Combine primary and secondary parameters
         all_params = {**self.get_primary_params(), **self.get_secondary_params()}
+        all_params.pop('gpu')
 
         # Run DirectLiNGAM algorithm
-        model = CLDirectLiNGAM(**all_params)
+        if cuda_available and self._params['gpu']:
+            model = AcDirectLiNGAM(**all_params)
+        else:
+            model = CLDirectLiNGAM(**all_params)
         model.fit(data_values)
 
         # Convert the graph to adjacency matrix
@@ -112,3 +123,7 @@ class DirectLiNGAM(CausalDiscoveryAlgorithm):
         print(f"Precision: {metrics['precision']:.4f}")
         print(f"Recall: {metrics['recall']:.4f}")
         print(f"SHD: {metrics['shd']:.4f}") 
+
+if __name__ == "__main__":
+    direct_lingam = DirectLiNGAM({'gpu': True})
+    direct_lingam.test_algorithm()

@@ -20,6 +20,6 @@
       "fast_robust_nonlinear": "fastkci",
       "approximate_fast_nonlinear": "rcit"
     },
-    "reasoning": "Choose based on data type: 'fisherz' for linear continuous; 'chisq' for discrete; 'gsq' for simplied mixed data types; 'kci' for general nonlinear data; 'fastkci' is a fast version of kci for nonlinear data; 'rcit' is a fast version of kci approximation for nonlinear data. Note [IMPORTANT]: Some nonlinear tests are extremely slow. Only consider 'kci' and 'fastkci' only if when the variable size is less than 5, consider 'rcit' only if the variable size is less than 10."
+    "reasoning": "Choose based on data type and hardware. 'fisherz_cpu' for linear continuous data; 'chisq_cpu' for discrete data; 'gsq' for mixed data types; 'kci' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit' is the fastest approximation of kci (use with < 30 variables and sample size < 5000)."
   }
 } 

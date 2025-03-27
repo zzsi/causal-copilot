@@ -1,3 +1,6 @@
+import json
+import torch
+from .wrappers import __all__ as all_algos
 from .hyperparameter_selector import HyperparameterSelector
 from .runtime_estimators.runtime_estimator import RuntimeEstimator
 from .llm_client import LLMClient
@@ -31,8 +34,11 @@ class Reranker:
         algorithm_profiles = ""
         for algo in global_state.algorithm.algorithm_candidates:
             profile_path = f"algorithm/context/algos/{algo}.txt"
+            hyperparameters_path = f"algorithm/context/hyperparameters/{algo}.json"
             with open(profile_path, "r", encoding="utf-8") as f:
                 algorithm_profiles += f"======================================\n\n" + f"# {algo}\n\n" + f.read() + "\n\n"
+            with open(hyperparameters_path, "r", encoding="utf-8") as f:
+                algorithm_profiles += f"## Supported hyperparameters: " + json.dumps(json.load(f), indent=4) + "\n\n"
 
 
         replacements = {
@@ -40,6 +46,7 @@ class Reranker:
             "[COLUMNS]": '\t'.join(global_state.user_data.processed_data.columns._data),
             "[KNOWLEDGE_INFO]": str(global_state.user_data.knowledge_docs),
             "[STATISTICS_INFO]": global_state.statistics.description,
+            "[CUDA_WARNING]": "Current machine supports CUDA, so you can choose GPU-powered algorithms." if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.",
             "[ALGORITHM_CANDIDATES]": str(global_state.algorithm.algorithm_candidates.keys()),
             "[WAIT_TIME]": str(global_state.algorithm.waiting_minutes),
             "[TIME_INFO]": time_info,
@@ -69,7 +76,7 @@ class Reranker:
 
         # filter out algorithm candidates that are not in the hp_context
         algo_candidates = global_state.algorithm.algorithm_candidates
-        algo_candidates = {algo: algo_candidates[algo] for algo in algo_candidates}
+        algo_candidates = {algo: algo_candidates[algo] for algo in algo_candidates if algo in all_algos}
 
         # if user has already selected an algorithm, only keep the selected algorithm in the algo_candidates
         if global_state.algorithm.selected_algorithm is not None:

@@ -6,6 +6,8 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.gaussian_process.kernels import ConstantKernel as C
 from sklearn.gaussian_process.kernels import WhiteKernel
+from contextlib import contextmanager
+import os
 
 from causallearn.utils.KCI.GaussianKernel import GaussianKernel
 from causallearn.utils.KCI.Kernel import Kernel
@@ -77,16 +79,32 @@ class KCI_UInd(object):
             Kx, Ky are both symmetric with diagonals equal to 1 (no matter what the kernel is)
             Kxc, Kyc are both symmetric
         """
-
+        import time
+        import psutil
+        
+        start_time = time.time()
+        start_cpu = psutil.cpu_percent(interval=None)
+        
         Kx, Ky = self.kernel_matrix(data_x, data_y)
+        # print(f"Kernel matrix computation - Time: {time.time() - start_time:.4f}s, CPU: {psutil.cpu_percent(interval=None):.2f}%")
+        
+        
+        kernel_time = time.time()
         test_stat, Kxc, Kyc = self.HSIC_V_statistic(Kx, Ky)
-
+        # print(f"HSIC V-statistic computation - Time: {time.time() - kernel_time:.4f}s, CPU: {psutil.cpu_percent(interval=None):.2f}%")
+        
+        stat_time = time.time()
         if self.approx:
             k_appr, theta_appr = self.get_kappa(Kxc, Kyc)
             pvalue = 1 - stats.gamma.cdf(test_stat, k_appr, 0, theta_appr)
+            # print(f"Gamma approximation - Time: {time.time() - stat_time:.4f}s, CPU: {psutil.cpu_percent(interval=None):.2f}%")
         else:
             null_dstr = self.null_sample_spectral(Kxc, Kyc)
             pvalue = sum(null_dstr.squeeze() > test_stat) / float(self.nullss)
+            # print(f"Spectral sampling - Time: {time.time() - stat_time:.4f}s, CPU: {psutil.cpu_percent(interval=None):.2f}%")
+        
+        # print(f"Total computation - Time: {time.time() - start_time:.4f}s, CPU usage increase: {psutil.cpu_percent(interval=None) - start_cpu:.2f}%")
+        
         return pvalue, test_stat
 
     def kernel_matrix(self, data_x, data_y):
@@ -299,16 +317,45 @@ class KCI_CInd(object):
         pvalue: p value
         test_stat: test statistic
         """
+        import time
+        import psutil
+        
+        start_time = time.time()
+        start_cpu = psutil.cpu_percent(interval=None)
+        
         Kx, Ky, Kzx, Kzy = self.kernel_matrix(data_x, data_y, data_z)
+        # print(f"Kernel matrix computation - Time: {time.time() - start_time:.4f}s, CPU: {psutil.cpu_percent(interval=None):.2f}%")
+        
+        
+        kernel_time = time.time()
         test_stat, KxR, KyR = self.KCI_V_statistic(Kx, Ky, Kzx, Kzy)
+        # print(f"KCI V-statistic computation - Time: {time.time() - kernel_time:.4f}s, CPU: {psutil.cpu_percent(interval=None):.2f}%")
+        
+        
+        stat_time = time.time()
         uu_prod, size_u = self.get_uuprod(KxR, KyR)
         if self.approx:
             k_appr, theta_appr = self.get_kappa(uu_prod)
             pvalue = 1 - stats.gamma.cdf(test_stat, k_appr, 0, theta_appr)
+            # print(f"Gamma approximation - Time: {time.time() - stat_time:.4f}s, CPU: {psutil.cpu_percent(interval=None):.2f}%")
         else:
             null_samples = self.null_sample_spectral(uu_prod, size_u, Kx.shape[0])
             pvalue = sum(null_samples > test_stat) / float(self.nullss)
+            # print(f"Spectral sampling - Time: {time.time() - stat_time:.4f}s, CPU: {psutil.cpu_percent(interval=None):.2f}%")
+        
+        # print(f"Total computation - Time: {time.time() - start_time:.4f}s, CPU usage increase: {psutil.cpu_percent(interval=None) - start_cpu:.2f}%")
+        
         return pvalue, test_stat
+
+    @contextmanager
+    def cpu_throttle(nice_level=10):
+        # Record the current nice value
+        current_nice = os.nice(0)
+        try:
+            os.nice(nice_level)  # Increase the nice value, lowering priority
+            yield
+        finally:
+            os.nice(current_nice - os.nice(0))  # Reset to the original nice
 
     def kernel_matrix(self, data_x, data_y, data_z):
         """

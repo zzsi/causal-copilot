@@ -34,5 +34,14 @@
         "default": null
       },
       "reasoning": "DirectLiNGAM - Standard setting, assumes purely linear causal effects. Alternatively ICA-LiNGAM can be used under strong ICA assumptions on data"
+    },
+    "gpu": {
+      "meaning": "Whether to use GPU acceleration.",
+      "suggested_values": {
+        "default": false,
+        "use_cpu": false,
+        "use_gpu": true
+      },
+      "reasoning": "If GPU is available, set gpu=True to use GPU acceleration. It is recommended to use GPU acceleration for large datasets."
     }
 } 

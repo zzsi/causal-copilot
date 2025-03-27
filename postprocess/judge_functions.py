@@ -386,7 +386,7 @@ def call_llm_new(args, prompt, prompt_type):
         cot_context = file.read()
     
     # initiate a client
-    client = OpenAI(api_key=args.apikey)
+    client = OpenAI()
     client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[

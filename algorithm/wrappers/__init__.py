@@ -47,16 +47,4 @@ permutation_based_algorithms = ['GRaSP']
 hybrid_algorithms = ['Hybrid']
 ts_algorithms = ['PCMCI', 'VARLiNGAM', 'DYNOTEARS']
 
-try:
-    from .accelerated_lingam import AcceleratedLiNGAM
-    functional_model_based_algorithms.append('AcceleratedLiNGAM')
-except Exception as e:
-    print(f"GPU is not available, {e}")
-
-try:
-    from .accelerated_pc import AcceleratedPC
-    constraint_based_algorithms.append('AcceleratedPC')
-except Exception as e:
-    print(f"GPU is not available, {e}")
-
 __all__ = constraint_based_algorithms + score_based_algorithms + functional_model_based_algorithms + permutation_based_algorithms + hybrid_algorithms + ts_algorithms

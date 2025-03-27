@@ -13,7 +13,8 @@
     "meaning": "The type of sparsity regularization",
     "suggested_values": {
       "default": "l2",
-      "explicit": "l1"
+      "hard": "logistic",
+      "soft": "l2"
     },
     "reasoning": "l2 is more implicit and smooth to learn a sparse graph, l1 is more explicit but may lead to a over-penalized graph."
   },

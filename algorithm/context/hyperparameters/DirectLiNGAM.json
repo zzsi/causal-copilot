@@ -7,5 +7,14 @@
       "kernel": "kernel"
     },
     "reasoning": "Use 'pwling' for pairwise likelihood-based measure, or 'kernel' for kernel-based measure."
+  },
+  "gpu": {
+      "meaning": "Whether to use GPU acceleration.",
+      "suggested_values": {
+        "default": false,
+        "use_cpu": false,
+        "use_gpu": true
+      },
+    "reasoning": "If GPU is available, set gpu=True to use GPU acceleration. It is recommended to use GPU acceleration for large datasets."
   }
 } 

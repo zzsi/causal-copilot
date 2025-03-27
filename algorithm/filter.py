@@ -3,7 +3,7 @@ import os
 import torch
 from algorithm.llm_client import LLMClient
 
-TOP_K = 5
+TOP_K = 3
 
 class Filter(object):
     def __init__(self, args):
@@ -31,9 +31,10 @@ class Filter(object):
             f.write(prompt)
 
         output = self.llm_client.chat_completion(
-            prompt=prompt,
-            system_prompt="",
-            json_response=True
+            prompt="Please choose the most suitable algorithms up to top 3, for the data user provided and explain why these algorithms were chosen over the others. For the unselected algorithms, illustrate the reasons for each of them, why we do not choose it.",
+            system_prompt=prompt,
+            json_response=True,
+            model="gpt-4o"
         )
 
         algorithm_candidates = self.parse_response(output)
@@ -79,7 +80,7 @@ class Filter(object):
             "[COLUMNS]": ', '.join(data.columns),
             "[STATISTICS_DESC]": statistics_desc,
             "[ALGO_CONTEXT]": algo_context,
-            "[CUDA_WARNING]": "" if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.",
+            "[CUDA_WARNING]": "Current machine supports CUDA, so you can choose GPU-powered algorithms." if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.",
             "[TOP_K]": str(TOP_K),
             "[ACCEPT_CPDAG]": "The user accepts the output graph including undirected edges/undeterministic directions (CPDAG/PAG)" if accept_CPDAG else "The user does not accept the output graph including undirected edges/undeterministic directions (CPDAG/PAG), so the output graph should be a DAG."
         }

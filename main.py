@@ -5,9 +5,9 @@ from algorithm.program import Programming
 from algorithm.rerank import Reranker
 from algorithm.hyperparameter_selector import HyperparameterSelector
 from postprocess.judge import Judge
-from postprocess.visualization import Visualization, convert_to_edges
+# from postprocess.visualization import Visualization, convert_to_edges
 from preprocess.eda_generation import EDA
-from report.report_generation import Report_generation
+# from report.report_generation import Report_generation
 from global_setting.Initialize_state import global_state_initialization, load_data
 
 import json
