@@ -11,10 +11,10 @@ sys.path.append(root_dir)
 sys.path.append(algorithm_dir)
 
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
-
 from algorithm.evaluation.evaluator import GraphEvaluator
-from culingam.directlingam import DirectLiNGAM as AcDirectLiNGAM
 
+from culingam.directlingam import DirectLiNGAM as AcDirectLiNGAM
+# from culingam.varlingam import VarLiNGAM as AcVarLiNGAM
 
 class AcceleratedLiNGAM(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):

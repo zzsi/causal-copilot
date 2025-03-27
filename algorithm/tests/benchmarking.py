@@ -131,6 +131,22 @@ class BenchmarkRunner:
                              true_graph: np.ndarray, config: Dict) -> Dict:
         """Run a single experiment with given algorithm and configuration"""
         start_time = time.time()
+        
+        # Create an event to signal timeout
+        import threading
+        import multiprocessing as mp
+        timeout_event = threading.Event()
+        
+        # Function to monitor execution time
+        def monitor_timeout():
+            if time.time() - start_time > 1800:  # 30 minutes = 1800 seconds
+                timeout_event.set()
+                
+        # Start the monitoring thread
+        monitor_thread = threading.Thread(target=monitor_timeout)
+        monitor_thread.daemon = True
+        monitor_thread.start()
+        
         try:
             # fill the missing value if it is existed
             data = data.fillna(0)
@@ -142,7 +158,17 @@ class BenchmarkRunner:
                 # independent domain index randomly generated
                 data["domain_index"] = np.random.randn(data.shape[0])
 
+            # Check for timeout periodically during execution
             adj_matrix, info, _ = algo_instance.fit(data)
+            
+            # Check if timeout occurred
+            if timeout_event.is_set():
+                return {
+                    "success": False,
+                    "error": "Execution timed out after 30 minutes",
+                    "data_config": config
+                }
+                
             runtime = time.time() - start_time
             metrics = self.evaluator.compute_metrics(true_graph, adj_matrix)
             
@@ -161,8 +187,15 @@ class BenchmarkRunner:
                 "data_config": config
             }
             
+        # Check one more time for timeout
+        if timeout_event.is_set():
+            result = {
+                "success": False,
+                "error": "Execution timed out after 30 minutes",
+                "data_config": config
+            }
+            
         return result
-
     def _save_result(self, algo_name: str, result: Dict) -> None:
         """Save the result of a single experiment to a JSON file"""
         output_file = os.path.join(self.output_dir, f"{algo_name}_results.json")

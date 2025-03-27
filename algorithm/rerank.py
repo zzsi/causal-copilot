@@ -1,3 +1,4 @@
+import json
 from .wrappers import __all__ as all_algos
 from .hyperparameter_selector import HyperparameterSelector
 from .runtime_estimators.runtime_estimator import RuntimeEstimator
@@ -32,8 +33,11 @@ class Reranker:
         algorithm_profiles = ""
         for algo in global_state.algorithm.algorithm_candidates:
             profile_path = f"algorithm/context/algos/{algo}.txt"
+            hyperparameters_path = f"algorithm/context/hyperparameters/{algo}.json"
             with open(profile_path, "r", encoding="utf-8") as f:
                 algorithm_profiles += f"======================================\n\n" + f"# {algo}\n\n" + f.read() + "\n\n"
+            with open(hyperparameters_path, "r", encoding="utf-8") as f:
+                algorithm_profiles += f"## Supported hyperparameters: " + str(json.dumps(global_state.algorithm.algorithm_candidates[algo]['hyperparameters'], indent=4)) + "\n\n"
 
 
         replacements = {

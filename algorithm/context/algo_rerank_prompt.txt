@@ -21,7 +21,7 @@ The estimated time costs of the following algorithms using linear estimation met
 [TIME_INFO]
 
 ===============================================
-Detailed Profiles of the algorithm candidates are shown here. You MUST actively combine and reason with them:
+Detailed Profiles of the algorithm candidates are shown here. We also include the supported hyperparamerters as additional information to help you know the potentials of each algorithm combining various hyperparamerter settings. You MUST actively combine and reason with them:
 
 [ALGORITHM_PROFILES]
 

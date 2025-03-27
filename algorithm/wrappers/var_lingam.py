@@ -6,16 +6,27 @@ from typing import Dict, Tuple
 import sys
 import os
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+causal_learn_dir = os.path.join(root_dir, 'externals', 'causal-learn')
+if not os.path.exists(causal_learn_dir):
+    raise FileNotFoundError(f"Local causal-learn directory not found: {causal_learn_dir}, please git clone the submodule of causal-learn")
 algorithm_dir = os.path.join(root_dir, 'algorithm')
 sys.path.append(root_dir)
 sys.path.append(algorithm_dir)
+sys.path.append(causal_learn_dir)
 
-from lingam import VARLiNGAM as VARLiNGAM_model
+from causallearn.search.FCMBased.lingam import VARLiNGAM as VARLiNGAM_model
 from causalnex.structure.data_generators import gen_stationary_dyn_net_and_df
-
 
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
+
+import torch
+cuda_available = torch.cuda.is_available()
+try:
+    from culingam.varlingam import VarLiNGAM as AcVarLiNGAM
+except ImportError:
+    if not cuda_available:
+        raise ImportError("CUDA is not available, will not use GPU acceleration")
 
 # {‘aic’, ‘fpe’, ‘hqic’, ‘bic’, None}
 class VARLiNGAM(CausalDiscoveryAlgorithm):
@@ -28,6 +39,7 @@ class VARLiNGAM(CausalDiscoveryAlgorithm):
             'ar_coefs': None,
             'lingam_model': None,
             'random_state': None,
+            'gpu': False
         }
         self._params.update(params)
 
@@ -39,7 +51,7 @@ class VARLiNGAM(CausalDiscoveryAlgorithm):
         return self._params
 
     def get_primary_params(self):
-        self._primary_param_keys = ['lags', 'criterion', 'prune']
+        self._primary_param_keys = ['lags', 'criterion', 'prune', 'gpu']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def get_secondary_params(self):
@@ -53,8 +65,12 @@ class VARLiNGAM(CausalDiscoveryAlgorithm):
 
         # Combine primary and secondary parameters
         all_params = {**self.get_primary_params(), **self.get_secondary_params()}
+        all_params.pop('gpu')
 
-        model = VARLiNGAM_model(**all_params)
+        if cuda_available and self._params['gpu']:
+            model = AcVarLiNGAM(**all_params)
+        else:
+            model = VARLiNGAM_model(**all_params)
         model.fit(data_values)
         
         adj_matrices = model._adjacency_matrices

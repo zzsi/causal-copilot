@@ -11,7 +11,7 @@ def generate_datasets():
     # Default settings
     default_settings = {
         "n_nodes": 10,
-        "n_samples": 500,
+        "n_samples": 1000,
         "edge_probability": 0.2,
         "function_type": "linear",
         "noise_type": "gaussian",
@@ -27,7 +27,7 @@ def generate_datasets():
     })
     
     # Scale comparison - varying node counts
-    for n_nodes in [5, 10, 25, 50]:  # Skip 25 as it's in default
+    for n_nodes in [5, 25, 50]:  # Skip 25 as it's in default
         dataset_configs.append({
             **default_settings,
             "name": f"scale_nodes_{n_nodes}",
@@ -35,7 +35,7 @@ def generate_datasets():
         })
     
     # Scale comparison - varying sample sizes 
-    for n_samples in [500, 1000, 5000]:  # Skip 5000 as it's in default
+    for n_samples in [500, 2500, 5000]:  # Skip 5000 as it's in default
         dataset_configs.append({
             **default_settings,
             "name": f"scale_samples_{n_samples}",
@@ -99,7 +99,7 @@ def generate_datasets():
             "n_domains": n_domains
         })
 
-    output_dir = os.path.join(os.getcwd(), "simulated_data/copilot_evaluation")
+    output_dir = os.path.join(os.getcwd(), "simulated_data/fast_benchmarking")
     os.makedirs(output_dir, exist_ok=True)
 
     # Generate 3 random versions of each configuration

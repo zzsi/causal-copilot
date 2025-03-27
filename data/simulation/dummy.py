@@ -396,7 +396,7 @@ class DataSimulator:
     
     def generate_multi_domain_data(self, n_samples: int, noise_scale: float, noise_type: str, 
                                    function_type: Union[str, List[str], Dict[str, str]], 
-                                   discrete_ratio: float = 0.0, max_categories: int = 5) -> pd.DataFrame:
+                                   discrete_ratio: float = 0.0, max_categories: int = 5, edge_probability: float = 0.3) -> pd.DataFrame:
         """Generate data for a single domain based on the graph structure."""
         # assert if function_type, noise_type, noise_scale are valid
         print(f"function_type: {function_type}, noise_type: {noise_type}, noise_scale: {noise_scale}")
@@ -407,19 +407,37 @@ class DataSimulator:
             print(f"When function_type is not linear, noise_type is set to gaussian")
         assert isinstance(noise_scale, float) and noise_scale > 0
 
-        C = np.random.uniform(1, 2, (self.graph.shape[0], self.n_domains))
+        # Generate base data for all domains
         if function_type == 'linear':
-            data = []
             W = simulate_parameter(self.graph)
+            base_data = []
             for i in range(self.n_domains):
-                data.extend(simulate_linear_sem(W, n_samples, noise_type, noise_scale, discrete_ratio, max_categories) * C[:, i])
+                base_data.append(simulate_linear_sem(W, n_samples, noise_type, noise_scale, discrete_ratio, max_categories))
         else:
-            data = []
+            base_data = []
             for i in range(self.n_domains):
-                data.extend(simulate_nonlinear_sem(self.graph, n_samples, function_type, noise_scale, discrete_ratio, max_categories) * C[:, i])
+                base_data.append(simulate_nonlinear_sem(self.graph, n_samples, function_type, noise_scale, discrete_ratio, max_categories))
+        
+        # Randomly select a subset of nodes to be affected by domain
+        n_nodes = self.graph.shape[0]
+        # affected_nodes = np.random.choice(n_nodes, size=int(edge_probability * n_nodes), replace=False)
+        # print(f"Domain index affects variables: {[self.variable_names[i] for i in affected_nodes]}")    
+        # Generate domain-specific linear noise and inject it to realize linear effects of domain index
+        data = []
+        scaling_factors = np.arange(1, 1 + n_nodes) * 0.5 # * np.random.choice([-1, 1], size=n_nodes)
+        scaling_factors = np.random.permutation(scaling_factors)
+        for i in range(self.n_domains):
+            domain_data = base_data[i].copy()
+            # Small noise amplitude and range to make sure the domain transition is smooth
+            domain_noise = (i + 1) + np.random.normal(0, 0.1, size=n_samples)
+            
+            for j in range(n_nodes):
+                domain_data[:, j] += scaling_factors[j] * domain_noise
+            
+            data.extend(domain_data)
         
         data_df = pd.DataFrame(data, columns=self.variable_names)
-        data_df['domain_index'] = np.repeat(range(self.n_domains), n_samples)
+        data_df['domain_index'] = np.repeat(range(1, 1 + self.n_domains), n_samples)
         return data_df
 
 
@@ -427,12 +445,11 @@ class DataSimulator:
                       noise_type: str = 'gaussian', 
                       function_type: Union[str, List[str], Dict[str, str]] = 'linear',
                       n_domains: int = 1, variable_names: List[str] = None,
-                      discrete_ratio: float = 0.0, max_categories: int = 5) -> None:
+                      discrete_ratio: float = 0.0, max_categories: int = 5, edge_probability: float = 0.3) -> None:
         """Generate heterogeneous data from multiple domains."""
         if self.graph is None:
             raise ValueError("Generate graph first")
 
-        domain_data = []
         domain_size = n_samples // n_domains
 
         self.n_domains = n_domains
@@ -442,7 +459,7 @@ class DataSimulator:
                                                           discrete_ratio, max_categories)
         else:
             domain_df = self.generate_multi_domain_data(domain_size, noise_scale, noise_type, function_type, 
-                                                       discrete_ratio, max_categories)
+                                                       discrete_ratio, max_categories, edge_probability)
     
         self.data = domain_df
         # shuffle the self.data
@@ -504,7 +521,7 @@ class DataSimulator:
         Generate a complete heterogeneous dataset with various characteristics.
         """
         self.generate_graph(n_nodes, edge_probability, variable_names, graph_type)
-        self.generate_data(n_samples, noise_scale, noise_type, function_type, n_domains, variable_names, discrete_ratio, max_categories)
+        self.generate_data(n_samples, noise_scale, noise_type, function_type, n_domains, variable_names, discrete_ratio, max_categories, edge_probability)
                     
         if add_measurement_error:
             self.add_measurement_error(error_std=error_std, error_rate=error_rate)

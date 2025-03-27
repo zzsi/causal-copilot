@@ -134,6 +134,7 @@ dmypy.json
 
 # data/simulation/dummy
 data/simulation/simulated_data
+data/simulation/evaluation.py
 preprocess/result
 postprocess/test_result
 causal_analysis/test_result

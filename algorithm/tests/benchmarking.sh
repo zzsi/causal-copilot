@@ -4,15 +4,15 @@
 SCRIPT_DIR="algorithm/tests"
 
 # Set number of parallel jobs
-N_JOBS=20
+N_JOBS=4
 
 # Get list of algorithms from config
-# ALGORITHMS=(PC FCI CDNOD AcceleratedPC GES FGES XGES GRaSP 
-#             DirectLiNGAM AcceleratedLiNGAM GOLEM 
-#             NOTEARSLinear 
-#             HITONMB BAMB IAMBnPC MBOR InterIAMB)
+ALGORITHMS=(PC FCI CDNOD GES FGES XGES GRaSP 
+            DirectLiNGAM AcceleratedLiNGAM GOLEM 
+            NOTEARSLinear 
+            HITONMB BAMB IAMBnPC MBOR InterIAMB)
             # Hybrid CALM NOTEARSNonlinear CORL
-ALGORITHMS=(AcceleratedPC)
+# ALGORITHMS=(AcceleratedPC)
 
 # (CDNOD AcceleratedPC AcceleratedLiNGAM FCI GES GOLEM GRaSP IAMBnPC InterIAMB MBOR NOTEARSLinear PC XGES)
 
@@ -30,7 +30,7 @@ run_benchmark() {
     echo "[$(date +"%Y-%m-%d %H:%M:%S")] Starting benchmark for algorithm: $algo" | tee -a "$log_file"
     
     # Run the benchmark and redirect both stdout and stderr to the log file
-    CUDA_VISIBLE_DEVICES=1 python "$SCRIPT_DIR/benchmarking.py" --algorithm "$algo" >> "$log_file" 2>&1
+    CUDA_VISIBLE_DEVICES=7 python "$SCRIPT_DIR/benchmarking.py" --algorithm "$algo" >> "$log_file" 2>&1
     
     if [ $? -eq 0 ]; then
         echo "[$(date +"%Y-%m-%d %H:%M:%S")] Benchmark for algorithm $algo completed successfully." | tee -a "$log_file"

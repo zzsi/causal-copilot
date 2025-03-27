@@ -7,6 +7,7 @@ Below is a concise description of each tag category and its possible values:
    - Available: Ready to use in the current codebase.
    - Unavailable: No longer maintained because of being not useful.
 
+
 2. Method Type: Reflects the underlying approach.
    - Constraint-based: Utilizes conditional independence tests.
    - Score-based: Leverages score metrics for structure learning.
@@ -33,14 +34,14 @@ Below is a concise description of each tag category and its possible values:
    - Heterogenous: Designed for datasets including varied or shifting distributions and indicators (domain index) of distribution shifts.
    - Homogenous: Assumes a consistent data distribution.
 
-7. Scalability: Reflects the method's maximum capacity for handling dataset sizes (number of variables and samples).
+7. Scalability: Reflects the method's maximum capacity for handling dataset sizes (number of variables and samples). Note that some algorithms have different implementations (CPU & GPU), which may result in a range of scalability capabilities.
    - Large-scale: Able to handle very large datasets (e.g., 1000 variables and 10000 samples).
    - Medium-to-large-scale: Able to handle medium-sized datasets (e.g., 100 variables and 10000 samples).
    - Medium-scale: Able to handle moderately sized datasets (e.g., 50 variables and 5000 samples).
    - Small-to-medium-scale: Able to handle small-to-medium-sized datasets (e.g., 25 variables and 5000 samples).
    - Small-scale: Only able to handle smaller datasets (e.g., 15 variables and 2500 samples).
 
-8. Efficiency: Highlights computational speed and hardware utilization.
+8. Efficiency: Highlights computational speed and hardware utilization. Note that some algorithms have different implementations (CPU & GPU), which may result in a range of efficiency capabilities.
    - Extreme Fast (GPU): Optimized for GPU acceleration to have extreme fast speed.
    - Fast (GPU): Optimized for GPU acceleration to have fast speed.
    - Fast (CPU): Optimized with improvements on algorithm logic and parallelization to have fast speed.
@@ -58,6 +59,11 @@ Below is a concise description of each tag category and its possible values:
     - CPDAG: Completed Partially Directed Acyclic Graph.
     - PAG: Partial Ancestral Graph accommodating latent confounding.
 
+11. Data Type: Specifies the type of data the algorithm is designed to handle.
+    - Tabular: Designed for cross-sectional data without temporal dependencies.
+    - Time-series: Designed for sequential data with temporal dependencies.
+    - Both: Can handle both tabular and time-series data.
+
 Below is the listing of causal discovery algorithms annotated with each tag type:
 
 --- Constraint-based Methods -----------------------------------------------------------
@@ -69,23 +75,11 @@ PC: {
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability: Medium-to-large-scale,
-    Efficiency: Fast (CPU),
+    Scalability: from Medium-to-large-scale to Large-scale,
+    Efficiency: from Fast (CPU) to Extreme Fast (GPU),
     Empirical Performance: Moderate,
-    Output Format: CPDAG
-}
-
-PCParallel: {
-    Availability: Unavailable,
-    Method Type: Constraint-based,
-    Functional form: Flexible,
-    Noise: Flexible,
-    Latent Variable Tolerance: Moderate,
-    Distribution Shift: Homogenous,
-    Scalability: Large-scale,
-    Efficiency: Fast (CPU),
-    Empirical Performance: Moderate,
-    Output Format: CPDAG
+    Output Format: CPDAG,
+    Data Type: Tabular
 }
 
 FCI: {
@@ -98,7 +92,8 @@ FCI: {
     Scalability: Medium-to-large-scale,
     Efficiency: Fast (CPU),
     Empirical Performance: Moderate,
-    Output Format: CPDAG
+    Output Format: CPDAG,
+    Data Type: Tabular
 }
 
 CDNOD: {
@@ -108,36 +103,25 @@ CDNOD: {
     Noise: Flexible,
     Latent Variable Tolerance: Robust,
     Distribution Shift: Heterogenous,
-    Scalability: Medium-to-large-scale,
-    Efficiency: Fast (CPU),
-    Empirical Performance: Moderate,
-    Output Format: CPDAG
+    Scalability: from Medium-to-large-scale to Large-scale,
+    Efficiency: from Fast (CPU) to Extreme Fast (GPU),
+    Empirical Performance: Moderate (Especially good at heterogenous data),
+    Output Format: CPDAG,
+    Data Type: Tabular
 }
 
-AcceleratedPC: {
+PCMCI: {
     Availability: Available,
     Method Type: Constraint-based,
     Functional form: Flexible,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability: Large-scale,
-    Efficiency: Extreme Fast (GPU),
-    Empirical Performance: Moderate,
-    Output Format: CPDAG
-}
-
-AcceleratedCDNOD: {
-    Availability: Unavailable,
-    Method Type: Constraint-based,
-    Functional form: Flexible,
-    Noise: Flexible,
-    Latent Variable Tolerance: Moderate,
-    Distribution Shift: Heterogenous,
-    Scalability: Large-scale,
-    Efficiency: Extreme Fast (GPU),
-    Empirical Performance: Moderate,
-    Output Format: CPDAG
+    Scalability: Medium-to-large-scale,
+    Efficiency: Fast (CPU),
+    Empirical Performance: Robust,
+    Output Format: DAG,
+    Data Type: Time-series
 }
 
 --- MB-based Methods --------------------------------------------------------------
@@ -152,7 +136,8 @@ InterIAMB: {
     Scalability: Medium-to-large-scale,
     Efficiency: Fast (CPU),
     Empirical Performance: Robust,
-    Output Format: CPDAG
+    Output Format: CPDAG,
+    Data Type: Tabular
 }
 
 BAMB: {
@@ -165,7 +150,8 @@ BAMB: {
     Scalability: Medium-scale,
     Efficiency: Moderate,
     Empirical Performance: Limited,
-    Output Format: CPDAG
+    Output Format: CPDAG,
+    Data Type: Tabular
 }
 
 HITONMB: {
@@ -178,7 +164,8 @@ HITONMB: {
     Scalability: Medium-scale,
     Efficiency: Moderate,
     Empirical Performance: Limited,
-    Output Format: CPDAG
+    Output Format: CPDAG,
+    Data Type: Tabular
 }
 
 IAMBnPC: {
@@ -191,7 +178,8 @@ IAMBnPC: {
     Scalability: Medium-to-large-scale,
     Efficiency: Fast (CPU),
     Empirical Performance: Robust,
-    Output Format: CPDAG
+    Output Format: CPDAG,
+    Data Type: Tabular
 }
 
 MBOR: {
@@ -204,7 +192,8 @@ MBOR: {
     Scalability: Medium-scale,
     Efficiency: Moderate,
     Empirical Performance: Moderate,
-    Output Format: CPDAG
+    Output Format: CPDAG,
+    Data Type: Tabular
 }
 
 --- Score-based Methods --------------------------------------------------------------
@@ -219,7 +208,8 @@ GES: {
     Scalability: Medium-scale,
     Efficiency: Slow,
     Empirical Performance: Limited,
-    Output Format: CPDAG
+    Output Format: CPDAG,
+    Data Type: Tabular
 }
 
 FGES: {
@@ -232,7 +222,8 @@ FGES: {
     Scalability: Large-scale,
     Efficiency: Fast (CPU),
     Empirical Performance: Moderate,
-    Output Format: CPDAG
+    Output Format: CPDAG,
+    Data Type: Tabular
 }
 
 XGES: {
@@ -245,7 +236,8 @@ XGES: {
     Scalability: Medium-to-large-scale,
     Efficiency: Fast (CPU),
     Empirical Performance: Robust,
-    Output Format: CPDAG
+    Output Format: CPDAG,
+    Data Type: Tabular
 }
 
 GRaSP: {
@@ -258,7 +250,8 @@ GRaSP: {
     Scalability: Medium-scale,
     Efficiency: Moderate,
     Empirical Performance: Robust,
-    Output Format: CPDAG
+    Output Format: CPDAG,
+    Data Type: Tabular
 }
 
 --- Continuous-optimization Methods -------------------------------------------------
@@ -273,7 +266,8 @@ GOLEM: {
     Scalability: Medium-to-large-scale,
     Efficiency: Fast (CPU),
     Empirical Performance: Robust,
-    Output Format: DAG
+    Output Format: DAG,
+    Data Type: Tabular
 }
 
 CALM: {
@@ -286,7 +280,8 @@ CALM: {
     Scalability: Small-scale,
     Efficiency: Extreme Slow,
     Empirical Performance: Moderate,
-    Output Format: DAG
+    Output Format: DAG,
+    Data Type: Tabular
 }
 
 CORL: {
@@ -299,7 +294,8 @@ CORL: {
     Scalability: Small-scale,
     Efficiency: Extreme Slow,
     Empirical Performance: Moderate,
-    Output Format: DAG
+    Output Format: DAG,
+    Data Type: Tabular
 }
 
 NOTEARSLinear: {
@@ -312,7 +308,8 @@ NOTEARSLinear: {
     Scalability: Medium-scale,
     Efficiency: Moderate,
     Empirical Performance: Robust,
-    Output Format: DAG
+    Output Format: DAG,
+    Data Type: Tabular
 }
 
 NOTEARSNonlinear: {
@@ -325,8 +322,24 @@ NOTEARSNonlinear: {
     Scalability: Medium-scale,
     Efficiency: Slow,
     Empirical Performance: Moderate,
-    Output Format: DAG
+    Output Format: DAG,
+    Data Type: Tabular
 }
+
+DYNOTEARS: {
+    Availability: Available,
+    Method Type: Continuous-optimization,
+    Functional form: Linear,
+    Noise: Flexible,
+    Latent Variable Tolerance: Moderate,
+    Distribution Shift: Homogenous,
+    Scalability: Medium-scale,
+    Efficiency: Moderate,
+    Empirical Performance: Moderate,
+    Output Format: DAG,
+    Data Type: Time-series
+}
+
 
 --- Functional Model-based Methods (LiNGAM Family) ----------------------------------
 
@@ -338,22 +351,10 @@ DirectLiNGAM: {
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
     Scalability: Large-scale,
-    Efficiency: Fast (CPU),
-    Empirical Performance: Limited,
-    Output Format: DAG
-}
-
-AcceleratedLiNGAM: {
-    Availability: Available,
-    Method Type: Functional Model-based,
-    Functional form: Linear,
-    Noise: NonGaussian,
-    Latent Variable Tolerance: Moderate,
-    Distribution Shift: Homogenous,
-    Scalability: Large-scale,
-    Efficiency: Fast (GPU),
-    Empirical Performance: Limited,
-    Output Format: DAG
+    Efficiency: from Fast (CPU) to Fast (GPU),
+    Empirical Performance: Robust(Only good at nongaussian noise data, limited in Gaussian noise data),
+    Output Format: DAG,
+    Data Type: Tabular
 }
 
 ICALiNGAM: {
@@ -365,8 +366,23 @@ ICALiNGAM: {
     Distribution Shift: Homogenous,
     Scalability: Small-scale,
     Efficiency: Slow,
-    Empirical Performance: Moderate,
-    Output Format: DAG
+    Empirical Performance: Limited,
+    Output Format: DAG,
+    Data Type: Tabular
+}
+
+VARLiNGAM: {
+    Availability: Available,
+    Method Type: Functional Model-based,
+    Functional form: Linear,
+    Noise: NonGaussian,
+    Latent Variable Tolerance: Moderate,
+    Distribution Shift: Homogenous,
+    Scalability: from Medium-scale to Large-scale,
+    Efficiency: from Fast (CPU) to Fast (GPU),
+    Empirical Performance: Robust (Good at both noise gaussian and nongaussian noise data),
+    Output Format: DAG,
+    Data Type: Time-series
 }
 
 --- Hybrid Methods -----------------------------------------------------------------
@@ -381,5 +397,6 @@ Hybrid: {
     Scalability: Small-scale,
     Efficiency: Slow,
     Empirical Performance: Moderate,
-    Output Format: DAG
+    Output Format: DAG,
+    Data Type: Tabular
 }

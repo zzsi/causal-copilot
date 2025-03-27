@@ -23,7 +23,9 @@ def _process_node_pair(
     alpha: float, 
     stable: bool, 
     background_knowledge: BackgroundKnowledge | None, 
-    verbose: bool
+    verbose: bool,
+    domain_index: int | None = None,
+    non_linear_cit: CIT | None = None
 ) -> Tuple[List[Tuple[int, int]], dict]:
     """
     Process a single node pair for conditional independence testing
@@ -38,6 +40,8 @@ def _process_node_pair(
     stable : bool, whether to use stable PC
     background_knowledge : background knowledge
     verbose : bool, whether to print verbose output
+    domain_index : int or None, the index of the domain column
+    non_linear_cit : CIT or None, the non-linear CIT to use for tests involving domain_index
     
     Returns
     -------
@@ -74,7 +78,12 @@ def _process_node_pair(
     Neigh_x_noy = np.delete(Neigh_x, np.where(Neigh_x == y))
     
     for S in combinations(Neigh_x_noy, depth):
-        p = cg.ci_test(x, y, S)
+        # Use non_linear_cit if domain_index is in the test, otherwise use the default cit
+        if domain_index is not None and (x == domain_index or y == domain_index or domain_index in S):
+            p = non_linear_cit(x, y, S) if non_linear_cit is not None else cg.ci_test(x, y, S)
+        else:
+            p = cg.ci_test(x, y, S)
+            
         if p > alpha:
             if verbose:
                 print('%d ind %d | %s with p-value %f\n' % (x, y, S, p))
@@ -113,7 +122,9 @@ def skeleton_discovery(
     show_progress: bool = True,
     node_names: List[str] | None = None,
     depth: int = -1,
-    n_jobs: int = 4
+    n_jobs: int = 4,
+    domain_index: int | None = None,
+    non_linear_cit: CIT | None = None
 ) -> CausalGraph:
     """
     Perform skeleton discovery
@@ -136,6 +147,7 @@ def skeleton_discovery(
     show_progress : True iff the algorithm progress should be show in console.
     node_names: Shape [n_features]. The name for each feature (each feature is represented as a Node in the graph, so it's also the node name)
     n_jobs: int, number of parallel jobs (default = 4)
+    domain_index: int, the index of the domain column in the data, if it is not None, use KCI for independence test including it
 
     Returns
     -------
@@ -186,7 +198,9 @@ def skeleton_discovery(
             alpha=alpha, 
             stable=stable, 
             background_knowledge=background_knowledge, 
-            verbose=verbose
+            verbose=verbose,
+            domain_index=domain_index,
+            non_linear_cit=non_linear_cit
         )
         
         results = joblib.Parallel(n_jobs=n_jobs)(

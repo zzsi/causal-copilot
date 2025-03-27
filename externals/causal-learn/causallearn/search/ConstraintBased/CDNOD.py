@@ -16,7 +16,7 @@ from causallearn.search.ConstraintBased.PC import get_parent_missingness_pairs, 
 def cdnod(data: ndarray, c_indx: ndarray, alpha: float=0.05, indep_test: str=fisherz, depth: int=-1, stable: bool=True,
           uc_rule: int=0, uc_priority: int=2, mvcdnod: bool=False, correction_name: str='MV_Crtn_Fisher_Z',
           background_knowledge: Optional[BackgroundKnowledge]=None, verbose: bool=False,
-          show_progress: bool = True, n_jobs: int = 4, **kwargs) -> CausalGraph:
+          show_progress: bool = True, n_jobs: int = 4, non_linear_indep_test: str=None, **kwargs) -> CausalGraph:
     """
     Causal discovery from nonstationary/heterogeneous data
     phase 1: learning causal skeleton,
@@ -41,12 +41,12 @@ def cdnod(data: ndarray, c_indx: ndarray, alpha: float=0.05, indep_test: str=fis
     else:
         return cdnod_alg(data=data_aug, alpha=alpha, indep_test=indep_test, depth=depth, stable=stable, uc_rule=uc_rule,
                          uc_priority=uc_priority, background_knowledge=background_knowledge, verbose=verbose,
-                         show_progress=show_progress, n_jobs=n_jobs, **kwargs)
+                         show_progress=show_progress, n_jobs=n_jobs, non_linear_indep_test=non_linear_indep_test, **kwargs)
 
 
 def cdnod_alg(data: ndarray, alpha: float, indep_test: str, depth: int, stable: bool, uc_rule: int, uc_priority: int,
               background_knowledge: Optional[BackgroundKnowledge] = None, verbose: bool = False,
-              show_progress: bool = True, n_jobs: int = 4, **kwargs) -> CausalGraph:
+              show_progress: bool = True, n_jobs: int = 4, non_linear_indep_test: str = None, **kwargs) -> CausalGraph:
     """
     Perform Peter-Clark algorithm for causal discovery on the augmented data set that captures the unobserved changing factors
 
@@ -86,10 +86,11 @@ def cdnod_alg(data: ndarray, alpha: float, indep_test: str, depth: int, stable: 
     """
     start = time.time()
     indep_test = CIT(data, indep_test, **kwargs)
-    cg_1 = SkeletonDiscovery.skeleton_discovery(data, alpha, indep_test, stable, depth=depth, n_jobs=n_jobs)
+    non_linear_indep_test = CIT(data, non_linear_indep_test, **kwargs) if non_linear_indep_test is not None else None
+    c_indx_id = data.shape[1] - 1
+    cg_1 = SkeletonDiscovery.skeleton_discovery(data, alpha, indep_test, stable, depth=depth, n_jobs=n_jobs, non_linear_cit=non_linear_indep_test, domain_index=c_indx_id)
 
     # orient the direction from c_indx to X, if there is an edge between c_indx and X
-    c_indx_id = data.shape[1] - 1
     for i in cg_1.G.get_adjacent_nodes(cg_1.G.nodes[c_indx_id]):
         cg_1.G.add_directed_edge(cg_1.G.nodes[c_indx_id], i)
 

@@ -176,11 +176,17 @@ class GraphEvaluator:
                         best_graph[i, j] = self.EDGE_TYPES['directed']
                     elif true_graph[j, i] == self.EDGE_TYPES['directed']:
                         best_graph[j, i] = self.EDGE_TYPES['directed']
+                    else:
+                        # there is no edge in the true graph, choose one as the wrong edge
+                        best_graph[i, j] = self.EDGE_TYPES['directed']
                 elif edge_type == self.EDGE_TYPES['bidirected']:
                     if true_graph[i, j] == self.EDGE_TYPES['directed']:
                         best_graph[i, j] = self.EDGE_TYPES['directed']
                     elif true_graph[j, i] == self.EDGE_TYPES['directed']:
                         best_graph[j, i] = self.EDGE_TYPES['directed']
+                    else:
+                        # there is no edge in the true graph, choose one as the wrong edge
+                        best_graph[i, j] = self.EDGE_TYPES['directed']
                 elif edge_type == self.EDGE_TYPES['partial_directed']:
                     if true_graph[i, j] == self.EDGE_TYPES['directed']:
                         best_graph[i, j] = self.EDGE_TYPES['directed']
@@ -188,6 +194,9 @@ class GraphEvaluator:
                         best_graph[j, i] = self.EDGE_TYPES['directed']
                     elif true_graph[i, j] == self.EDGE_TYPES['bidirected']:
                         best_graph[i, j] = self.EDGE_TYPES['bidirected']
+                    else:
+                        # there is no edge in the true graph, choose one as the wrong edge
+                        best_graph[i, j] = self.EDGE_TYPES['directed']
                 elif edge_type == self.EDGE_TYPES['partial_undirected']:
                     raise ValueError("Partial undirected edges are not found in the existed algorithms")
                 elif edge_type == self.EDGE_TYPES['partial_unknown']:
@@ -197,6 +206,9 @@ class GraphEvaluator:
                         best_graph[j, i] = self.EDGE_TYPES['directed']
                     elif true_graph[i, j] == self.EDGE_TYPES['bidirected']:
                         best_graph[i, j] = self.EDGE_TYPES['bidirected']
+                    else:
+                        # there is no edge in the true graph, choose one as the wrong edge
+                        best_graph[i, j] = self.EDGE_TYPES['directed']
                       
         
         return best_graph
