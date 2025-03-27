@@ -2,23 +2,23 @@
   "algorithm_name": "GRaSP",
   "score_func": {
     "meaning": "Score function to be used",
-    "suggested_values": {
+    "available_values": {
       "default": "local_score_BIC",
       "BIC": "local_score_BIC",
       "BDeu": "local_score_BDeu",
       "marginal_general": "local_score_marginal_general",
       "marginal_multi": "local_score_marginal_multi"
     },
-    "reasoning": "Use 'local_score_BIC' for a good balance of fit and complexity for linear data. 'BDeu' for discrete data. local_score_marginal_general and marginal_multi are powerful for complex data such as nonlinear data but time-consuming. local_score_marginal_general leverages non-parametric generalized score and cross-validation to select the best model. local_score_marginal_multi leverages non-parametric generalized score and marginal likelihood to select the best model. Note [IMPORTANT]: local_score_marginal_general and local_score_marginal_multi are extremely slow. Only consider local_score_marginal_general if the variable size is less than 5. Do not consider local_score_marginal_multi since it is buggy now."
+    "expert_suggestion": "Use 'local_score_BIC' for a good balance of fit and complexity for linear data. 'BDeu' for discrete data. local_score_marginal_general and marginal_multi are powerful for complex data such as nonlinear data but time-consuming. local_score_marginal_general leverages non-parametric generalized score and cross-validation to select the best model. local_score_marginal_multi leverages non-parametric generalized score and marginal likelihood to select the best model. Note [IMPORTANT]: local_score_marginal_general and local_score_marginal_multi are extremely slow. Only consider local_score_marginal_general if the variable size is less than 5. Do not consider local_score_marginal_multi since it is buggy now."
   },
   "depth": {
     "meaning": "Maximum depth for searching permutations in the graph space",
-    "suggested_values": {
+    "available_values": {
       "default": 3,
       "small_graph": 5,
       "medium_graph": 3,
       "large_graph": 2
     },
-    "reasoning": "Controls how thoroughly the algorithm explores the permutation space. Higher values allow more thorough search but increase computational cost. For graphs with <10 nodes, use depth 5; for graphs with 10-25 nodes, use depth 3; for graphs with >25 nodes, use depth 2 to maintain reasonable runtime. Each unit increase in depth can increase runtime exponentially."
+    "expert_suggestion": "Controls how thoroughly the algorithm explores the permutation space. Higher values allow more thorough search but increase computational cost. For graphs with <10 nodes, use depth 5; for graphs with 10-25 nodes, use depth 3; for graphs with >25 nodes, use depth 2 to maintain reasonable runtime. Each unit increase in depth can increase runtime exponentially."
   }
 } 

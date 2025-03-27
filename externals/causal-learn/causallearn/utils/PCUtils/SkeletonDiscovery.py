@@ -25,7 +25,8 @@ def _process_node_pair(
     background_knowledge: BackgroundKnowledge | None, 
     verbose: bool,
     domain_index: int | None = None,
-    non_linear_cit: CIT | None = None
+    non_linear_cit: CIT | None = None,
+    backup_indep_test: CIT | None = None
 ) -> Tuple[List[Tuple[int, int]], dict]:
     """
     Process a single node pair for conditional independence testing
@@ -42,7 +43,8 @@ def _process_node_pair(
     verbose : bool, whether to print verbose output
     domain_index : int or None, the index of the domain column
     non_linear_cit : CIT or None, the non-linear CIT to use for tests involving domain_index
-    
+    backup_indep_test : CIT or None, the backup indep test to use for fastkci bug
+
     Returns
     -------
     edge_removal : list of tuples, edges to remove
@@ -79,11 +81,17 @@ def _process_node_pair(
     
     for S in combinations(Neigh_x_noy, depth):
         # Use non_linear_cit if domain_index is in the test, otherwise use the default cit
-        if domain_index is not None and (x == domain_index or y == domain_index or domain_index in S):
-            p = non_linear_cit(x, y, S) if non_linear_cit is not None else cg.ci_test(x, y, S)
-        else:
-            p = cg.ci_test(x, y, S)
-            
+        try:
+            if domain_index is not None and (x == domain_index or y == domain_index or domain_index in S):
+                p = non_linear_cit(x, y, S) if non_linear_cit is not None else cg.ci_test(x, y, S)
+            else:
+                p = cg.ci_test(x, y, S)
+        except ValueError as e:
+            # fastkci bug:
+            # null_sample_spectrum error: ValueError: zero-size array to reduction operation maximum which has no identity
+            # use backup_indep_test (kci) as a workaround
+            p = backup_indep_test(x, y, S)
+
         if p > alpha:
             if verbose:
                 print('%d ind %d | %s with p-value %f\n' % (x, y, S, p))
@@ -163,6 +171,7 @@ def skeleton_discovery(
     no_of_var = data.shape[1]
     cg = CausalGraph(no_of_var, node_names)
     cg.set_ind_test(indep_test)
+    backup_indep_test = CIT(data, method='kci')
 
     if depth == -1:
         depth = no_of_var
@@ -200,7 +209,8 @@ def skeleton_discovery(
             background_knowledge=background_knowledge, 
             verbose=verbose,
             domain_index=domain_index,
-            non_linear_cit=non_linear_cit
+            non_linear_cit=non_linear_cit,
+            backup_indep_test=backup_indep_test
         )
         
         results = joblib.Parallel(n_jobs=n_jobs)(

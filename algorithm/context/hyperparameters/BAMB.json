@@ -2,24 +2,23 @@
   "algorithm_name": "BAMB",
   "alpha": {
     "meaning": "Desired significance level in (0, 1)",
-    "suggested_values": {
+    "available_values": {
       "default": 0.05,
       "small_sample": 0.1,
       "large_sample": 0.01
     },
-    "reasoning": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
+    "expert_suggestion": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
   },
   "indep_test": {
     "meaning": "Independence test method",
-    "suggested_values": {
+    "available_values": {
       "default": "fisherz",
       "continuous": "fisherz",
       "discrete": "chisq",
-      "mixed": "gsq",
       "robust_nonlinear": "kci",
       "fast_robust_nonlinear": "fastkci",
       "approximate_fast_nonlinear": "rcit"
     },
-    "reasoning": "Choose based on data type and hardware. 'fisherz_cpu' for linear continuous data; 'chisq_cpu' for discrete data; 'gsq' for mixed data types; 'kci' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit' is the fastest approximation of kci (use with < 30 variables and sample size < 5000)."
+    "expert_suggestion": "Choose based on data type, 'fisherz' for linear continuous data; 'chisq' for discrete data (only applied for pure discrete data); 'kci' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit' is the fastest approximation of kci (use with < 30 variables and sample size < 5000)."
   }
 } 

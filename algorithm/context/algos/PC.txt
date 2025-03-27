@@ -6,28 +6,29 @@ Below is a seven-dimension profile of the PC (Peter–Clark) algorithm, integrat
 • Number of Key Hyperparameters  
   - The PC algorithm has three main hyperparameters:  
     1. α (alpha): Significance level for conditional independence tests.  
-    2. indep_test: Choice of conditional independence test (e.g., Fisher’s Z, chi-square, G-square, KCI variants).  
+    2. indep_test: Choice of conditional independence test (e.g., Fisher's Z, chi-square, G-square, KCI variants) with both CPU and GPU implementations.  
     3. depth: Maximum depth for the skeleton search phase.  
 
 • Tuning Difficulty  
   - α is typically the most critical parameter, with recommended defaults in the provided file (e.g., 0.05 for moderate sample sizes, 0.1 for smaller samples, 0.01 for very large samples). These guidelines simplify tuning for different dataset sizes.  
-  - The choice of indep_test can be straightforward (Fisher’s Z for continuous data, chi-square for discrete data, etc.), though advanced options (like KCI) may require more specialized knowledge.  
+  - The choice of indep_test can be straightforward (Fisher's Z for continuous data, chi-square for discrete data, etc.), with GPU-accelerated options now available for significantly improved performance. The selection includes 'fisherz_cpu'/'fisherz_gpu' for continuous data, 'chisq_cpu'/'chisq_gpu' for discrete data, and 'cmiknn_gpu' for nonparametric testing with GPU acceleration.
   - depth has a default of -1 (unlimited), but it can be restricted to reduce runtime for large graphs. The suggested rule of thumb scales with the number of nodes, setting smaller depths for larger graphs.  
 
 • Sensitivity  
   - Small changes in α can produce noticeable effects on edge detection: lower α yields more conservative edge selection (fewer false positives) but may lead to more false negatives.  
   - Shifting from an unlimited depth (depth = -1) to a restricted depth (like 1 to 3) can significantly speed up the search on large graphs but may miss subtler causal relationships.  
-  - Changing the independence test (e.g., from a linear Fisher test to a non-parametric test like KCI) can likewise alter both runtime and the ability to capture non-linear causal links.  
+  - Changing the independence test (e.g., from a linear Fisher test to a non-parametric test like KCI or cmiknn_gpu) can likewise alter both runtime and the ability to capture non-linear causal links.  
 
 • Critique/Extension  
   - Parameters that control graph-search complexity (depth) can drastically reduce runtime but may compromise completeness in highly connected graphs.  
   - The α threshold has more direct influence on statistical testing; even small shifts in α can change the number of edges found. Hence, domain knowledge is often helpful to choose a good α.  
+  - The availability of GPU-accelerated tests provides a significant performance boost without sacrificing accuracy, making PC more viable for larger datasets.
 
 ────────────────────────────────────────────────────────────────────────
 2. ROBUSTNESS & SCALABILITY
 ────────────────────────────────────────────────────────────────────────
 • Tolerance to Bad Data Quality  
-  - Benchmarks (File #2) indicate that PC’s performance tends to degrade when data quality drops (e.g., missing data or measurement error). In fact, PC ranked relatively low in measurement error and missing data tolerance, suggesting it does not handle either type of bad data as robustly as some other methods.  
+  - Benchmarks (File #2) indicate that PC's performance tends to degrade when data quality drops (e.g., missing data or measurement error). In fact, PC ranked relatively low in measurement error and missing data tolerance, suggesting it does not handle either type of bad data as robustly as some other methods.  
   - It lacks built-in methods for imputation; in practice, users might preprocess missing values or use more advanced PC variants (e.g., PC-missing).  
 
 • Tolerance to Sparse vs. Dense Connected Systems  
@@ -35,35 +36,40 @@ Below is a seven-dimension profile of the PC (Peter–Clark) algorithm, integrat
   - From a benchmarking standpoint, when confronted with moderately dense networks, performance declines more in runtime than in accuracy, highlighting the combinatorial explosion of tests in denser graphs.  
 
 • Scalability  
-  - According to File #2, the algorithm scored moderately on scalability, reflecting that it can handle dozens to a few hundred variables well, but may slow down noticeably beyond that range.  
-  - Parallelization or restricting depth can mitigate the combinatorial explosion in larger problems but may reduce the completeness of causal edges.  
+  - With the integration of GPU-accelerated independence tests ('fisherz_gpu', 'chisq_gpu', and 'cmiknn_gpu'), PC's scalability has significantly improved. The GPU tests provide extreme speedups compared to their CPU counterparts, especially for large datasets.
+  - According to the hyperparameter file, 'cmiknn_gpu' offers a 1000x speedup compared to CPU-based 'kci' with comparable accuracy, making nonparametric testing viable for much larger datasets.
+  - Even with GPU acceleration, restricting depth remains an important strategy for very large graphs to manage computational complexity.
 
 • Critique/Extension  
   - Parallel-PC implementations exist and can be employed on multi-core hardware to improve speed.  
   - Using approximation strategies (like a lower maximum depth or partitioning variables) can be beneficial when the dataset contains hundreds or thousands of variables, though these techniques might weaken correctness guarantees.  
+  - The GPU-accelerated tests make PC much more practical for large-scale applications, addressing one of its traditional limitations.
 
 ────────────────────────────────────────────────────────────────────────
 3. MIXED DATA & COMPLEX FUNCTIONS
 ────────────────────────────────────────────────────────────────────────
 • Noise Type  
-  - The PC algorithm’s traditional setup often presupposes approximately Gaussian errors for continuous data, but other independence tests allow for broader noise distributions.  
-  - Benchmarks (File #2) suggested that PC performed somewhat lower when confronted with more diverse or non-Gaussian noise, although advanced tests (KCI, RCIT) can address non-linearity.  
+  - The PC algorithm's traditional setup often presupposes approximately Gaussian errors for continuous data, but other independence tests allow for broader noise distributions.  
+  - Benchmarks (File #2) suggested that PC performed somewhat lower when confronted with more diverse or non-Gaussian noise, although advanced tests (KCI, RCIT, and now cmiknn_gpu) can address non-linearity.  
 
 • Mixed Data (Continuous & Discrete)  
-  - PC can integrate different conditional independence tests: Fisher’s Z or partial correlation for continuous variables; chi-square or G-square for discrete; or a mix for hybrid data.  
+  - PC can integrate different conditional independence tests: Fisher's Z or partial correlation for continuous variables; chi-square or G-square for discrete; or a mix for hybrid data.  
   - Some PC implementations provide direct support for mixed data via specialized tests like G-square, allowing simultaneous handling of continuous and categorical variables.  
+  - Both CPU and GPU implementations are available for different data types, with 'fisherz_cpu'/'fisherz_gpu' for continuous data and 'chisq_cpu'/'chisq_gpu' for discrete data.
 
 • Heterogeneous Data  
-  - Benchmark results (File #2) show it scored in the middle ranges under “Heterogeneity.” It can handle moderate changes in distribution across variables, provided a suitable test is chosen.  
+  - Benchmark results (File #2) show it scored in the middle ranges under "Heterogeneity." It can handle moderate changes in distribution across variables, provided a suitable test is chosen.  
   - Marked shifts across subsets of data may require domain-driven adjustments or advanced versions (like FCI for partial latent confounding).  
 
 • Complex Functional Forms  
-  - The standard PC algorithm is tailored for linear (or near-linear) dependencies, but employing a kernel-based test (e.g., KCI) can detect non-linear relationships.  
-  - Non-linear extensions usually come with higher computational burdens, which can be partially offset by “fastKCI” or “RCIT.”  
+  - The standard PC algorithm is tailored for linear (or near-linear) dependencies, but employing kernel-based tests can detect non-linear relationships.
+  - The GPU-accelerated 'cmiknn_gpu' test provides a powerful nonparametric option for detecting complex, non-linear relationships with significantly improved computational efficiency compared to CPU-based alternatives like 'kci_cpu'.
+  - Other non-linear options include 'fastkci_cpu' (faster than kci) and 'rcit_cpu' (fastest approximation of kci), each with their own trade-offs between speed and accuracy.
 
 • Critique/Extension  
   - Users often underestimate how crucial the independence test choice is when dealing with non-linear patterns. A robust non-parametric test can significantly improve detection of non-linear causal links.  
   - Overfitting concerns can arise in small samples if a highly flexible test is used without proper regularization or multiple testing corrections.  
+  - The addition of GPU-accelerated tests, especially 'cmiknn_gpu', makes non-linear causal discovery much more practical for larger datasets.
 
 ────────────────────────────────────────────────────────────────────────
 4. COMPUTATIONAL COMPLEXITY
@@ -74,10 +80,11 @@ Below is a seven-dimension profile of the PC (Peter–Clark) algorithm, integrat
 • Variability in Practical Usage  
   - Despite the polynomial (sometimes high-order) worst-case bound, many real-world graphs are sparse, so runtime is often much lower.  
   - Increasing depth or lowering α can drive up the number of tests, and thus runtime can spike. Conversely, restricting depth dampens the combinatorial explosion but risks missing some edges.  
+  - The GPU-accelerated tests ('fisherz_gpu', 'chisq_gpu', 'cmiknn_gpu') dramatically reduce the practical runtime, especially for large datasets, making PC much more viable for real-world applications.
 
 • Critique/Extension  
   - The worst-case scenario might be rarely encountered in practical sparse settings. However, in denser structures or with large depth parameters, runtime can indeed grow significantly.  
-  - Parallelization can help distribute the skeleton-discovery phase across multiple CPUs, improving the typical runtime on large datasets.  
+  - GPU acceleration provides a substantial practical improvement in computational efficiency without changing the theoretical complexity, making PC more competitive with other algorithms for large-scale causal discovery.
 
 ────────────────────────────────────────────────────────────────────────
 5. INTERPRETABILITY
@@ -91,7 +98,7 @@ Below is a seven-dimension profile of the PC (Peter–Clark) algorithm, integrat
   - Many software packages (e.g., Tetrad, pcalg) provide visualization tools to help interpret a CPDAG.  
 
 • Limitations of the Output Format  
-  - Edges in the “partially” directed region can generate ambiguity, as the algorithm leaves some edges unoriented if the data are insufficiently informative.  
+  - Edges in the "partially" directed region can generate ambiguity, as the algorithm leaves some edges unoriented if the data are insufficiently informative.  
   - In high-dimensional or complex domains, the resulting graph might still be large and cumbersome to interpret without additional domain knowledge.  
 
 • Critique/Extension  
@@ -127,15 +134,18 @@ Below is a seven-dimension profile of the PC (Peter–Clark) algorithm, integrat
   - Combining PC with domain knowledge (e.g., known biological pathways) often yields improved orientation of edges.  
   - Limiting depth can drastically reduce computation time for high-dimensional data, but practitioners must confirm that the trade-off in missed edges is acceptable.  
   - Discussion forums and user groups consistently recommend verifying the sample size is sufficient for the chosen α level, or considering small-sample corrections if data are limited.  
+  - For large datasets or when dealing with non-linear relationships, GPU-accelerated tests ('fisherz_gpu', 'chisq_gpu', 'cmiknn_gpu') are strongly recommended for their significant performance benefits.
 
 ────────────────────────────────────────────────────────────────────────
 CONCLUSION
 ────────────────────────────────────────────────────────────────────────
-The PC algorithm remains a flagship approach in constraint-based causal discovery, prized for its interpretability (CPDAG output) and relatively direct hyperparameter tuning guidelines (notably α and depth). It is best applied in scenarios where:  
+The PC algorithm remains a flagship approach in constraint-based causal discovery, prized for its interpretability (CPDAG output) and relatively direct hyperparameter tuning guidelines (notably α and depth). With the integration of GPU-accelerated independence tests, it has become much more scalable and practical for large datasets. It is best applied in scenarios where:  
 • The graph is not excessively dense.  
 • The data generally meet Markov and faithfulness assumptions.  
 • There are no severe missing data or measurement error problems, or these issues are pre-processed/handled externally.  
-Recent developments in parallelization, alternative independence tests, and specialized PC variants help address non-linearities, mixed data, and large-scale settings. Nonetheless, potential users must keep in mind the algorithm’s sensitivity to significance thresholds, data assumptions, and the combinatorial explosion of conditional tests in bigger or denser networks.
+• GPU acceleration is available for large datasets or when using nonparametric tests for non-linear relationships.
+
+Recent developments in GPU acceleration, alternative independence tests, and specialized PC variants help address non-linearities, mixed data, and large-scale settings. The 'cmiknn_gpu' test in particular provides a 1000x speedup for nonparametric testing compared to CPU-based alternatives, making PC much more competitive for complex, non-linear causal discovery tasks. Nonetheless, potential users must keep in mind the algorithm's sensitivity to significance thresholds, data assumptions, and the combinatorial explosion of conditional tests in bigger or denser networks.
 
 ────────────────────────────────────────────────────────
 Benchmarking Results
@@ -163,4 +173,3 @@ Benchmarking Results
 
   – Overall mean ranking across 7 scenarios: 8.58
   – Average standard deviation: 1.61
-
