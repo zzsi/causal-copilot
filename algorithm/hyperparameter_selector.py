@@ -1,4 +1,5 @@
 import json
+import torch
 import algorithm.wrappers as wrappers
 from algorithm.llm_client import LLMClient
 
@@ -52,6 +53,7 @@ class HyperparameterSelector:
         hp_prompt = hp_prompt.replace("[COLUMNS]", table_columns)
         hp_prompt = hp_prompt.replace("[KNOWLEDGE_INFO]", knowledge_info)
         hp_prompt = hp_prompt.replace("[STATISTICS INFO]", global_state.statistics.description)
+        hp_prompt = hp_prompt.replace("[CUDA_WARNING]", "Current machine supports CUDA, so you can choose GPU-powered algorithms." if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.")
         hp_prompt = hp_prompt.replace("[ALGORITHM_NAME]", selected_algo)
         hp_prompt = hp_prompt.replace("[ALGORITHM_DESCRIPTION]", algorithm_optimum_reason)
         # hp_prompt = hp_prompt.replace("[PRIMARY_HYPERPARAMETERS]", str(primary_params))

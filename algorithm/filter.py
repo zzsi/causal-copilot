@@ -80,7 +80,7 @@ class Filter(object):
             "[COLUMNS]": ', '.join(data.columns),
             "[STATISTICS_DESC]": statistics_desc,
             "[ALGO_CONTEXT]": algo_context,
-            "[CUDA_WARNING]": "" if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.",
+            "[CUDA_WARNING]": "Current machine supports CUDA, so you can choose GPU-powered algorithms." if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.",
             "[TOP_K]": str(TOP_K),
             "[ACCEPT_CPDAG]": "The user accepts the output graph including undirected edges/undeterministic directions (CPDAG/PAG)" if accept_CPDAG else "The user does not accept the output graph including undirected edges/undeterministic directions (CPDAG/PAG), so the output graph should be a DAG."
         }

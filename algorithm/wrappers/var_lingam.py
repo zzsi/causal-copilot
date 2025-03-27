@@ -26,7 +26,7 @@ try:
     from culingam.varlingam import VarLiNGAM as AcVarLiNGAM
 except ImportError:
     if not cuda_available:
-        raise ImportError("CUDA is not available, will not use GPU acceleration")
+        print("CUDA is not available, will not use GPU acceleration")
 
 # {‘aic’, ‘fpe’, ‘hqic’, ‘bic’, None}
 class VARLiNGAM(CausalDiscoveryAlgorithm):

@@ -70,7 +70,7 @@ def parse_args():
     parser.add_argument(
         '--initial_query',
         type=str,
-        default="Use CDNOD on this dataset",
+        default="Do causal discovery on this dataset",
         help='Initial query for the algorithm'
     )
 

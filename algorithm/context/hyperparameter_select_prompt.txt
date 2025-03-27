@@ -19,7 +19,7 @@ For each primary hyperparameter, provide:
 3. A brief explanation of why this value is appropriate given the dataset characteristics and algorithm requirements
 4. Each primary hyperparameter is provided with a default value, which should be adjusted based on the dataset characteristics and algorithm requirements
 
-Here we include the cuda availability as device information to help you decide hyperparameters:
+Here is the CUDA/GPU availability to help you decide hyperparameters:
 
 [CUDA_WARNING]
 

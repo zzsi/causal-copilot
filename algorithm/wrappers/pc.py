@@ -27,7 +27,7 @@ try:
     from externals.acceleration.pc.pc import accelerated_pc
 except ImportError:
     if not cuda_available:
-        raise ImportError("CUDA is not available, will not use GPU acceleration")
+        print("CUDA is not available, will not use GPU acceleration")
 
 
 # KCI: 5 nodes, 1000 samples: 66s

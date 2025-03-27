@@ -28,7 +28,7 @@ try:
     from externals.acceleration.cdnod.cdnod import accelerated_cdnod
 except ImportError:
     if not cuda_available:
-        raise ImportError("CUDA is not available, will not use GPU acceleration")
+        print("CUDA is not available, will not use GPU acceleration")
 
 
 class CDNOD(CausalDiscoveryAlgorithm):

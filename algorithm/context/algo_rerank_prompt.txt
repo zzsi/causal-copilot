@@ -20,6 +20,10 @@ The estimated time costs of the following algorithms using linear estimation met
 
 [TIME_INFO]
 
+At the same time, be careful about the current device availability for GPU/CUDA acceleration. Note that some algorithm settings would need GPU to run, which could be a indirect limitation on the algorithm application potential:
+
+[CUDA_WARNING]
+
 ===============================================
 Detailed Profiles of the algorithm candidates are shown here. We also include the supported hyperparamerters as additional information to help you know the potentials of each algorithm combining various hyperparamerter settings. You MUST actively combine and reason with them:
 
