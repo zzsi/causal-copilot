@@ -81,8 +81,12 @@ class Report_generation(object):
             inference_global_state = global_state 
 
         self.client = OpenAI()
-        self.data_mode = args.data_mode
+        if global_state.user_data.meaningful_feature:
+            self.data_mode = 'real'
+        else:
+            self.data_mode = 'simulated'
         self.data_file = args.data_file
+        # self.data_file = 'house_price'
         self.global_state = global_state
         self.inference_global_state = inference_global_state
         self.args = args 
@@ -426,7 +430,7 @@ The JSON should be
         {param_list}
         """
 
-        if self.args.data_mode == 'real':
+        if self.data_mode == 'real':
             response += f"""
             \subsection{{Graph Tuning with Bootstrap and LLM Suggestion}}
             In the final step, we performed graph tuning with suggestions provided by the Bootstrap and LLM.

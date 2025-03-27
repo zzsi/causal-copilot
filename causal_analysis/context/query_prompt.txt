@@ -1,7 +1,7 @@
 You are a helpful assistant, please do the following tasks:
 **Tasks*
 Firstly please identify what tasks the user want to do and save them as a list in tasks.
-Please choose among the following causal tasks, if there's no matched task just return an empty list 
+Please choose among the following causal tasks.
 You can only choose from the following tasks: 
 1. Treatment Effect Estimation; 2. Anormaly Attribution; 3. Feature Importance 4. Counterfactual Estimation
 

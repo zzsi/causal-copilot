@@ -1,27 +1,25 @@
 Given a dataset with the following properties:
 
-1. Columns: region	year	area	deaths	richter	day	month
+1. Columns: Id	MSSubClass	MSZoning	LotFrontage	LotArea	Street	LotShape	LandContour	Utilities	LotConfig	LandSlope	Neighborhood	Condition1	Condition2	BldgType	HouseStyle	OverallQual	OverallCond	YearRemodAdd	RoofStyle	RoofMatl	Exterior1st	Exterior2nd	MasVnrArea	ExterQual	ExterCond	Foundation	BsmtQual	BsmtCond	BsmtExposure	BsmtFinType1	BsmtFinSF1	BsmtFinType2	BsmtFinSF2	BsmtUnfSF	TotalBsmtSF	Heating	HeatingQC	CentralAir	Electrical	1stFlrSF	2ndFlrSF	LowQualFinSF	GrLivArea	BsmtFullBath	BsmtHalfBath	FullBath	HalfBath	BedroomAbvGr	KitchenAbvGr	KitchenQual	TotRmsAbvGrd	Functional	Fireplaces	FireplaceQu	GarageType	GarageYrBlt	GarageFinish	GarageCars	GarageArea	GarageQual	GarageCond	PavedDrive	WoodDeckSF	OpenPorchSF	EnclosedPorch	3SsnPorch	ScreenPorch	PoolArea	MiscVal	MoSold	YrSold	SaleType	SaleCondition	SalePrice	domain_index
 2. Statistics:
 The dataset has the following characteristics:
 
 Data Type: The overall data type is Mixture.
 
-The sample size is 123 with 7 features. This dataset is not time-series data. Data Quality: There are missing values in the dataset.
+The sample size is 1460 with 75 features. This dataset is not time-series data. Data Quality: There are missing values in the dataset.
 
 Statistical Properties:
 - Linearity: The relationships between variables are not predominantly linear.
 - Gaussian Errors: The errors in the data do not follow a Gaussian distribution.
-- Heterogeneity: The dataset is not heterogeneous. 
+- Heterogeneity: The dataset is heterogeneous. 
 
-
-
-
+- Domain Index: YearBuilt
 
 We have selected the following algorithm for causal discovery:
 
-Algorithm: MBOR
-Description: MBOR is a Markov blanket-based causal discovery algorithm that identifies key features while accommodating flexible relationships in the data, producing a CPDAG output.
-MBOR's comprehensive handling of noise, mixed data, and missing values with a strong focus on interpretability and efficiency makes it superior for this specific dataset. Its performance in benchmark scenarios similar to the dataset's properties outcompetes others, offering balanced accuracy and runtime.
+Algorithm: CDNOD
+Description: CDNOD is a constraint-based method that employs various conditional independence tests to discover causal structures. It is designed to accommodate shifting distributions and can manage the complexities often found in diverse datasets.
+CDNOD is particularly designed for nonstationary and heterogeneous data, which closely aligns with the dataset's characteristics. Its ability to manage mixed data types and ensure robustness in complex environments, combined with is suitable execution time, makes it the ideal choice.
 
 Now, we need to set up the primary hyperparameters for this algorithm. Please consider the dataset characteristics and the algorithm requirements to suggest appropriate values for the following hyperparameters:
 
@@ -35,12 +33,12 @@ For each primary hyperparameter, provide:
 
 Actively use and reason with the following information about each hyperparameter to inform your decisions:
 
-"{\n  \"algorithm_name\": \"MBOR\",\n  \"alpha\": {\n    \"meaning\": \"Desired significance level in (0, 1)\",\n    \"suggested_values\": {\n      \"default\": 0.05,\n      \"small_sample\": 0.1,\n      \"large_sample\": 0.01\n    },\n    \"reasoning\": \"Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\"\n  },\n  \"indep_test\": {\n    \"meaning\": \"Independence test method\",\n    \"suggested_values\": {\n      \"default\": \"fisherz\",\n      \"continuous\": \"fisherz\",\n      \"discrete\": \"chisq\",\n      \"mixed\": \"gsq\",\n      \"robust_nonlinear\": \"kci\",\n      \"fast_robust_nonlinear\": \"fastkci\",\n      \"approximate_fast_nonlinear\": \"rcit\"\n    },\n    \"reasoning\": \"Choose based on data type: 'fisherz' for linear continuous; 'chisq' for discrete; 'gsq' for simplied mixed data types; 'kci' for general nonlinear data; 'fastkci' is a fast version of kci for nonlinear data; 'rcit' is a fast version of kci approximation for nonlinear data. Note [IMPORTANT]: Some nonlinear tests are extremely slow. Only consider 'kci' and 'fastkci' only if when the variable size is less than 5, consider 'rcit' only if the variable size is less than 10.\"\n  }\n} "
+"{\n  \"algorithm_name\": \"CDNOD\",\n  \"alpha\": {\n    \"meaning\": \"Significance level in (0, 1)\",\n    \"suggested_values\": {\n      \"default\": 0.05,\n      \"small_sample\": 0.1,\n      \"large_sample\": 0.01\n    },\n    \"reasoning\": \"Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\"\n  },\n  \"indep_test\": {\n    \"meaning\": \"Independence test method\",\n    \"suggested_values\": {\n      \"default\": \"fisherz\",\n      \"continuous\": \"fisherz\",\n      \"discrete\": \"chisq\",\n      \"mixed\": \"gsq\",\n      \"robust_nonlinear\": \"kci\",\n      \"fast_robust_nonlinear\": \"fastkci\",\n      \"approximate_fast_nonlinear\": \"rcit\"\n    },\n    \"reasoning\": \"Choose based on data type: 'fisherz' for linear continuous; 'chisq' for discrete; 'gsq' for simplied mixed data types; 'kci' for general nonlinear data; 'fastkci' is a fast version of kci for nonlinear data; 'rcit' is a fast version of kci approximation for nonlinear data. Note [IMPORTANT]: Some nonlinear tests are extremely slow. Only consider 'kci' and 'fastkci' only if when the variable size is less than 5, consider 'rcit' only if the variable size is less than 10.\"\n  },\n  \"depth\": {\n    \"meaning\": \"Maximum depth for skeleton search\",\n    \"suggested_values\": {\n      \"default\": -1,\n      \"small_graph\": 6,\n      \"medium_graph\": 4,\n      \"large_graph\": 2,\n      \"extra_large_graph\": 1\n    },\n    \"reasoning\": \"Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 1-3) can significantly speed up the algorithm at the cost of some accuracy. A graph with node number < 10, use depth 6; A graph with node number 10 - 25, use depth 4; A graph with node number 25-50, use depth 2; A graph with node number > 50, use depth 1.\"\n  }\n} "
 
 Please provide your suggestions in a structured JSON format. Your response should look like this:
 
 {
-  "algorithm": "MBOR",
+  "algorithm": "CDNOD",
   "hyperparameters": {
     "[HYPERPARAMETER_1_NAME]": {
       "full_name": "[HYPERPARAMETER_1_FULL_NAME]",

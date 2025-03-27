@@ -6,7 +6,7 @@ import traceback
 from preprocess.stat_info_functions import *
 from openai import OpenAI
 from pydantic import BaseModel
-from typing import List, Union, Any
+from typing import List, Union, Any, Optional
 import torch 
 from dotenv import load_dotenv
 load_dotenv('/Users/wwy/Documents/Project/Causal-Copilot/.env')
@@ -86,122 +86,144 @@ def parse_drop_high_miss_query(message, chat_history, download_btn, global_state
     return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 # process functions
 def sample_size_check(n_row, n_col, chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE):
-    ## Few sample case: give warning
+    ## Few sample case: must reupload
     if 1<= n_row/n_col < 5:
-        chat_history.append((None, "Sample Size Check Summary: \n"\
-                             "⚠️ The dataset provided do not have enough sample size and may result in unreliable analysis. \n"
-                                "Please upload a larger dataset if you mind that."))
+        info = "⚠️ The dataset provided do not have enough sample size and may result in unreliable analysis. Please upload a larger dataset."
         CURRENT_STAGE = 'reupload_dataset'
     ## Not enough sample case: must reupload
     elif n_row/n_col < 1:
-        chat_history.append((None, "Sample Size Check Summary: \n"\
-                             "⚠️ The sample size of dataset provided is less than its feature size. We are not able to conduct further analysis. Please provide more samples. \n"))
+        info = "⚠️ The sample size of dataset provided is less than its feature size. We are not able to conduct further analysis. Please provide more samples. \n"
         CURRENT_STAGE = 'reupload_dataset'
     ## Enough sample case
     else:
-        chat_history.append((None, "Sample Size Check Summary: \n"\
-                             "✅ The sample size is enough for the following analysis. \n"))
-        CURRENT_STAGE = 'meaningful_feature' #'important_feature_selection'
-    return chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE
+        info =  "✅ The sample size is enough for the following analysis. \n"
+        CURRENT_STAGE = 'meaningful_feature'
+    return chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE, info
 
 def meaningful_feature_query(global_state, message, chat_history, download_btn, CURRENT_STAGE):
-    if message.lower() == 'yes':
-        global_state.user_data.meaningful_feature = True
-        CURRENT_STAGE = 'heterogeneity'
-        chat_history.append((message, None))
-    elif message.lower() == 'no' or message == '':
-        global_state.user_data.meaningful_feature = False
-        CURRENT_STAGE = 'heterogeneity'
-        chat_history.append((message, None))
+    prompt = "Does this dataset have meaningful feature names? **Please only respond with 'Yes' or 'No'**."\
+    "Column names like 'X1', 'X2', 'X3' are not meaningful."\
+    "Column names like 'Age', 'Height', 'Weight' are meaningful."\
+    f"Columns: {global_state.user_data.raw_data.columns}"
+    response = LLM_parse_query(None, "You are a helpful assistant, help me to answer this question with Yes or No", prompt)
+    
+    if 'yes' in response.lower():
+        global_state.user_data.meaningful_feature = True 
+        # chat_history.append((None, "Meaningful Feature Check Summary: \n"\
+        #                      "✅ The dataset has meaningful feature names."))
     else:
-        chat_history.append((None, "❌ Invalid input, please try again!"))
+        global_state.user_data.meaningful_feature = False
+        # chat_history.append((None, "Meaningful Feature Check Summary: \n"\
+        #                      "✅ The dataset doesn't have meaningful feature names."))
+    CURRENT_STAGE = 'heterogeneity'
     return chat_history, download_btn, global_state, CURRENT_STAGE
 
 
 def heterogeneity_query(global_state, message, chat_history, download_btn, CURRENT_STAGE,args):
-    if message.lower() == 'no' or message == '':
-        global_state.user_data.heterogeneity = None
-        CURRENT_STAGE = 'accept_CPDAG'
-        chat_history.append((message, None))
-        var_list = []
-        return var_list, chat_history, download_btn, global_state, CURRENT_STAGE
+    class VarList(BaseModel):
+        variables: list[str]
+    prompt =  "Please mention heterogeneity if there is any. \n "\
+    "**Heterogeneity means that the patterns or trends in the data change over time, instead of staying consistent throughout the entire period.**"\
+    "If there is no indicator of heterogeneity, please return an empty list, otherwise please provide the column name of this indicator in the list. \n"\
+    "You should only choose 0 or 1 variable as the heterogeneity indicator. The name must be among the features of the dataset!\n"\
+    "These are features in the dataset:\n"\
+    f"{global_state.user_data.raw_data.columns}"
+    parsed_vars = LLM_parse_query(VarList, "You are a helpful assistant, help me to answer this question", prompt)
+    var_list = parsed_vars.variables
+    missing_vars = [var for var in var_list if var not in global_state.user_data.raw_data.columns and var != '']
+    final_hte_list = list(set(var_list) - set(missing_vars))
+    if len(final_hte_list) != 0:
+        global_state.statistics.heterogeneous = True
+        global_state.statistics.domain_index = final_hte_list[0]
+        global_state.user_data.important_features.append(final_hte_list[0])
+        # chat_history.append((None, "Heterogeneity Check Summary: \n"\
+        #                      f"✅ The variable {global_state.statistics.domain_index} is detected as a heterogeneity indicator in your dataset."))
     else:
-        class VarList(BaseModel):
-            variables: list[str]
+        global_state.statistics.heterogeneous = False
+        # chat_history.append((None, "Heterogeneity Check Summary: \n"\
+        #                      "✅ There is no heterogeneity indicator detected in your dataset."))
+    CURRENT_STAGE = 'accept_CPDAG'
+    return var_list, chat_history, download_btn, global_state, CURRENT_STAGE
 
-        prompt = "You are a helpful assistant, please extract variable names as a list. \n"
-        "If there is only one variable, also save it in list variables"
-        f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
-        "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
-        "If user's input is not Case Sensitive, please map them into correct CASE SENSITIVE variable names."
-        "If they say 'all of them', 'all' or something like that, please save all the variable names in the list."
-        "If you cannot find variable names, just return an empty list."
-        parsed_vars = LLM_parse_query(VarList, prompt, message)
-        var_list = parsed_vars.variables
-        if var_list == []:
-            chat_history.append((message,
-                                 "❌ Your heterogeneity indicator cannot be parsed, please make sure variables are among your dataset features and retry. \n"
-                                 ))
-            return var_list, chat_history, download_btn, global_state, CURRENT_STAGE
-        else:
-            missing_vars = [var for var in var_list if var not in global_state.user_data.raw_data.columns and var != '']
-            if missing_vars != []:
-                chat_history.append((message, "❌ Variables " + ", ".join(
-                    missing_vars) + " are not in the dataset, please check it and retry.\n"
-                                    "Note that it's CASE SENSITIVE."))
-                return var_list, chat_history, download_btn, global_state, CURRENT_STAGE
+def parse_preliminary_feedback(global_state, message):
+    print(message)
+    text = ""
+    if not 'no' in message.lower():
+        class preliminaryVar(BaseModel):
+            selected_variables: list[str]
+            meaningful_feature: bool
+            heterogeneity: bool
+            accept_CPDAG: bool
+            domin_index: Optional[str] 
+            missing_value: Union[str, int, float]
+        prompt = "I'm collecting some informations from the user and I give this template to them, help me to parse information from it and set variables correspondingly.\n"\
+        "Firstly, carefully extract which variables are provided by the user, and save them in selected_variables list. \n"\
+        "Secondly, save the provided value of variables correspondingly."
+        """
+        meaningful_feature: True/False
+        heterogeneity: True/False
+        accept_CPDAG: True/False
+        domin_index: The column name of domin_index (Can only be set when heterogeneity is True)
+        missing_value: special NA value/False
+        """
+        "If they provide domin_index, and it's among this column name list, save it in domin_index; Otherwise leave the domin_index as None."
+        f"Columns: {global_state.user_data.raw_data.columns}"
+        "If user provide some missing value like 0, None, etc, save it in missing_value. Save it as int or string."
+        response = LLM_parse_query(preliminaryVar, "You are a helpful assistant, help me to parse the user's message carefully\n"+prompt, message)
+        selected_variables, meaningful_feature, heterogeneity, accept_CPDAG, domin_index, missing_value = response.selected_variables, response.meaningful_feature, response.heterogeneity, response.accept_CPDAG, response.domin_index, response.missing_value
+        print('1', meaningful_feature, '1', heterogeneity, '1', accept_CPDAG, '1', domin_index, '1', missing_value)
+        # text += f"✅ Successfully parsed your provided information. \n"
+        if 'meaningful_feature' in selected_variables:
+            global_state.user_data.meaningful_feature
+            text += f"- ✅ Adjusted Meaningful Feature: {meaningful_feature}\n"
+        if 'heterogeneity' in selected_variables:
+            global_state.statistics.heterogeneous = heterogeneity
+            text += f"- ✅ Adjusted Heterogeneity: {heterogeneity}\n"
+            if heterogeneity:
+                if domin_index and domin_index in global_state.user_data.raw_data.columns:
+                    global_state.statistics.domain_index = domin_index
+                    global_state.user_data.important_features.expand(domin_index)
+                    text += f"- ✅ Adjusted Domain Index: {domin_index}\n"
+                elif domin_index and domin_index not in global_state.user_data.raw_data.columns:
+                    text += f"- ❌ The provided domain index {domin_index} is not in the dataset, we do not adjust it.\n"
             else:
-                chat_history.append((message, "✅ Successfully parsed your provided heterogeneity indicator."))
-                CURRENT_STAGE = 'accept_CPDAG'
-                global_state.user_data.heterogeneity = var_list
-                return var_list, chat_history, download_btn, global_state, CURRENT_STAGE
+                global_state.statistics.domain_index = None
+        if 'accept_CPDAG' in selected_variables:
+            global_state.user_data.accept_CPDAG = accept_CPDAG
+            text += f"- ✅ Adjusted Accept CPDAG: {accept_CPDAG}\n"
+        if 'missing_value' in selected_variables:
+            global_state.user_data.nan_indicator = missing_value
+            global_state, nan_detect = numeric_str_nan_detect(global_state)
+            if nan_detect:
+                info, global_state, CURRENT_STAGE = drop_spare_features(global_state)
+                # text += f"- ✅ Adjusted Missing Ratio: {info}\n"
+                test += info
+    return global_state, text
 
-
-def accept_CPDAG_query(global_state, message, chat_history, download_btn, CURRENT_STAGE):
-    if message.lower() == 'yes':
-        global_state.user_data.accept_CPDAG = True
-        CURRENT_STAGE = 'important_feature_selection'
-        chat_history.append((message, None))
-    elif message.lower() == 'no' or message == '':
-        global_state.user_data.accept_CPDAG = False
-        CURRENT_STAGE = 'important_feature_selection'
-        chat_history.append((message, None))
-    else:
-        chat_history.append((None, "❌ Invalid input, please try again!"))
-    return chat_history, download_btn, global_state, CURRENT_STAGE
-
-
-def parse_reupload_query(message, chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE):
-    print('reupload query:', message)
-    if message == 'continue':
+def parse_reupload_query(message, chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE, next_step):
+    class UploadVar(BaseModel):
+        upload: bool
+    prompt = "I ask the user whether they want to continue the procedure or they want to reupload the dataset."\
+    "Help me to analyze user's intention. If they want to continue, set the upload to be False, otherwise set it to be True."
+    response = LLM_parse_query(UploadVar, "You are a helpful assistant, help me to answer this question with Yes or No", prompt)
+    upload = response.upload
+    if not upload:
         chat_history.append((message, "📈 Continue the analysis..."))
-        CURRENT_STAGE = 'important_feature_selection'
+        CURRENT_STAGE = next_step
     else:
-        #REQUIRED_INFO['data_uploaded'] = False
+        REQUIRED_INFO['data_uploaded'] = False
         CURRENT_STAGE = 'initial_process'
-    return chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE
+    return chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE, upload
 
 
 def process_initial_query(message, chat_history, download_btn, args, REQUIRED_INFO, CURRENT_STAGE):
-    # TODO: check if the initial query is valid or satisfies the requirements
     print('initial query:', message)
-    # algorithm 
-    # 
+    chat_history.append((message, None))
+    REQUIRED_INFO['initial_query'] = True
     if 'yes' in message.lower():
         args.data_mode = 'real'
-        REQUIRED_INFO['initial_query'] = True
-        chat_history.append((message, None))
     elif 'no' in message.lower():
-        args.data_mode = 'simulated'
-        REQUIRED_INFO['initial_query'] = True
-        chat_history.append((message, None))
-    else:
-        print('not feature indicator')
-        chat_history.append((message,
-                                """Please enter your initial query first before proceeding. 
-                             You can also provide some information about the background/context/prior/statistical information about the dataset,
-                             which would help us generate appropriate report for you.
-                             """))
+        args.data_mode = 'simulated'     
     return chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE, args    
 
 def parse_mode_query(message, chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE):
@@ -221,35 +243,50 @@ def parse_mode_query(message, chat_history, download_btn, REQUIRED_INFO, CURRENT
 
 def parse_var_selection_query(message, chat_history, download_btn, next_step, args, global_state, REQUIRED_INFO, CURRENT_STAGE):
     class VarList(BaseModel):
+        all: bool
+        none: bool
         variables: list[str]
     prompt = "You are a helpful assistant, please help me to understand user's need and extract variable names from their message."
     "I ask them whether in a dataset they have important features"
     "1. If they provide some variable names, please extract variable names as a list. \n"
     "2. If there is only one variable, also save it in list variables"
-    "3. If they say 'all of them', 'all' or something like that, please save all the variable names in the list."
-    "4. If they say 'no', 'none', 'nothing' or something like that, just return an empty list."
+    "3. If they say 'all of them', 'all' or something like that, set 'all' to be True."
+    "4. If they say 'no', 'none', 'nothing' '' or something like that, set 'none' to be True."
     f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
     "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
     
     parsed_vars = LLM_parse_query(VarList, prompt, message)
-    var_list = parsed_vars.variables
-    if var_list == []:
-        chat_history.append((message, "❌ Your variable selection query cannot be parsed, please make sure variables are among your dataset features and retry. \n"
-                             ))
-        return var_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
+    all, none, var_list = parsed_vars.all, parsed_vars.none, parsed_vars.variables
+    if all:
+        var_list = global_state.user_data.raw_data.columns
+        chat_history.append((message, "✅ All variables are selected."))
+        CURRENT_STAGE = next_step
+    elif none:
+        var_list = []
+        chat_history.append((message, "✅ No variable is selected."))
+        CURRENT_STAGE = next_step
     else:
-        missing_vars = [var for var in var_list if var not in global_state.user_data.raw_data.columns and var!='']
-        if missing_vars != []:
-            chat_history.append((message, "❌ Variables " + ", ".join(missing_vars) + " are not in the dataset, please check it and retry.\n"
-                                 "Note that it's CASE SENSITIVE."))
-            return var_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
-        elif len(var_list) > 20:
-            chat_history.append((message, "❌ Number of chosen Variables should be within 20, please check it and retry."))
-            return var_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
+        if var_list == []:
+            chat_history.append((message, "❌ Your variable selection query cannot be parsed, please make sure variables are among your dataset features and retry. \n"
+                                ))
         else:
-            chat_history.append((message, "✅ Successfully parsed your provided variables."))
-            CURRENT_STAGE = next_step
-            return var_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
+            missing_vars = [var for var in var_list if var not in global_state.user_data.raw_data.columns and var!='']
+            if missing_vars != []:
+                chat_history.append((message, "❌ Variables " + ", ".join(missing_vars) + " are not in the dataset, please check it and retry.\n"
+                                    "Note that it's CASE SENSITIVE."))
+            elif len(var_list) > 20:
+                chat_history.append((message, "❌ Number of chosen Variables should be within 20, please check it and retry."))
+            else:
+                chat_history.append((message, "✅ Successfully parsed your provided variables."))
+                CURRENT_STAGE = next_step
+    return var_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
+
+def parse_important_feature_query(message, chat_history, download_btn, CURRENT_STAGE, args, global_state, REQUIRED_INFO):
+    print('important_feature_selection')
+    var_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_var_selection_query(message, chat_history, download_btn, 'preliminary_check', args, global_state, REQUIRED_INFO, CURRENT_STAGE)
+    global_state.user_data.important_features = var_list
+    print(global_state.user_data.important_features)
+    return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
 def LLM_var_selection(message, global_state, chat_history):
     class VarList(BaseModel):
@@ -273,6 +310,9 @@ def parse_ts_query(message, chat_history, download_btn, global_state, REQUIRED_I
     if message.lower() == 'no':
         global_state.statistics.time_series = False
         CURRENT_STAGE = 'ts_check_done'
+    elif message.lower() == 'yes':
+        global_state.statistics.time_series = True
+        CURRENT_STAGE = 'ts_check_done'
     elif message == 'continue' or message == '':
         CURRENT_STAGE = 'ts_check_done'
         global_state.statistics.time_series = True
@@ -287,22 +327,20 @@ def parse_ts_query(message, chat_history, download_btn, global_state, REQUIRED_I
             chat_history.append((None, f"❌ We cannot parse your query, please follow the template and retry."))
     return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
-def parse_sparsity_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE):
+def parse_sparsity_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
     # Select features based on LLM
     if message.upper() == 'LLM' or message == '':
         try:
-            global_state = llm_select_dropped_features(global_state, args=args)
+            global_state = llm_select_dropped_features(global_state)
         except:
-            global_state = llm_select_dropped_features(global_state, args=args)
-        if message.upper() == 'LLM':
-            chat_history.append((None, "The following sparse variables suggested by LLM will be dropped: \n"
-                                            ", ".join(global_state.user_data.llm_drop_features)))
-        elif message == '':
-            chat_history.append((None, "You do not choose any variables to drop, we will drop the following variables suggested by LLM: \n"
-                                            ", ".join(global_state.user_data.llm_drop_features)))
+            global_state = llm_select_dropped_features(global_state)
+        # if message.upper() == 'LLM':
+        #     chat_history.append((None, "The following sparse variables suggested by LLM will be dropped: \n"
+        #                                     ", ".join(global_state.user_data.llm_drop_features)))
+        # elif message == '':
+        #     chat_history.append((None, "You do not choose any variables to drop, we will drop the following variables suggested by LLM: \n"
+        #                                     ", ".join(global_state.user_data.llm_drop_features)))
         global_state = drop_greater_miss_between_30_50_feature(global_state)
-        CURRENT_STAGE = "sparsity_drop_done"
-        #var_list = [var for var in global_state.user_data.llm_drop_features if var in global_state.user_data.raw_data.columns]
     # Select features based on user query
     else:
         class VarList(BaseModel):
@@ -325,7 +363,6 @@ def parse_sparsity_query(message, chat_history, download_btn, args, global_state
                 chat_history.append((None, "✅ Successfully parsed your provided variables. These sparse variables you provided will be dropped."))
                 global_state.user_data.user_drop_features = var_list
                 global_state = drop_greater_miss_between_30_50_feature(global_state)
-                CURRENT_STAGE = "sparsity_drop_done"
     return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
 def first_stage_sparsity_check(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE):
@@ -356,19 +393,53 @@ def first_stage_sparsity_check(message, chat_history, download_btn, args, global
             chat_history.append((None, "❌ We cannot find the NA value you specified in the dataset, please retry!"))
     return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
+def drop_spare_features(chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
+    global_state = missing_ratio_table(global_state) # Update missingness indicator in global state and generate missingness ratio table
+    global_state.statistics.sparsity_dict = sparsity_check(global_state.user_data.processed_data, global_state.user_data.nan_indicator)
+    info = "Missing Ratio Summary: \n"\
+            f"1️⃣ High Missing Ratio Variables (>0.5): {', '.join(global_state.statistics.sparsity_dict['high']) if global_state.statistics.sparsity_dict['high']!=[] else 'None'} \n"\
+            f"2️⃣ Moderate Missing Ratio Variables: {', '.join(global_state.statistics.sparsity_dict['moderate']) if global_state.statistics.sparsity_dict['moderate']!=[] else 'None'} \n"\
+            f"3️⃣ Low Missing Ratio Variables (<0.3): {', '.join(global_state.statistics.sparsity_dict['low']) if global_state.statistics.sparsity_dict['low']!=[] else 'None'} \n"
+    
+    if global_state.statistics.sparsity_dict['moderate'] != []:
+        info += f"📍 The missing ratios of the following variables are greater than 0.3 and smaller than 0.5, we will use LLM to decide which variables to drop. \n"\
+                f"{', '.join(global_state.statistics.sparsity_dict['moderate'])} \n"
+        chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_sparsity_query('LLM', chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE)
+    if global_state.statistics.sparsity_dict['high'] != []:
+        info += f"📍 The missing ratios of the following variables are greater than 0.5, we will drop them: \n"\
+                                f"{', '.join(global_state.statistics.sparsity_dict['high'])}  \n"
+        global_state = drop_greater_miss_50_feature(global_state)
+    if global_state.statistics.sparsity_dict['low'] != []:
+        # impute variables with sparsity<0.3 in the following
+        info += f"📍 The missing ratios of the following variables are smaller than 0.3, we will impute them: \n" \
+                            f"{', '.join(global_state.statistics.sparsity_dict['low'])}  \n"
+    CURRENT_STAGE = 'reupload_dataset_done'
+    return info, global_state, CURRENT_STAGE
+                       
+
 def parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
+    if torch.cuda.is_available():
+        permitted_algo_list = ['PC', 'PCParallel', 'AcceleratedPC', 'FCI', 'CDNOD', 'AcceleratedCDNOD',
+                        'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
+                        'GES', 'FGES', 'XGES', 'GRaSP',
+                        'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
+                        'DirectLiNGAM', 'AcceleratedLiNGAM', 'ICALiNGAM']
+    else:
+        permitted_algo_list = ['PC', 'PCParallel', 'FCI', 'CDNOD',
+                        'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
+                        'GES', 'FGES', 'XGES', 'GRaSP',
+                        'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
+                        'DirectLiNGAM', 'ICALiNGAM']
     if message == '' or message.lower()=='no':
         chat_history.append((message, "💬 No algorithm is specified, will go to the next step..."))
         CURRENT_STAGE = 'inference_analysis_check'     
-    elif message not in ['PC', 'FCI', 'CDNOD', 'GES', 'DirectLiNGAM', 'ICALiNGAM', 'NOTEARS', 'FGES', 'XGES', 'AcceleratedDirectLiNGAM']:
+    elif message not in permitted_algo_list:
         if torch.cuda.is_available():
             chat_history.append((message, "❌ The specified algorithm is not correct, please choose from the following: \n"
-                                        "PC, FCI, CDNOD, GES, DirectLiNGAM, ICALiNGAM, NOTEARS\n"
-                                        "Fast Version: FGES, XGES, AcceleratedDirectLiNGAM"))   
+                                       f"{', '.join(permitted_algo_list)}\n"))   
         else:    
             chat_history.append((message, "❌ The specified algorithm is not correct, please choose from the following: \n"
-                                        "PC, FCI, CDNOD, GES, DirectLiNGAM, ICALiNGAM, NOTEARS\n"
-                                        "Fast Version: FGES, XGES."))   
+                                        f"{', '.join(permitted_algo_list)}\n"))   
     else:  
         global_state.algorithm.selected_algorithm = message
         chat_history.append((message, f"✅ We will rerun the Causal Discovery Procedure with the Selected algorithm: {global_state.algorithm.selected_algorithm}\n"
@@ -522,16 +593,16 @@ def parse_inference_query(message, chat_history, download_btn, args, global_stat
                 descriptions: list[str]
                 key_node: list[str]
         columns = global_state.user_data.processed_data.columns
-        binary = False
-        for col in columns:
-            unique_values = global_state.user_data.processed_data[col].unique()
-            if len(unique_values) == 2:
-                binary = True
-                break
-        if not binary:
-            binary_condition = "The dataset does not contain binary variables, DO NOT choose Treatment Effect Estimation!"
-        else:
-            binary_condition = ""
+        # binary = False
+        # for col in columns:
+        #     unique_values = global_state.user_data.processed_data[col].unique()
+        #     if len(unique_values) == 2:
+        #         binary = True
+        #         break
+        # if not binary:
+        #     binary_condition = "The dataset does not contain binary variables, DO NOT choose Treatment Effect Estimation!"
+        # else:
+        binary_condition = ""
         with open('causal_analysis/context/query_prompt.txt', 'r') as file:
             query_prompt = file.read()
             query_prompt = query_prompt.replace('[COLUMNS]', f",".join(columns))

@@ -115,7 +115,7 @@ def drop_greater_miss_50_feature(global_state):
 
 
 
-def llm_select_dropped_features(global_state, args):
+def llm_select_dropped_features(global_state):
     ratio_between_05_03 = [k for k, v in global_state.statistics.miss_ratio.items() if 0.5 > v >= 0.3]
 
     client = OpenAI()
@@ -174,7 +174,7 @@ def correlation_check(global_state):
     for i in range(m):
         for j in range(i + 1, m):
             corr_value = correlation_matrix.iloc[i, j]
-            if abs(corr_value) > 0.9:
+            if abs(corr_value) > 0.95:
                 var1 = df.columns[i]
                 var2 = df.columns[j]
 
@@ -192,16 +192,24 @@ def correlation_check(global_state):
                         drop_feature.append(var2)
 
     # Update global state
+    # print('global_state.user_data.important_features', global_state.user_data.important_features)
+    # print('global_state.user_data.selected_features', global_state.user_data.selected_features)
     selected_set = set(global_state.user_data.selected_features) - set(drop_feature)
     selected_set.update(global_state.user_data.important_features)
     final_drop_feature = list(set(drop_feature) - set(global_state.user_data.important_features))
     global_state.user_data.high_corr_drop_features = final_drop_feature
-    # Convert back to list
-    global_state.user_data.selected_features = list(selected_set)
+    
+    # print('selected_set', selected_set)
+    # print('list_selected_set', list(selected_set))
+    if len(selected_set) > 20:
+        # Convert back to list
+        global_state.user_data.selected_features = list(selected_set)
+        global_state.user_data.processed_data = global_state.user_data.raw_data[global_state.user_data.selected_features]
+        drop = True
+    else:
+        drop = False
 
-    global_state.user_data.processed_data = global_state.user_data.raw_data[global_state.user_data.selected_features]
-
-    return global_state
+    return global_state, drop
 
 # TIME SERIES PROCESSING ###############################################################################################
 def impute_time_series(df: pd.DataFrame, time_index_feature: str = None) -> pd.DataFrame:
@@ -710,15 +718,14 @@ def convert_stat_info_to_text(statistics):
     text += f"- Heterogeneity: The dataset {'is' if statistics.heterogeneous else 'is not'} heterogeneous. \n\n"
 
     if statistics.domain_index is not None:
-        text += f"If the data is heterogeneous, the column/variable {statistics.domain_index} is the domain index indicating the heterogeneity. "
-        text += f"If the data is not heterogeneous, then the existed domain index is constant.\n\n"
+        text += f"- Domain Index: {statistics.domain_index}"
     else:
         text += "\n\n"
         
     return text
 
-def sparsity_check(df: pd.DataFrame):
-    missing_vals = [np.nan]
+def sparsity_check(df: pd.DataFrame, nan_indicator):
+    missing_vals = [np.nan, nan_indicator]
     missing_mask = df.isin(missing_vals)
 
     ratio_record = {}

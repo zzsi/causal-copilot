@@ -476,7 +476,7 @@ class Analysis(object):
             anomaly_samples=anomaly_samples,
             anomaly_scorer=None,
             attribute_mean_deviation=False,
-            num_distribution_samples=3000,
+            num_distribution_samples=1000,
             shapley_config=None
         )
 
