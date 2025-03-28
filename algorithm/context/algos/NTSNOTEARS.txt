@@ -1,104 +1,106 @@
-### DYNOTEARS
+### NTSNOTEARS
 ────────────────────────────────────────────────────────────────────────
 1. HYPER-PARAMETERS SENSITIVITY
 ────────────────────────────────────────────────────────────────────────
 • Number of Key Hyperparameters:
-  - DYNOTEARS uses continuous optimization for learning time-lagged causal graphs. The key hyperparameters in the implementation are:
+  - NTS-NOTEARS extends NOTEARS for nonlinear causal discovery in time series, using neural networks to model dependencies. The key hyperparameters include::
     1. p (Lookback window length): Defines how far back in time causal relationships are considered.
-    2. λ_w (lambda_w): L1 regularization for intra-slice (same time step) edges.
-    3. λ_a (lambda_a): L1 regularization for inter-slice (time-lagged) edges.
+    2. λ_1 (lambda1): lambdas for convolutional parameters in each time step.
+    3. λ_2 (lambda2): L1 regularization smoothness over time for causal relations.
     4. max_iter: Maximum number of optimization steps in the dual ascent method.
     5. h_tol: Tolerance for acyclicity enforcement—ensures a DAG structure.
     6. w_threshold: Threshold for pruning weak edges in the learned adjacency matrix.
 
 • Tuning Difficulty:
-  - p (Lookback window) is dataset-dependent—should be determined through preprocessing (e.g., autocorrelation analysis).
-  - λ_w and λ_a control sparsity—higher values promote simpler graphs but may remove true causal links.
+  - p (Lookback window) Affects long-term dependencies—should be determined using preprocessing (e.g., autocorrelation analysis).
+  - λ_1 and λ_2 control sparsity—higher values promote simpler graphs but may remove true causal links.
   - h_tol ensures strict DAG constraints—lower values enforce acyclicity but may slow down optimization.
   - w_threshold filters weak edges—higher values yield sparser graphs, reducing false positives but possibly missing weak causal relationships.
 
 • Sensitivity:
   - p significantly affects discovered causal lags—shorter values may miss long-term dependencies, while longer values increase computation time.
-  - λ_w and λ_a strongly influence graph density—too high removes meaningful connections, too low introduces noise.
+  - λ_1 and λ_2 strongly influence graph density—too high removes meaningful connections, too low introduces noise.
   - h_tol must be carefully chosen—too strict, and the optimization may not converge; too relaxed, and cycles may appear.
 
 • Critique/Extension:
-  - Hyperparameter tuning is dataset-specific—using preprocessing steps like partial autocorrelation functions (PACF) can help set p.
   - Adaptive regularization could help balance intra- and inter-slice dependencies dynamically.
+  - More robust hyperparameter tuning methods, such as Bayesian optimization, could improve performance.
 
 ────────────────────────────────────────────────────────────────────────
 2. ROBUSTNESS & SCALABILITY
 ────────────────────────────────────────────────────────────────────────
 • Tolerance to Bad Data Quality
   - Handles moderate noise well but assumes no missing values—preprocessing is required.
-  - Sensitive to outliers—alternative loss functions (e.g., Huber loss) could improve robustness.
-  - Regularization (λ_w, λ_a) helps suppress noisy edges, improving generalization.
+  - More robust than linear models but still sensitive to extreme outliers—alternative loss functions (e.g., Huber loss) could improve robustness.
+  - Regularization helps suppress noisy edges, improving generalization.
 
 • Tolerance to Sparse vs. Dense Connected Systems
-  - Works well for moderate sparsity—λ_w and λ_a encourage sparsity, preventing overfitting.
+  - Works well for moderately sparse graphs—regularization prevents overfitting.
   - For denser graphs, lower λ values are needed to preserve meaningful connections.
 
 • Scalability  
-  - Scales quadratically in the number of nodes (O(n²)), but benefits from parallelized solvers.
-  - Higher lag values significantly increase complexity—setting it too high makes optimization slow and memory-intensive.
+  - Scales worse than linear methods due to neural network complexity.
+  - Memory and runtime depend on hidden_units and activation complexity.
+  - Parallelized optimization over GPU can improve computational efficiency.
 
 • Critique/Extension  
   - Batch processing techniques or adaptive depth selection could improve scalability for large datasets.
-  - Pre-filtering irrelevant variables before running DYNOTEARS helps reduce computation time.
+  - Pre-filtering irrelevant variables can reduce computational burden.
 
 ────────────────────────────────────────────────────────────────────────
 3. MIXED DATA & COMPLEX FUNCTIONS
 ────────────────────────────────────────────────────────────────────────
 • Noise Type  
-  - Standard DYNOTEARS assumes Gaussian noise, but can be adapted to other distributions.
-  - Heavy-tailed noise or heteroskedasticity can degrade performance—alternative loss functions may be needed.
+  - Handles nonlinear noise better than other functional-model based methods.
+  - Still assumes noise is iid—may struggle with heteroskedasticity.
+  - Alternative architectures (e.g., Variational Autoencoders) could enhance robustness.
 
 • Mixed Data (Continuous & Discrete)  
-  - Supports continuous variables by default; discrete data requires modified loss functions.
-  - Extensions exist for categorical data (e.g., logistic loss).
+  - Supports continuous variables natively
+  - Discrete data requires modifications, such as sigmoid activations or Gumbel-softmax.
 
 • Heterogeneous Data  
-  - Performs well in relatively stable environments but may struggle if distributions change over time.
-  - Non-stationary relationships require adaptive methods like PCMCI+.
+  - Better than linear models for non-stationary data but still assumes a relatively stable underlying distribution.
+  - Adaptive neural architectures (e.g., recurrent models) could improve robustness.
 
 • Complex Functional Forms  
-  - Assumes linear relationships—non-linear extensions (e.g. NTS-NOTEARS) may be needed for more complex patterns.
-  - Thresholding (w_threshold) is essential to remove weak connections from overfitting.
+  - Captures nonlinear dependencies, unlike linear methods.
+  - Can model higher-order interactions if the architecture has sufficient capacity.
 
 • Critique/Extension  
-  - Hybrid methods using kernel-based tests could enhance non-linear discovery.
-  - Using multi-scale embeddings before causal discovery could improve robustness for heterogeneous datasets.
+  - Kernel-based or attention-based architectures could further improve causal discovery for complex systems.
 
 ────────────────────────────────────────────────────────────────────────
 4. COMPUTATIONAL COMPLEXITY
 ────────────────────────────────────────────────────────────────────────
 • Theoretical Time Complexity  
-  - O(n²) complexity due to acyclicity constraints and L1-regularized optimization. Increasing p makes computation more expensive (p=2 is much faster than p=10).
+  - Higher than linear methods (O(n² log n)) due to neural network training.
+  - More complex activation functions increase runtime.
 
 • Variability in Practical Usage  
-  - Computational cost is highly dependent on p—longer lookbacks require solving larger adjacency matrices.
-  - h_tol settings affect runtime—lower values make the problem harder to solve.
+  - Longer lookbacks (higher p) significantly increase computation time.
+  - Larger networks (higher hidden_units) require more data to avoid overfitting.
 
 • Critique/Extension  
-  - Parallelized implementations can improve performance. 
-  - Approximations like low-rank factorization of the adjacency matrix could reduce complexity in large-scale settings.
+  - Pruning weak connections early could speed up optimization.
+  - Using low-rank approximations could reduce matrix operations' cost.
 
 ────────────────────────────────────────────────────────────────────────
 5. INTERPRETABILITY
 ────────────────────────────────────────────────────────────────────────
 • Output Format  
   - Produces a time-lagged DAG, where edges indicate causal influences with specific time lags.
+  - Edges reflect learned nonlinear relationships, rather than simple coefficients.
 
 • Strength of the Output Format  
-  - Fully directed causal graph (unlike PC, which produces CPDAGs). 
+  - More expressive than linear models—captures complex interactions.
   - Includes explicit time-lagged relationships as well as contemporaneous relations, making it useful for real-world applications.
 
 • Limitations of the Output Format  
-  - Requires proper w_threshold tuning to remove spurious edges. 
-  - Regularization strength impacts interpretability—aggressive pruning may remove true effects
+  - Edge strengths are non-trivial to analyze due to activation nonlinearities.
 
 • Critique/Extension  
-  - Post-processing with bootstrapping could improve stability of inferred edges.
+  - Saliency-based post-processing could improve interpretability.
 
 ────────────────────────────────────────────────────────────────────────
 6. ASSUMPTIONS
@@ -111,35 +113,33 @@
   - Stationarity: Assumes causal relations do not change over time.
 
 • Violation Impact  
-  - Missing confounders can lead to spurious or missing edges.  
+  - Unobserved confounders can lead to biased estimates.
   - Unfaithful data-generating mechanisms can hide true edges or create extra independencies.  
-  - If stationarity is violated, discovered causal relations may not hold over time.
+  - Non-stationarity could cause incorrect causal edges.
 
 • Critique/Extension  
-  - Relaxing stationarity assumptions could improve robustness in dynamic environments.
+  - Extending NTS-NOTEARS for dynamic causal graphs could help with non-stationary environments.
 
 ────────────────────────────────────────────────────────────────────────
 7. (OPTIONAL) REAL-WORLD BENCHMARKS
 ────────────────────────────────────────────────────────────────────────
 • Performance on Real Datasets  
-  - Outperforms Granger causality in many settings.
-  - More efficient than constraint-based methods like PCMCI.
-  - Works well for economic, neuroscience, and environmental data.
+  - Outperforms linear models like Granger Causality and DYNOTEARS when causal effects are highly nonlinear.
+  - Higher computational cost, but captures richer dependencies in economic, neuroscience, and financial data.
 
 • Practical Tips  
   - Choosing p based on domain knowledge is crucial—p=2 for short-range dependencies, p=10 for long-range.
-  - Regularization (λ_w, λ_a) should be cross-validated to find the best sparsity setting.
-  - For non-stationary data, consider hybrid approaches like PCMCI+.
+  - Regularization (λ_1, λ_2) should be cross-validated to find the best sparsity setting.
 
 ────────────────────────────────────────────────────────────────────────
 CONCLUSION
 ────────────────────────────────────────────────────────────────────────
-DYNOTEARS is a powerful differentiable causal discovery algorithm for time-series data, leveraging continuous optimization to enforce acyclicity while capturing time-lagged causal structures. Its key strengths include:
-  - Faster than combinatorial search methods (e.g., PC or Granger causality).
-  - Naturally enforces time constraints and acyclicity.
+NTS-NOTEARS is a neural-based causal discovery method for time-series data, improving on linear models by capturing nonlinear dependencies while enforcing acyclicity constraints.
+  - More expressive than DYNOTEARS (captures nonlinear causal effects). Works well when causal effects are highly nonlinear.
+  - Learns from data using neural networks, avoiding fixed parametric assumptions.
   - Scales well to moderate-sized graphs with proper regularization.
 However, it has limitations, including:
-  - Strong sensitivity to hyperparameters (especially p, λ_w, and λ_a).
-  - Computational cost increases with longer lookback windows.
+  - More computationally expensive than linear models.
+  - Requires careful tuning of neural network hyperparameters.
   - Assumes stationarity, limiting its applicability to evolving systems.
 ────────────────────────────────────────────────────────

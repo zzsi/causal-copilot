@@ -47,8 +47,7 @@ class Statistics:
     domain_index: Optional[str] = None
     description: Optional[str] = None
     time_series: Optional[bool] = False # indicator of time-series data
-    time_lag: List[Dict] = field(default_factory=list) # estimated time lags for each feature
-    nlags: int = 50
+    time_lag: int = 50
 
 @dataclass
 class Logging:
