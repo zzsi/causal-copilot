@@ -34,7 +34,6 @@ from .ica_lingam import ICALiNGAM
 # hybrid algorithms
 from .hybrid import Hybrid
 
-#TS algorithms
 from .dynotears import DYNOTEARS
 from .pcmci import PCMCI
 from .var_lingam import VARLiNGAM

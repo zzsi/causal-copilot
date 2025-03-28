@@ -2,38 +2,38 @@
   "algorithm_name": "NOTEARSNonlinear",
   "lambda1": {
     "meaning": "L1 regularization parameter for sparsity",
-    "suggested_values": {
+    "available_values": {
       "default": 0.01,
       "sparse": 0.1,
       "dense": 0.001
     },
-    "reasoning": "Higher values promote sparser graphs, lower values allow more connections."
+    "expert_suggestion": "Higher values promote sparser graphs, lower values allow more connections."
   },
   "lambda2": {
     "meaning": "L2 regularization parameter for implicit sparsity",
-    "suggested_values": {
+    "available_values": {
       "default": 0.01,
       "strong": 0.1,
       "weak": 0.001
     },
-    "reasoning": "Controls overfitting of neural network weights, implicitly add sparsity by shrinking the weights."
+    "expert_suggestion": "Controls overfitting of neural network weights, implicitly add sparsity by shrinking the weights."
   },
   "max_iter": {
     "meaning": "Maximum number of dual ascent steps during optimization",
-    "suggested_values": {
+    "available_values": {
       "default": 100,
       "medium": 500,
       "thorough": 1000
     },
-    "reasoning": "Increase for more complex graphs and functional relationships."
+    "expert_suggestion": "Increase for more complex graphs and functional relationships."
   },
   "w_threshold": {
     "meaning": "Threshold for edge weights in adjacency matrix",
-    "suggested_values": {
+    "available_values": {
       "default": 0.3,
       "conservative": 0.5,
       "liberal": 0.1
     },
-    "reasoning": "Higher values lead to sparser graphs by pruning weak connections, which is a kind of implicit sparsity."
+    "expert_suggestion": "Higher values lead to sparser graphs by pruning weak connections, which is a kind of implicit sparsity."
   }
 } 

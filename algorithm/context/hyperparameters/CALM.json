@@ -2,29 +2,29 @@
   "algorithm_name": "CALM",
   "lambda1": {
     "meaning": "L1 regularization parameter for sparsity",
-    "suggested_values": {
+    "available_values": {
       "default": 0.01,
       "sparse": 0.1,
       "dense": 0.001
     },
-    "reasoning": "Higher values promote sparser graphs, lower values allow more connections."
+    "expert_suggestion": "Higher values promote sparser graphs, lower values allow more connections."
   },
   "alpha": {
     "meaning": "Desired significance level in (0, 1)",
-    "suggested_values": {
+    "available_values": {
       "default": 0.05,
       "small_sample": 0.1,
       "large_sample": 0.01
     },
-    "reasoning": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
+    "expert_suggestion": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
   },
   "subproblem_iter": {
     "meaning": "Maximum number of sub-optimization steps during optimization",
-    "suggested_values": {
+    "available_values": {
       "default": 10000,
       "light": 5000,
       "thorough": 40000
     },
-    "reasoning": "Increase for more complex graphs and functional relationships, while more iterations is much more time-consuming."
+    "expert_suggestion": "Increase for more complex graphs and functional relationships, while more iterations is much more time-consuming."
   }
 } 
