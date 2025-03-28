@@ -14,7 +14,7 @@ from econml.dml import DML, LinearDML, SparseLinearDML, CausalForestDML
 import shap
 import sklearn
 import matplotlib.pyplot as plt
-import seaborn as sns
+import seaborn as snscl
 from openai import OpenAI
 from pydantic import BaseModel
 import os
@@ -27,6 +27,7 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.ensemble import RandomForestRegressor
 from global_setting.state import Inference
 
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from causal_analysis.DML.hte_filter import HTE_Filter as DML_HTE_Filter
@@ -38,6 +39,9 @@ from causal_analysis.DRL.hte_program import HTE_Programming as DRL_HTE_Programmi
 from causal_analysis.IV.hte_filter import HTE_Filter as IV_HTE_Filter
 from causal_analysis.IV.hte_params import HTE_Param_Selector as IV_HTE_Param_Selector
 from causal_analysis.IV.hte_program import HTE_Programming as IV_HTE_Programming
+from causal_analysis.MetaLearners.hte_filter import HTE_Filter as MetaLearners_HTE_Filter
+from causal_analysis.MetaLearners.hte_params import HTE_Param_Selector as MetaLearners_HTE_Param_Selector
+from causal_analysis.MetaLearners.hte_program import HTE_Programming as MetaLearners_HTE_Programming
 from causal_analysis.help_functions import *
 from causal_analysis.analysis import *
 from global_setting.Initialize_state import global_state_initialization
@@ -809,26 +813,42 @@ class Analysis(object):
             W = pd.DataFrame(np.zeros((len(self.data), 1)), columns=W_col)
             self.data = pd.concat([self.data, W], axis=1)
             self.global_state.user_data.processed_data = self.data
-        # Algorithm selection and deliberation
-        filter = IV_HTE_Filter(self.args)
+
+        # Step 1: Apply Filtering (if necessary)
+        filter = MetaLearners_HTE_Filter(self.args)
         self.global_state = filter.forward(self.global_state, query)
-        reranker = IV_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, Z_col=instrument_variable, X_col=X_col, W_col=W_col)
+
+        # Step 2: Select the best hyperparameters for the Metalearner
+        reranker = MetaLearners_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
         self.global_state = reranker.forward(self.global_state)
-        programmer = IV_HTE_Programming(self.args, y_col=outcome, T_col=treatment, Z_col=instrument_variable, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
+        
+        
+        print("W_col being passed:", W_col)
+        # Step 3: Choose and initialize the appropriate Metalearner
+        programmer = MetaLearners_HTE_Programming(
+            self.args, y_col=outcome, T_col=treatment, T0=T0, T1=T1, X_col=X_col
+        )
         programmer.fit_model(self.global_state)
-        # Estimate ate, att, hte
+
+        # Step 4: Estimate ATE, ATT, HTE
         ate, ate_lower, ate_upper = programmer.forward(self.global_state, task='ate')
         att, att_lower, att_upper = programmer.forward(self.global_state, task='att')
         hte, hte_lower, hte_upper = programmer.forward(self.global_state, task='hte')
-        hte = pd.DataFrame({'hte': hte.flatten()})
-        hte.to_csv(f'{self.global_state.user_data.output_graph_dir}/hte.csv', index=False)
 
-        result = {'ate': [ate, ate_lower, ate_upper],
-                  'att': [att, att_lower, att_upper],
-                  'hte': [hte, hte_lower, hte_upper]}
+        # Convert HTE results to a DataFrame
+        hte_df = pd.DataFrame({'hte': hte.flatten()})
+        print(f"Saving HTE results to: {self.global_state.user_data.output_graph_dir}/hte_metalearner.csv")
+        hte_df.to_csv(f'{self.global_state.user_data.output_graph_dir}/hte_metalearner.csv', index=False)
+
+        result = {
+            'ate': [ate, ate_lower, ate_upper],
+            'att': [att, att_lower, att_upper],
+            'hte': [hte, hte_lower, hte_upper]
+        }
         return result
     
-    # def Estimate_effect_MetaLearners
+
+
     def estimate_effect_linear(self, 
                                treatment, 
                                outcome, 
@@ -1307,23 +1327,13 @@ if __name__ == '__main__':
         )
         args = parser.parse_args()
         return args
-    
     args = parse_args()
-    # with open('demo_data/20250121_223113/lalonde/output_graph/PC_global_state.pkl', 'rb') as file:
-    #     global_state = pickle.load(file)
-    
-    # my_analysis = Analysis(global_state, args)
-    # # my_analysis.estimate_effect_dml(outcome='re78', treatment='treat', 
-    # #                                 T0=0, T1=1, 
-    # #                                 X_col=['age', 'nodegr'], 
-    # #                                 W_col=['educ', 'age', 'married', 'nodegr'], 
-    # #                                 query='What is the treatment effect of treat on re78')
-    # my_analysis.feature_importance(target_node='re78', linearity=False, visualize=True)
-    # #my_analysis.simulate_intervention(treatment_name = 'married', response_name = 're78', shift_intervention_val =1)
+
+    # Load global state
     with open('./demo_data/20250130_130622/house_price/output_graph/PC_global_state.pkl', 'rb') as file:
         global_state = pickle.load(file)
 
-    # Dynamically update `inference`
+    # Ensure inference attributes exist in global_state
     if not hasattr(global_state, "inference"):
         global_state.inference = Inference()
 
@@ -1335,44 +1345,137 @@ if __name__ == '__main__':
 
     if not hasattr(global_state.inference, "task_info"):
         global_state.inference.task_info = []
-    
 
-        
-    my_analysis = Analysis(global_state, args)
-    # my_analysis.estimate_effect_dml(outcome='re78', treatment='treat', 
-    #                                 T0=0, T1=1, 
-    #                                 X_col=['age', 'nodegr'], 
-    #                                 W_col=['educ', 'age', 'married', 'nodegr'], 
-    #                                 query='What is the treatment effect of treat on re78')
-    # my_analysis.feature_importance(target_node='SalePrice', linearity=False, visualize=True)
-    anomaly_samples = my_analysis.data.head(10)  # Replace with your anomaly DataFrame
-    anomaly_df, anomaly_figs = my_analysis.attribute_anomalies(
-        target_node='SalePrice', 
-        anomaly_samples=anomaly_samples, 
-        confidence_level=0.95
-    )
-    print("Anomaly Attribution Results:", anomaly_df)
-    #my_analysis.simulate_intervention(treatment_name = 'married', response_name = 're78', shift_intervention_val =1)
+    print(global_state.user_data.processed_data["CentralAir"].value_counts(normalize=True))
+    print("Missing values in dataset:\n", global_state.user_data.processed_data.isnull().sum())
+    print(global_state.user_data.processed_data.head())
 
     # Initialize analysis
     my_analysis = Analysis(global_state, args)
 
-    # Load dataset and split into `data_old` and `data_new`
-    full_data = my_analysis.data  # Load the full dataset
-    split_point = len(full_data) // 2  # Split into two halves
-    data_old = full_data.iloc[:split_point]  # First half as "old" data
-    data_new = full_data.iloc[split_point:]  # Second half as "new" data
+    # Ensure processed_data exists
+    if not hasattr(global_state, "user_data") or not hasattr(global_state.user_data, "processed_data"):
+        raise ValueError("Processed data is missing from global_state. Ensure data is properly loaded.")
 
-    # Test `attribute_distributional_changes`
-    target_node = 'SalePrice'  # Change to your variable of interest
-    method = 'distribution_change'  # or 'distribution_change_robust'
+    treatment_col = "CentralAir"  # Adjust if necessary
+
+    # Check if treatment column exists
+    if treatment_col in global_state.user_data.processed_data.columns:
+        unique_treatment_values = global_state.user_data.processed_data[treatment_col].unique()
+        print(f"Unique values in {treatment_col}:", unique_treatment_values)
+
+        if len(unique_treatment_values) < 2:
+            raise ValueError(f"Treatment column '{treatment_col}' has insufficient variation: {unique_treatment_values}")
+    else:
+        raise ValueError(f"Treatment column '{treatment_col}' not found in dataset.")
     
-    dist_change_df, dist_change_figs = my_analysis.attribute_distributional_changes(
-        target_node=target_node,
-        data_old=data_old,
-        data_new=data_new,
-        method=method,
-        confidence_level=0.95
+    global_state.user_data.processed_data["CentralAir"] = (
+    global_state.user_data.processed_data["CentralAir"] > 0).astype(int)  # Converts to 0 or 1
+    print("Fixed Unique values in CentralAir:", global_state.user_data.processed_data["CentralAir"].unique())
+    
+
+
+    # Run the MetaLearner estimation
+    result = my_analysis.estimate_effect_MetaLearners(
+        outcome='SalePrice', 
+        treatment='CentralAir', 
+        T0=0, T1=1, 
+        X_col=['LotArea', 'OverallQual'], 
+        W_col=['YearBuilt', 'GrLivArea', 'GarageCars'], 
+        query='What is the treatment effect of CentralAir on SalePrice'
     )
 
-    print("Distributional Change Attribution Results:\n", dist_change_df)
+    print("Unique Treatment Values in Data:", global_state.user_data.processed_data['CentralAir'].unique())
+    print("Available keys in global_state.statistics.data_type_column:", global_state.statistics.data_type_column.keys())
+    print("\nFinal MetaLearner Estimation Results:", result)
+
+    
+    # args = parse_args()
+    # # with open('demo_data/20250121_223113/lalonde/output_graph/PC_global_state.pkl', 'rb') as file:
+    # #     global_state = pickle.load(file)
+    
+    # # my_analysis = Analysis(global_state, args)
+    # # # my_analysis.estimate_effect_dml(outcome='re78', treatment='treat', 
+    # # #                                 T0=0, T1=1, 
+    # # #                                 X_col=['age', 'nodegr'], 
+    # # #                                 W_col=['educ', 'age', 'married', 'nodegr'], 
+    # # #                                 query='What is the treatment effect of treat on re78')
+    # # my_analysis.feature_importance(target_node='re78', linearity=False, visualize=True)
+    # # #my_analysis.simulate_intervention(treatment_name = 'married', response_name = 're78', shift_intervention_val =1)
+    # with open('./demo_data/20250130_130622/house_price/output_graph/PC_global_state.pkl', 'rb') as file:
+    #     global_state = pickle.load(file)
+
+    # # Dynamically update `inference`
+    # if not hasattr(global_state, "inference"):
+    #     global_state.inference = Inference()
+
+    # if not hasattr(global_state.inference, "editing_history"):
+    #     global_state.inference.editing_history = []
+
+    # if not hasattr(global_state.inference, "cycle_detection_result"):
+    #     global_state.inference.cycle_detection_result = {}
+
+    # if not hasattr(global_state.inference, "task_info"):
+    #     global_state.inference.task_info = []
+
+    # my_analysis = Analysis(global_state, args)
+
+    # treatment_col = "CentralAir"  # Adjust if necessary
+    # if treatment_col in global_state.user_data.processed_data:
+    #     unique_treatment_values = global_state.user_data.processed_data[treatment_col].unique()
+    #     print(f"Unique values in {treatment_col}:", unique_treatment_values)
+
+    # if len(unique_treatment_values) < 2:
+    #     raise ValueError(f"Treatment column '{treatment_col}' has insufficient variation: {unique_treatment_values}")
+    # else:
+    #     raise ValueError(f"Treatment column '{treatment_col}' not found in dataset.")
+    
+    # result = my_analysis.estimate_effect_MetaLearners(outcome='SalePrice', treatment='CentralAir', 
+    #                      T0=0, T1=1, 
+    #                      X_col=['LotArea', 'OverallQual'], 
+    #                      W_col=['YearBuilt', 'GrLivArea', 'GarageCars'], 
+    #                      query='What is the treatment effect of CentralAir on SalePrice')
+    # print("Unique Treatment Values in Data:", global_state.user_data.processed_data['CentralAir'].unique())
+    # print("Available keys in global_state.statistics.data_type_column:", global_state.statistics.data_type_column.keys())
+    # print("\nFinal MetaLearner Estimation Results:", result)
+
+
+    # # result = my_analysis.estimate_effect_MetaLearners(outcome='re78', treatment='treat', 
+    # #                                 T0=0, T1=1, 
+    # #                                 X_col=['age', 'nodegr'], 
+    # #                                 W_col=['educ', 'age', 'married', 'nodegr'], 
+    # #                                 query='What is the treatment effect of treat on re78')
+    # # my_analysis.feature_importance(target_node='SalePrice', linearity=False, visualize=True)
+    # # anomaly_samples = my_analysis.data.head(10)  # Replace with your anomaly DataFrame
+    # # anomaly_df, anomaly_figs = my_analysis.attribute_anomalies(
+    # #     target_node='SalePrice', 
+    # #     anomaly_samples=anomaly_samples, 
+    # #     confidence_level=0.95
+    # # )
+    # # print("Anomaly Attribution Results:", anomaly_df)
+    # #my_analysis.simulate_intervention(treatment_name = 'married', response_name = 're78', shift_intervention_val =1)
+
+    # # # Initialize analysis
+    # # my_analysis = Analysis(global_state, args)
+
+    # # # Load dataset and split into `data_old` and `data_new`
+    # # full_data = my_analysis.data  # Load the full dataset
+    # # split_point = len(full_data) // 2  # Split into two halves
+    # # data_old = full_data.iloc[:split_point]  # First half as "old" data
+    # # data_new = full_data.iloc[split_point:]  # Second half as "new" data
+
+    # # # Test `attribute_distributional_changes`
+    # # target_node = 'SalePrice'  # Change to your variable of interest
+    # # method = 'distribution_change'  # or 'distribution_change_robust'
+    
+    # # dist_change_df, dist_change_figs = my_analysis.attribute_distributional_changes(
+    # #     target_node=target_node,
+    # #     data_old=data_old,
+    # #     data_new=data_new,
+    # #     method=method,
+    # #     confidence_level=0.95
+    # # )
+
+    # # print("Distributional Change Attribution Results:\n", dist_change_df)
+    # # Print results
+    
