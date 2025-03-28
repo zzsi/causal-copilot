@@ -457,37 +457,69 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
         try:
             class Param_Selector(BaseModel):
                 param_keys: list[str]
-                param_values: list[Union[str, int, float]] 
-            prompt = """You are a helpful assistant, please do the following tasks based on the provided context:
+                param_values: list[Union[str, int, float]]
+                valid_params: bool = True
+                error_messages: list[str] = []
+            with open("parameter_range_context.json", "r") as f:
+                param_specs = json.load(f)
+
+            # Get current algorithm specs
+            algorithm = global_state.algorithm.selected_algorithm
+            algorithm_specs = param_specs.get(algorithm, {})
+            prompt = f"""You are a parameter validation assistant. Please parse and validate the user's parameter inputs based on the provided context:
+
             **Context**
-            We ask the user: Do you want to specify values for parameters instead of the selected one? If so, please specify your parameter.
-            Now we need to parse the user's input.
+            We asked the user: "Do you want to specify values for parameters instead of the selected ones? If so, please specify your parameters."
+
+            The current algorithm selected is: {algorithm}
+
+            Here are the valid parameter specifications for this algorithm:
+            {algorithm_specs}
+
             **Task**
-            Firstly, save the parameter keys and values in the list param_keys and param_values respectively.
-            keys and values should be save in list format, and the order of keys and values should be matched.
-            If the user does not specify the parameter, just return an empty list.
-            If the value is a number, please save it as a number, otherwise save it as a string.
+            1. Parse the user's input to identify parameter keys and their corresponding values.
+            2. Save parameter keys in the list `param_keys` and values in the list `param_values`. The order should match between the two lists.
+            3. For each parameter:
+            - Convert numeric values to the appropriate type (int or float) based on the parameter's expected type
+            - Validate that string values match one of the allowed options for string parameters
+            - Verify numeric values fall within the acceptable range for the parameter
+            - If arrays are expected (e.g., hidden_dims), parse them correctly
+            4. If the parameter value is invalid, set `valid_params` to False and add an appropriate error message to `error_messages` explaining why the value is invalid.
+            5. If the user does not specify any parameters, return empty lists for both param_keys and param_values.
+
+            Examples of validation:
+            - For alpha parameters with type "float" and range [0, 1], check if the value is a float between 0 and 1
+            - For indep_test parameters with type "string" and specific allowed values, verify the input matches one of those values
+            - For depth parameters with type "integer" and specific allowed values, ensure the value is an integer in the allowed set
+
+            Only validate parameters that exist for the current algorithm. Ignore parameters that aren't defined in the specifications.
             """
             parsed_response = LLM_parse_query(Param_Selector, prompt, message)
-            param_keys, param_values = parsed_response.param_keys, parsed_response.param_values
+            param_keys, param_values, valid_params, error_messages = parsed_response.param_keys, parsed_response.param_values, parsed_response.valid_params, parsed_response.error_messages
             specified_params = {param_keys[i]: param_values[i] for i in range(len(param_keys))}
-            print('specified_params',specified_params)
-            original_params = global_state.algorithm.algorithm_arguments_json['hyperparameters']
-            print('original_params',original_params)
-            common_keys = original_params.keys() & specified_params.keys()
-            if len(common_keys)==0:
-                chat_history.append((None, "❌ The specified parameters are not correct, please follow the template!"))
-                return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
+            if valid_params:
+                print('specified_params',specified_params)
+                original_params = global_state.algorithm.algorithm_arguments_json['hyperparameters']
+                print('original_params',original_params)
+                common_keys = original_params.keys() & specified_params.keys()
+                if len(common_keys)==0:
+                    chat_history.append((None, "❌ The specified parameters are not correct, please follow the template!"))
+                    return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
-            for key in common_keys:
-                global_state.algorithm.algorithm_arguments_json['hyperparameters'][key]['value'] = try_numeric(specified_params[key])
-                global_state.algorithm.algorithm_arguments_json['hyperparameters'][key]['explanation'] = 'User specified'
-                global_state.algorithm.algorithm_arguments[key] = try_numeric(specified_params[key])
-            print(global_state.algorithm.algorithm_arguments)
-            hyperparameter_text, global_state = generate_hyperparameter_text(global_state) 
-            chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Specified parameters: \n"
-                                    f"{hyperparameter_text}"))
-            CURRENT_STAGE = 'algo_running' 
+                for key in common_keys:
+                    global_state.algorithm.algorithm_arguments_json['hyperparameters'][key]['value'] = specified_params[key]
+                    global_state.algorithm.algorithm_arguments_json['hyperparameters'][key]['explanation'] = 'User specified'
+                    global_state.algorithm.algorithm_arguments[key] = specified_params[key]
+                print(global_state.algorithm.algorithm_arguments)
+                hyperparameter_text, global_state = generate_hyperparameter_text(global_state) 
+                chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Specified parameters: \n"
+                                        f"{hyperparameter_text}"))
+                CURRENT_STAGE = 'algo_running' 
+            else:
+                chat_history.append((None, "❌ The specified parameters are not correct, the following is the error message: \n"))
+                for error in error_messages:
+                    chat_history.append((None, error))
+                return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
         except Exception as e:
             print(e)
             print(str(e))
