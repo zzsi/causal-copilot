@@ -749,6 +749,60 @@ class Analysis(object):
         return result
     # TODO: Add def contains_iv() to check where the causal graph contains IV
     
+    def contains_iv(self, treatment, outcome):
+        """
+        Determines if the causal graph contains a valid instrumental variable (IV) for the
+        given treatment and outcome pair.
+        
+        An instrumental variable Z must satisfy three conditions:
+        1. Z is associated with the treatment variable (relevance)
+        2. Z affects the outcome only through the treatment (exclusion restriction)
+        3. Z has no common causes with the outcome (independence)
+        
+        Args:
+            treatment (str): The treatment variable name
+            outcome (str): The outcome variable name
+            
+        Returns:
+            tuple: (exists_iv (bool), iv_variable (str or None))
+        """
+        # Get all nodes in the graph
+        all_nodes = list(self.G.nodes())
+        
+        # Check each node as a potential IV
+        for node in all_nodes:
+            # Skip if node is the treatment or outcome
+            if node == treatment or node == outcome:
+                continue
+                
+            # 1. Check if Z affects T (relevance)
+            affects_treatment = False
+            for path in nx.all_simple_paths(self.G, node, treatment, cutoff=1):
+                if len(path) == 2:  # Direct path from node to treatment
+                    affects_treatment = True
+                    break
+                    
+            if not affects_treatment:
+                continue
+                
+            # 2. Check if Z affects Y only through T (exclusion restriction)
+            direct_to_outcome = False
+            for path in nx.all_simple_paths(self.G, node, outcome, cutoff=1):
+                if len(path) == 2:  # Direct path from node to outcome
+                    direct_to_outcome = True
+                    break
+                    
+            if direct_to_outcome:
+                continue
+                
+            # 3. Check if Z has no common causes with Y (independence)
+            # For simplicity, we check if there are no incoming edges to Z
+            # (This is a simplification - a more thorough check would verify Z's parents don't affect Y)
+            if len(list(self.G.predecessors(node))) == 0:
+                return True, node
+                
+        return False, None
+    
     def estimate_effect_iv(self, outcome, treatment, instrument_variable, T0, T1, X_col, W_col, query):
         if len(W_col) == 0:
             W_col = ['W']
@@ -1044,13 +1098,12 @@ class Analysis(object):
             parent_nodes = list(self.G.predecessors(key_node))
             method = task_info['hte_method']
             ### Suggest method based on dataset characteristics
-            # TODO: Check for IV in the Causal Graph
-            exist_IV = False
+            # Check for IV in the Causal Graph
+            exist_IV, iv_variable = self.contains_iv(treatment, key_node)
             if exist_IV:
-                iv_variable = None
-                global_state.inference.task_info[self.global_state.inference.task_index]['IV'] = iv_variable
+                self.global_state.inference.task_info[self.global_state.inference.task_index]['IV'] = iv_variable
                 method = "iv"
-
+            
             elif len(confounders) <= 5:
                 if len(confounders) - len(cont_confounders) > len(cont_confounders):  # If more than half discrete confounders
                     method = "cem"
@@ -1083,11 +1136,26 @@ class Analysis(object):
             # TODO: Add IV Estimation
             if method == "iv":
                 result = self.estimate_effect_iv(outcome=key_node, treatment=treatment, instrument_variable=iv_variable, T0=control, T1=treat,
-                                                            X_col=hte_variables, W_col=confounders, query=desc)
+                                                        X_col=hte_variables, W_col=confounders, query=desc)
                 response, figs = generate_analysis_econml(self.args, self.global_state, key_node, treatment, parent_nodes, hte_variables, confounders, result, desc)
                 chat_history.append(("📝 Analyze for ATE and ATT...", None))
                 chat_history.append((None, response[0]))
                 chat_history.append(("📝 Analyze for HTE...", None))
+                for fig in figs:
+                    chat_history.append((None, (f'{fig}',)))
+                chat_history.append((None, response[1]))
+                
+            elif method == "uplift":
+                result = self.estimate_effect_uplift(outcome=key_node, treatment=treatment, T0=control, T1=treat,
+                                                        X_col=hte_variables, W_col=confounders, query=desc)
+                response, figs = generate_analysis_econml(self.args, self.global_state, key_node, treatment, parent_nodes, hte_variables, confounders, result, desc)
+                
+                # Add special uplift-specific formatting for chat history
+                chat_history.append(("📝 Analyzing Individual Treatment Effects with Uplift Modeling...", None))
+                chat_history.append((None, response[0]))
+                chat_history.append(("📝 Analyzing Heterogeneous Treatment Effects...", None))
+                
+                # Add uplift-specific visualizations
                 for fig in figs:
                     chat_history.append((None, (f'{fig}',)))
                 chat_history.append((None, response[1]))
