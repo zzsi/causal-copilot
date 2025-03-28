@@ -34,10 +34,11 @@ from .ica_lingam import ICALiNGAM
 # hybrid algorithms
 from .hybrid import Hybrid
 
-#TS algorithms
 from .dynotears import DYNOTEARS
 from .pcmci import PCMCI
 from .var_lingam import VARLiNGAM
+from .granger_causality import GrangerCausality
+from .nts_notears import NTSNOTEARS
 
 constraint_based_algorithms = ['PC', 'FCI', 'CDNOD', 'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR', 'PCParallel', 'AcceleratedPC']
 score_based_algorithms = ['GES', 'FGES', 'XGES', 'NOTEARSLinear', 'NOTEARSNonlinear', 'CORL', 'CALM', 'GOLEM', 'DYNOTEARS']
@@ -45,6 +46,6 @@ functional_model_based_algorithms = ['DirectLiNGAM', 'ICALiNGAM']
 
 permutation_based_algorithms = ['GRaSP']
 hybrid_algorithms = ['Hybrid']
-ts_algorithms = ['PCMCI', 'VARLiNGAM', 'DYNOTEARS']
+ts_algorithms = ['PCMCI', 'VARLiNGAM', 'DYNOTEARS', 'GrangerCausality', 'NTSNOTEARS']
 
 __all__ = constraint_based_algorithms + score_based_algorithms + functional_model_based_algorithms + permutation_based_algorithms + hybrid_algorithms + ts_algorithms

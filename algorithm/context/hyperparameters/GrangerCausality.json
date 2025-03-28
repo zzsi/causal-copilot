@@ -1,0 +1,39 @@
+{
+    "algorithm_name": "MVGC",
+    "p": {
+        "meaning": "Lookback window length for the time-lagged causal relations",
+        "suggested_values": {
+          "default": 2,
+          "short":2,
+          "long":10
+        },
+        "reasoning": "Chosen value can be dtermined by preprocessing steps"
+    },
+    "gc_type": {
+        "meaning": "Type of granger causality testing - pairwise or multi-variate",
+        "suggested_values": {
+          "pairwise": "pw",
+          "multivariate": "mv"
+        },
+        "reasoning": "Pairwise for low dimensional data, Multivariate for high dimensional large datasets."
+    },
+    "alpha": {
+      "meaning": "significance level for F test",
+      "suggested_values": {
+        "default": 0.05,
+        "conservative": 0.5,
+        "liberal": 0.01
+      },
+      "reasoning": "Higher values promote sparser graphs, lower values allow more connections."
+    },
+    "criterion": {
+      "meaning": "Information criterion for the MV or PW test",
+      "suggested_values": {
+        "default": null,
+        "conservative": "bic",
+        "liberal": "aic",
+        "pairwise": "ssr_ftest"
+      },
+      "reasoning": "BIC heavily penalizes complexity, use for a for spase graph, AIC is less restrictive and promotes a bit dense graph. Default none value is recommended unless true lag is not known."
+    }
+} 

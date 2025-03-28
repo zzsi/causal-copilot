@@ -18,6 +18,7 @@ For each primary hyperparameter, provide:
 2. The suggested value
 3. A brief explanation of why this value is appropriate given the dataset characteristics and algorithm requirements
 4. Each primary hyperparameter is provided with a default value, which should be adjusted based on the dataset characteristics and algorithm requirements
+5. For time-series data, give a higher priority to the statistically estimated lag order provided under the Statistics section.
 
 Here is the CUDA/GPU availability to help you decide hyperparameters:
 
@@ -49,5 +50,7 @@ Please provide your suggestions in a structured JSON format. Your response shoul
 Please always determine the hyperparameters from its corresponding "Suggested Values" part, DO NOT use any values just exist in other context but not in "Suggested Values".
 
 Please consider the trade-offs between accuracy and computational efficiency when suggesting values. If you're unsure about a specific value, you may suggest using the default value and explain why.
+
+Please consider using the estimated time lag value. If you think a different value might be useful for the given context, you may suggest the value and explain why it will be better.
 
 Please provide your hyperparameter suggestions following this JSON structure.

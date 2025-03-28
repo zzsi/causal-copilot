@@ -9,78 +9,73 @@ algorithm_dir = os.path.join(root_dir, 'algorithm')
 sys.path.append(root_dir)
 sys.path.append(algorithm_dir)
 
-from algorithm.wrappers.utils.ts_utils import dict_to_adjacency_matrix, generate_stationary_linear
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
-from causalnex.structure.dynotears import from_pandas_dynamic
+from statsmodels.tsa.stattools import grangercausalitytests
+from algorithm.wrappers.utils.ts_utils import generate_stationary_linear
 
-class DYNOTEARS(CausalDiscoveryAlgorithm):
+# reference - https://github.com/ckassaad/causal_discovery_for_time_series
+
+def granger_pw(X_train, p=5, alpha=0.05):
+    test = 'ssr_ftest'
+    names = X_train.columns
+    adj = np.zeros((len(names), len(names)), dtype=int)
+    dataset = pd.DataFrame(np.zeros((len(names), len(names)), dtype=int), columns=names, index=names)
+    for c in dataset.columns:
+        for r in dataset.index:
+            test_result = grangercausalitytests(X_train[[r,c]], maxlag=p, verbose=False)
+            p_values = [round(test_result[i+1][0][test][1], 4) for i in range(p)]
+            min_p_value = np.min(p_values)
+            # dataset.loc[c, r] = min_p_value
+            if min_p_value < alpha:
+                dataset.loc[c, r] = 2
+                adj[int(r), int(c)] = 1
+    for c in dataset.columns:
+        for r in dataset.index:
+            if dataset.loc[c, r] == 2:
+                if dataset.loc[r, c] == 0:
+                    dataset.loc[r, c] = 1
+            if r == c:
+                dataset.loc[r, c] = 1
+                adj[int(c)][int(r)] = 1
+    return dataset, adj
+
+
+class PWGC(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
         self._params = {
             'p': int,
-            'lambda_w': 0.1,
-            'lambda_a': 0.1,
-            'max_iter': 100,
-            'h_tol': 1e-8,
-            'w_threshold': 0.01
+            'alpha': 0.1, #significance level for F test
         }
         self._params.update(params)
 
     @property
     def name(self):
-        return "DYNOTEARS"
+        return "PWGC"
 
     def get_params(self):
         return self._params
     
     def get_primary_params(self):
-        self._primary_param_keys = ['p', 'lambda_w', 'lambda_a', 'max_iter', 'w_threshold']
+        self._primary_param_keys = ['p', 'alpha']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
     
     def get_secondary_params(self):
-        self._secondary_param_keys = ['h_tol']
+        self._secondary_param_keys = []
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
-    def fit(self, data: Union[pd.DataFrame, np.ndarray]) -> Tuple[np.ndarray, Dict]:
+    def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict]:
         node_names = list(data.columns)
-        data_values = data.values
         max_lag = self._params['p']
-        #init graph_dict for result aggregation
-        graph_dict = dict()
-        for name in node_names:
-            graph_dict[name] = []
-
-        # call DYNOTEARS
-        sm = from_pandas_dynamic(data, **self.get_primary_params(), **self.get_secondary_params())
-        tname_to_name_dict = dict()
-        count_lag = 0
-        idx_name = 0
-        for tname in sm.nodes:
-            tname_to_name_dict[tname] = data.columns[idx_name]
-            if count_lag == max_lag:
-                idx_name = idx_name +1
-                count_lag = -1
-            count_lag = count_lag +1
-            
-        for ce in sm.edges:
-            c = ce[0]
-            e = ce[1]
-            tc = int(c.partition("lag")[2])
-            te = int(e.partition("lag")[2])
-            t = tc - te
-            if (tname_to_name_dict[c], -t) not in graph_dict[tname_to_name_dict[e]]:
-                graph_dict[tname_to_name_dict[e]].append((tname_to_name_dict[c], -t))
-                
-        summary_matrix, lag_matrix = dict_to_adjacency_matrix(graph_dict, len(node_names), max_lag)
+        res_df, summary_matrix = granger_pw(data, **self.get_primary_params())
         
         info = {
-            'lag_matrix': lag_matrix,
             'lag': max_lag,
-            'nodes': node_names
+            'nodes': node_names,
         }
 
-        return summary_matrix, info, sm
+        return summary_matrix, info, res_df
 
     def test_algorithm(self):
         # Generate some sample data
@@ -89,15 +84,15 @@ class DYNOTEARS(CausalDiscoveryAlgorithm):
         n_nodes = 3
         lag = 2
         
-        df, gt_graph, summary, graph_net = generate_stationary_linear(
+        df, gt_graph_lag, gt_graph_summary, graph_net = generate_stationary_linear(
             n_nodes,
             n_samples,
             lag,
             degree_intra=1,
             degree_inter=2,
         )
-        print("Testing DYNOTEARS algorithm with pandas DataFrame:")
-        print("Ground truth graph", gt_graph)
+        print("Testing MVGC algorithm with pandas DataFrame:")
+        print("Ground truth summary graph\n", gt_graph_summary)
         # Initialize lists to store metrics
         f1_scores = []
         precisions = []
@@ -106,10 +101,10 @@ class DYNOTEARS(CausalDiscoveryAlgorithm):
         
         # Run the algorithm
         for _ in range(2):
-            adj_matrix,_,_ = self.fit(df)
-            print("Prediction", adj_matrix)
+            prediction, _, _ = self.fit(df)
+            print("Prediction\n", prediction)
             evaluator = GraphEvaluator()
-            metrics = evaluator._compute_single_metrics(gt_graph, adj_matrix)
+            metrics = evaluator._compute_single_metrics(gt_graph_summary, prediction)
             f1_scores.append(metrics['f1'])
             precisions.append(metrics['precision'])
             recalls.append(metrics['recall'])
@@ -134,10 +129,7 @@ class DYNOTEARS(CausalDiscoveryAlgorithm):
 if __name__ == "__main__":
     params = {
         'p': 2,
-        'lambda_w': 0.1,
-        'lambda_a': 0.07,
-        'max_iter': 1000,
-        'w_threshold':0.01
+        'alpha': 0.5,
     }
-    dynotears_algo = DYNOTEARS(params)
-    dynotears_algo.test_algorithm() 
+    pwgc_algo = PWGC(params)
+    pwgc_algo.test_algorithm() 

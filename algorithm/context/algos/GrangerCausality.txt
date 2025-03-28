@@ -1,0 +1,142 @@
+## GC
+────────────────────────────────────────────────────────────────────────
+1. HYPER-PARAMETERS SENSITIVITY
+────────────────────────────────────────────────────────────────────────
+• Number of Key Hyperparameters:
+  - Granger Causality (GC) tests whether past values of one variable help predict another, assuming a vector autoregressive (VAR) model. The key hyperparameters include:
+    1. p (Lookback window length): Defines the maximum number of past time steps to consider.
+    2. alpha (Significance Level): The threshold for rejecting the null hypothesis of no causality.
+    3. criterion (Model Selection Criterion): Determines the best lag order (None, AIC, BIC, HQIC, ssr_ftest).
+
+• Tuning Difficulty:
+  - p (Lag Order): Affects causal discovery—too short may miss dependencies, too long introduces noise.
+  - alpha (Significance Level): Lower values reduce false positives but increase false negatives.
+  - criterion: Influences lag selection—AIC is more flexible but BIC penalizes complexity. Default none value used if lag is not known.ssr_ftest is exclusively used for Pairwise GC
+
+• Sensitivity:
+  - Higher p increases computation time exponentially.
+  - The F-test (used in MVGC) is highly sensitive to non-normality—data preprocessing is critical
+  - Pairwise GC (PWGC) is more sensitive to indirect effects than MVGC.
+
+• Critique/Extension:
+  - Using Lasso-regularized VAR (Granger-Lasso) could improve feature selection.
+  - Bayesian model averaging could provide more robust significance testing.
+
+────────────────────────────────────────────────────────────────────────
+2. ROBUSTNESS & SCALABILITY
+────────────────────────────────────────────────────────────────────────
+• Tolerance to Bad Data Quality
+  - Highly sensitive to noise & non-normality—especially in MVGC (F-test sensitivity).
+  - Missing values require imputation since VAR models assume complete data.
+  - Log-transforming highly skewed data can improve robustness.
+
+• Tolerance to Sparse vs. Dense Connected Systems
+  - PWGC detects spurious correlations in densely connected systems.
+  - MVGC handles high-dimensional cases better because it conditions on multiple predictors.
+
+• Scalability  
+  - MVGC scales quadratically with the number of variables (VAR model complexity).
+  - PWGC scales quadratically with the number of tested pairs but is more computationally efficient.
+  - Parallel computation can accelerate GC testing.
+
+• Critique/Extension  
+  - Sparse VAR models (e.g., LASSO VAR) could improve scalability.
+  - Hybrid approaches (e.g., PCMCI-Granger) could improve robustness in dense networks.
+
+────────────────────────────────────────────────────────────────────────
+3. MIXED DATA & COMPLEX FUNCTIONS
+────────────────────────────────────────────────────────────────────────
+• Noise Type  
+  - Assumes Gaussian noise—non-Gaussian noise leads to unreliable p-values.
+  - Heteroskedasticity (time-varying variance) can bias results.
+  - Bootstrapping methods can improve significance testing in noisy environments.
+
+• Mixed Data (Continuous & Discrete)  
+  - Standard GC assumes continuous data—categorical variables require encoding
+  - Extensions like transfer entropy can handle mixed data.
+
+• Heterogeneous Data  
+  - Stationary data is required for valid inference.
+  - Unit root tests (ADF, KPSS) should be applied before Granger testing.
+
+• Complex Functional Forms  
+  - GC is linear—cannot detect nonlinear dependencies.
+  - Kernel-based GC (e.g., HSIC Granger) can model nonlinear relationships.
+
+• Critique/Extension  
+  - Kernel GC or deep learning-based causal inference could improve performance on nonlinear systems.
+
+────────────────────────────────────────────────────────────────────────
+4. COMPUTATIONAL COMPLEXITY
+────────────────────────────────────────────────────────────────────────
+• Theoretical Time Complexity  
+  - MVGC (VAR-based) has complexity O(d³ p²) due to matrix inversion.
+  - PWGC (pairwise F-tests) has complexity O(d² p).
+
+• Variability in Practical Usage  
+  - Higher p significantly increases runtime.
+  - Large feature spaces make VAR estimation slow.
+
+• Critique/Extension  
+  - Sparse regularization techniques (L1 penalization) could speed up computations.
+  - Parallelized versions of GC could improve real-world applicability.
+
+────────────────────────────────────────────────────────────────────────
+5. INTERPRETABILITY
+────────────────────────────────────────────────────────────────────────
+• Output Format  
+  - Returns a directed adjacency matrix for the summary graph over the time-series where edges indicate predictive causality.
+
+• Strength of the Output Format  
+  - Results are easy to interpret - since its a summary graph
+
+• Limitations of the Output Format  
+  - Does not imply true causality (only statistical predictability).
+  - No information about time-lagged relations
+
+• Critique/Extension  
+  - Combining GC with causal graphs (e.g., PCMCI) could improve interpretability.
+
+────────────────────────────────────────────────────────────────────────
+6. ASSUMPTIONS
+────────────────────────────────────────────────────────────────────────
+• Critical Assumptions  
+  - Causal Markov condition: Each variable is conditionally independent of its non-descendants, given its parents.  
+  - Faithfulness: All and only the conditional independencies in the true structure are reflected in the data.  
+  - Causal sufficiency: No unobserved confounders of the measured variables.  
+  - Acyclicity: Enforced through continuous optimization constraints - past affects the future
+  - Stationarity: Assumes causal relations do not change over time.
+  - Linearity: VAR model assumption
+
+• Violation Impact  
+  - Missing confounders can lead to spurious or missing edges.  
+  - Unfaithful data-generating mechanisms can hide true edges or create extra independencies.  
+  - If stationarity is violated, discovered causal relations may not hold over time.
+
+• Critique/Extension  
+  - Combining GC with instrumental variables could reduce confounding bias.
+
+────────────────────────────────────────────────────────────────────────
+7. (OPTIONAL) REAL-WORLD BENCHMARKS
+────────────────────────────────────────────────────────────────────────
+• Performance on Real Datasets  
+  - Effective for economic & neuroscience applications.
+  - Fails in high-dimensional settings without regularization.
+
+• Practical Tips  
+  - Use ADF tests before applying Granger causality.
+  - Apply log-transformation or differencing to enforce stationarity.
+  - Refrain from choosing information criterion if true lag (p) is not known.
+
+────────────────────────────────────────────────────────────────────────
+CONCLUSION
+────────────────────────────────────────────────────────────────────────
+Multivariate & Pairwise Granger Causality tests are powerful tools for discovering time-lagged statistical dependencies. While effective for linear time series models, they fail in nonlinear and high-dimensional settings. The key strengths include:
+  - Simple & widely used for time-series causality.
+  - Works well in small-scale economic & neuroscience data.
+  - MVGC is more robust than PWGC in multivariate settings.
+However, it has limitations, including:
+  - Fails for nonlinear causal relations.
+  - High sensitivity to stationarity assumptions.
+  - Computationally expensive for high-dimensional data.
+────────────────────────────────────────────────────────

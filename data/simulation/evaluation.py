@@ -27,7 +27,7 @@ def generate_datasets():
     })
     
     # Scale comparison - varying node counts
-    for n_nodes in [5, 25, 50]:  # Skip 25 as it's in default
+    for n_nodes in [5, 25]: 
         dataset_configs.append({
             **default_settings,
             "name": f"scale_nodes_{n_nodes}",

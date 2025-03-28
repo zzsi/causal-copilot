@@ -70,7 +70,8 @@ class CDNOD(CausalDiscoveryAlgorithm):
         
         # Extract c_indx (assuming it's the last column)
         if 'domain_index' not in data.columns:
-            raise ValueError("Dataset must contain a 'domain_index' column for CDNOD.")
+            print("Dataset must contain a 'domain_index' column for CDNOD, simulating one for testing")
+            data['domain_index'] = np.ones(data.shape[0])
         c_indx = data['domain_index'].values.reshape(-1, 1)
         data = data.drop(columns=['domain_index'])
         data_values = data.values

@@ -9,6 +9,8 @@ from sklearn.impute import SimpleImputer
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.preprocessing import StandardScaler
+from scipy.stats import pearsonr
+from sklearn.feature_selection import mutual_info_regression
 from itertools import combinations
 import statsmodels.api as sm
 from statsmodels.stats.diagnostic import linear_reset
@@ -19,6 +21,7 @@ from statsmodels.tsa.stattools import adfuller
 from scipy import stats
 import matplotlib.pyplot as plt
 from statsmodels.tsa.stattools import acf, pacf
+from scipy.signal import find_peaks
 import json
 from openai import OpenAI
 # from Gradio.demo import global_state
@@ -251,33 +254,81 @@ def impute_time_series(df: pd.DataFrame, time_index_feature: str = None) -> pd.D
 
 
 
-def series_lag_est(time_series, nlags = 50):
+def series_lag_est(time_series, nlags=20, acf_threshold=0.6, pacf_top_pct=0.4):
+    '''
+    :param time_series: individual time series from df
+    :param nlags: maximum lags to check
+    :param acf_threshold: threshold for acf test
+    :param pacf_top_pct: threshold for pacf test
+    :return: estimation of max lag of causal relations
+    '''
+    # 1. ACF-Based Lag Selection
+    acf_values, confint = acf(time_series, nlags=nlags, fft=True, alpha=0.05)
+    acf_peaks, _ = find_peaks(acf_values, height=confint[:, 1]*acf_threshold)
+    
+    # 2. PACF-Based Lag Selection
+    pacf_values = pacf(time_series, nlags=nlags)
+    pacf_threshold = np.percentile(np.abs(pacf_values), 100 * (1 - pacf_top_pct))
+    pacf_significant_lags = np.where(np.abs(pacf_values) > pacf_threshold)[0]
 
-    autocorr, confint = acf(time_series, nlags=nlags, fft=True, alpha=0.05)
-    lag_significant = []
+    # 3. AIC/BIC-Based Lag Selection
+    best_aic, best_bic = float("inf"), float("inf")
+    best_aic_lag, best_bic_lag = 1, 1
+    for lag in range(1, nlags + 1):
+        try:
+            model = sm.tsa.ARIMA(time_series, order=(lag, 0, 0)).fit()
+            if model.aic < best_aic:
+                best_aic = model.aic
+                best_aic_lag = lag
+            if model.bic < best_bic:
+                best_bic = model.bic
+                best_bic_lag = lag
+        except:
+            continue
 
-    for lag in range(1, len(autocorr)):
-        if autocorr[lag] > confint[lag][1] or autocorr[lag] < confint[lag][0]:
-            lag_significant = lag
-
-    if len(lag_significant) != 0:
-        est_lag = max(lag_significant)
+    candidate_lags = list(set(acf_peaks) | set(pacf_significant_lags) | {best_aic_lag, best_bic_lag})
+    candidate_lags = [lag for lag in candidate_lags if lag > 0] 
+    if len(candidate_lags) > 0:
+        final_lag = max(set(candidate_lags), key=lambda lag: 
+                        (acf_values[lag] if lag in acf_peaks else 0) + 
+                        (pacf_values[lag] if lag in pacf_significant_lags else 0) +
+                        (0.3 if lag in {best_aic_lag, best_bic_lag} else 0)
+                       )
     else:
-        est_lag = np.argmax(autocorr[1:]) + 1
+        final_lag = np.argmax(acf_values[1:]) + 1
 
-    return est_lag
+    return final_lag
 
 
-def time_series_lag_est(df: pd.DataFrame, nlags = 50):
-    est_lags = {}
+def time_series_lag_est(df: pd.DataFrame, nlags = 30):
+    '''
+    :param df: imputed data in Pandas DataFrame format.
+    :param nlags: maximum lags to check
+    :return: estimation of max lag of causal relations of each feature
+    '''
+    est_lags = []
 
     for i in range(df.shape[1]):
-        est_lags[df.columns[i]] = series_lag_est(df.iloc[:, i], nlags=nlags)
+        est_lags.append(series_lag_est(df.iloc[:, i], nlags=nlags))
+    
+    mode_lag, count = mode(est_lags)
+    median_lag = int(np.median(est_lags))
+    final_lag = round((mode_lag * 0.6) + (median_lag * 0.4))
+        
+    return final_lag
 
-    return est_lags
-
-# lags = time_series_lag_est(ts_imputed)
-# print(lags)
+def check_instantaneous(df: pd.DataFrame) -> bool:
+    '''
+    :param df: imputed data in Pandas DataFrame format.
+    :return: bool value indicating the presence of instantaneous causal relations
+    '''
+    n_features = df.shape[1]
+    # Cross-correlation based
+    corr_matrix = df.corr().abs()
+    corr_threshold = 1 / np.sqrt(n_features)  # 
+    high_corr_pairs = [(i, j) for i in range(n_features) for j in range(i + 1, n_features)
+                       if corr_matrix.iloc[i, j]*n_features > corr_threshold]
+    return len(high_corr_pairs) > 0
 
 ########################################################################################################################
 
@@ -593,40 +644,23 @@ def stationary_check(df: pd.DataFrame, max_test: int = 1000, alpha: float = 0.1)
     :param alpha: significance level.
     :return: indicator of stationary.
     '''
-
     ADF_pval = []
     m = df.shape[1]
-
     if m > max_test:
-        num_test = max_test
-        index = random.sample(range(m), num_test)
+        index = random.sample(range(m), max_test)
     else:
-        num_test = m
-        index = range(num_test)
+        index = range(m)
 
-    for i in range(num_test):
+    for i in (index):
         x = df.iloc[:, index[i]].to_numpy()
-
-        # ADF test - H0: this series is non-stationary
         adf_test = adfuller(x)
         ADF_pval.append(adf_test[1])
 
-        # Bonferroni correction
-        # True: reject H0 -- this series is stationary
-        # False: accept H0 -- this series is non-stationary
-        corrected_ADF = multipletests(ADF_pval, alpha=alpha, method='bonferroni')[0]
+    corrected_ADF = multipletests(ADF_pval, alpha=alpha, method='bonferroni')[0]
+    num_stationary = np.sum(corrected_ADF)
+    stationary = num_stationary >= len(index) * 0.8  # At least 80% of tested features must be stationary
 
-        if corrected_ADF.sum() == m:
-            check_result = {"Stationary": True}
-            continue
-        else:
-            check_result = {"Stationary": False}
-            break
-
-    return check_result
-
-
-
+    return stationary
 
 
 def stat_info_collection(global_state):
@@ -678,13 +712,15 @@ def stat_info_collection(global_state):
 
     # Assumption checking for time-series data
     if global_state.statistics.time_series:
-        global_state.statistics.linearity = False
-        global_state.statistics.gaussian_error = False
+        if global_state.statistics.linearity is None:
+            # Update global state
+            global_state = linearity_check(df_raw=imputed_data, global_state=global_state)
+        if global_state.statistics.gaussian_error is None:
+            # Update global state
+            global_state = gaussian_check(df_raw=imputed_data, global_state=global_state)
 
-        stationary_res = stationary_check(df=imputed_data, max_test=global_state.statistics.num_test, alpha=global_state.statistics.alpha)
-        global_state.statistics.stationary = stationary_res["Stationary"]
-
-        global_state.statistics.time_lag =time_series_lag_est(df=imputed_data, nlags = global_state.statistics.nlags)
+        global_state.statistics.stationary = stationary_check(df=imputed_data, max_test=global_state.statistics.num_test, alpha=global_state.statistics.alpha)
+        global_state.statistics.time_lag = time_series_lag_est(df=imputed_data, nlags=20)
 
     # merge the domain index column back to the data if it exists
     if col_domain_index is not None:
