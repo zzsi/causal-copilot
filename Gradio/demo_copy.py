@@ -75,8 +75,8 @@ from report.inference_report_generation import Inference_Report_generation
 from user.discuss import Discussion
 from openai import OpenAI
 from pydantic import BaseModel
-from help_functions import *
 from causal_analysis.help_functions import *
+
 
 print('##########Initialize Global Variables##########')
 # Global variables
@@ -1263,7 +1263,7 @@ def parse_args():
     parser.add_argument(
         '--apikey',
         type=str,
-        default=None,
+        default="sk-******************************",
         help='API Key'
     )
 
