@@ -26,6 +26,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import NearestNeighbors
 from sklearn.ensemble import RandomForestRegressor
 from global_setting.state import Inference
+from sklearn.preprocessing import LabelEncoder
 
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -50,8 +51,6 @@ import seaborn as sns
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 
-
-# add imports for MetaLearners
 
 class Analysis(object):
     def __init__(self, global_state, args):
@@ -702,24 +701,97 @@ class Analysis(object):
         figs = [bar_plot_path, violin_plot_path]
         return df, figs
     
+    def prepare_treatment_column(self, data, treatment_col, T0=None, T1=None, model_name=None):
+        treatment = data[treatment_col]
+
+        # Case 1: Categorical string
+        if treatment.dtype == 'object' or treatment.dtype.name == 'category':
+            print(f"[INFO] Categorical string treatment detected")
+            if T0 is None or T1 is None:
+                unique_vals = sorted(treatment.unique().tolist())
+                T0, T1 = unique_vals[0], unique_vals[1]
+            return treatment, T0, T1
+
+        # Case 2: Binary numeric
+        if treatment.nunique() == 2:
+            sorted_vals = sorted(treatment.unique())
+            print(f"[INFO] Binary treatment detected: {sorted_vals}")
+            if T0 is None or T1 is None:
+                T0, T1 = sorted_vals[0], sorted_vals[1]
+            return treatment, T0, T1
+
+        # Case 3: Numeric, low-cardinality, but non-integer
+        if pd.api.types.is_numeric_dtype(treatment):
+            unique_vals = sorted(treatment.unique())
+            if len(unique_vals) <= 10:
+                print(f"[INFO] Low-cardinality numeric treatment detected: {unique_vals}")
+                if T0 is None or T1 is None:
+                    T0, T1 = unique_vals[0], unique_vals[1]
+                return treatment, T0, T1
+
+            # Case 4: Continuous treatment
+            if model_name == 'CausalForestDML':
+                print(f"[WARN] CausalForestDML doesn't support continuous treatment. Switching to LinearDML.")
+                self.global_state.inference.hte_algo_json['name'] = 'LinearDML'
+
+            if T0 is None or T1 is None:
+                T0 = treatment.quantile(0.1)
+                T1 = treatment.quantile(0.9)
+            return treatment, T0, T1
+
+        raise ValueError(f"Unsupported treatment type: {treatment.dtype}")
+
     def estimate_effect_dml(self, outcome, treatment, T0, T1, X_col, W_col, query):
         if len(W_col) == 0:
             W_col = ['W']
             W = pd.DataFrame(np.zeros((len(self.data), 1)), columns=W_col)
             self.data = pd.concat([self.data, W], axis=1)
             self.global_state.user_data.processed_data = self.data
+
         # Algorithm selection and deliberation
         filter = DML_HTE_Filter(self.args)
         self.global_state = filter.forward(self.global_state, query)
+
+        # 2. Now we know the selected model
+        model_name = self.global_state.inference.hte_algo_json['name']
+
+        encoded_treatment, T0, T1 = self.prepare_treatment_column(self.data, treatment, T0, T1, model_name)
+        self.data[treatment] = encoded_treatment
+        self.global_state.user_data.processed_data = self.data
+
         reranker = DML_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
         self.global_state = reranker.forward(self.global_state)
+        print(f"[DEBUG] treatment column name: {treatment}, T0: {T0}, T1: {T1}")
+        assert isinstance(treatment, str), f"❌ treatment must be str, got {type(treatment)}"
+        assert treatment in self.data.columns, f"❌ Column '{treatment}' not found in data columns"
+        print(f"[DEBUG] Final T_col = {treatment}")
+        print(f"[DEBUG] Columns in data: {self.data.columns.tolist()}")
+
+        model_name = self.global_state.inference.hte_algo_json['name']  # ✅ update model name
         programmer = DML_HTE_Programming(self.args, y_col=outcome, T_col=treatment, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
         programmer.fit_model(self.global_state)
+        self.global_state.inference.dml_programmer = programmer
+
+        # Override T0 and T1 with valid values if using CausalForestDML
+        if self.global_state.inference.hte_algo_json['name'] == 'CausalForestDML':
+            treatment_values = sorted(self.data[treatment].unique())
+            T0, T1 = treatment_values[0], treatment_values[1]
+            print(f"Overriding T0/T1 for CausalForestDML: T0={T0}, T1={T1}")
+            programmer.T0 = T0
+            programmer.T1 = T1
+            if programmer.model:
+                programmer.model.T0 = T0
+                programmer.model.T1 = T1
         # Estimate ate, att, hte
+        print(f"Final T0: {T0}, T1: {T1}")
+        print(f"Treatment values seen during fit: {self.data[treatment].unique()}")
         ate, ate_lower, ate_upper = programmer.forward(self.global_state, task='ate')
         att, att_lower, att_upper = programmer.forward(self.global_state, task='att')
         hte, hte_lower, hte_upper = programmer.forward(self.global_state, task='hte')
         hte = pd.DataFrame({'hte': hte.flatten()})
+        output_dir = self.global_state.user_data.output_graph_dir
+        os.makedirs(output_dir, exist_ok=True)  # ✅ Creates the directory if it doesn't exist
+
         hte.to_csv(f'{self.global_state.user_data.output_graph_dir}/hte.csv', index=False)
 
         result = {'ate': [ate, ate_lower, ate_upper],
@@ -1332,62 +1404,102 @@ if __name__ == '__main__':
     # Load global state
     with open('./demo_data/20250130_130622/house_price/output_graph/PC_global_state.pkl', 'rb') as file:
         global_state = pickle.load(file)
+        analysis = Analysis(global_state, args)
 
-    # Ensure inference attributes exist in global_state
-    if not hasattr(global_state, "inference"):
-        global_state.inference = Inference()
+        result = analysis.estimate_effect_dml(outcome ='SalePrice', 
+                                              treatment = 'HouseStyle', 
+                                              T0=0, T1=1, 
+                                              X_col =['OverallQual', 'OverallCond', 'YearBuilt', 'GarageArea'],
+                                              W_col=[],
+                                              query='Find the treatment effect')
 
-    if not hasattr(global_state.inference, "editing_history"):
-        global_state.inference.editing_history = []
+        def _to_scalar(x):
+            return x.item() if isinstance(x, np.ndarray) and x.size == 1 else x
 
-    if not hasattr(global_state.inference, "cycle_detection_result"):
-        global_state.inference.cycle_detection_result = {}
+        ate, ate_lower, ate_upper = map(_to_scalar, result['ate'])
+        att, att_lower, att_upper = map(_to_scalar, result['att'])
 
-    if not hasattr(global_state.inference, "task_info"):
-        global_state.inference.task_info = []
+        print(f"\n=== ATE ===")
+        print(f"ATE: {ate:.4f} (95% CI: [{ate_lower:.4f}, {ate_upper:.4f}])")
 
-    print(global_state.user_data.processed_data["CentralAir"].value_counts(normalize=True))
-    print("Missing values in dataset:\n", global_state.user_data.processed_data.isnull().sum())
-    print(global_state.user_data.processed_data.head())
+        print(f"\n=== ATT ===")
+        print(f"ATT: {att:.4f} (95% CI: [{att_lower:.4f}, {att_upper:.4f}])")
+
+
+        # result = analysis.estimate_effect_dml(outcome ='is_canceled', 
+        #                                       treatment = 'previous_cancellations', 
+        #                                       T0=0, T1=1, 
+        #                                       X_col =['is_repeated_guest', 'previous_bookings_not_canceled', 'booking_changes', 'deposit_type','customer_type'],
+        #                                       W_col=[],
+        #                                       query='Find the treatment effect')
+        
+        #  result = analysis.estimate_effect_dml(outcome ='deaths', 
+        #                                       treatment = 'richter', 
+        #                                       T0=0, T1=1, 
+        #                                       X_col =['year', 'month', 'day', 'region','area'],
+        #                                       W_col=[],
+        #                                       query='Find the treatment effect')   
+
+        
+
+
+
+
+    # # Ensure inference attributes exist in global_state
+    # if not hasattr(global_state, "inference"):
+    #     global_state.inference = Inference()
+
+    # if not hasattr(global_state.inference, "editing_history"):
+    #     global_state.inference.editing_history = []
+
+    # if not hasattr(global_state.inference, "cycle_detection_result"):
+    #     global_state.inference.cycle_detection_result = {}
+
+    # if not hasattr(global_state.inference, "task_info"):
+    #     global_state.inference.task_info = []
+
+    # print(global_state.user_data.processed_data["CentralAir"].value_counts(normalize=True))
+    # print("Missing values in dataset:\n", global_state.user_data.processed_data.isnull().sum())
+    # print(global_state.user_data.processed_data.head())
 
     # Initialize analysis
-    my_analysis = Analysis(global_state, args)
+    # my_analysis = Analysis(global_state, args)
 
-    # Ensure processed_data exists
-    if not hasattr(global_state, "user_data") or not hasattr(global_state.user_data, "processed_data"):
-        raise ValueError("Processed data is missing from global_state. Ensure data is properly loaded.")
+    # # Ensure processed_data exists
+    # if not hasattr(global_state, "user_data") or not hasattr(global_state.user_data, "processed_data"):
+    #     raise ValueError("Processed data is missing from global_state. Ensure data is properly loaded.")
 
-    treatment_col = "CentralAir"  # Adjust if necessary
+    # treatment_col = "CentralAir"  # Adjust if necessary
 
-    # Check if treatment column exists
-    if treatment_col in global_state.user_data.processed_data.columns:
-        unique_treatment_values = global_state.user_data.processed_data[treatment_col].unique()
-        print(f"Unique values in {treatment_col}:", unique_treatment_values)
+    # # Check if treatment column exists
+    # if treatment_col in global_state.user_data.processed_data.columns:
+    #     unique_treatment_values = global_state.user_data.processed_data[treatment_col].unique()
+    #     print(f"Unique values in {treatment_col}:", unique_treatment_values)
 
-        if len(unique_treatment_values) < 2:
-            raise ValueError(f"Treatment column '{treatment_col}' has insufficient variation: {unique_treatment_values}")
-    else:
-        raise ValueError(f"Treatment column '{treatment_col}' not found in dataset.")
+    #     if len(unique_treatment_values) < 2:
+    #         raise ValueError(f"Treatment column '{treatment_col}' has insufficient variation: {unique_treatment_values}")
+    # else:
+    #     raise ValueError(f"Treatment column '{treatment_col}' not found in dataset.")
     
-    global_state.user_data.processed_data["CentralAir"] = (
-    global_state.user_data.processed_data["CentralAir"] > 0).astype(int)  # Converts to 0 or 1
-    print("Fixed Unique values in CentralAir:", global_state.user_data.processed_data["CentralAir"].unique())
+    # global_state.user_data.processed_data["CentralAir"] = (
+    # global_state.user_data.processed_data["CentralAir"] > 0).astype(int)  # Converts to 0 or 1
+    # print("Fixed Unique values in CentralAir:", global_state.user_data.processed_data["CentralAir"].unique())
     
 
 
-    # Run the MetaLearner estimation
-    result = my_analysis.estimate_effect_MetaLearners(
-        outcome='SalePrice', 
-        treatment='CentralAir', 
-        T0=0, T1=1, 
-        X_col=['LotArea', 'OverallQual'], 
-        W_col=['YearBuilt', 'GrLivArea', 'GarageCars'], 
-        query='What is the treatment effect of CentralAir on SalePrice'
-    )
+    # # Run the MetaLearner estimation
+    # result = my_analysis.estimate_effect_MetaLearners(
+    #     outcome='SalePrice', 
+    #     treatment='CentralAir', 
+    #     T0=0, T1=1, 
+    #     X_col=['LotArea', 'OverallQual'], 
+    #     W_col=['YearBuilt', 'GrLivArea', 'GarageCars'], 
+    #     query='What is the treatment effect of CentralAir on SalePrice'
+    # )
 
-    print("Unique Treatment Values in Data:", global_state.user_data.processed_data['CentralAir'].unique())
-    print("Available keys in global_state.statistics.data_type_column:", global_state.statistics.data_type_column.keys())
-    print("\nFinal MetaLearner Estimation Results:", result)
+    # print("Unique Treatment Values in Data:", global_state.user_data.processed_data['CentralAir'].unique())
+    # print("Available keys in global_state.statistics.data_type_column:", global_state.statistics.data_type_column.keys())
+    # print("\nFinal MetaLearner Estimation Results:", result)
 
     
     # args = parse_args()
