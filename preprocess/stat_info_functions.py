@@ -673,6 +673,8 @@ def stat_info_collection(global_state):
         # Drop the domain index column from the data
         domain_index = global_state.statistics.domain_index
         col_domain_index = global_state.user_data.raw_data[domain_index]
+        if domain_index in global_state.user_data.selected_features:
+            global_state.user_data.selected_features.remove(domain_index)
     else:
         col_domain_index = None
 

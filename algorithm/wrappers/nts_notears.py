@@ -14,7 +14,7 @@ sys.path.append(nts_dir)
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
 from algorithm.wrappers.utils.ts_utils import generate_stationary_linear
-from notears.nts_model import MODEL_NTS_NOTEARS, train_NTS_NOTEARS
+# from notears.nts_model import MODEL_NTS_NOTEARS, train_NTS_NOTEARS
 from sklearn import preprocessing
 
 
