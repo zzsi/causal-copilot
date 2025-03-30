@@ -33,7 +33,7 @@ class GCModel:
         self.names = list(x.columns.values)
         self.pa = {self.names[i]: [self.names[i]] for i in range(len(self.names))}
         # scaling data
-        if scale:
+        if gc_type=='mv':
             scaler = StandardScaler()
             x_scaled = scaler.fit_transform(x.values)
             self.X = pd.DataFrame(x_scaled, columns=self.names)
@@ -126,15 +126,15 @@ class GCModel:
         if self.gc_type == 'mv':
             result, summary_matrix = self.mvgc(alpha, criterion)
         elif self.gc_type == 'pw':
-            result, summary_matrix = self.pwgc(alpha, criterion)
-        return result, summary_matrix
+            result, summary_matrix = self.pwgc(alpha)
+        return result, summary_matrix 
 
 
 class GrangerCausality(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
         self._params = {
-            'p': int,
+            'p': 1,
             'gc_type': 'pw', #pair-wise (pw) or multi-variate (mv)
             'alpha': 0.1, #significance level for F test
             'criterion': None, # information criterion

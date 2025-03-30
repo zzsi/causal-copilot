@@ -18,9 +18,12 @@ from statsmodels.stats.multitest import multipletests
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.stats.stattools import jarque_bera
 from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.api import VAR
+from statsmodels.tsa.stattools import bds
 from scipy import stats
 import matplotlib.pyplot as plt
 from statsmodels.tsa.stattools import acf, pacf
+from scipy.stats import mode
 from scipy.signal import find_peaks
 import json
 from openai import OpenAI
@@ -517,6 +520,78 @@ def linearity_check (df_raw: pd.DataFrame, global_state):
 
     return global_state
 
+
+def linearity_check_ts(df_raw: pd.DataFrame, global_state, save_plot=False):
+    '''
+    :param df: imputed data in Pandas DataFrame format.
+    :param global_state
+    :return: indicator of linearity, fitting a VAR model and checking the residuals
+    '''
+    maxlags = global_state.statistics.time_lag
+    path = global_state.user_data.output_graph_dir
+    alpha = global_state.statistics.alpha
+    model = VAR(df_raw)
+    results = model.fit(maxlags=maxlags)
+
+    residuals = results.resid
+    fitted = results.fittedvalues
+    columns = residuals.columns
+    reset_pvals = {}
+    for i in range(residuals.shape[1]):
+        y = residuals.iloc[:, i]
+        x = fitted.iloc[:, i]
+        x_const = sm.add_constant(x)
+        ols_model = sm.OLS(y, x_const).fit()
+        reset_result = linear_reset(ols_model, power=2, use_f=True)
+        reset_pvals[columns[i]] = reset_result.pvalue
+
+    bds_pvals = {}
+    for i in range(residuals.shape[1]):
+        y = residuals.iloc[:, i]
+        try:
+            bds_result = bds(y, max_dim=2)
+            bds_pvals[columns[i]] = bds_result.pvalue
+        except Exception as e:
+            bds_pvals[columns[i]] = None
+    
+    if save_plot:
+        num_vars = df.shape[1]
+        ncols = 2
+        nrows = int(np.ceil(num_vars / ncols))
+        
+        fig, axs = plt.subplots(nrows, ncols, figsize=(12, 4 * nrows))
+        axs = axs.flatten()
+
+        for i in range(num_vars):
+            axs[i].scatter(fitted.iloc[:, i], residuals.iloc[:, i], alpha=0.6)
+            axs[i].axhline(0, color='r', linestyle='--')
+            axs[i].set_title(f'{df.columns[i]}: Residuals vs Fitted')
+            axs[i].set_xlabel('Fitted Values')
+            axs[i].set_ylabel('Residuals')
+
+        # Clean up unused subplots
+        for i in range(num_vars, len(axs)):
+            fig.delaxes(axs[i])
+
+        fig.suptitle('VAR Residual Analysis (Linearity Diagnostic)', fontsize=16)
+        
+        # Ensure output path exists
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        plot_path = os.path.join(path, "var_linearity_residuals.jpg")
+        fig.tight_layout()
+        fig.subplots_adjust(top=0.95)
+        fig.savefig(plot_path)
+
+        print(f"Saved VAR residuals plot to: {plot_path}")
+        
+    reset_significant = any(p < alpha for p in reset_pvals.values() if p is not None)
+    bds_significant = any(p < alpha for p in bds_pvals.values() if p is not None)
+    linearity = not (reset_significant or bds_significant)
+    global_state.statistics.linearity = linearity
+
+    return global_state
 # linearity_res = linearity_check(df = imputed_data, path = '/Users/fangnan/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/ML Research/Causal Copilot/preprocess/stat_figures')
 # print(linearity_res)
 
@@ -705,22 +780,19 @@ def stat_info_collection(global_state):
         if global_state.statistics.gaussian_error is None:
             # Update global state
             global_state = gaussian_check(df_raw=imputed_data, global_state=global_state)
-
+    # Assumption checking for time-series data
+    elif global_state.statistics.data_type=="Time-series":
+        # estimate the time lag
+        global_state.statistics.time_lag = time_series_lag_est(df=imputed_data, nlags=20)
+        # check linearity
+        global_state = linearity_check_ts(df_raw=imputed_data, global_state=global_state)
+        # check gaussianity
+        global_state = gaussian_check(df_raw=imputed_data, global_state=global_state)
+        # check stationarity
+        global_state.statistics.stationary = stationary_check(df=imputed_data, max_test=global_state.statistics.num_test, alpha=global_state.statistics.alpha)        
     else:
         global_state.statistics.linearity = False
         global_state.statistics.gaussian_error = False
-
-    # Assumption checking for time-series data
-    if global_state.statistics.time_series:
-        if global_state.statistics.linearity is None:
-            # Update global state
-            global_state = linearity_check(df_raw=imputed_data, global_state=global_state)
-        if global_state.statistics.gaussian_error is None:
-            # Update global state
-            global_state = gaussian_check(df_raw=imputed_data, global_state=global_state)
-
-        global_state.statistics.stationary = stationary_check(df=imputed_data, max_test=global_state.statistics.num_test, alpha=global_state.statistics.alpha)
-        global_state.statistics.time_lag = time_series_lag_est(df=imputed_data, nlags=20)
 
     # merge the domain index column back to the data if it exists
     if col_domain_index is not None:
@@ -753,6 +825,8 @@ def convert_stat_info_to_text(statistics):
     text += f"- Gaussian Errors: The errors in the data {'do' if statistics.gaussian_error else 'do not'} follow a Gaussian distribution.\n"
     text += f"- Heterogeneity: The dataset {'is' if statistics.heterogeneous else 'is not'} heterogeneous. \n\n"
 
+    if statistics.time_series:
+        text += f"- Estimated time lag: {statistics.time_lag} \n\n"
     if statistics.domain_index is not None:
         text += f"- Domain Index: {statistics.domain_index}"
     else:

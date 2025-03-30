@@ -12,4 +12,9 @@ class Programming(object):
         global_state.results.raw_result = raw_result
         global_state.results.converted_graph = graph
         global_state.results.raw_info = info
+        if global_state.statistics.data_type=="Time-series":
+            if 'lag_matrix' in info:
+                global_state.results.lagged_graph = info['lag_matrix']
+            else:
+                global_state.results.lagged_graph = None
         return global_state

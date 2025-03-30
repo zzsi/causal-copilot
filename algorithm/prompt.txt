@@ -1,24 +1,28 @@
 Given the following user query:
-YES. Find causal relationships between physical measurements and age of abalone. The dataset contains numerical measurements of physical characteristics.
+Do causal discovery on this dataset
 
 For the data that have the following variables:
-Age, Length, Shell_weight, Diameter, Height, Whole_weight, Shucked_weight, Viscera_weight, domain_index
+0, 1, 2
 
 And the following statistics:
 The dataset has the following characteristics:
 
-Data Type: The overall data type is Continuous.
+Data Type: The overall data type is Time-series.
 
-The sample size is 4177 with 8 features. This dataset is not time-series data. 
+The sample size is 2000 with 3 features. This dataset is time-series data. 
 
 Data Quality: There are no missing values in the dataset.
 
 Statistical Properties:
-- Linearity: The relationships between variables are not predominantly linear.
-- Gaussian Errors: The errors in the data do not follow a Gaussian distribution.
-- Heterogeneity: The dataset is heterogeneous. 
+- Linearity: The relationships between variables are predominantly linear.
+- Gaussian Errors: The errors in the data do follow a Gaussian distribution.
+- Heterogeneity: The dataset is not heterogeneous. 
 
-- Domain Index: Whole_weight
+- Estimated time lag: 3 
+
+
+
+
 
 All candidate algorithms, their descriptions and tags:
 # Causal Discovery Algorithm Tagging
@@ -26,7 +30,7 @@ All candidate algorithms, their descriptions and tags:
 Below is a concise description of each tag category and its possible values:
 
 1. Availability: Indicates if the algorithm is ready to use.
-    ***ONLY USE AVAILABLE ALGORITHMSFOR NOW***
+    ***ONLY USE AVAILABLE ALGORITHMS FOR NOW***
    - Available: Ready to use in the current codebase.
    - Unavailable: No longer maintained because of being not useful.
 
@@ -363,6 +367,20 @@ DYNOTEARS: {
     Data Type: Time-series
 }
 
+NTSNOTEARS: {
+    Availability: Available,
+    Method Type: Continuous-optimization,
+    Functional form: Nonlinear,
+    Noise: Flexible,
+    Latent Variable Tolerance: Moderate,
+    Distribution Shift: Homogenous,
+    Scalability: Medium-scale,
+    Efficiency: Moderate,
+    Empirical Performance: Moderate,
+    Output Format: DAG,
+    Data Type: Time-series
+}
+
 
 --- Functional Model-based Methods (LiNGAM Family) ----------------------------------
 
@@ -410,6 +428,20 @@ VARLiNGAM: {
 
 --- Hybrid Methods -----------------------------------------------------------------
 
+GrangerCausality: {
+    Availability: Available,
+    Method Type: Hybrid,
+    Functional form: Linear,
+    Noise: Gaussian,
+    Latent Variable Tolerance: Moderate,
+    Distribution Shift: Homogenous,
+    Scalability: Medium-scale,
+    Efficiency: Fast (CPU),
+    Empirical Performance: Moderate,
+    Output Format: DAG,
+    Data Type: Time-series
+}
+
 Hybrid: {
     Availability: Unavailable,
     Method Type: Hybrid,
@@ -428,8 +460,7 @@ Please choose the most suitable causal discovery algorithms up to top 3, for the
 
 At the same time, be careful about the current device availability for GPU/CUDA acceleration. Note that some algorithm settings would need GPU to run, which could be a indirect limitation on the algorithm application potential:
 
-
-Current machine doesn't support CUDA, do not choose any GPU-powered algorithms.
+Current machine supports CUDA, so you can choose GPU-powered algorithms.
 
 The user accepts the output graph including undirected edges/undeterministic directions (CPDAG/PAG).
 
