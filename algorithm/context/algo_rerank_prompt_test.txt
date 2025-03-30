@@ -1,6 +1,6 @@
-You will conduct causal discovery on the Tabular Dataset ./demo_data/20250328_102046/Abalone/Abalone.csv containing the following Columns:
+You will conduct causal discovery on the Tabular Dataset ./demo_data/20250329_100726/house_price/house_price.csv containing the following Columns:
 
-Age	Length	Shell_weight	Diameter	Height	Whole_weight	Shucked_weight	Viscera_weight	domain_index
+Id	MSSubClass	MSZoning	LotFrontage	LotArea	Street	LotShape	LandContour	Utilities	LotConfig	LandSlope	Neighborhood	Condition1	Condition2	BldgType	HouseStyle	OverallQual	OverallCond	YearBuilt	YearRemodAdd	RoofStyle	RoofMatl	Exterior1st	Exterior2nd	MasVnrArea	ExterQual	ExterCond	Foundation	BsmtQual	BsmtCond	BsmtExposure	BsmtFinType1	BsmtFinSF1	BsmtFinType2	BsmtFinSF2	BsmtUnfSF	TotalBsmtSF	Heating	HeatingQC	CentralAir	Electrical	1stFlrSF	2ndFlrSF	LowQualFinSF	GrLivArea	BsmtFullBath	BsmtHalfBath	FullBath	HalfBath	BedroomAbvGr	KitchenAbvGr	KitchenQual	TotRmsAbvGrd	Functional	Fireplaces	GarageType	GarageYrBlt	GarageFinish	GarageCars	GarageArea	GarageQual	GarageCond	PavedDrive	WoodDeckSF	OpenPorchSF	EnclosedPorch	3SsnPorch	ScreenPorch	PoolArea	MiscVal	MoSold	SaleType	SaleCondition	SalePrice	domain_index
 
 The Detailed Background Information is listed below:
 
@@ -10,18 +10,18 @@ The Statistics Information about the dataset is:
 
 The dataset has the following characteristics:
 
-Data Type: The overall data type is Continuous.
+Data Type: The overall data type is Mixture.
 
-The sample size is 4177 with 8 features. This dataset is not time-series data. 
+The sample size is 1460 with 74 features. This dataset is not time-series data. 
 
-Data Quality: There are no missing values in the dataset.
+Data Quality: There are missing values in the dataset.
 
 Statistical Properties:
 - Linearity: The relationships between variables are not predominantly linear.
 - Gaussian Errors: The errors in the data do not follow a Gaussian distribution.
 - Heterogeneity: The dataset is heterogeneous. 
 
-- Domain Index: Whole_weight
+- Domain Index: YrSold
 
 Based on the above information, please select the best-suited algorithm from the following candidate (the order of the algorithm candidates is not important):
 
@@ -31,9 +31,9 @@ dict_keys(['CDNOD', 'InterIAMB', 'IAMBnPC'])
 Note that the user can only wait for 1440.0 minutes for the algorithm execution, please ensure the time cost of the selected algorithm would not exceed it!
 The estimated time costs of the following algorithms using linear estimation methods (e.g. Fisherz for constraint-based methods, BIC for score-based methods) are below. Use it as a reference for the algorithm runtime comparison, note that the absolute value might changes significantly when the estimation methods are not linear (e.g. KCI for constraint-based methods, Generalized score for score-based methods). Consider the time cost wisely when selecting the algorithm, it is critical but less important than the performance when the time cost does not exceed the waiting time. As long as the timecost difference is not that large 1440.0, you should pivot more on the performance.
 
-CDNOD: 1.0 minutes
-InterIAMB: 1.0 minutes
-IAMBnPC: 1.0 minutes
+CDNOD: 1.5 minutes
+InterIAMB: 7.5 minutes
+IAMBnPC: 9.2 minutes
 
 At the same time, be careful about the current device availability for GPU/CUDA acceleration. Note that some algorithm settings would need GPU to run, which could be a indirect limitation on the algorithm application potential:
 
@@ -54,24 +54,26 @@ Below is a structured profile of the CDNOD (Constraint-based causal Discovery fr
 ────────────────────────────────────────────────────────────
 
 • Number of Key Hyperparameters  
-  - CDNOD’s primary hyperparameters include:  
+  - CDNOD's primary hyperparameters include:  
     1. α (alpha): The significance level for conditional independence tests.  
-    2. indep_test: The choice of independence test (e.g., “fisherz,” “chisq,” “gsq,” “kci,” etc.).  
+    2. indep_test: The choice of independence test (e.g., "fisherz_cpu", "fisherz_gpu", "chisq_cpu", "chisq_gpu", "cmiknn_gpu", etc.).  
     3. depth: The maximum depth in the skeleton discovery phase.  
-  - These three hyperparameters—alpha, indep_test, and depth—are generally the most influential in determining both the algorithm’s accuracy and runtime.
+  - These three hyperparameters—alpha, indep_test, and depth—are generally the most influential in determining both the algorithm's accuracy and runtime.
 
 • Tuning Difficulty  
-  - Default settings are typically sufficient for many domains (e.g., alpha=0.05, indep_test="fisherz," depth=-1). However, the selected values can significantly affect performance when sample sizes or graph sizes are extreme.  
+  - Default settings are typically sufficient for many domains (e.g., alpha=0.05, indep_test="fisherz_cpu", depth=-1). However, the selected values can significantly affect performance when sample sizes or graph sizes are extreme.  
   - The guidelines for alpha (e.g., 0.1 for <500 samples, 0.05 for mid-range, 0.01 for very large samples) offer straightforward, data-driven rules. This means domain experts or automated routines can tune alpha more reliably given the sample size.  
-  - For the independence test, recommended defaults exist depending on data type. Selecting the appropriate test (e.g., “kci” for nonlinear continuous) can be done without deep statistical expertise, but advanced users can refine the choice if data assumptions are violated.
+  - For the independence test, recommended defaults exist depending on data type. GPU-accelerated tests are now available, providing significant performance improvements: "fisherz_gpu" for continuous data, "chisq_gpu" for discrete data, and "cmiknn_gpu" for nonparametric testing with GPU acceleration.
 
 • Sensitivity  
-  - Alpha exerts a substantial influence on the graph’s sparsity: smaller alpha yields sparser graphs, reducing false positives but potentially missing weaker edges. Larger alpha leads to denser graphs, possibly increasing false positives.  
+  - Alpha exerts a substantial influence on the graph's sparsity: smaller alpha yields sparser graphs, reducing false positives but potentially missing weaker edges. Larger alpha leads to denser graphs, possibly increasing false positives.  
   - Depth affects the thoroughness of the skeleton search. A high (or unlimited) depth can improve accuracy on complex graphs but may sharply increase runtime. Lower depth settings speed up computations while potentially missing longer-range conditional dependencies.
+  - Switching from CPU to GPU implementations (e.g., from "fisherz_cpu" to "fisherz_gpu") can dramatically improve runtime without affecting accuracy, making CDNOD much more practical for large datasets.
 
 • Critique/Extension  
   - Hyperparameters controlling the search complexity (e.g., depth) most strongly influence runtime and can also affect correctness if restricted too aggressively.  
   - Hyperparameters tied to statistical tests (alpha, indep_test) have a more direct effect on false positives/negatives. In practice, balancing both sets of parameters is essential for robust performance.
+  - The GPU-accelerated tests provide extreme speedups compared to their CPU counterparts, especially for large datasets, addressing one of the traditional limitations of constraint-based methods.
 
 ────────────────────────────────────────────────────────────
 2. Robustness & Scalability
@@ -85,12 +87,13 @@ Below is a structured profile of the CDNOD (Constraint-based causal Discovery fr
   - While not extensively detailed in the provided reports, constraint-based methods typically show stable performance on sparse networks. Dense networks can still be handled, but the computational load and potential for spurious edges may grow. Depth constraints can partially mitigate these issues.
 
 • Scalability  
-  - Among the tested scenarios, CDNOD’s scalability ranking was moderate (somewhere around the middle), hinting that performance remains feasible for medium-to-large graphs, although it might not be among the fastest for extremely large variable counts.  
-  - Practical thresholds depend on the machine’s computational resources and the hyperparameters used. Limiting depth and using faster independence tests (e.g., “fastkci” or “rcit”) can help scale to bigger problems.
+  - With the integration of GPU-accelerated independence tests ('fisherz_gpu', 'chisq_gpu', and 'cmiknn_gpu'), CDNOD's scalability has significantly improved. The GPU tests provide extreme speedups compared to their CPU counterparts, especially for large datasets.
+  - According to the hyperparameter information, 'cmiknn_gpu' offers a 1000x speedup compared to CPU-based 'kci' with comparable accuracy, making nonparametric testing viable for much larger datasets.
+  - Even with GPU acceleration, restricting depth remains an important strategy for very large graphs to manage computational complexity.
 
 • Critique/Extension  
-  - Parallelization: Constraint-based methods (including CDNOD) can often be parallelized by splitting conditional independence tests across computing cores. This can improve runtime for large datasets, although built-in parallelization support may vary by implementation.  
-  - Approximation options like restricting the skeleton search depth or using approximate tests (e.g., “rcit”) strike a balance between runtime and accuracy.
+  - Parallelization: Constraint-based methods (including CDNOD) can often be parallelized by splitting conditional independence tests across computing cores. The GPU-accelerated tests take this to another level, providing massive parallelization on GPU hardware.
+  - Approximation options like restricting the skeleton search depth or using GPU-accelerated tests strike an excellent balance between runtime and accuracy, making CDNOD much more competitive for large-scale applications.
 
 ────────────────────────────────────────────────────────────
 3. Mixed Data & Complex Functions
@@ -98,18 +101,22 @@ Below is a structured profile of the CDNOD (Constraint-based causal Discovery fr
 
 • Noise Type  
   - CDNOD does not assume strictly Gaussian noise. It supports a variety of independence tests (including kernel-based nonparametric methods), making it suitable for non-Gaussian scenarios.
+  - The GPU-accelerated 'cmiknn_gpu' test provides a powerful nonparametric option that can handle complex noise distributions with significantly improved performance.
 
 • Mixed Data (Continuous & Discrete)  
-  - The recommended “gsq” or “chisq” tests indicate that the algorithm can handle discrete or mixed data. Defaults suggest “fisherz” for purely continuous data, “chisq” for discrete, “gsq” for simplified mixed data, and advanced options (like “kci”) for nonlinear or more complex distributions.
+  - CDNOD can integrate different conditional independence tests: 'fisherz_cpu'/'fisherz_gpu' for continuous variables; 'chisq_cpu'/'chisq_gpu' for discrete; or a mix for hybrid data.
+  - Both CPU and GPU implementations are available for different data types, allowing for efficient processing regardless of data characteristics.
 
 • Heterogeneous Data  
-  - CDNOD is specifically designed to address nonstationary and heterogeneous conditions, which is one of its defining strengths (confirmed by top performance in the “Heterogeneity” category of the provided benchmarks).
+  - CDNOD is specifically designed to address nonstationary and heterogeneous conditions, which is one of its defining strengths (confirmed by top performance in the "Heterogeneity" category of the provided benchmarks).
+  - The GPU-accelerated tests make it much more practical to apply CDNOD to large heterogeneous datasets that would be computationally prohibitive with CPU-only implementations.
 
 • Complex Functional Forms  
-  - When the relationships between variables are nonlinear, switching to tests such as “kci,” “fastkci,” or “rcit” helps to capture complex dependencies. CDNOD’s framework supports these tests with minimal configuration changes.
+  - When the relationships between variables are nonlinear, the 'cmiknn_gpu' test provides an excellent option for capturing complex dependencies with dramatically improved performance compared to CPU-based nonparametric tests.
+  - The 1000x speedup of 'cmiknn_gpu' compared to 'kci' makes nonparametric testing practical for much larger datasets, allowing CDNOD to handle complex functional forms at scale.
 
 • Critique/Extension  
-  - If users initially rely on purely linear tests (e.g., “fisherz”) for data that are strongly nonlinear, they risk underspecifying relationships. Therefore, domain knowledge or preliminary data checks can guide the choice of a more robust independence test.  
+  - If users initially rely on purely linear tests (e.g., "fisherz_cpu" or "fisherz_gpu") for data that are strongly nonlinear, they risk underspecifying relationships. Therefore, domain knowledge or preliminary data checks can guide the choice of a more robust independence test like 'cmiknn_gpu'.
   - Overfitting can occur if alpha is set too high while a flexible, nonlinear test is used. Proper emphasis on cross-validation or domain-driven alpha choices is advisable.
 
 ────────────────────────────────────────────────────────────
@@ -118,16 +125,17 @@ Below is a structured profile of the CDNOD (Constraint-based causal Discovery fr
 
 • Theoretical Time Complexity  
   - As a constraint-based algorithm, skeleton discovery and orientation typically have a complexity that grows with both the number of variables and the maximum conditioning set size. A simplified notation for the worst-case complexity can be denoted as:  
-    <temp>[O(p^k)]</temp>  
+    O(p^k)  
   where p is the number of variables and k depends on the search depth. Exact exponents vary based on independence test complexity and data sample size.
 
 • Variability in Practical Usage  
   - If depth is set to -1 (unlimited), the search can become computationally heavy for large graphs. Reducing it to smaller values (e.g., 1–3) often substantially cuts runtime.  
-  - Selecting faster independence tests (e.g., “fastkci” vs. “kci”) also yields tangible efficiency gains with minor trade-offs in accuracy.
+  - Selecting GPU-accelerated tests ('fisherz_gpu', 'chisq_gpu', 'cmiknn_gpu') provides dramatic efficiency gains with no trade-offs in accuracy, making CDNOD much more practical for large-scale applications.
+  - The 'cmiknn_gpu' test in particular offers a 1000x speedup compared to CPU-based 'kci', making nonparametric testing viable for much larger datasets.
 
 • Critique/Extension  
   - In real-world datasets with many variables, worst-case complexity can be mitigatingly high, but typical performance can be significantly better when the underlying network is not extremely dense.  
-  - Hardware-wise, parallel processing can provide meaningful improvements by distributing independence tests across CPU cores.
+  - The GPU-accelerated tests provide massive parallelization, dramatically reducing the practical runtime for large datasets and making CDNOD much more competitive for large-scale applications.
 
 ────────────────────────────────────────────────────────────
 5. Interpretability
@@ -144,7 +152,8 @@ Below is a structured profile of the CDNOD (Constraint-based causal Discovery fr
   - The underlying changing distribution (nonstationarity) can sometimes complicate orientation, leading to partial orientation in complex scenarios.
 
 • Critique/Extension  
-  - Domain experts often refine or prune orientations after the algorithm’s initial output. In contexts like multi-stage or time-varying processes, additional domain knowledge can greatly enhance interpretability.
+  - Domain experts often refine or prune orientations after the algorithm's initial output. In contexts like multi-stage or time-varying processes, additional domain knowledge can greatly enhance interpretability.
+  - The improved scalability from GPU-accelerated tests allows CDNOD to be applied to larger, more complex datasets, potentially yielding more comprehensive and informative causal graphs.
 
 ────────────────────────────────────────────────────────────
 6. Assumptions
@@ -162,6 +171,7 @@ Below is a structured profile of the CDNOD (Constraint-based causal Discovery fr
 • Critique/Extension  
   - Extensions of CDNOD can handle partially missing or ambiguous domain indices.  
   - In practice, moderate violations of the assumptions (e.g., mild confounding) might still yield useful causal insights, but caution is warranted.
+  - The availability of GPU-accelerated nonparametric tests like 'cmiknn_gpu' makes it more practical to apply CDNOD to complex datasets where linear assumptions may not hold.
 
 ────────────────────────────────────────────────────────────
 7. (Optional) Real-World Benchmarks
@@ -170,17 +180,19 @@ Below is a structured profile of the CDNOD (Constraint-based causal Discovery fr
 • Performance on Real Datasets  
   - According to some demonstrations (e.g., financial market data applications), CDNOD performs successfully in capturing dynamic causal structures underlying changing market conditions.  
   - Benchmarks indicate it is among the stronger algorithms in contexts involving noise, measurement error, and missing data. In those areas, CDNOD scored near the top in overall performance.
+  - The integration of GPU-accelerated tests makes CDNOD much more practical for large real-world datasets that would be computationally prohibitive with CPU-only implementations.
 
 • Practical Tips  
   - For large sample sizes (>10,000), use a lower alpha (e.g., α=0.01) and consider a smaller depth to control runtime.  
-  - If data are suspected of containing strongly nonlinear relationships, opt for “kci” or a faster variant (“fastkci” or “rcit”) to improve detection of complex causal links.  
+  - If data are suspected of containing strongly nonlinear relationships, opt for the GPU-accelerated 'cmiknn_gpu' test, which provides a 1000x speedup compared to CPU-based 'kci' with comparable accuracy.
+  - For large datasets, always use the GPU-accelerated tests ('fisherz_gpu', 'chisq_gpu', 'cmiknn_gpu') when GPU hardware is available, as they provide extreme speedups with no loss in accuracy.
   - Domain-driven insights can help refine or interpret partially oriented edges, especially in real-world settings like finance, biology, or social sciences.
 
 ────────────────────────────────────────────────────────────
 Summary
 ────────────────────────────────────────────────────────────
 
-CDNOD is specifically designed for causal discovery in nonstationary and heterogeneous data. Its ability to handle various data types (continuous, discrete, mixed), along with flexible independence test choices, makes it adaptable across multiple domains. While its scalability is not the absolute highest, careful selection of key hyperparameters—particularly depth and the independence test—can keep runtime manageable. As with most constraint-based methods, interpretability is straightforward in graph form, though some edges may remain unoriented without further domain knowledge. Its robust performance in the face of measurement error, missing data, and heterogeneous sources underscores its value for complex real-world applications where distributions shift across time or other conditions.
+CDNOD is specifically designed for causal discovery in nonstationary and heterogeneous data. Its ability to handle various data types (continuous, discrete, mixed), along with flexible independence test choices, makes it adaptable across multiple domains. With the integration of GPU-accelerated tests ('fisherz_gpu', 'chisq_gpu', and 'cmiknn_gpu'), its scalability has significantly improved, making it much more practical for large datasets. The 'cmiknn_gpu' test in particular provides a 1000x speedup for nonparametric testing compared to CPU-based alternatives, making CDNOD much more competitive for complex, non-linear causal discovery tasks. As with most constraint-based methods, interpretability is straightforward in graph form, though some edges may remain unoriented without further domain knowledge. Its robust performance in the face of measurement error, missing data, and heterogeneous sources underscores its value for complex real-world applications where distributions shift across time or other conditions.
 
 ────────────────────────────────────────────────────────
 Benchmarking Results
@@ -210,53 +222,42 @@ Benchmarking Results
   – Average standard deviation: 1.38
 
 
-
 ## Supported hyperparameters: {
     "algorithm_name": "CDNOD",
     "alpha": {
         "meaning": "Significance level in (0, 1)",
-        "suggested_values": {
+        "available_values": {
             "default": 0.05,
             "small_sample": 0.1,
             "large_sample": 0.01
         },
-        "reasoning": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
+        "expert_suggestion": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
     },
     "indep_test": {
         "meaning": "Independence test method",
-        "suggested_values": {
+        "available_values": {
             "default": "fisherz_cpu",
             "continuous_cpu": "fisherz_cpu",
             "continuous_gpu": "fisherz_gpu",
             "discrete_cpu": "chisq_cpu",
             "discrete_gpu": "chisq_gpu",
-            "mixed_cpu": "gsq_cpu",
             "robust_nonlinear_cpu": "kci_cpu",
             "robust_nonlinear_gpu": "cmiknn_gpu",
             "fast_robust_nonlinear_cpu": "fastkci_cpu",
             "approximate_fast_nonlinear_cpu": "rcit_cpu"
         },
-        "reasoning": "Choose based on data type and hardware. CPU TESTS: 'fisherz_cpu' for linear continuous data; 'chisq_cpu' for discrete data; 'gsq_cpu' for mixed data types; 'kci_cpu' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci_cpu' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit_cpu' is the fastest approximation of kci (use with < 30 variables and sample size < 5000). GPU TESTS: 'fisherz_gpu' and 'chisq_gpu' work similarly but are extremely fast because of GPU's super parallel computing; 'cmiknn_gpu' is a GPU-accelerated nonparametric test that provides 1000x speedup compared to CPU-based 'kci' with comparable accuracy. GPU acceleration is strongly recommended for large datasets."
+        "expert_suggestion": "Choose based on data type and hardware. CPU TESTS: 'fisherz_cpu' for linear continuous data; 'chisq_cpu' for discrete data (only applied for pure discrete data); 'kci_cpu' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci_cpu' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit_cpu' is the fastest approximation of kci (use with < 30 variables and sample size < 5000). GPU TESTS: 'fisherz_gpu' and 'chisq_gpu' (only applied for pure discrete data) work similarly but are extremely fast because of GPU's super parallel computing; 'cmiknn_gpu' is a GPU-accelerated nonparametric test that provides 1000x speedup compared to CPU-based 'kci' with comparable accuracy. GPU acceleration is strongly recommended for large datasets."
     },
     "depth": {
         "meaning": "Maximum depth for skeleton search",
-        "suggested_values": {
+        "available_values": {
             "default": -1,
             "small_graph": 6,
             "medium_graph": 4,
             "large_graph": 2,
             "extra_large_graph": 1
         },
-        "reasoning": "Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 1-3) can significantly speed up the algorithm at the cost of some accuracy. A graph with node number < 10, use depth 6; A graph with node number 10 - 25, use depth 4; A graph with node number 25-50, use depth 2; A graph with node number > 50, use depth 1."
-    },
-    "device": {
-        "meaning": "Computation device to use for independence tests",
-        "suggested_values": {
-            "default": "auto",
-            "cpu": "cpu",
-            "gpu": "cuda"
-        },
-        "reasoning": "Use 'auto' to automatically select GPU if available, otherwise CPU. Use 'cuda' to force GPU usage (requires compatible independence tests like 'cmiknn'). Use 'cpu' to force CPU usage. GPU acceleration can provide 10-100x speedup for nonlinear tests with large datasets."
+        "expert_suggestion": "Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 1-3) can significantly speed up the algorithm at the cost of some accuracy. A graph with node number < 10, use depth 6; A graph with node number 10 - 25, use depth 4; A graph with node number 25-50, use depth 2; A graph with node number > 50, use depth 1."
     }
 }
 
@@ -422,25 +423,24 @@ Benchmarking Results
     "algorithm_name": "InterIAMB",
     "alpha": {
         "meaning": "Desired significance level in (0, 1)",
-        "suggested_values": {
+        "available_values": {
             "default": 0.05,
             "small_sample": 0.1,
             "large_sample": 0.01
         },
-        "reasoning": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
+        "expert_suggestion": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
     },
     "indep_test": {
         "meaning": "Independence test method",
-        "suggested_values": {
+        "available_values": {
             "default": "fisherz",
             "continuous": "fisherz",
             "discrete": "chisq",
-            "mixed": "gsq",
             "robust_nonlinear": "kci",
             "fast_robust_nonlinear": "fastkci",
             "approximate_fast_nonlinear": "rcit"
         },
-        "reasoning": "Choose based on data type and hardware. 'fisherz_cpu' for linear continuous data; 'chisq_cpu' for discrete data; 'gsq' for mixed data types; 'kci' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit' is the fastest approximation of kci (use with < 30 variables and sample size < 5000)."
+        "expert_suggestion": "Choose based on data type, 'fisherz' for linear continuous data; 'chisq' for discrete data (only applied for pure discrete data); 'kci' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit' is the fastest approximation of kci (use with < 30 variables and sample size < 5000)."
     }
 }
 
@@ -606,25 +606,24 @@ Benchmarking Results
     "algorithm_name": "IAMBnPC",
     "alpha": {
         "meaning": "Desired significance level in (0, 1)",
-        "suggested_values": {
+        "available_values": {
             "default": 0.05,
             "small_sample": 0.1,
             "large_sample": 0.01
         },
-        "reasoning": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
+        "expert_suggestion": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
     },
     "indep_test": {
         "meaning": "Independence test method",
-        "suggested_values": {
+        "available_values": {
             "default": "fisherz",
             "continuous": "fisherz",
             "discrete": "chisq",
-            "mixed": "gsq",
             "robust_nonlinear": "kci",
             "fast_robust_nonlinear": "fastkci",
             "approximate_fast_nonlinear": "rcit"
         },
-        "reasoning": "Choose based on data type and hardware. 'fisherz_cpu' for linear continuous data; 'chisq_cpu' for discrete data; 'gsq' for mixed data types; 'kci' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit' is the fastest approximation of kci (use with < 30 variables and sample size < 5000)."
+        "expert_suggestion": "Choose based on data type, 'fisherz' for linear continuous data; 'chisq' for discrete data (only applied for pure discrete data); 'kci' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit' is the fastest approximation of kci (use with < 30 variables and sample size < 5000)."
     }
 }
 
