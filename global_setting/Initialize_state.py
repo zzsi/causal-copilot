@@ -113,7 +113,12 @@ def global_state_initialization(args: argparse.Namespace = None) -> GlobalState:
 
     # Extract information from user queries
     from openai import OpenAI
-    import json
+    
+    # get all available algorithms
+    algorithms = [algo.split('.')[0] for algo in os.listdir('algorithm/context/algos') if algo.endswith('.txt') and 'tagging' not in algo and 'guideline' not in algo]  
+    algorithms = ', '.join(algorithms)
+
+    print(algorithms)
 
     client = OpenAI(organization=args.organization, project=args.project, api_key=args.apikey)
     prompt = (f"Based on the query that I provided: {user_query} \n\n; "
@@ -136,10 +141,13 @@ def global_state_initialization(args: argparse.Namespace = None) -> GlobalState:
               "Options of value (str): The name of the column that represents the domain index. \n\n"
               "6. Which algorithm the user would like to use to do causal discovery:"
               "Key: 'selected_algorithm'. \n\n"
-              "Options of value (str): 'PC', 'FCI', 'CDNOD', 'GES', 'FGES', 'XGES', 'NOTEARS', 'DirectLiNGAM', 'ICALiNGAM', 'AcceleratedLiNGAM'. \n\n"
+              f"Options of value (str): {algorithms}. \n\n"
               "7. How many minutes the user can wait for the causal discovery algorithm:"
               "Key: 'waiting_minutes'. \n\n"
               "Options of value (float): A numeric value that is greater than 0. \n\n"
+              "8. Does the user accept the output graph including undirected edges/undeterministic directions:"
+              "Key: 'accept_CPDAG'. \n\n"
+              "Options of value (bool): True, False. \n\n"
               "However, for each key, if the value extracted from queries does not match provided options, or if the queries do not provide enough information and you cannot summarize them,"
               "the value for such key should be set to None! \n\n"
               "Just give me the output in a json format, do not provide other information! \n\n")
@@ -181,6 +189,10 @@ def global_state_initialization(args: argparse.Namespace = None) -> GlobalState:
         global_state.algorithm.waiting_minutes = info_extracted["waiting_minutes"]
     if info_extracted["alpha"] is not None:
         global_state.statistics.alpha = info_extracted["alpha"]
+
+    # Accept CPDAG
+    if info_extracted["accept_CPDAG"] is not None:
+        global_state.user_data.accept_CPDAG = info_extracted["accept_CPDAG"]
 
     return global_state
 

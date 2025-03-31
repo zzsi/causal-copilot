@@ -4,14 +4,21 @@ from typing import Dict, Tuple
 
 # use the local causal-learn package
 import sys
+import os
+root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+causal_learn_dir = os.path.join(root_dir, 'externals', 'causal-learn')
+if not os.path.exists(causal_learn_dir):
+    raise FileNotFoundError(f"Local causal-learn directory not found: {causal_learn_dir}, please git clone the submodule of causal-learn")
+algorithm_dir = os.path.join(root_dir, 'algorithm')
+sys.path.append(root_dir)
+sys.path.append(algorithm_dir)
+sys.path.insert(0, causal_learn_dir)
 
-sys.path.insert(0, 'causal-learn')
-sys.path.append('algorithm')
 
 from causallearn.graph.GraphClass import CausalGraph
 from causallearn.search.ConstraintBased.CDNOD import cdnod as cl_cdnod
 
-from .base import CausalDiscoveryAlgorithm
+from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
 
 class CDNOD(CausalDiscoveryAlgorithm):
@@ -23,7 +30,7 @@ class CDNOD(CausalDiscoveryAlgorithm):
             'stable': True,
             'uc_rule': 0,
             'uc_priority': 2,
-            'depth': -1,
+            'depth': 3, #-1,
             'mvcdnod': False,
             'correction_name': 'MV_Crtn_Fisher_Z',
             'background_knowledge': None,
@@ -92,6 +99,9 @@ class CDNOD(CausalDiscoveryAlgorithm):
                 # undirected edge: j -- i
                 if inferred_flat[j, i] == 0:
                     inferred_flat[i, j] = 2
+
+        # remove the domain index column
+        inferred_flat = inferred_flat[:-1, :-1]
         return inferred_flat
 
     def test_algorithm(self):
@@ -130,10 +140,15 @@ class CDNOD(CausalDiscoveryAlgorithm):
 
         # Use GraphEvaluator to compute metrics
         evaluator = GraphEvaluator()
-        metrics = evaluator.compute_metrics(gt_graph, adj_matrix[:-1, :-1])
+        metrics = evaluator.compute_metrics(gt_graph, adj_matrix)
 
         print("\nMetrics:")
         print(f"F1 Score: {metrics['f1']:.4f}")
         print(f"Precision: {metrics['precision']:.4f}")
         print(f"Recall: {metrics['recall']:.4f}")
         print(f"SHD: {metrics['shd']:.4f}")
+
+
+if __name__ == "__main__":
+    cdnod = CDNOD()
+    cdnod.test_algorithm()

@@ -12,6 +12,8 @@ Current algorithms implemented for usage. Note that some algorithms are GPU acce
 - ICALiNGAM
 - FGES
 - XGES
+- AcceleratedPC (GPU-accelerated)
+- Hybrid
 
 ## Domain Knowledge about Algorithm Selection
 

@@ -198,12 +198,15 @@ def parse_mode_query(message, chat_history, download_btn, REQUIRED_INFO, CURRENT
 def parse_var_selection_query(message, chat_history, download_btn, next_step, args, global_state, REQUIRED_INFO, CURRENT_STAGE):
     class VarList(BaseModel):
         variables: list[str]
-    prompt = "You are a helpful assistant, please extract variable names as a list. \n"
+    prompt = "You are a helpful assistant, please help me to understand user's need and extract variable names from their message."
+    "I ask them whether in a dataset they have important features"
+    "If they say 'all of them', 'all' or something like that, please save all the variable names in the list."
+    "If they provide some variable names, please extract variable names as a list. \n"
     "If there is only one variable, also save it in list variables"
     f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
     "If there are 'all of them' or 'all', please return all variables."
     "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
-    "If you cannot find variable names, just return an empty list."
+    "If they say 'no', 'none', 'nothing' or something like that, just return an empty list."
     parsed_vars = LLM_parse_query(VarList, prompt, message, args)
     var_list = parsed_vars.variables
     if var_list == []:

@@ -1,0 +1,25 @@
+{
+  "algorithm_name": "IAMBnPC",
+  "alpha": {
+    "meaning": "Desired significance level in (0, 1)",
+    "suggested_values": {
+      "default": 0.05,
+      "small_sample": 0.1,
+      "large_sample": 0.01
+    },
+    "reasoning": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
+  },
+  "indep_test": {
+    "meaning": "Independence test method",
+    "suggested_values": {
+      "default": "fisherz",
+      "continuous": "fisherz",
+      "discrete": "chisq",
+      "mixed": "gsq",
+      "robust_nonlinear": "kci",
+      "fast_robust_nonlinear": "fastkci",
+      "approximate_fast_nonlinear": "rcit"
+    },
+    "reasoning": "Choose based on data type: 'fisherz' for linear continuous; 'chisq' for discrete; 'gsq' for simplied mixed data types; 'kci' for general nonlinear data; 'fastkci' is a fast version of kci for nonlinear data; 'rcit' is a fast version of kci approximation for nonlinear data."
+  }
+} 

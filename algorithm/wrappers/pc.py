@@ -4,14 +4,22 @@ from typing import Dict, Tuple
 
 # use the local causal-learn package
 import sys
+import os
+root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+causal_learn_dir = os.path.join(root_dir, 'externals', 'causal-learn')
+if not os.path.exists(causal_learn_dir):
+    raise FileNotFoundError(f"Local causal-learn directory not found: {causal_learn_dir}, please git clone the submodule of causal-learn")
+algorithm_dir = os.path.join(root_dir, 'algorithm')
+sys.path.append(root_dir)
+sys.path.append(algorithm_dir)
+sys.path.insert(0, causal_learn_dir)
 
-sys.path.insert(0, 'causal-learn')
-sys.path.append('algorithm')
+
 
 from causallearn.graph.GraphClass import CausalGraph
 from causallearn.search.ConstraintBased.PC import pc as cl_pc
 
-from .base import CausalDiscoveryAlgorithm
+from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
 
 class PC(CausalDiscoveryAlgorithm):
@@ -20,7 +28,7 @@ class PC(CausalDiscoveryAlgorithm):
         self._params = {
             'alpha': 0.05,
             'indep_test': 'fisherz',
-            'depth': -1,
+            'depth': 3, # -1,
             'stable': True,
             'uc_rule': 0,
             'uc_priority': -1,
