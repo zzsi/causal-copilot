@@ -6,7 +6,7 @@ import traceback
 from preprocess.stat_info_functions import *
 from openai import OpenAI
 from pydantic import BaseModel
-from typing import List, Union, Any, Optional
+from typing import List, Union, Any, Optional, Literal
 import torch 
 from dotenv import load_dotenv
 load_dotenv('/Users/wwy/Documents/Project/Causal-Copilot/.env')
@@ -120,32 +120,50 @@ def meaningful_feature_query(global_state, message, chat_history, download_btn, 
 
 
 def heterogeneity_query(global_state, message, chat_history, download_btn, CURRENT_STAGE,args):
-    class VarList(BaseModel):
-        variables: list[str]
+    class DomainIndexResponse(BaseModel):
+        exist_domain_index: bool 
+        candidate_domain_index: Optional[str]  
+        
     prompt =  "Please mention heterogeneity if there is any. \n "\
     "**Heterogeneity means that the patterns or trends in the data change over time, instead of staying consistent throughout the entire period.**"\
     "If there is no indicator of heterogeneity, please return an empty list, otherwise please provide the column name of this indicator in the list. \n"\
     "You should only choose 0 or 1 variable as the heterogeneity indicator. The name must be among the features of the dataset!\n"\
     "These are features in the dataset:\n"\
     f"{global_state.user_data.raw_data.columns}"
-    parsed_vars = LLM_parse_query(VarList, "You are a helpful assistant, help me to answer this question", prompt)
-    var_list = parsed_vars.variables
-    missing_vars = [var for var in var_list if var not in global_state.user_data.raw_data.columns and var != '']
-    final_hte_list = list(set(var_list) - set(missing_vars))
-    if len(final_hte_list) != 0:
-        global_state.statistics.heterogeneous = True
-        global_state.statistics.domain_index = final_hte_list[0]
-        global_state.user_data.important_features.append(final_hte_list[0])
-        # chat_history.append((None, "Heterogeneity Check Summary: \n"\
-        #                      f"✅ The variable {global_state.statistics.domain_index} is detected as a heterogeneity indicator in your dataset."))
+    "**Definition**: A heterogeneous domain index is a column that indicates which domain, environment, or context each data point belongs to. "\
+    "It is often used in causal discovery frameworks like CD-NOD to detect changes in distributions across domains (e.g., time, location, experiment condition).\n\n"\
+    "[TASK]\n"
+    "1. Identify if any column is a good candidate for the domain index, if yes, set exist_domain_index to be True; If no, set exist_domain_index to be false\n"
+    "2. If you set exist_domain_index to be True, choose only one column. The column name must be among the given column name list\n"
+    "[Dataset Metadata]\n"
+    
+    col_types, _ = data_preprocess(global_state.user_data.raw_data)
+    for col in global_state.user_data.raw_data.columns:
+        col_line = f"- Column name: {col} (type: {col_types[col]}) "
+        if col_types[col] == "Category":
+            unique_num = global_state.user_data.raw_data[col].nunique()
+            col_line += f"Unique values: {unique_num}"
+        prompt += col_line + "\n"
+    
+    parsed_vars = LLM_parse_query(DomainIndexResponse, "You are a helpful assistant, specifically checking for the presence of a heterogeneous domain index in a dataset.", prompt)
+    exist_domain_index, candidate_domain_index = parsed_vars.exist_domain_index, parsed_vars.candidate_domain_index
+    if exist_domain_index:
+        if candidate_domain_index and candidate_domain_index in global_state.user_data.raw_data.columns:
+            global_state.statistics.heterogeneous = True
+            global_state.statistics.domain_index = candidate_domain_index
+            global_state.user_data.important_features = [var for var in global_state.user_data.important_features if var != candidate_domain_index]
+            global_state.user_data.selected_features = [var for var in global_state.user_data.selected_features if var != candidate_domain_index]
+        else:
+            global_state.statistics.heterogeneous = False
+            global_state.statistics.domain_index = None
     else:
         global_state.statistics.heterogeneous = False
-        # chat_history.append((None, "Heterogeneity Check Summary: \n"\
-        #                      "✅ There is no heterogeneity indicator detected in your dataset."))
+        global_state.statistics.domain_index = None
+        
     CURRENT_STAGE = 'accept_CPDAG'
-    return var_list, chat_history, download_btn, global_state, CURRENT_STAGE
+    return chat_history, download_btn, global_state, CURRENT_STAGE
 
-def parse_preliminary_feedback(global_state, message):
+def parse_preliminary_feedback(chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE, message):
     print(message)
     text = ""
     if not 'no' in message.lower():
@@ -184,6 +202,8 @@ def parse_preliminary_feedback(global_state, message):
                     global_state.statistics.domain_index = domin_index
                     # global_state.user_data.important_features.expand(domin_index)
                     text += f"- ✅ Adjusted Domain Index: {domin_index}\n"
+                    global_state.user_data.important_features = [var for var in global_state.user_data.important_features if var != domin_index]
+                    global_state.user_data.selected_features = [var for var in global_state.user_data.selected_features if var != domin_index]
                 elif domin_index and domin_index not in global_state.user_data.raw_data.columns:
                     text += f"- ❌ The provided domain index {domin_index} is not in the dataset, we do not adjust it.\n"
             else:
@@ -195,9 +215,8 @@ def parse_preliminary_feedback(global_state, message):
             global_state.user_data.nan_indicator = missing_value
             global_state, nan_detect = numeric_str_nan_detect(global_state)
             if nan_detect:
-                info, global_state, CURRENT_STAGE = drop_spare_features(global_state)
-                # text += f"- ✅ Adjusted Missing Ratio: {info}\n"
-                test += info
+                info, global_state, CURRENT_STAGE = drop_spare_features(chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE)
+                text += f"- ✅ Adjusted Missing Ratio: \n {info}\n"
     return global_state, text
 
 def parse_reupload_query(message, chat_history, download_btn, REQUIRED_INFO, CURRENT_STAGE, next_step):
@@ -306,25 +325,38 @@ def LLM_var_selection(message, global_state, chat_history):
 
         
 def parse_ts_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
-    message = message.strip()
-    if message.lower() == 'no':
-        global_state.statistics.time_series = False
-        CURRENT_STAGE = 'ts_check_done'
-    elif message.lower() == 'yes':
+    class TimeSeriesInput(BaseModel):
+        is_time_series: bool
+        time_lag: Union[int, Literal['continue'], None]
+    prompt = """
+            You are helping parse a user's input regarding time-series settings for their dataset.
+
+            The user is asked to specify:
+
+            1. Whether their dataset is time-series.
+            2. If it is time-series:
+            - They can provide a specific integer `time_lag`, or
+            - They can input `'continue'` to let the system determine the lag automatically.
+            3. If it is NOT a time-series dataset, they must leave `time_lag` as `None`.
+
+            Please extract two fields from the user's input and return them in JSON format:
+            - `is_time_series`: a boolean (`true` or `false`)
+            - `time_lag`: an integer, `"continue"`, or `None`
+
+            ⚠️ Rules:
+            - If `is_time_series` is false, `time_lag` must be `None`.
+            - If `is_time_series` is true, `time_lag` must be either an integer or `"continue"`.
+            """
+    parsed_response = LLM_parse_query(TimeSeriesInput, prompt, message)
+    is_time_series, time_lag = parsed_response.is_time_series, parsed_response.time_lag
+    
+    if is_time_series:
         global_state.statistics.time_series = True
-        CURRENT_STAGE = 'ts_check_done'
-    elif message == 'continue' or message == '':
-        CURRENT_STAGE = 'ts_check_done'
-        global_state.statistics.time_series = True
-    else:
-        try:
-            time_lag = int(message)
+        if time_lag is not None and time_lag != 'continue':
             global_state.statistics.time_lag = time_lag
-            chat_history.append((None, f"✅ We successfully set your time lag to be {time_lag}."))
-            CURRENT_STAGE = 'ts_check_done'
-            global_state.statistics.time_series = True
-        except: 
-            chat_history.append((None, f"❌ We cannot parse your query, please follow the template and retry."))
+    else:
+        global_state.statistics.time_series = False
+    CURRENT_STAGE = 'ts_check_done'
     return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
 def parse_sparsity_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
@@ -458,8 +490,8 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
             class Param_Selector(BaseModel):
                 param_keys: list[str]
                 param_values: list[Union[str, int, float]]
-                valid_params: bool = True
-                error_messages: list[str] = []
+                valid_params: bool
+                error_messages: str
             with open("Gradio/parameter_range_context.json", "r") as f:
                 param_specs = json.load(f)
 
@@ -479,12 +511,13 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
             **Task**
             1. Parse the user's input to identify parameter keys and their corresponding values.
             2. Save parameter keys in the list `param_keys` and values in the list `param_values`. The order should match between the two lists.
-            3. For each parameter:
+            3. Check each parameter one by one:
             - Convert numeric values to the appropriate type (int or float) based on the parameter's expected type
             - Validate that string values match one of the allowed options for string parameters
             - Verify numeric values fall within the acceptable range for the parameter
             - If arrays are expected (e.g., hidden_dims), parse them correctly
-            4. If the parameter value is invalid, set `valid_params` to False and add an appropriate error message to `error_messages` explaining why the value is invalid.
+            4. If the parameter value is valid, set `valid_params` to True and leave `error_messages` as an empty string.
+            4. If the parameter value is invalid, set `valid_params` to False and add an appropriate error message to `error_messages` explaining why the value is invalid, and instruct user what values they should input.
             5. If the user does not specify any parameters, return empty lists for both param_keys and param_values.
 
             Examples of validation:
@@ -496,7 +529,9 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
             """
             parsed_response = LLM_parse_query(Param_Selector, prompt, message)
             param_keys, param_values, valid_params, error_messages = parsed_response.param_keys, parsed_response.param_values, parsed_response.valid_params, parsed_response.error_messages
-            specified_params = {param_keys[i]: param_values[i] for i in range(len(param_keys))}
+            specified_params = {param_keys[i].lower(): param_values[i] for i in range(len(param_keys))}
+            print('specified_params',specified_params)
+            print('valid_params', valid_params)
             if valid_params:
                 print('specified_params',specified_params)
                 original_params = global_state.algorithm.algorithm_arguments_json['hyperparameters']
@@ -517,8 +552,7 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
                 CURRENT_STAGE = 'algo_running' 
             else:
                 chat_history.append((None, "❌ The specified parameters are not correct, the following is the error message: \n"))
-                for error in error_messages:
-                    chat_history.append((None, error))
+                chat_history.append((None, error_messages))
                 return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
         except Exception as e:
             print(e)

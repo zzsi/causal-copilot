@@ -1,6 +1,6 @@
-You will conduct causal discovery on the Tabular Dataset ./demo_data/20250329_100726/house_price/house_price.csv containing the following Columns:
+You will conduct causal discovery on the Tabular Dataset ./demo_data/20250330_214809/CCS_Data/CCS_Data.csv containing the following Columns:
 
-Id	MSSubClass	MSZoning	LotFrontage	LotArea	Street	LotShape	LandContour	Utilities	LotConfig	LandSlope	Neighborhood	Condition1	Condition2	BldgType	HouseStyle	OverallQual	OverallCond	YearBuilt	YearRemodAdd	RoofStyle	RoofMatl	Exterior1st	Exterior2nd	MasVnrArea	ExterQual	ExterCond	Foundation	BsmtQual	BsmtCond	BsmtExposure	BsmtFinType1	BsmtFinSF1	BsmtFinType2	BsmtFinSF2	BsmtUnfSF	TotalBsmtSF	Heating	HeatingQC	CentralAir	Electrical	1stFlrSF	2ndFlrSF	LowQualFinSF	GrLivArea	BsmtFullBath	BsmtHalfBath	FullBath	HalfBath	BedroomAbvGr	KitchenAbvGr	KitchenQual	TotRmsAbvGrd	Functional	Fireplaces	GarageType	GarageYrBlt	GarageFinish	GarageCars	GarageArea	GarageQual	GarageCond	PavedDrive	WoodDeckSF	OpenPorchSF	EnclosedPorch	3SsnPorch	ScreenPorch	PoolArea	MiscVal	MoSold	SaleType	SaleCondition	SalePrice	domain_index
+Cement	Blast_furnace_slag	Fly_ash	Water	Superplasticizer	Coarse_aggregate	Fine_aggregate	Age	Compressive_strength
 
 The Detailed Background Information is listed below:
 
@@ -10,30 +10,32 @@ The Statistics Information about the dataset is:
 
 The dataset has the following characteristics:
 
-Data Type: The overall data type is Mixture.
+Data Type: The overall data type is Continuous.
 
-The sample size is 1460 with 74 features. This dataset is not time-series data. 
+The sample size is 1030 with 9 features. This dataset is not time-series data. 
 
-Data Quality: There are missing values in the dataset.
+Data Quality: There are no missing values in the dataset.
 
 Statistical Properties:
 - Linearity: The relationships between variables are not predominantly linear.
 - Gaussian Errors: The errors in the data do not follow a Gaussian distribution.
-- Heterogeneity: The dataset is heterogeneous. 
+- Heterogeneity: The dataset is not heterogeneous. 
 
-- Domain Index: YrSold
+
+
+
 
 Based on the above information, please select the best-suited algorithm from the following candidate (the order of the algorithm candidates is not important):
 
-dict_keys(['CDNOD', 'InterIAMB', 'IAMBnPC'])
+dict_keys(['CDNOD', 'PC', 'InterIAMB'])
 
 ===============================================
 Note that the user can only wait for 1440.0 minutes for the algorithm execution, please ensure the time cost of the selected algorithm would not exceed it!
 The estimated time costs of the following algorithms using linear estimation methods (e.g. Fisherz for constraint-based methods, BIC for score-based methods) are below. Use it as a reference for the algorithm runtime comparison, note that the absolute value might changes significantly when the estimation methods are not linear (e.g. KCI for constraint-based methods, Generalized score for score-based methods). Consider the time cost wisely when selecting the algorithm, it is critical but less important than the performance when the time cost does not exceed the waiting time. As long as the timecost difference is not that large 1440.0, you should pivot more on the performance.
 
-CDNOD: 1.5 minutes
-InterIAMB: 7.5 minutes
-IAMBnPC: 9.2 minutes
+CDNOD: 1.3 minutes
+PC: 1.0 minutes
+InterIAMB: 1.0 minutes
 
 At the same time, be careful about the current device availability for GPU/CUDA acceleration. Note that some algorithm settings would need GPU to run, which could be a indirect limitation on the algorithm application potential:
 
@@ -263,6 +265,226 @@ Benchmarking Results
 
 ======================================
 
+# PC
+
+Below is a seven-dimension profile of the PC (Peter–Clark) algorithm, integrating (1) the hyperparameter file, (2) the benchmarking results, and (3) external knowledge about the algorithm and its typical use cases. References or paraphrased remarks from the external sources are indicated where relevant.
+
+────────────────────────────────────────────────────────────────────────
+1. HYPER-PARAMETERS SENSITIVITY
+────────────────────────────────────────────────────────────────────────
+• Number of Key Hyperparameters  
+  - The PC algorithm has three main hyperparameters:  
+    1. α (alpha): Significance level for conditional independence tests.  
+    2. indep_test: Choice of conditional independence test (e.g., Fisher's Z, chi-square, G-square, KCI variants) with both CPU and GPU implementations.  
+    3. depth: Maximum depth for the skeleton search phase.  
+
+• Tuning Difficulty  
+  - α is typically the most critical parameter, with recommended defaults in the provided file (e.g., 0.05 for moderate sample sizes, 0.1 for smaller samples, 0.01 for very large samples). These guidelines simplify tuning for different dataset sizes.  
+  - The choice of indep_test can be straightforward (Fisher's Z for continuous data, chi-square for discrete data, etc.), with GPU-accelerated options now available for significantly improved performance. The selection includes 'fisherz_cpu'/'fisherz_gpu' for continuous data, 'chisq_cpu'/'chisq_gpu' for discrete data, and 'cmiknn_gpu' for nonparametric testing with GPU acceleration.
+  - depth has a default of -1 (unlimited), but it can be restricted to reduce runtime for large graphs. The suggested rule of thumb scales with the number of nodes, setting smaller depths for larger graphs.  
+
+• Sensitivity  
+  - Small changes in α can produce noticeable effects on edge detection: lower α yields more conservative edge selection (fewer false positives) but may lead to more false negatives.  
+  - Shifting from an unlimited depth (depth = -1) to a restricted depth (like 1 to 3) can significantly speed up the search on large graphs but may miss subtler causal relationships.  
+  - Changing the independence test (e.g., from a linear Fisher test to a non-parametric test like KCI or cmiknn_gpu) can likewise alter both runtime and the ability to capture non-linear causal links.  
+
+• Critique/Extension  
+  - Parameters that control graph-search complexity (depth) can drastically reduce runtime but may compromise completeness in highly connected graphs.  
+  - The α threshold has more direct influence on statistical testing; even small shifts in α can change the number of edges found. Hence, domain knowledge is often helpful to choose a good α.  
+  - The availability of GPU-accelerated tests provides a significant performance boost without sacrificing accuracy, making PC more viable for larger datasets.
+
+────────────────────────────────────────────────────────────────────────
+2. ROBUSTNESS & SCALABILITY
+────────────────────────────────────────────────────────────────────────
+• Tolerance to Bad Data Quality  
+  - Benchmarks (File #2) indicate that PC's performance tends to degrade when data quality drops (e.g., missing data or measurement error). In fact, PC ranked relatively low in measurement error and missing data tolerance, suggesting it does not handle either type of bad data as robustly as some other methods.  
+  - It lacks built-in methods for imputation; in practice, users might preprocess missing values or use more advanced PC variants (e.g., PC-missing).  
+
+• Tolerance to Sparse vs. Dense Connected Systems  
+  - PC often performs better on sparse systems, since the number of conditional independence tests remains more manageable. For dense graphs, the algorithm may require many tests, increasing the risk of both false positives and elevated runtime.  
+  - From a benchmarking standpoint, when confronted with moderately dense networks, performance declines more in runtime than in accuracy, highlighting the combinatorial explosion of tests in denser graphs.  
+
+• Scalability  
+  - With the integration of GPU-accelerated independence tests ('fisherz_gpu', 'chisq_gpu', and 'cmiknn_gpu'), PC's scalability has significantly improved. The GPU tests provide extreme speedups compared to their CPU counterparts, especially for large datasets.
+  - According to the hyperparameter file, 'cmiknn_gpu' offers a 1000x speedup compared to CPU-based 'kci' with comparable accuracy, making nonparametric testing viable for much larger datasets.
+  - Even with GPU acceleration, restricting depth remains an important strategy for very large graphs to manage computational complexity.
+
+• Critique/Extension  
+  - Parallel-PC implementations exist and can be employed on multi-core hardware to improve speed.  
+  - Using approximation strategies (like a lower maximum depth or partitioning variables) can be beneficial when the dataset contains hundreds or thousands of variables, though these techniques might weaken correctness guarantees.  
+  - The GPU-accelerated tests make PC much more practical for large-scale applications, addressing one of its traditional limitations.
+
+────────────────────────────────────────────────────────────────────────
+3. MIXED DATA & COMPLEX FUNCTIONS
+────────────────────────────────────────────────────────────────────────
+• Noise Type  
+  - The PC algorithm's traditional setup often presupposes approximately Gaussian errors for continuous data, but other independence tests allow for broader noise distributions.  
+  - Benchmarks (File #2) suggested that PC performed somewhat lower when confronted with more diverse or non-Gaussian noise, although advanced tests (KCI, RCIT, and now cmiknn_gpu) can address non-linearity.  
+
+• Mixed Data (Continuous & Discrete)  
+  - PC can integrate different conditional independence tests: Fisher's Z or partial correlation for continuous variables; chi-square or G-square for discrete; or a mix for hybrid data.  
+  - Some PC implementations provide direct support for mixed data via specialized tests like G-square, allowing simultaneous handling of continuous and categorical variables.  
+  - Both CPU and GPU implementations are available for different data types, with 'fisherz_cpu'/'fisherz_gpu' for continuous data and 'chisq_cpu'/'chisq_gpu' for discrete data.
+
+• Heterogeneous Data  
+  - Benchmark results (File #2) show it scored in the middle ranges under "Heterogeneity." It can handle moderate changes in distribution across variables, provided a suitable test is chosen.  
+  - Marked shifts across subsets of data may require domain-driven adjustments or advanced versions (like FCI for partial latent confounding).  
+
+• Complex Functional Forms  
+  - The standard PC algorithm is tailored for linear (or near-linear) dependencies, but employing kernel-based tests can detect non-linear relationships.
+  - The GPU-accelerated 'cmiknn_gpu' test provides a powerful nonparametric option for detecting complex, non-linear relationships with significantly improved computational efficiency compared to CPU-based alternatives like 'kci_cpu'.
+  - Other non-linear options include 'fastkci_cpu' (faster than kci) and 'rcit_cpu' (fastest approximation of kci), each with their own trade-offs between speed and accuracy.
+
+• Critique/Extension  
+  - Users often underestimate how crucial the independence test choice is when dealing with non-linear patterns. A robust non-parametric test can significantly improve detection of non-linear causal links.  
+  - Overfitting concerns can arise in small samples if a highly flexible test is used without proper regularization or multiple testing corrections.  
+  - The addition of GPU-accelerated tests, especially 'cmiknn_gpu', makes non-linear causal discovery much more practical for larger datasets.
+
+────────────────────────────────────────────────────────────────────────
+4. COMPUTATIONAL COMPLEXITY
+────────────────────────────────────────────────────────────────────────
+• Theoretical Time Complexity  
+  - The PC algorithm can have a worst-case time complexity of <temp>[O(n^(k+2))]</temp>, where n is the number of variables and k is the maximum degree of a node in the true graph.  
+
+• Variability in Practical Usage  
+  - Despite the polynomial (sometimes high-order) worst-case bound, many real-world graphs are sparse, so runtime is often much lower.  
+  - Increasing depth or lowering α can drive up the number of tests, and thus runtime can spike. Conversely, restricting depth dampens the combinatorial explosion but risks missing some edges.  
+  - The GPU-accelerated tests ('fisherz_gpu', 'chisq_gpu', 'cmiknn_gpu') dramatically reduce the practical runtime, especially for large datasets, making PC much more viable for real-world applications.
+
+• Critique/Extension  
+  - The worst-case scenario might be rarely encountered in practical sparse settings. However, in denser structures or with large depth parameters, runtime can indeed grow significantly.  
+  - GPU acceleration provides a substantial practical improvement in computational efficiency without changing the theoretical complexity, making PC more competitive with other algorithms for large-scale causal discovery.
+
+────────────────────────────────────────────────────────────────────────
+5. INTERPRETABILITY
+────────────────────────────────────────────────────────────────────────
+• Output Format  
+  - PC outputs a CPDAG (Completed Partially Directed Acyclic Graph). This graph shows which edges are definitely directed, as well as edges uncertain about orientation.  
+  - Some implementations also provide adjacency matrices with confidence measures (e.g., p-values).  
+
+• Strength of the Output Format  
+  - CPDAGs are considered quite interpretable: they clarify which directions are inferred and which remain undetermined.  
+  - Many software packages (e.g., Tetrad, pcalg) provide visualization tools to help interpret a CPDAG.  
+
+• Limitations of the Output Format  
+  - Edges in the "partially" directed region can generate ambiguity, as the algorithm leaves some edges unoriented if the data are insufficiently informative.  
+  - In high-dimensional or complex domains, the resulting graph might still be large and cumbersome to interpret without additional domain knowledge.  
+
+• Critique/Extension  
+  - Domain experts frequently refine or manually orient ambiguous edges, especially in specialized fields such as genomics or neuroscience.  
+  - Some suggest performing a stability or bootstrap analysis to highlight edges that are consistently inferred across subsamples.  
+
+────────────────────────────────────────────────────────────────────────
+6. ASSUMPTIONS
+────────────────────────────────────────────────────────────────────────
+• Critical Assumptions  
+  - Causal Markov condition: Each variable is conditionally independent of its non-descendants, given its parents.  
+  - Faithfulness: All and only the conditional independencies in the true structure are reflected in the data.  
+  - Causal sufficiency: No unobserved confounders of the measured variables.  
+  - Acyclicity: The underlying causal structure forms a Directed Acyclic Graph (DAG).  
+
+• Violation Impact  
+  - Missing confounders can lead to spurious or missing edges.  
+  - Unfaithful data-generating mechanisms can hide true edges or create extra independencies.  
+  - Feedback loops or cyclic structures break the acyclicity assumption, causing the algorithm to infer incomplete or incorrect edges.  
+
+• Critique/Extension  
+  - When hidden variable confounding is suspected, variants like FCI (Fast Causal Inference) or RFCI are recommended instead of basic PC.  
+  - Many real-world systems include some feedback or non-stationary behavior, so partial violations are not uncommon. Users often need to test sensitivity or adopt extended algorithms.  
+
+────────────────────────────────────────────────────────────────────────
+7. (OPTIONAL) REAL-WORLD BENCHMARKS
+────────────────────────────────────────────────────────────────────────
+• Performance on Real Datasets  
+  - Across a variety of real datasets (e.g., gene-expression data, brain connectivity data), PC tends to perform competitively for structure learning, provided the data are not extremely noisy or riddled with missing values.  
+  - In some evaluations, PC was among the more accurate approaches for sparse graphs but was sometimes outperformed by score-based or hybrid methods on very noisy or dense data.  
+
+• Practical Tips  
+  - Combining PC with domain knowledge (e.g., known biological pathways) often yields improved orientation of edges.  
+  - Limiting depth can drastically reduce computation time for high-dimensional data, but practitioners must confirm that the trade-off in missed edges is acceptable.  
+  - Discussion forums and user groups consistently recommend verifying the sample size is sufficient for the chosen α level, or considering small-sample corrections if data are limited.  
+  - For large datasets or when dealing with non-linear relationships, GPU-accelerated tests ('fisherz_gpu', 'chisq_gpu', 'cmiknn_gpu') are strongly recommended for their significant performance benefits.
+
+────────────────────────────────────────────────────────────────────────
+CONCLUSION
+────────────────────────────────────────────────────────────────────────
+The PC algorithm remains a flagship approach in constraint-based causal discovery, prized for its interpretability (CPDAG output) and relatively direct hyperparameter tuning guidelines (notably α and depth). With the integration of GPU-accelerated independence tests, it has become much more scalable and practical for large datasets. It is best applied in scenarios where:  
+• The graph is not excessively dense.  
+• The data generally meet Markov and faithfulness assumptions.  
+• There are no severe missing data or measurement error problems, or these issues are pre-processed/handled externally.  
+• GPU acceleration is available for large datasets or when using nonparametric tests for non-linear relationships.
+
+Recent developments in GPU acceleration, alternative independence tests, and specialized PC variants help address non-linearities, mixed data, and large-scale settings. The 'cmiknn_gpu' test in particular provides a 1000x speedup for nonparametric testing compared to CPU-based alternatives, making PC much more competitive for complex, non-linear causal discovery tasks. Nonetheless, potential users must keep in mind the algorithm's sensitivity to significance thresholds, data assumptions, and the combinatorial explosion of conditional tests in bigger or denser networks.
+
+────────────────────────────────────────────────────────
+Benchmarking Results
+────────────────────────────────────────────────────────
+
+• Comparative Performance
+  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics, which are represented as level scores from 1-5, with 5 being the best.
+  – Levels scores of composite metrics combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+[NOTE] The ranking is smaller, the better. The level score is higher, the better.
+
+• Algorithm Rankings
+
+| Scenario | Rank (Mean) | Rank (Std Dev) | Performance (Level) | Efficiency (Level) | Composite (Level) |
+|----------|-----------|---------|-------------|------------|------------|
+| Scalability | 8.1 | 2.47 | 3.0 | 5.0 | 3.0 |
+| Heterogeneity | 8.2 | 1.30 | 3.0 | 5.0 | 3.0 |
+| Measurement Error | 9.0 | 0.00 | 3.0 | 5.0 | 3.0 |
+| Noise Type | 10.5 | 1.50 | 2.0 | 5.0 | 2.0 |
+| Missing Data | 6.5 | 1.80 | 3.0 | 4.0 | 4.0 |
+| Edge Probability | 7.7 | 3.40 | 3.0 | 5.0 | 3.0 |
+| Discrete Ratio | 10.0 | 0.82 | 3.0 | 5.0 | 3.0 |
+
+• Analysis
+
+  – Overall mean ranking across 7 scenarios: 8.58
+  – Average standard deviation: 1.61
+
+
+## Supported hyperparameters: {
+    "algorithm_name": "PC",
+    "alpha": {
+        "meaning": "Desired significance level in (0, 1)",
+        "available_values": {
+            "default": 0.05,
+            "small_sample": 0.1,
+            "large_sample": 0.01
+        },
+        "expert_suggestion": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
+    },
+    "indep_test": {
+        "meaning": "Independence test method",
+        "available_values": {
+            "default": "fisherz_cpu",
+            "continuous_cpu": "fisherz_cpu",
+            "continuous_gpu": "fisherz_gpu",
+            "discrete_cpu": "chisq_cpu",
+            "discrete_gpu": "chisq_gpu",
+            "robust_nonlinear_cpu": "kci_cpu",
+            "robust_nonlinear_gpu": "cmiknn_gpu",
+            "fast_robust_nonlinear_cpu": "fastkci_cpu",
+            "approximate_fast_nonlinear_cpu": "rcit_cpu"
+        },
+        "expert_suggestion": "Choose based on data type and hardware. CPU TESTS: 'fisherz_cpu' for linear continuous data; 'chisq_cpu' for discrete data (only applied for pure discrete data); 'kci_cpu' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci_cpu' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit_cpu' is the fastest approximation of kci (use with < 30 variables and sample size < 5000). GPU TESTS: 'fisherz_gpu' and 'chisq_gpu' (only applied for pure discrete data) work similarly but are extremely fast because of GPU's super parallel computing; 'cmiknn_gpu' is a GPU-accelerated nonparametric test that provides 1000x speedup compared to CPU-based 'kci' with comparable accuracy. GPU acceleration is strongly recommended for large datasets."
+    },
+    "depth": {
+        "meaning": "Maximum depth for skeleton search",
+        "available_values": {
+            "default": -1,
+            "small_graph": 6,
+            "medium_graph": 4,
+            "large_graph": 2,
+            "extra_large_graph": 1
+        },
+        "expert_suggestion": "Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 1-3) can significantly speed up the algorithm at the cost of some accuracy. A graph with node number < 10, use depth 6; A graph with node number 10 - 25, use depth 4; A graph with node number 25-50, use depth 2; A graph with node number > 50, use depth 1."
+    }
+}
+
+======================================
+
 # InterIAMB
 
 Below is an in-depth profile of InterIAMB, organized around the seven dimensions (or “degrees”) specified in the meta-prompt. The following draws on the provided hyperparameter definitions, the comparative benchmarking results, external online information about InterIAMB, and general knowledge of Markov blanket (MB) and causal discovery methods.
@@ -421,189 +643,6 @@ Benchmarking Results
 
 ## Supported hyperparameters: {
     "algorithm_name": "InterIAMB",
-    "alpha": {
-        "meaning": "Desired significance level in (0, 1)",
-        "available_values": {
-            "default": 0.05,
-            "small_sample": 0.1,
-            "large_sample": 0.01
-        },
-        "expert_suggestion": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
-    },
-    "indep_test": {
-        "meaning": "Independence test method",
-        "available_values": {
-            "default": "fisherz",
-            "continuous": "fisherz",
-            "discrete": "chisq",
-            "robust_nonlinear": "kci",
-            "fast_robust_nonlinear": "fastkci",
-            "approximate_fast_nonlinear": "rcit"
-        },
-        "expert_suggestion": "Choose based on data type, 'fisherz' for linear continuous data; 'chisq' for discrete data (only applied for pure discrete data); 'kci' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit' is the fastest approximation of kci (use with < 30 variables and sample size < 5000)."
-    }
-}
-
-======================================
-
-# IAMBnPC
-
-Below is a comprehensive seven-dimensional profile of the IAMBnPC algorithm, integrating the provided hyperparameter specifications, benchmarking statistics, and external/archival information about how this algorithm operates in practice.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. Hyper-Parameters Sensitivity
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• Number of Key Hyperparameters  
-  - Based on the provided hyperparameter dictionary (File #1) and external sources (File #3), IAMBnPC has two primary hyperparameters that most strongly affect results:  
-    1) α (alpha), the significance level for independence testing.  
-    2) The independence test selection (indep_test), which can vary (fisherz, chisq, etc.) depending on data type.  
-  - Some implementations also expose a “max.sx” parameter (often described in community documentation and academic references) that controls the maximum conditioning set size, which can be crucial in higher-dimensional setups.
-
-• Tuning Difficulty  
-  - The significance level (alpha) has suggested defaults (e.g., 0.05 for moderate samples, 0.1 for smaller, 0.01 for very large samples) (File #1). These guidelines simplify tuning for standard use cases, but domain sense or iterative experimentation is beneficial for optimal results.  
-  - The independence test parameter (indep_test) has clear default recommendations (fisherz for continuous data, chisq for discrete, etc.). In practice, a domain expert or an automated tool can select tests effectively once the data types (continuous, discrete, or mixed) and anticipated nonlinearities are identified.  
-  - max.sx requires more advanced tuning as it directly influences computational effort and can demand deeper domain knowledge to avoid overly large conditioning sets.
-
-• Sensitivity  
-  - Small changes in alpha can noticeably alter the sparsity of the discovered structure: lowering alpha (e.g., from 0.05 to 0.01) typically yields fewer edges, while raising it runs the risk of extra false positives.  
-  - Switching from a linear independence test (e.g., fisherz) to a nonlinear test (e.g., kci) can significantly extend runtime but often improves detection of complex relationships. Benchmarks (File #2) show that more robust or nonlinear tests can bring moderate decreases in efficiency but may help maintain performance under complex data conditions.
-
-• Critique/Extension  
-  - Parameters like alpha relate primarily to statistical tests, determining how conservative or permissive the algorithm is in drawing edges.  
-  - By contrast, parameters such as max.sx or the choice of test method can have a major bearing on computational complexity in the graph-search phase. Tuning each in tandem is key to balancing runtime and accuracy.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2. Robustness & Scalability
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• Tolerance to Bad Data Quality  
-  - Missing Data: IAMBnPC does not have a specialized built-in mechanism for handling missingness; most implementations rely on either casewise deletion or test-specific adjustments. According to benchmark observations (File #2), the algorithm’s performance in scenarios with moderate missing data typically remains acceptable, but more severe missingness can degrade inference reliability.  
-  - Measurement/Observation Error: Benchmark statistics (File #2) suggest the algorithm ranks around the middle-to-lower range when measurement error is severe, indicating sensitivity to inaccuracies in the independence tests.
-
-• Tolerance to Sparse/Dense Connected Systems  
-  - Sparse Graphs: IAMBnPC often excels in sparse settings because fewer edges reduce the conditioning set searches, making it easier to identify Markov Blankets accurately.  
-  - Dense Graphs: As density grows, the algorithm’s computational load can increase. It generally still performs competitively if the sample size is sufficient, but it may be slower in identifying all relevant edges accurately.
-
-• Scalability  
-  - Benchmarks (File #2) show that under moderate problem sizes, IAMBnPC scales adequately, though it does not always place at the top in efficiency.  
-  - Very large numbers of variables or extremely large sample sizes can stress runtime, especially if max.sx or more complex tests (e.g., kci) are used. Memory usage can also become a bottleneck, but partial parallelization of independence tests may mitigate some performance issues.
-
-• Critique/Extension  
-  - Parallelization strategies for the independence tests can help handle large data sets faster, an approach mentioned in community discussions (File #3).  
-  - Some extensions implement approximate tests or heuristic-based constraint pruning to better cope with large or noisy data environments.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-3. Mixed Data & Complex Functions
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• Noise Type  
-  - IAMBnPC does not strictly require Gaussian noise; it adopts whichever independence test is chosen (File #1). This flexibility allows for non-Gaussian or even nonparametric tests (e.g., kci), albeit at added computational cost.
-
-• Mixed Data (Continuous & Discrete)  
-  - As per File #1, the suggested test for discrete variables is chisq, and for mixed variables, gsq or other methods (gsq, kci in certain hybrid contexts). This indicates built-in support for analyzing mixed data types, as long as the user selects an appropriate test.
-
-• Heterogeneous Data  
-  - Benchmarks (File #2) show moderate reliability when data are heterogeneous (the algorithm’s ranking is neither the highest nor the lowest in that regard). Much depends on how well the chosen test handles distribution shifts and varied variable types.
-
-• Complex Functional Forms  
-  - If a nonlinear independence test (like kci) is selected (File #1), IAMBnPC can detect non-linear relationships. Default linear tests (e.g., fisherz) work well but may miss intricate dependencies.
-
-• Critique/Extension  
-  - By default, many IAMBnPC implementations use parametric tests (fisherz or chisq) that assume linear or categorical relationships. Users dealing with strongly nonlinear phenomena might consider kci or rcit for better detection, though these methods require more computational time and possibly larger sample sizes to remain stable.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-4. Computational Complexity
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• Theoretical Time Complexity  
-  - <temp>[O(|MB(T)| × N)]</temp>, where |MB(T)| is the size of the Markov Blanket of the target T, and N is the overall number of variables. In practice, this can vary if the algorithm iterates repeatedly to refine the Markov Blanket.
-
-• Variability in Practical Usage  
-  - Increased max.sx or using more complex independence tests can increase runtime considerably.  
-  - Benchmark data (File #2) suggest that IAMBnPC tends to occupy a moderate position in efficiency: not the fastest for extremely large networks, but still viable for typical mid-to-large-scale scenarios.
-
-• Critique/Extension  
-  - Real-world usage indicates that worst-case performance rises if the underlying Markov Blanket includes many variables, making the search space large.  
-  - Some open-source implementations can leverage multi-core systems to test multiple candidates in parallel, improving real-world runtime.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-5. Interpretability
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• Output Format  
-  - IAMBnPC typically identifies a Markov Blanket for a target variable, which includes parents, children, and parents of children (spouses). In more extended usage, it can be used sequentially for each variable, approximating a larger causal structure in the form of adjacency lists or adjacency matrices.
-
-• Strength of the Output Format  
-  - Markov blankets are highly interpretable, especially in domain-focused tasks (e.g., finding key predictors). Some implementations provide conditional independence p-values, adding numeric confidence to the adjacency information.
-
-• Limitations of the Output Format  
-  - By design, Markov Blanket discovery alone does not fully orient all edges (e.g., distinguishing the parent from the child can require an additional causal orientation step or a separate backward phase).  
-  - If sample size is small or alpha is too lenient, false positives may appear in the Markov Blanket, reducing clarity.
-
-• Critique/Extension  
-  - Domain experts often post-process the discovered Markov Blankets (e.g., verifying directions or removing improbable edges).  
-  - Community resources (File #3) recommend cross-referencing these results with domain constraints for added orientation confidence.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-6. Assumptions
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• Critical Assumptions  
-  - Markov Condition: The causal structure in question encodes all conditional independencies present in the data.  
-  - Faithfulness: All and only the independencies found in the data are represented in the graph (File #3).  
-  - Causal Sufficiency: No unmeasured confounding variables relevant to the included variables.
-
-• Violation Impact  
-  - Failure of faithfulness (e.g., strong cancellations or nonlinear confounding) can lead to spurious or missing edges.  
-  - Hidden confounders (violating causal sufficiency) may result in flawed Markov Blanket identification.
-
-• Critique/Extension  
-  - Some advanced variations relax faithfulness assumptions, allowing for approximate independence detection.  
-  - In presence of suspected hidden variables, a user might need to adopt extended methods (e.g., latent variable detection) or adopt additional domain knowledge to correct for confounders.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-7. (Optional) Real-World Benchmarks
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• Performance on Real Datasets  
-  - While synthetic experiments provide clarity on alpha’s influence and Markov Blanket sizes, real-world comparisons usually find IAMBnPC near or somewhat above middle-tier performance in terms of both accuracy and runtime (File #2).  
-  - In bioinformatics (e.g., gene regulatory networks), IAMBnPC is often praised for effectively identifying candidate regulators for a given gene.
-
-• Practical Tips  
-  - Employ domain knowledge whenever possible to set alpha and refine conditioning sets. This often curbs false positives in the Markov Blanket.  
-  - If data are high-dimensional or heavily nonlinear, consider advanced (nonlinear) tests and parallelization where available.  
-  - Users should be mindful of the assumptions (faithfulness, causal sufficiency), as real-world violations can degrade reliability. Complementing IAMBnPC with domain-specific heuristics or knowledge can help avert misinterpretation.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Summary
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-IAMBnPC is a Markov Blanket discovery algorithm that integrates the iterative conditional independence testing strategy of IAMB with backward-phase refinements inspired by the PC algorithm. Its primary hyperparameter (alpha) controls the strictness of conditional independence tests; tuning this in conjunction with the independence test choice (e.g., fisherz, chisq, kci) is crucial. Though generally robust and interpretable, its performance can diminish with high data noise, missingness, or unfaithful structures. Parallelization or approximate testing can improve scalability, and domain knowledge often helps prune extraneous edges and increase interpretability. Overall, IAMBnPC is a solid and often competitive choice for applications—especially those where identifying relevant predictors for a target variable is paramount—provided its underlying assumptions align reasonably well with the data-generating process.
-
-────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics, which are represented as level scores from 1-5, with 5 being the best.
-  – Levels scores of composite metrics combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-[NOTE] The ranking is smaller, the better. The level score is higher, the better.
-
-• Algorithm Rankings
-
-| Scenario | Rank (Mean) | Rank (Std Dev) | Performance (Level) | Efficiency (Level) | Composite (Level) |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 7.4 | 3.90 | 4.0 | 3.0 | 4.0 |
-| Heterogeneity | 3.5 | 2.69 | 4.0 | 5.0 | 5.0 |
-| Measurement Error | 6.8 | 0.83 | 3.0 | 5.0 | 4.0 |
-| Noise Type | 8.5 | 0.50 | 3.0 | 5.0 | 3.0 |
-| Missing Data | 3.8 | 2.49 | 5.0 | 3.0 | 5.0 |
-| Edge Probability | 6.0 | 1.41 | 4.0 | 5.0 | 4.0 |
-| Discrete Ratio | 6.7 | 0.94 | 4.0 | 5.0 | 4.0 |
-
-• Analysis
-
-  – Overall mean ranking across 7 scenarios: 6.08
-  – Average standard deviation: 1.82
-
-
-
-## Supported hyperparameters: {
-    "algorithm_name": "IAMBnPC",
     "alpha": {
         "meaning": "Desired significance level in (0, 1)",
         "available_values": {

@@ -41,17 +41,25 @@ def numeric_str_nan_detect(global_state):
 
     nan_detect = True
 
-    # missing value is represented as in the int format
-    if nan_value.isdigit():
-        data.replace(int(nan_value), np.nan, inplace=True)
-        global_state.user_data.raw_data = data
-    # missing value is represented as in the str format
-    elif data.isin([nan_value]).any().any():
-        data.replace(nan_value, np.nan, inplace=True)
-        global_state.user_data.raw_data = data
-    else:
-        nan_detect = False
+    # Check if the nan_value exists in the data
+    if isinstance(nan_value, (int, float)):
+        if (data == nan_value).any().any():
+            data.replace(nan_value, np.nan, inplace=True)
+            nan_detect = True
+    elif isinstance(nan_value, str):
+        # If the value is a string that represents a number, cast it
+        try:
+            num_value = float(nan_value)
+            if (data == num_value).any().any():
+                data.replace(num_value, np.nan, inplace=True)
+                nan_detect = True
+        except ValueError:
+            # It's a true string like "missing"
+            if data.isin([nan_value]).any().any():
+                data.replace(nan_value, np.nan, inplace=True)
+                nan_detect = True
 
+    global_state.user_data.raw_data = data
     return global_state, nan_detect
 
 
@@ -674,7 +682,7 @@ def stat_info_collection(global_state):
         domain_index = global_state.statistics.domain_index
         col_domain_index = global_state.user_data.raw_data[domain_index]
         if domain_index in global_state.user_data.selected_features:
-            global_state.user_data.selected_features.remove(domain_index)
+            global_state.user_data.selected_features = global_state.user_data.selected_features.drop(domain_index)
     else:
         col_domain_index = None
 

@@ -204,13 +204,21 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 global_state.user_data.raw_data.columns = [col.replace(' ', '_') for col in global_state.user_data.raw_data.columns]
                 global_state.user_data.selected_features = global_state.user_data.raw_data.columns
                 global_state.user_data.processed_data = global_state.user_data.raw_data
-                chat_history.append((None, f"Do you have important features you care about? These are features in your provided dataset:\n"
-                                        f"{', '.join(global_state.user_data.raw_data.columns)}"))
-                CURRENT_STAGE = 'important_feature_selection'
-                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                
-            
+                if len(global_state.user_data.raw_data.columns) > 20:
+                    chat_history.append((None, f"Do you have any important features you'd like us to focus on? "
+                                            "These features will be prioritized and visualized in the upcoming analysis.\n\n"
+                                            "Here are the features available in your dataset:\n"
+                                            f"{', '.join(global_state.user_data.raw_data.columns)}"))
+                    CURRENT_STAGE = 'important_feature_selection'
+                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                    return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                else:
+                    chat_history.append((None, "These are all features in your dataset:\n"
+                                            f"{', '.join(global_state.user_data.raw_data.columns)}"))
+                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                    CURRENT_STAGE = 'preliminary_check'
+                    global_state.user_data.important_features = []
+                    
         if CURRENT_STAGE == 'important_feature_selection':
             ##### Collect Important Features #####
             args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn = parse_important_feature_query(message, chat_history, download_btn, CURRENT_STAGE, args, global_state, REQUIRED_INFO)
@@ -233,7 +241,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             chat_history, download_btn, global_state, CURRENT_STAGE = meaningful_feature_query(global_state,message,chat_history,download_btn,CURRENT_STAGE)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             # Preprocessing - Step 3: Heterogeneity Checking
-            var_list, chat_history, download_btn, global_state, CURRENT_STAGE = heterogeneity_query(global_state, message,
+            chat_history, download_btn, global_state, CURRENT_STAGE = heterogeneity_query(global_state, message,
                                                                                             chat_history,
                                                                                             download_btn,
                                                                                             CURRENT_STAGE, args)
@@ -250,25 +258,29 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             f"""
 | Sample size | Meaningful Feature | Heterogeneity | Accept CPDAG | Missing Value | Highly Correlated Features |
 |:-----------:|:-------------------:|:-------------:|:------------:|:-------------:|:-------------:|
-|{'✅ Enough' if enough_sample else '⚠️ Not Enough'}|{'✅ Meaningful' if global_state.user_data.meaningful_feature else '🚫 Simulated Data'}|{global_state.statistics.domain_index if global_state.statistics.domain_index else '🚫 Non Heterogeneous'}|{'✅ Accept'}|{'✅ No Missingness' if not np_nan else '⚠️ Missingness'}|{'✅ No Highly Correlated Features' if not global_state.user_data.high_corr_drop_features else '⚠️ Highly Correlated Features'}|
+|{'✅ Enough' if enough_sample else '⚠️ Not Enough'}|{'✅ Yes' if global_state.user_data.meaningful_feature else '🚫 Simulated Data'}|{global_state.statistics.domain_index if global_state.statistics.domain_index else '🚫 Non Heterogeneous'}|{'✅ Accept'}|{'✅ No Missingness' if not np_nan else '⚠️ Missingness'}|{'✅ No Highly Correlated Features' if not global_state.user_data.high_corr_drop_features else '⚠️ Highly Correlated Features'}|
 """
             chat_history.append((None, tables))
             texts = ""
             if not global_state.user_data.meaningful_feature:
                 texts += "- No meaningful features are detected in your dataset, we will treat it as a simulated dataset.\n"
             if global_state.statistics.domain_index:
-                texts += f"- The dataset is heterogeneous, the domain index is {global_state.statistics.domain_index}.\n"
+                texts += (
+        f"- The dataset is **heterogeneous**, meaning it contains samples collected under different conditions or domains (such as time, location, or experimental setup). "
+        f"  → The column **`{global_state.statistics.domain_index}`** is identified as the **domain index**, indicating the domain or environment each sample belongs to.\n"
+        "Please note that the domain index is set by LLM, please set 'heterogeneity' to be False if you think it is not heterogeneous.\n"
+    )
             if not np_nan:
                 texts += "- We do not detect NA values in your dataset, if you have the specific value that represents NA like 0, then you can provide it.\n"
             else:
                 info, global_state, CURRENT_STAGE = drop_spare_features(chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE)
                 texts += f"- {info}\n"
             if global_state.user_data.high_corr_drop_features:
-                if drop:
-                    texts += f"- We will drop {', '.join(list(set(global_state.user_data.high_corr_drop_features)))} due to the fact that they are highly correlated with other features."
-                else:
-                    texts += "- The following variables are highly correlated with others, but due to the variable number limitation, we will not drop them: \n"\
-                                            f"{', '.join(list(set(global_state.user_data.high_corr_drop_features)))}"
+                # if drop:
+                #     texts += f"- We will drop {', '.join(list(set(global_state.user_data.high_corr_drop_features)))} due to the fact that they are highly correlated with other features."
+                # else:
+                texts += "- The following variables are highly correlated with others: \n"\
+                                        f"{', '.join(list(set(global_state.user_data.high_corr_drop_features)))}"
             chat_history.append((None, texts))
             # print('preliminary check', global_state.user_data.selected_features)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -278,12 +290,19 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             else:
                 modify_prompt = "You can modify the result above following the template below; Otherwise please input 'NO'. \n"\
                                 """
-                                meaningful_feature: True/False
-                                heterogeneity: True/False
-                                accept_CPDAG: True/False
-                                domin_index: The column name of domin_index (Can only be set when heterogeneity is True)
-                                missing_value: special NA value/False
+    meaningful_feature: Set to `True` if your dataset contains real, meaningful features. Set to `False` if it's simulated data.
+    accept_CPDAG: Set to `True` to proceed with causal discovery using the CPDAG method.
+    heterogeneity: Set to `True` if your data comes from different domains (e.g. time periods, hospitals, experiments).
+    domain_index: Specify the name of the column that indicates the domain (e.g. `hospital_id`, `time_group`). Only set this if `heterogeneity` is `True`.
+    missing_value: If your dataset uses a special value (like 0, -1, or missing) to represent missing data, specify it here. Otherwise, use `False`.
                                 """
+                                # """
+                                # meaningful_feature: True/False
+                                # heterogeneity: True/False
+                                # accept_CPDAG: True/False
+                                # domin_index: The column name of domin_index (Can only be set when heterogeneity is True)
+                                # missing_value: special NA value/False
+                                # """
                 chat_history.append((None, modify_prompt))
                 CURRENT_STAGE = 'preliminary_feedback'
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -299,7 +318,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             
         if CURRENT_STAGE == 'preliminary_feedback':
             chat_history.append((message, None))
-            global_state, text = parse_preliminary_feedback(global_state, message)
+            global_state, text = parse_preliminary_feedback(chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE, message)
             # print('preliminary_feedback', global_state.user_data.selected_features)
             if text != "":
                 chat_history.append((None, text))
@@ -354,10 +373,11 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                     chat_history.append((None, "Dimension Checking Summary:\n"\
                                          "💡 Because of the high dimensionality, We will only visualize 20 variables and include variables you care about."))
                     other_variables = list(set(global_state.user_data.selected_features) - (set(global_state.user_data.selected_features)&set(global_state.user_data.important_features)))
+                    if global_state.statistics.heterogeneous and global_state.statistics.domain_index is not None:
+                        other_variables = [var for var in other_variables if var != global_state.statistics.domain_index]
                     remaining_num = 20 - len(global_state.user_data.important_features)
                     global_state.user_data.visual_selected_features = other_variables[:remaining_num+1]
-                    if not global_state.statistics.heterogeneous:
-                        global_state.user_data.visual_selected_features.extend(global_state.user_data.important_features)
+                    global_state.user_data.visual_selected_features.extend(global_state.user_data.important_features)
                     CURRENT_STAGE = 'knowledge_generation'
                     print('visual_dimension_check', global_state.user_data.processed_data.columns)
                     print('visual_dimension_check', global_state.user_data.visual_selected_features)
@@ -381,6 +401,8 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 else:
                     var_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_var_selection_query(message, chat_history, download_btn, 'knowledge_generation', args, global_state, REQUIRED_INFO, CURRENT_STAGE)
                 # Update the selected variables
+                if global_state.statistics.heterogeneous and global_state.statistics.domain_index is not None:
+                    var_list = [var for var in var_list if var != global_state.statistics.domain_index]
                 global_state.user_data.visual_selected_features = var_list
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
         
@@ -420,9 +442,13 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
         if CURRENT_STAGE == 'stat_analysis':
             # Statistical Analysis: Time Series
             chat_history.append((None, "Please indicate whether your dataset is Time-Series and set your time lag: \n"\
-                                           "1️⃣ Input 'YES' or 'NO' to clarify whether it is a Time-Series dataset;\n"\
-                                           "2️⃣ Input your time lag if you want to set it by yourself;\n"\
-                                           "3️⃣ Input 'continue' if you want the time lag to be set automatically;\n"))
+                                           "1️⃣ Clarify whether it is a Time-Series dataset;\n"\
+                                           "2️⃣ If it is a Time-Series dataset, set your time lag  by yourself or input 'continue' if you want the time lag to be set automatically;\n"\
+                                           "3️⃣ Leave the time_lag as None if it is not a Time-Series dataset.\n"
+                                           """
+    is_time_series: True/False
+    time_lag: [an integer] / continue / None
+                                           """))
             CURRENT_STAGE = 'ts_check'
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -442,6 +468,8 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             user_gaussian = global_state.statistics.gaussian_error
             # print('stat_analysis', global_state.user_data.selected_features)
             global_state = stat_info_collection(global_state)
+            print('stat_analysis', global_state.user_data.processed_data.columns)
+            print('stat_analysis', global_state.user_data.selected_features)
             global_state.statistics.description = convert_stat_info_to_text(global_state.statistics)
 
             if global_state.statistics.data_type == "Continuous":
@@ -518,7 +546,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             chat_history.append(("🔍 Run exploratory data analysis...", None))
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             print('eda_generation', global_state.user_data.processed_data.columns)
-            print('eda_generation', global_state.user_data.visual_selected_features)
+            print('eda_generation', global_state.user_data.selected_features)
             my_eda = EDA(global_state)
             my_eda.generate_eda()
             chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_corr.jpg',)))
@@ -549,20 +577,20 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 if REQUIRED_INFO["interactive_mode"]:
                     CURRENT_STAGE = 'user_algo_selection'
                     if torch.cuda.is_available():
-                        chat_history.append((None, "Do you want to use other algorithms? If so, please choose one from the following: \n"
+                        chat_history.append((None, "Do you want to use another algorithms instead of the selected one? If so, please choose one from the following: \n"
                                                 "- **Constraint-based Methods**: PC, PCParallel, AcceleratedPC, FCI, CDNOD, AcceleratedCDNOD;\n"
                                                 "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
                                                 "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
                                                 "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
+                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;\n"
                                                 "Otherwise please reply NO."))
                     else:
-                        chat_history.append((None, "Do you want to use other algorithms? If so, please choose one from the following: \n"
+                        chat_history.append((None, "Do you want to use another algorithms instead of the selected one? If so, please choose one from the following: \n"
                                                 "- **Constraint-based Methods**: PC, PCParallel, FCI, CDNOD;\n"
                                                 "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
                                                 "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
                                                 "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, ICALiNGAM;"
+                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, ICALiNGAM;\n"
                                                 "Otherwise please reply NO."))
                     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                     return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -768,20 +796,20 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                     pickle.dump(global_state, f)
                 #global_state.logging.global_state_logging.append(global_state.algorithm.selected_algorithm)
                 if torch.cuda.is_available():
-                    chat_history.append((None, "Do you want to retry other algorithms? If so, please choose one from the following: \n"
+                    chat_history.append((None, "Do you want to retry another algorithm? If so, please choose one from the following: \n"
                                                 "- **Constraint-based Methods**: PC, PCParallel, AcceleratedPC, FCI, CDNOD, AcceleratedCDNOD;\n"
                                                 "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
                                                 "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
                                                 "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
+                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;\n"
                                                 "Otherwise please reply NO."))
                 else:
-                    chat_history.append((None, "Do you want to retry other algorithms? If so, please choose one from the following: \n"
+                    chat_history.append((None, "Do you want to retry another algorithm? If so, please choose one from the following: \n"
                                                 "- **Constraint-based Methods**: PC, PCParallel, FCI, CDNOD;\n"
                                                 "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
                                                 "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
                                                 "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, ICALiNGAM;"
+                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, ICALiNGAM;\n"
                                                 "Otherwise please reply NO."))
                 CURRENT_STAGE = 'retry_algo'
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
