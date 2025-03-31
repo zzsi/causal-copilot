@@ -6,6 +6,9 @@ from econml.dr import DRLearner as Econ_DRL
 from econml.dr import LinearDRLearner as Econ_LinearDRL
 from econml.dr import SparseLinearDRLearner as Econ_SparseLinearDRL
 from econml.dr import ForestDRLearner as Econ_ForestDRL
+from sklearn.model_selection import StratifiedKFold, KFold
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+
 
 from .base import Estimator
 
@@ -17,7 +20,8 @@ from .base import Estimator
 class DRL(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int=0, T1: int=1):
         super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
-        self.model = Econ_DRL(cv=5, **self._params)
+        self.model = Econ_DRL(**self._params)
+
 
     @property
     def name(self):
@@ -88,7 +92,11 @@ class LinearDRL(Estimator):
 
     def att(self, data: pd.DataFrame):
         X = data[self.X_col]
-        treated_indices = (data[self.T_col] == 1)
+        treated_indices = np.isclose(data[self.T_col], self.T1)
+        if treated_indices.sum() == 0:
+            print(f"[WARN] No treated samples found for T1 = {self.T1}. ATT cannot be computed.")
+            return np.nan, np.nan, np.nan
+
         treated_effects = self.model.effect(X[treated_indices], T0=self.T0, T1=self.T1)
         lower_bound, upper_bound = self.model.effect_interval(X[treated_indices], T0=self.T0, T1=self.T1)
         att = np.mean(treated_effects)
@@ -133,7 +141,10 @@ class SparseLinearDRL(Estimator):
 
     def att(self, data: pd.DataFrame):
         X = data[self.X_col]
-        treated_indices = (data[self.T_col] == 1)
+        treated_indices = np.isclose(data[self.T_col], self.T1)
+        if treated_indices.sum() == 0:
+            print(f"[WARN] No treated samples found for T1 = {self.T1}. ATT cannot be computed.")
+            return np.nan, np.nan, np.nan
         treated_effects = self.model.effect(X[treated_indices], T0=self.T0, T1=self.T1)
         lower_bound, upper_bound = self.model.effect_interval(X[treated_indices], T0=self.T0, T1=self.T1)
         att = np.mean(treated_effects)
@@ -151,9 +162,37 @@ class SparseLinearDRL(Estimator):
 
 class ForestDRL(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int = 0, T1: int = 1):
-        del params['model_final']
+        # del params['model_final']
+        # super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
+        # self.model = Econ_ForestDRL(cv=5, **self._params)
+        params.pop('model_final', None)
+
+        # ✅ Safe CV logic
+        try:
+            # We'll assume the treatment is available at init time for now
+            # You can patch this dynamically later if needed
+            treatment_values = pd.Series(params.get("T_vals", []))  # You could pass T_vals when calling this
+            min_treatment_count = treatment_values.value_counts().min()
+
+            if min_treatment_count >= 3:
+                print("[INFO] Using StratifiedKFold(n_splits=3)")
+                params['cv'] = StratifiedKFold(n_splits=3)
+            else:
+                print("[WARN] Treatment group too small. Using KFold(n_splits=2)")
+                params['cv'] = KFold(n_splits=2)
+        except:
+            print("[WARN] Could not determine safe CV strategy. Using default KFold(n_splits=2)")
+            params['cv'] = KFold(n_splits=2)
+
+        # Now continue with standard init
         super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
-        self.model = Econ_ForestDRL(cv=5, **self._params)
+        # Fix the model_propensity if it's missing or incorrect
+        if 'model_propensity' not in self._params or isinstance(self._params['model_propensity'], RandomForestRegressor):
+            print("[FIX] Setting model_propensity to RandomForestClassifier")
+            self._params['model_propensity'] = RandomForestClassifier(n_estimators=100)
+
+
+        self.model = Econ_ForestDRL(**self._params)
 
     @property
     def name(self):
@@ -178,7 +217,10 @@ class ForestDRL(Estimator):
 
     def att(self, data: pd.DataFrame):
         X = data[self.X_col] if self.X_col else None
-        treated_indices = (data[self.T_col] == 1)
+        treated_indices = np.isclose(data[self.T_col], self.T1)
+        if treated_indices.sum() == 0:
+            print(f"[WARN] No treated samples found for T1 = {self.T1}. ATT cannot be computed.")
+            return np.nan, np.nan, np.nan
         treated_effects = self.model.effect(X[treated_indices], T0=self.T0, T1=self.T1)
         lower_bound, upper_bound = self.model.effect_interval(X[treated_indices], T0=self.T0, T1=self.T1)
         att = np.mean(treated_effects)

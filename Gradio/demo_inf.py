@@ -85,8 +85,8 @@ from report.report_generation import Report_generation
 from user.discuss import Discussion
 from openai import OpenAI
 from pydantic import BaseModel
-from help_functions import *
 from causal_analysis.help_functions import *
+
 
 print('##########Initialize Global Variables##########')
 # Global variables
@@ -1026,8 +1026,15 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                                  f"{','.join(hte_variable)}"))
             CURRENT_STAGE = "method_selection"
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            chat_history.append((None, "🔍 Whether your data is experimental or observational?"))
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
         if CURRENT_STAGE == "method_selection":
+            exp_data, chat_history, download_btn, CURRENT_STAGE = parse_intention_query(message, chat_history, download_btn, CURRENT_STAGE)
+            yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            if exp_data is None:
+                return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            
             task_info = global_state.inference.task_info[global_state.inference.task_index]
             confounders = task_info['confounders']
             cont_confounders = task_info['cont_confounders']
@@ -1036,8 +1043,11 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             exist_IV = False
             ## code ##
             if exist_IV:
+                method = "iv"
                 iv_variable = None
                 global_state.inference.task_info[global_state.inference.task_index]['IV'] = iv_variable
+            if exp_data:
+                method = "uplift"
             if len(confounders) <= 5:
                 if len(confounders) - len(cont_confounders) > len(cont_confounders):  # If more than half discrete confounders
                     method = "cem"

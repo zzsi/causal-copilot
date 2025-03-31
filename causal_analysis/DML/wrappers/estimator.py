@@ -42,7 +42,15 @@ class DML(Estimator):
 
     def att(self, data: pd.DataFrame):
         X = data[self.X_col]
-        treated_indices = (data[self.T_col] == 1)
+        # ✅ Use isclose for float-safe comparison
+        treated_indices =  np.isclose(data[self.T_col], self.T1)
+        # treated_indices = (data[self.T_col] == self.T1)
+
+        # ✅ Handle case when no treated units are found
+        if treated_indices.sum() == 0:
+            print(f"[WARN] No treated samples found for T1 = {self.T1}. ATT cannot be computed.")
+            return np.nan, np.nan, np.nan
+        
         treated_effects = self.model.effect(X[treated_indices], T0=self.T0, T1=self.T1)
         lower_bound, upper_bound = self.model.effect_interval(X[treated_indices], T0=self.T0, T1=self.T1)
         att = np.mean(treated_effects)
@@ -60,8 +68,8 @@ class DML(Estimator):
 
 class LinearDML(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int=0, T1: int=1):
-        del params['model_final']
-        super().__init__(params, y_col, T0, T1, T_col, X_col, W_col)
+        params.pop('model_final', None)
+        super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
         self.model = Econ_LinearDML(**self._params)
 
     @property
@@ -87,7 +95,14 @@ class LinearDML(Estimator):
 
     def att(self, data: pd.DataFrame):
         X = data[self.X_col]
-        treated_indices = (data[self.T_col] == 1)
+        # ✅ Use isclose for float-safe comparison
+        treated_indices =  np.isclose(data[self.T_col], self.T1)
+        # treated_indices = (data[self.T_col] == self.T1)
+
+        # ✅ Handle case when no treated units are found
+        if treated_indices.sum() == 0:
+            print(f"[WARN] No treated samples found for T1 = {self.T1}. ATT cannot be computed.")
+            return np.nan, np.nan, np.nan
         treated_effects = self.model.effect(X[treated_indices], T0=self.T0, T1=self.T1)
         lower_bound, upper_bound = self.model.effect_interval(X[treated_indices], T0=self.T0, T1=self.T1)
         att = np.mean(treated_effects)
@@ -105,7 +120,7 @@ class LinearDML(Estimator):
 
 class SparseLinearDML(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int=0, T1: int=1):
-        del params['model_final']
+        params.pop('model_final', None)
         super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
         self.model = Econ_SparseLinearDML(**self._params)
 
@@ -132,7 +147,14 @@ class SparseLinearDML(Estimator):
 
     def att(self, data: pd.DataFrame):
         X = data[self.X_col]
-        treated_indices = (data[self.T_col] == 1)
+        # ✅ Use isclose for float-safe comparison
+        treated_indices =  np.isclose(data[self.T_col], self.T1)
+        # treated_indices = (data[self.T_col] == self.T1)
+
+        # ✅ Handle case when no treated units are found
+        if treated_indices.sum() == 0:
+            print(f"[WARN] No treated samples found for T1 = {self.T1}. ATT cannot be computed.")
+            return np.nan, np.nan, np.nan
         treated_effects = self.model.effect(X[treated_indices], T0=self.T0, T1=self.T1)
         lower_bound, upper_bound = self.model.effect_interval(X[treated_indices], T0=self.T0, T1=self.T1)
         att = np.mean(treated_effects)
@@ -150,7 +172,7 @@ class SparseLinearDML(Estimator):
 
 class CausalForestDML(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int = 0, T1: int = 1):
-        del params['model_final']
+        params.pop('model_final', None)
         super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
         self.model = Econ_CausalForestDML(**self._params)
 
@@ -177,7 +199,14 @@ class CausalForestDML(Estimator):
 
     def att(self, data: pd.DataFrame):
         X = data[self.X_col]
-        treated_indices = (data[self.T_col] == 1)
+        # ✅ Use isclose for float-safe comparison
+        treated_indices =  np.isclose(data[self.T_col], self.T1)
+        # treated_indices = (data[self.T_col] == self.T1)
+
+        # ✅ Handle case when no treated units are found
+        if treated_indices.sum() == 0:
+            print(f"[WARN] No treated samples found for T1 = {self.T1}. ATT cannot be computed.")
+            return np.nan, np.nan, np.nan
         treated_effects = self.model.effect(X[treated_indices], T0=self.T0, T1=self.T1)
         lower_bound, upper_bound = self.model.effect_interval(X[treated_indices], T0=self.T0, T1=self.T1)
         att = np.mean(treated_effects)

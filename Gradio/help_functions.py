@@ -272,6 +272,7 @@ def parse_var_selection_query(message, chat_history, download_btn, next_step, ar
     "3. If they say 'all of them', 'all' or something like that, set 'all' to be True."
     "4. If they say 'no', 'none', 'nothing' '' or something like that, set 'none' to be True."
     f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
+    "If there are 'all of them' or 'all', please return all variables."
     "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
     
     parsed_vars = LLM_parse_query(VarList, prompt, message)
@@ -380,6 +381,7 @@ def parse_sparsity_query(message, chat_history, download_btn, global_state, REQU
         prompt = "You are a helpful assistant, please extract variable names as a list. \n"
         "If there is only one variable, also save it in list variables"
         f"Variables must be among this list! {global_state.user_data.raw_data.columns}"
+        "If there are 'all of them' or 'all', please return all variables."
         "variables in the returned list MUST be among the list above, and it's CASE SENSITIVE."
         "If you cannot find variable names, just return an empty list."
         parsed_vars = LLM_parse_query(VarList, prompt, message)

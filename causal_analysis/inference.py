@@ -14,7 +14,7 @@ from econml.dml import DML, LinearDML, SparseLinearDML, CausalForestDML
 import shap
 import sklearn
 import matplotlib.pyplot as plt
-import seaborn as sns
+import seaborn as snscl
 from openai import OpenAI
 from pydantic import BaseModel
 import os
@@ -26,6 +26,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import NearestNeighbors
 from sklearn.ensemble import RandomForestRegressor
 from global_setting.state import Inference
+from sklearn.preprocessing import LabelEncoder
+
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -38,6 +40,9 @@ from causal_analysis.DRL.hte_program import HTE_Programming as DRL_HTE_Programmi
 from causal_analysis.IV.hte_filter import HTE_Filter as IV_HTE_Filter
 from causal_analysis.IV.hte_params import HTE_Param_Selector as IV_HTE_Param_Selector
 from causal_analysis.IV.hte_program import HTE_Programming as IV_HTE_Programming
+from causal_analysis.MetaLearners.hte_filter import HTE_Filter as MetaLearners_HTE_Filter
+from causal_analysis.MetaLearners.hte_params import HTE_Param_Selector as MetaLearners_HTE_Param_Selector
+from causal_analysis.MetaLearners.hte_program import HTE_Programming as MetaLearners_HTE_Programming
 from causal_analysis.help_functions import *
 from causal_analysis.analysis import *
 from global_setting.Initialize_state import global_state_initialization
@@ -46,8 +51,6 @@ import seaborn as sns
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 
-
-# add imports for MetaLearners
 
 class Analysis(object):
     def __init__(self, global_state, args):
@@ -698,30 +701,264 @@ class Analysis(object):
         figs = [bar_plot_path, violin_plot_path]
         return df, figs
     
+    # def prepare_treatment_column(self, data, treatment_col, T0=None, T1=None, model_name=None):
+    #     treatment = data[treatment_col]
+
+    #     # Case 1: Categorical string
+    #     if treatment.dtype == 'object' or treatment.dtype.name == 'category':
+    #         print(f"[INFO] Categorical string treatment detected")
+    #         if T0 is None or T1 is None:
+    #             unique_vals = sorted(treatment.unique().tolist())
+    #             T0, T1 = unique_vals[0], unique_vals[1]
+    #         return treatment, T0, T1
+
+    #     # Case 2: Binary numeric
+    #     if treatment.nunique() == 2:
+    #         sorted_vals = sorted(treatment.unique())
+    #         print(f"[INFO] Binary treatment detected: {sorted_vals}")
+    #         if T0 is None or T1 is None:
+    #             T0, T1 = sorted_vals[0], sorted_vals[1]
+    #         return treatment, T0, T1
+
+    #     # Case 3: Numeric, low-cardinality, but non-integer
+    #     if pd.api.types.is_numeric_dtype(treatment):
+    #         unique_vals = sorted(treatment.unique())
+    #         if len(unique_vals) <= 10:
+    #             print(f"[INFO] Low-cardinality numeric treatment detected: {unique_vals}")
+    #             if T0 is None or T1 is None:
+    #                 T0, T1 = unique_vals[0], unique_vals[1]
+    #             return treatment, T0, T1
+
+    #         # Case 4: Continuous treatment
+    #         if model_name == 'CausalForestDML':
+    #             print(f"[WARN] CausalForestDML doesn't support continuous treatment. Switching to LinearDML.")
+    #             self.global_state.inference.hte_algo_json['name'] = 'LinearDML'
+
+    #         if T0 is None or T1 is None:
+    #             T0 = treatment.quantile(0.1)
+    #             T1 = treatment.quantile(0.9)
+    #         return treatment, T0, T1
+
+    #     raise ValueError(f"Unsupported treatment type: {treatment.dtype}")
+
+    def prepare_treatment_column(
+        self,
+        data,
+        treatment_col,
+        T0=None,
+        T1=None,
+        model_name=None,
+        discretize=False
+    ):
+        treatment = data[treatment_col]
+
+        # Optional quantile-based discretization
+        if discretize:
+            print(f"[INFO] Discretizing treatment column '{treatment_col}' into quantile bins")
+            try:
+                # 3 bins: low, medium, high
+                treatment_binned = pd.qcut(treatment, q=3, labels=[0, 1, 2])
+            except ValueError as e:
+                print(f"[WARN] Could not discretize '{treatment_col}': {e}")
+                return treatment, T0, T1  # fallback to original treatment
+
+            unique_vals = sorted(treatment_binned.unique())
+            if T0 is None or T1 is None:
+                T0, T1 = unique_vals[0], unique_vals[-1]  # e.g., 0 vs 2
+            return treatment_binned, T0, T1
+
+        # Case 1: String / object-type (leave as-is)
+        if treatment.dtype == 'object' or treatment.dtype.name == 'category':
+            print(f"[INFO] Categorical string treatment detected")
+            unique_vals = sorted(treatment.unique().tolist())
+            if T0 is None or T1 is None:
+                T0, T1 = unique_vals[0], unique_vals[1]
+            return treatment, T0, T1
+
+        # Case 2: Binary numeric
+        if treatment.nunique() == 2:
+            sorted_vals = sorted(treatment.unique())
+            print(f"[INFO] Binary treatment detected: {sorted_vals}")
+            if T0 is None or T1 is None:
+                T0, T1 = sorted_vals[0], sorted_vals[1]
+            return treatment, T0, T1
+
+        # Case 3: Discrete numeric (≤ 10 unique values)
+        unique_vals = sorted(treatment.unique())
+        if pd.api.types.is_numeric_dtype(treatment) and len(unique_vals) <= 10:
+            print(f"[INFO] Low-cardinality numeric treatment detected: {unique_vals}")
+            if T0 is None or T1 is None:
+                T0, T1 = unique_vals[0], unique_vals[1]
+            return treatment, T0, T1
+
+        # Case 4: Continuous treatment → switch model if needed
+        if model_name == 'CausalForestDML':
+            print("[WARN] CausalForestDML doesn't support continuous treatment. Switching to LinearDML.")
+            self.global_state.inference.hte_algo_json['name'] = 'LinearDML'
+
+        if T0 is None or T1 is None:
+            T0 = treatment.quantile(0.1)
+            T1 = treatment.quantile(0.9)
+            print(f"[INFO] Using 10th and 90th percentiles as T0/T1: {T0:.3f}, {T1:.3f}")
+
+        return treatment, T0, T1
+    
     def estimate_effect_dml(self, outcome, treatment, T0, T1, X_col, W_col, query):
         if len(W_col) == 0:
             W_col = ['W']
             W = pd.DataFrame(np.zeros((len(self.data), 1)), columns=W_col)
             self.data = pd.concat([self.data, W], axis=1)
             self.global_state.user_data.processed_data = self.data
-        # Algorithm selection and deliberation
+
+        # Step 1: Algorithm selection
         filter = DML_HTE_Filter(self.args)
         self.global_state = filter.forward(self.global_state, query)
+
+        # Step 2: Determine model and treatment preparation mode
+        model_name = self.global_state.inference.hte_algo_json['name']
+        discretize = True if model_name == 'CausalForestDML' else False
+
+        # Step 3: Prepare treatment column
+        encoded_treatment, T0, T1 = self.prepare_treatment_column(
+            self.data, treatment, T0, T1, model_name, discretize=discretize
+        )
+        self.data[treatment] = encoded_treatment
+        self.global_state.user_data.processed_data = self.data
+
+        # Step 4: Re-check model (in case treatment preprocessing switched model)
+        model_name = self.global_state.inference.hte_algo_json['name']
+
+        # Step 5: Reranker
         reranker = DML_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
         self.global_state = reranker.forward(self.global_state)
+
+        # Step 6: Create and fit model
+        print(f"[DEBUG] treatment column name: {treatment}, T0: {T0}, T1: {T1}")
+        assert isinstance(treatment, str), f"❌ treatment must be str, got {type(treatment)}"
+        assert treatment in self.data.columns, f"❌ Column '{treatment}' not found in data columns"
+        print(f"[DEBUG] Final T_col = {treatment}")
+        print(f"[DEBUG] Columns in data: {self.data.columns.tolist()}")
+
         programmer = DML_HTE_Programming(self.args, y_col=outcome, T_col=treatment, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
         programmer.fit_model(self.global_state)
-        # Estimate ate, att, hte
+        self.global_state.inference.dml_programmer = programmer
+
+        # Step 7: Handle T0/T1 override for discrete models like CausalForestDML
+        if model_name == 'CausalForestDML':
+            treatment_values = sorted(self.data[treatment].unique())
+            T0, T1 = treatment_values[0], treatment_values[1]
+            print(f"[INFO] Overriding T0/T1 for CausalForestDML: T0={T0}, T1={T1}")
+            programmer.T0 = T0
+            programmer.T1 = T1
+            if programmer.model:
+                programmer.model.T0 = T0
+                programmer.model.T1 = T1
+
+        # Step 8: Estimate effects
+        print(f"Final T0: {T0}, T1: {T1}")
+        print(f"Treatment values seen during fit: {self.data[treatment].unique()}")
         ate, ate_lower, ate_upper = programmer.forward(self.global_state, task='ate')
         att, att_lower, att_upper = programmer.forward(self.global_state, task='att')
         hte, hte_lower, hte_upper = programmer.forward(self.global_state, task='hte')
-        hte = pd.DataFrame({'hte': hte.flatten()})
-        hte.to_csv(f'{self.global_state.user_data.output_graph_dir}/hte.csv', index=False)
 
-        result = {'ate': [ate, ate_lower, ate_upper],
-                  'att': [att, att_lower, att_upper],
-                  'hte': [hte, hte_lower, hte_upper]}
+        hte = pd.DataFrame({'hte': hte.flatten()})
+        output_dir = self.global_state.user_data.output_graph_dir
+        os.makedirs(output_dir, exist_ok=True)
+        hte.to_csv(f'{output_dir}/hte.csv', index=False)
+
+        result = {
+            'ate': [ate, ate_lower, ate_upper],
+            'att': [att, att_lower, att_upper],
+            'hte': [hte, hte_lower, hte_upper]
+        }
+
         return result
+
+
+    # def estimate_effect_dml(self, outcome, treatment, T0, T1, X_col, W_col, query):
+    #     if len(W_col) == 0:
+    #         W_col = ['W']
+    #         W = pd.DataFrame(np.zeros((len(self.data), 1)), columns=W_col)
+    #         self.data = pd.concat([self.data, W], axis=1)
+    #         self.global_state.user_data.processed_data = self.data
+
+    #     # Algorithm selection and deliberation
+    #     filter = DML_HTE_Filter(self.args)
+    #     self.global_state = filter.forward(self.global_state, query)
+
+    #     # 2. Now we know the selected model
+    #     model_name = self.global_state.inference.hte_algo_json['name']
+
+    #     encoded_treatment, T0, T1 = self.prepare_treatment_column(self.data, treatment, T0, T1, model_name)
+    #     self.data[treatment] = encoded_treatment
+    #     self.global_state.user_data.processed_data = self.data
+
+    #     reranker = DML_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
+    #     self.global_state = reranker.forward(self.global_state)
+    #     print(f"[DEBUG] treatment column name: {treatment}, T0: {T0}, T1: {T1}")
+    #     assert isinstance(treatment, str), f"❌ treatment must be str, got {type(treatment)}"
+    #     assert treatment in self.data.columns, f"❌ Column '{treatment}' not found in data columns"
+    #     print(f"[DEBUG] Final T_col = {treatment}")
+    #     print(f"[DEBUG] Columns in data: {self.data.columns.tolist()}")
+
+    #     model_name = self.global_state.inference.hte_algo_json['name']  # ✅ update model name
+    #     programmer = DML_HTE_Programming(self.args, y_col=outcome, T_col=treatment, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
+    #     programmer.fit_model(self.global_state)
+    #     self.global_state.inference.dml_programmer = programmer
+
+    #     # Override T0 and T1 with valid values if using CausalForestDML
+        
+    #     if self.global_state.inference.hte_algo_json['name'] == 'CausalForestDML':
+    #         treatment_values = sorted(self.data[treatment].unique())
+    #         T0, T1 = treatment_values[0], treatment_values[1]
+    #         print(f"Overriding T0/T1 for CausalForestDML: T0={T0}, T1={T1}")
+    #         programmer.T0 = T0
+    #         programmer.T1 = T1
+    #         if programmer.model:
+    #             programmer.model.T0 = T0
+    #             programmer.model.T1 = T1
+    #     # Estimate ate, att, hte
+    #     print(f"Final T0: {T0}, T1: {T1}")
+    #     print(f"Treatment values seen during fit: {self.data[treatment].unique()}")
+    #     ate, ate_lower, ate_upper = programmer.forward(self.global_state, task='ate')
+    #     att, att_lower, att_upper = programmer.forward(self.global_state, task='att')
+    #     hte, hte_lower, hte_upper = programmer.forward(self.global_state, task='hte')
+    #     hte = pd.DataFrame({'hte': hte.flatten()})
+    #     output_dir = self.global_state.user_data.output_graph_dir
+    #     os.makedirs(output_dir, exist_ok=True)  # ✅ Creates the directory if it doesn't exist
+
+    #     hte.to_csv(f'{self.global_state.user_data.output_graph_dir}/hte.csv', index=False)
+
+    #     result = {'ate': [ate, ate_lower, ate_upper],
+    #               'att': [att, att_lower, att_upper],
+    #               'hte': [hte, hte_lower, hte_upper]}
+    #     return result
+
+    # def estimate_effect_drl(self, outcome, treatment, T0, T1, X_col, W_col, query):
+    #     if len(W_col) == 0:
+    #         W_col = ['W']
+    #         W = pd.DataFrame(np.zeros((len(self.data), 1)), columns=W_col)
+    #         self.data = pd.concat([self.data, W], axis=1)
+    #         self.global_state.user_data.processed_data = self.data
+    #     # Algorithm selection and deliberation
+    #     filter = DRL_HTE_Filter(self.args)
+    #     self.global_state = filter.forward(self.global_state, query)
+    #     reranker = DRL_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
+    #     self.global_state = reranker.forward(self.global_state)
+    #     programmer = DRL_HTE_Programming(self.args, y_col=outcome, T_col=treatment, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
+    #     programmer.fit_model(self.global_state)
+    #     # Estimate ate, att, hte
+    #     ate, ate_lower, ate_upper = programmer.forward(self.global_state, task='ate')
+    #     att, att_lower, att_upper = programmer.forward(self.global_state, task='att')
+    #     hte, hte_lower, hte_upper = programmer.forward(self.global_state, task='hte')
+    #     hte = pd.DataFrame({'hte': hte.flatten()})
+    #     hte.to_csv(f'{self.global_state.user_data.output_graph_dir}/hte.csv', index=False)
+
+    #     result = {'ate': [ate, ate_lower, ate_upper],
+    #               'att': [att, att_lower, att_upper],
+    #               'hte': [hte, hte_lower, hte_upper]}
+    #     return result
+    # TODO: Add def contains_iv() to check where the causal graph contains IV
 
     def estimate_effect_drl(self, outcome, treatment, T0, T1, X_col, W_col, query):
         if len(W_col) == 0:
@@ -729,25 +966,124 @@ class Analysis(object):
             W = pd.DataFrame(np.zeros((len(self.data), 1)), columns=W_col)
             self.data = pd.concat([self.data, W], axis=1)
             self.global_state.user_data.processed_data = self.data
-        # Algorithm selection and deliberation
+
+        # Step 1: Model selection
         filter = DRL_HTE_Filter(self.args)
         self.global_state = filter.forward(self.global_state, query)
+
+        # Step 2: Get model name
+        model_name = self.global_state.inference.hte_algo_json['name']
+        discretize = True if model_name in ['DRL','ForestDRL', 'LinearDRL', 'SparseDRL'] else False  # Optional binning strategy
+
+        # Step 3: Prepare treatment
+        encoded_treatment, T0, T1 = self.prepare_treatment_column(
+            self.data, treatment, T0, T1, model_name, discretize=discretize
+        )
+        self.data[treatment] = encoded_treatment
+        self.global_state.user_data.processed_data = self.data
+
+        # Step 4: Re-check model name if updated during treatment handling
+        model_name = self.global_state.inference.hte_algo_json['name']
+
+        # Step 5: Param Selection
         reranker = DRL_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
         self.global_state = reranker.forward(self.global_state)
+
+        # Step 6: Initialize and fit model
+        print(f"[DEBUG] treatment column name: {treatment}, T0: {T0}, T1: {T1}")
+        assert isinstance(treatment, str), f"❌ treatment must be str, got {type(treatment)}"
+        assert treatment in self.data.columns, f"❌ Column '{treatment}' not found in data columns"
+        print(f"[DEBUG] Final T_col = {treatment}")
+        print(f"[DEBUG] Columns in data: {self.data.columns.tolist()}")
+
         programmer = DRL_HTE_Programming(self.args, y_col=outcome, T_col=treatment, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
         programmer.fit_model(self.global_state)
-        # Estimate ate, att, hte
+        self.global_state.inference.drl_programmer = programmer
+
+        # Step 7: Ensure T0 and T1 are valid for effect calculation
+        treatment_values = sorted(self.data[treatment].unique())
+        if T0 not in treatment_values or T1 not in treatment_values:
+            T0, T1 = treatment_values[0], treatment_values[-1]
+            print(f"[INFO] Overriding T0/T1 to valid values: T0={T0}, T1={T1}")
+            programmer.T0 = T0
+            programmer.T1 = T1
+            if programmer.model:
+                programmer.model.T0 = T0
+                programmer.model.T1 = T1
+
+        # Step 8: Estimate effects
+        print(f"Final T0: {T0}, T1: {T1}")
+        print(f"Treatment values seen during fit: {self.data[treatment].unique()}")
+
         ate, ate_lower, ate_upper = programmer.forward(self.global_state, task='ate')
         att, att_lower, att_upper = programmer.forward(self.global_state, task='att')
         hte, hte_lower, hte_upper = programmer.forward(self.global_state, task='hte')
-        hte = pd.DataFrame({'hte': hte.flatten()})
-        hte.to_csv(f'{self.global_state.user_data.output_graph_dir}/hte.csv', index=False)
 
-        result = {'ate': [ate, ate_lower, ate_upper],
-                  'att': [att, att_lower, att_upper],
-                  'hte': [hte, hte_lower, hte_upper]}
-        return result
-    # TODO: Add def contains_iv() to check where the causal graph contains IV
+        hte = pd.DataFrame({'hte': hte.flatten()})
+        output_dir = self.global_state.user_data.output_graph_dir
+        os.makedirs(output_dir, exist_ok=True)
+        hte.to_csv(f'{output_dir}/hte.csv', index=False)
+
+        return {
+            'ate': [ate, ate_lower, ate_upper],
+            'att': [att, att_lower, att_upper],
+            'hte': [hte, hte_lower, hte_upper]
+        }
+
+    
+    def contains_iv(self, treatment, outcome):
+        """
+        Determines if the causal graph contains a valid instrumental variable (IV) for the
+        given treatment and outcome pair.
+        
+        An instrumental variable Z must satisfy three conditions:
+        1. Z is associated with the treatment variable (relevance)
+        2. Z affects the outcome only through the treatment (exclusion restriction)
+        3. Z has no common causes with the outcome (independence)
+        
+        Args:
+            treatment (str): The treatment variable name
+            outcome (str): The outcome variable name
+            
+        Returns:
+            tuple: (exists_iv (bool), iv_variable (str or None))
+        """
+        # Get all nodes in the graph
+        all_nodes = list(self.G.nodes())
+        
+        # Check each node as a potential IV
+        for node in all_nodes:
+            # Skip if node is the treatment or outcome
+            if node == treatment or node == outcome:
+                continue
+                
+            # 1. Check if Z affects T (relevance)
+            affects_treatment = False
+            for path in nx.all_simple_paths(self.G, node, treatment, cutoff=1):
+                if len(path) == 2:  # Direct path from node to treatment
+                    affects_treatment = True
+                    break
+                    
+            if not affects_treatment:
+                continue
+                
+            # 2. Check if Z affects Y only through T (exclusion restriction)
+            direct_to_outcome = False
+            for path in nx.all_simple_paths(self.G, node, outcome, cutoff=1):
+                if len(path) == 2:  # Direct path from node to outcome
+                    direct_to_outcome = True
+                    break
+                    
+            if direct_to_outcome:
+                continue
+                
+            # 3. Check if Z has no common causes with Y (independence)
+            # For simplicity, we check if there are no incoming edges to Z
+            # (This is a simplification - a more thorough check would verify Z's parents don't affect Y)
+            if len(list(self.G.predecessors(node))) == 0:
+                return True, node
+                
+        return False, None
     
     def estimate_effect_iv(self, outcome, treatment, instrument_variable, T0, T1, X_col, W_col, query):
         if len(W_col) == 0:
@@ -755,26 +1091,42 @@ class Analysis(object):
             W = pd.DataFrame(np.zeros((len(self.data), 1)), columns=W_col)
             self.data = pd.concat([self.data, W], axis=1)
             self.global_state.user_data.processed_data = self.data
-        # Algorithm selection and deliberation
-        filter = IV_HTE_Filter(self.args)
+
+        # Step 1: Apply Filtering (if necessary)
+        filter = MetaLearners_HTE_Filter(self.args)
         self.global_state = filter.forward(self.global_state, query)
-        reranker = IV_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, Z_col=instrument_variable, X_col=X_col, W_col=W_col)
+
+        # Step 2: Select the best hyperparameters for the Metalearner
+        reranker = MetaLearners_HTE_Param_Selector(self.args, y_col=outcome, T_col=treatment, X_col=X_col, W_col=W_col)
         self.global_state = reranker.forward(self.global_state)
-        programmer = IV_HTE_Programming(self.args, y_col=outcome, T_col=treatment, Z_col=instrument_variable, T0=T0, T1=T1, X_col=X_col, W_col=W_col)
+        
+        
+        print("W_col being passed:", W_col)
+        # Step 3: Choose and initialize the appropriate Metalearner
+        programmer = MetaLearners_HTE_Programming(
+            self.args, y_col=outcome, T_col=treatment, T0=T0, T1=T1, X_col=X_col
+        )
         programmer.fit_model(self.global_state)
-        # Estimate ate, att, hte
+
+        # Step 4: Estimate ATE, ATT, HTE
         ate, ate_lower, ate_upper = programmer.forward(self.global_state, task='ate')
         att, att_lower, att_upper = programmer.forward(self.global_state, task='att')
         hte, hte_lower, hte_upper = programmer.forward(self.global_state, task='hte')
-        hte = pd.DataFrame({'hte': hte.flatten()})
-        hte.to_csv(f'{self.global_state.user_data.output_graph_dir}/hte.csv', index=False)
 
-        result = {'ate': [ate, ate_lower, ate_upper],
-                  'att': [att, att_lower, att_upper],
-                  'hte': [hte, hte_lower, hte_upper]}
+        # Convert HTE results to a DataFrame
+        hte_df = pd.DataFrame({'hte': hte.flatten()})
+        print(f"Saving HTE results to: {self.global_state.user_data.output_graph_dir}/hte_metalearner.csv")
+        hte_df.to_csv(f'{self.global_state.user_data.output_graph_dir}/hte_metalearner.csv', index=False)
+
+        result = {
+            'ate': [ate, ate_lower, ate_upper],
+            'att': [att, att_lower, att_upper],
+            'hte': [hte, hte_lower, hte_upper]
+        }
         return result
     
-    # def Estimate_effect_MetaLearners
+
+
     def estimate_effect_linear(self, 
                                treatment, 
                                outcome, 
@@ -1056,13 +1408,12 @@ class Analysis(object):
             parent_nodes = list(self.G.predecessors(key_node))
             method = task_info['hte_method']
             ### Suggest method based on dataset characteristics
-            # TODO: Check for IV in the Causal Graph
-            exist_IV = False
+            # Check for IV in the Causal Graph
+            exist_IV, iv_variable = self.contains_iv(treatment, key_node)
             if exist_IV:
-                iv_variable = None
                 self.global_state.inference.task_info[self.global_state.inference.task_index]['IV'] = iv_variable
                 method = "iv"
-
+            
             elif len(confounders) <= 5:
                 if len(confounders) - len(cont_confounders) > len(cont_confounders):  # If more than half discrete confounders
                     method = "cem"
@@ -1095,11 +1446,26 @@ class Analysis(object):
             # TODO: Add IV Estimation
             if method == "iv":
                 result = self.estimate_effect_iv(outcome=key_node, treatment=treatment, instrument_variable=iv_variable, T0=control, T1=treat,
-                                                            X_col=hte_variables, W_col=confounders, query=desc)
+                                                        X_col=hte_variables, W_col=confounders, query=desc)
                 response, figs = generate_analysis_econml(self.args, self.global_state, key_node, treatment, parent_nodes, hte_variables, confounders, result, desc)
                 chat_history.append(("📝 Analyze for ATE and ATT...", None))
                 chat_history.append((None, response[0]))
                 chat_history.append(("📝 Analyze for HTE...", None))
+                for fig in figs:
+                    chat_history.append((None, (f'{fig}',)))
+                chat_history.append((None, response[1]))
+                
+            elif method == "uplift":
+                result = self.estimate_effect_uplift(outcome=key_node, treatment=treatment, T0=control, T1=treat,
+                                                        X_col=hte_variables, W_col=confounders, query=desc)
+                response, figs = generate_analysis_econml(self.args, self.global_state, key_node, treatment, parent_nodes, hte_variables, confounders, result, desc)
+                
+                # Add special uplift-specific formatting for chat history
+                chat_history.append(("📝 Analyzing Individual Treatment Effects with Uplift Modeling...", None))
+                chat_history.append((None, response[0]))
+                chat_history.append(("📝 Analyzing Heterogeneous Treatment Effects...", None))
+                
+                # Add uplift-specific visualizations
                 for fig in figs:
                     chat_history.append((None, (f'{fig}',)))
                 chat_history.append((None, response[1]))
@@ -1183,7 +1549,7 @@ if __name__ == '__main__':
         parser.add_argument(
             '--data-file',
             type=str,
-            default="./demo_data/20250130_130622/house_price.csv",
+            default="./demo_data/20250130_130622/hotel_booking_cancellation.csv",
             help='Path to the input dataset file (e.g., CSV format or directory location)'
         )
 
@@ -1239,72 +1605,205 @@ if __name__ == '__main__':
         )
         args = parser.parse_args()
         return args
-    
     args = parse_args()
-    # with open('demo_data/20250121_223113/lalonde/output_graph/PC_global_state.pkl', 'rb') as file:
-    #     global_state = pickle.load(file)
+
+    # Load global state
+    with open('./demo_data/20250130_130622/hotel_booking_cancellation/output_graph/PC_global_state.pkl', 'rb') as file:
+        global_state = pickle.load(file)
+        analysis = Analysis(global_state, args)
+
+        result = analysis.estimate_effect_dml(outcome ='is_canceled', 
+                                              treatment = 'previous_cancellations', 
+                                              T0=0, T1=1, 
+                                              X_col =['is_repeated_guest', 'previous_bookings_not_canceled', 'booking_changes', 'deposit_type','customer_type'],
+                                              W_col=[],
+                                              query='Find the treatment effect')
+        
+
     
+
+        def _to_scalar(x):
+            return x.item() if isinstance(x, np.ndarray) and x.size == 1 else x
+
+        ate, ate_lower, ate_upper = map(_to_scalar, result['ate'])
+        att, att_lower, att_upper = map(_to_scalar, result['att'])
+
+        print(f"\n=== ATE ===")
+        print(f"ATE: {ate:.4f} (95% CI: [{ate_lower:.4f}, {ate_upper:.4f}])")
+
+        print(f"\n=== ATT ===")
+        print(f"ATT: {att:.4f} (95% CI: [{att_lower:.4f}, {att_upper:.4f}])")
+
+
+        # result = analysis.estimate_effect_dml(outcome ='is_canceled', 
+        #                                       treatment = 'previous_cancellations', 
+        #                                       T0=0, T1=1, 
+        #                                       X_col =['is_repeated_guest', 'previous_bookings_not_canceled', 'booking_changes', 'deposit_type','customer_type'],
+        #                                       W_col=[],
+        #                                       query='Find the treatment effect')
+        
+        #  result = analysis.estimate_effect_dml(outcome ='deaths', 
+        #                                       treatment = 'richter', 
+        #                                       T0=0, T1=1, 
+        #                                       X_col =['year', 'month', 'day', 'region','area'],
+        #                                       W_col=[],
+        #                                       query='Find the treatment effect')   
+
+        # result = analysis.estimate_effect_dml(outcome ='SalePrice', 
+        #                                       treatment = 'HouseStyle', 
+        #                                       T0=0, T1=1, 
+        #                                       X_col =['OverallQual', 'OverallCond', 'YearBuilt', 'GarageArea'],
+        #                                       W_col=[],
+        #                                       query='Find the treatment effect')
+
+        
+
+
+
+
+    # # Ensure inference attributes exist in global_state
+    # if not hasattr(global_state, "inference"):
+    #     global_state.inference = Inference()
+
+    # if not hasattr(global_state.inference, "editing_history"):
+    #     global_state.inference.editing_history = []
+
+    # if not hasattr(global_state.inference, "cycle_detection_result"):
+    #     global_state.inference.cycle_detection_result = {}
+
+    # if not hasattr(global_state.inference, "task_info"):
+    #     global_state.inference.task_info = []
+
+    # print(global_state.user_data.processed_data["CentralAir"].value_counts(normalize=True))
+    # print("Missing values in dataset:\n", global_state.user_data.processed_data.isnull().sum())
+    # print(global_state.user_data.processed_data.head())
+
+    # Initialize analysis
     # my_analysis = Analysis(global_state, args)
-    # # my_analysis.estimate_effect_dml(outcome='re78', treatment='treat', 
+
+    # # Ensure processed_data exists
+    # if not hasattr(global_state, "user_data") or not hasattr(global_state.user_data, "processed_data"):
+    #     raise ValueError("Processed data is missing from global_state. Ensure data is properly loaded.")
+
+    # treatment_col = "CentralAir"  # Adjust if necessary
+
+    # # Check if treatment column exists
+    # if treatment_col in global_state.user_data.processed_data.columns:
+    #     unique_treatment_values = global_state.user_data.processed_data[treatment_col].unique()
+    #     print(f"Unique values in {treatment_col}:", unique_treatment_values)
+
+    #     if len(unique_treatment_values) < 2:
+    #         raise ValueError(f"Treatment column '{treatment_col}' has insufficient variation: {unique_treatment_values}")
+    # else:
+    #     raise ValueError(f"Treatment column '{treatment_col}' not found in dataset.")
+    
+    # global_state.user_data.processed_data["CentralAir"] = (
+    # global_state.user_data.processed_data["CentralAir"] > 0).astype(int)  # Converts to 0 or 1
+    # print("Fixed Unique values in CentralAir:", global_state.user_data.processed_data["CentralAir"].unique())
+    
+
+
+    # # Run the MetaLearner estimation
+    # result = my_analysis.estimate_effect_MetaLearners(
+    #     outcome='SalePrice', 
+    #     treatment='CentralAir', 
+    #     T0=0, T1=1, 
+    #     X_col=['LotArea', 'OverallQual'], 
+    #     W_col=['YearBuilt', 'GrLivArea', 'GarageCars'], 
+    #     query='What is the treatment effect of CentralAir on SalePrice'
+    # )
+
+    # print("Unique Treatment Values in Data:", global_state.user_data.processed_data['CentralAir'].unique())
+    # print("Available keys in global_state.statistics.data_type_column:", global_state.statistics.data_type_column.keys())
+    # print("\nFinal MetaLearner Estimation Results:", result)
+
+    
+    # args = parse_args()
+    # # with open('demo_data/20250121_223113/lalonde/output_graph/PC_global_state.pkl', 'rb') as file:
+    # #     global_state = pickle.load(file)
+    
+    # # my_analysis = Analysis(global_state, args)
+    # # # my_analysis.estimate_effect_dml(outcome='re78', treatment='treat', 
+    # # #                                 T0=0, T1=1, 
+    # # #                                 X_col=['age', 'nodegr'], 
+    # # #                                 W_col=['educ', 'age', 'married', 'nodegr'], 
+    # # #                                 query='What is the treatment effect of treat on re78')
+    # # my_analysis.feature_importance(target_node='re78', linearity=False, visualize=True)
+    # # #my_analysis.simulate_intervention(treatment_name = 'married', response_name = 're78', shift_intervention_val =1)
+    # with open('./demo_data/20250130_130622/house_price/output_graph/PC_global_state.pkl', 'rb') as file:
+    #     global_state = pickle.load(file)
+
+    # # Dynamically update `inference`
+    # if not hasattr(global_state, "inference"):
+    #     global_state.inference = Inference()
+
+    # if not hasattr(global_state.inference, "editing_history"):
+    #     global_state.inference.editing_history = []
+
+    # if not hasattr(global_state.inference, "cycle_detection_result"):
+    #     global_state.inference.cycle_detection_result = {}
+
+    # if not hasattr(global_state.inference, "task_info"):
+    #     global_state.inference.task_info = []
+
+    # my_analysis = Analysis(global_state, args)
+
+    # treatment_col = "CentralAir"  # Adjust if necessary
+    # if treatment_col in global_state.user_data.processed_data:
+    #     unique_treatment_values = global_state.user_data.processed_data[treatment_col].unique()
+    #     print(f"Unique values in {treatment_col}:", unique_treatment_values)
+
+    # if len(unique_treatment_values) < 2:
+    #     raise ValueError(f"Treatment column '{treatment_col}' has insufficient variation: {unique_treatment_values}")
+    # else:
+    #     raise ValueError(f"Treatment column '{treatment_col}' not found in dataset.")
+    
+    # result = my_analysis.estimate_effect_MetaLearners(outcome='SalePrice', treatment='CentralAir', 
+    #                      T0=0, T1=1, 
+    #                      X_col=['LotArea', 'OverallQual'], 
+    #                      W_col=['YearBuilt', 'GrLivArea', 'GarageCars'], 
+    #                      query='What is the treatment effect of CentralAir on SalePrice')
+    # print("Unique Treatment Values in Data:", global_state.user_data.processed_data['CentralAir'].unique())
+    # print("Available keys in global_state.statistics.data_type_column:", global_state.statistics.data_type_column.keys())
+    # print("\nFinal MetaLearner Estimation Results:", result)
+
+
+    # # result = my_analysis.estimate_effect_MetaLearners(outcome='re78', treatment='treat', 
     # #                                 T0=0, T1=1, 
     # #                                 X_col=['age', 'nodegr'], 
     # #                                 W_col=['educ', 'age', 'married', 'nodegr'], 
     # #                                 query='What is the treatment effect of treat on re78')
-    # my_analysis.feature_importance(target_node='re78', linearity=False, visualize=True)
+    # # my_analysis.feature_importance(target_node='SalePrice', linearity=False, visualize=True)
+    # # anomaly_samples = my_analysis.data.head(10)  # Replace with your anomaly DataFrame
+    # # anomaly_df, anomaly_figs = my_analysis.attribute_anomalies(
+    # #     target_node='SalePrice', 
+    # #     anomaly_samples=anomaly_samples, 
+    # #     confidence_level=0.95
+    # # )
+    # # print("Anomaly Attribution Results:", anomaly_df)
     # #my_analysis.simulate_intervention(treatment_name = 'married', response_name = 're78', shift_intervention_val =1)
-    with open('./demo_data/20250130_130622/house_price/output_graph/PC_global_state.pkl', 'rb') as file:
-        global_state = pickle.load(file)
 
-    # Dynamically update `inference`
-    if not hasattr(global_state, "inference"):
-        global_state.inference = Inference()
+    # # # Initialize analysis
+    # # my_analysis = Analysis(global_state, args)
 
-    if not hasattr(global_state.inference, "editing_history"):
-        global_state.inference.editing_history = []
+    # # # Load dataset and split into `data_old` and `data_new`
+    # # full_data = my_analysis.data  # Load the full dataset
+    # # split_point = len(full_data) // 2  # Split into two halves
+    # # data_old = full_data.iloc[:split_point]  # First half as "old" data
+    # # data_new = full_data.iloc[split_point:]  # Second half as "new" data
 
-    if not hasattr(global_state.inference, "cycle_detection_result"):
-        global_state.inference.cycle_detection_result = {}
-
-    if not hasattr(global_state.inference, "task_info"):
-        global_state.inference.task_info = []
+    # # # Test `attribute_distributional_changes`
+    # # target_node = 'SalePrice'  # Change to your variable of interest
+    # # method = 'distribution_change'  # or 'distribution_change_robust'
     
+    # # dist_change_df, dist_change_figs = my_analysis.attribute_distributional_changes(
+    # #     target_node=target_node,
+    # #     data_old=data_old,
+    # #     data_new=data_new,
+    # #     method=method,
+    # #     confidence_level=0.95
+    # # )
 
-        
-    my_analysis = Analysis(global_state, args)
-    # my_analysis.estimate_effect_dml(outcome='re78', treatment='treat', 
-    #                                 T0=0, T1=1, 
-    #                                 X_col=['age', 'nodegr'], 
-    #                                 W_col=['educ', 'age', 'married', 'nodegr'], 
-    #                                 query='What is the treatment effect of treat on re78')
-    # my_analysis.feature_importance(target_node='SalePrice', linearity=False, visualize=True)
-    anomaly_samples = my_analysis.data.head(10)  # Replace with your anomaly DataFrame
-    anomaly_df, anomaly_figs = my_analysis.attribute_anomalies(
-        target_node='SalePrice', 
-        anomaly_samples=anomaly_samples, 
-        confidence_level=0.95
-    )
-    print("Anomaly Attribution Results:", anomaly_df)
-    #my_analysis.simulate_intervention(treatment_name = 'married', response_name = 're78', shift_intervention_val =1)
-
-    # Initialize analysis
-    my_analysis = Analysis(global_state, args)
-
-    # Load dataset and split into `data_old` and `data_new`
-    full_data = my_analysis.data  # Load the full dataset
-    split_point = len(full_data) // 2  # Split into two halves
-    data_old = full_data.iloc[:split_point]  # First half as "old" data
-    data_new = full_data.iloc[split_point:]  # Second half as "new" data
-
-    # Test `attribute_distributional_changes`
-    target_node = 'SalePrice'  # Change to your variable of interest
-    method = 'distribution_change'  # or 'distribution_change_robust'
+    # # print("Distributional Change Attribution Results:\n", dist_change_df)
+    # # Print results
     
-    dist_change_df, dist_change_figs = my_analysis.attribute_distributional_changes(
-        target_node=target_node,
-        data_old=data_old,
-        data_new=data_new,
-        method=method,
-        confidence_level=0.95
-    )
-
-    print("Distributional Change Attribution Results:\n", dist_change_df)
