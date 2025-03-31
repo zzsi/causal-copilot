@@ -416,5 +416,141 @@
             }
         },
         "min_runtime": 60
+    },
+    "VARLiNGAM": {
+        "terms": [
+            {
+                "name": "data_validation_term",
+                "expression": "N * p"
+            },
+            {
+                "name": "var_coefficient_estimation_term",
+                "expression": "N * p**2"
+            },
+            {
+                "name": "residuals_computation_term",
+                "expression": "N * p**2"
+            },
+            {
+                "name": "B_matrix_computation_term",
+                "expression": "p**3"
+            },
+            {
+                "name": "bootstrap_ar_prediction_term",
+                "expression": "N * p**2"
+            },
+            {
+                "name": "total_effect_estimation_term",
+                "expression": "p**2"
+            },
+            {
+                "name": "pruning_regression_term",
+                "expression": "N * p**2"
+            },
+            {
+                "name": "error_independence_test_term",
+                "expression": "p**2"
+            }
+        ],
+        "log_transform": false,
+        "param_calculations": {
+            "d": {
+                "type": "degree",
+                "expression": "max(1, int(p/5))"
+            }
+        },
+        "min_runtime": 60
+    },
+    "NTSNOTEARS": {
+        "terms": [
+            {
+                "name": "data_preprocessing_term",
+                "expression": "N * p"
+            },
+            {
+                "name": "conv1d_term",
+                "expression": "N * p * M"
+            },
+            {
+                "name": "fc2_term",
+                "expression": "N * p * M"
+            },
+            {
+                "name": "h_expm_term",
+                "expression": "p**3"
+            },
+            {
+                "name": "adj_conversion_term",
+                "expression": "p**2 * M"
+            }
+        ],
+        "log_transform": false,
+        "param_calculations": {
+            "M": {
+                "type": "rank",
+                "expression": "max(int(log(p)/log(2)), 1)"
+            }
+        },
+        "min_runtime": 60
+    },
+    "DYNOTEARS": {
+        "terms": [
+            {
+                "name": "data_transform_term",
+                "expression": "N * p"
+            },
+            {
+                "name": "matrix_multiplication_term",
+                "expression": "N * p**2"
+            },
+            {
+                "name": "matrix_exponential_term",
+                "expression": "p**3"
+            }
+        ],
+        "log_transform": false,
+        "param_calculations": {
+            "lbfgs_iterations": {
+                "type": "iteration",
+                "expression": "max_iter"
+            }
+        },
+        "min_runtime": 60
+    },
+    "GrangerCausality": {
+        "terms": [
+            {
+                "name": "data_scaling_term",
+                "expression": "N * d"
+            },
+            {
+                "name": "var_fit_term",
+                "expression": "N * d**2 * p"
+            },
+            {
+                "name": "forecast_term",
+                "expression": "N * d**2"
+            },
+            {
+                "name": "mvgc_inner_loop_term",
+                "expression": "N * d**3"
+            },
+            {
+                "name": "granger_test_term",
+                "expression": "N * p * d**2"
+            }
+        ],
+        "log_transform": false,
+        "param_calculations": {
+            "p": {
+                "type": "lag",
+                "expression": "p"
+            },
+            "d": {
+                "type": "dimension",
+                "expression": "d"
+            }
+        },
+        "min_runtime": 60
     }
 }

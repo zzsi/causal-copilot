@@ -5,13 +5,14 @@ from algorithm.program import Programming
 from algorithm.rerank import Reranker
 from algorithm.hyperparameter_selector import HyperparameterSelector
 from postprocess.judge import Judge
-# from postprocess.visualization import Visualization, convert_to_edges
+from postprocess.visualization import Visualization, convert_to_edges
 from preprocess.eda_generation import EDA
-# from report.report_generation import Report_generation
+from report.report_generation import Report_generation
 from global_setting.Initialize_state import global_state_initialization, load_data
 
 import json
 import argparse
+import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 
@@ -26,7 +27,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default="dataset/sachs/sachs.csv",
+        default="dataset/sim_ts/data.csv",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -34,7 +35,7 @@ def parse_args():
     parser.add_argument(
         '--output-report-dir',
         type=str,
-        default='dataset/sachs/output_report',
+        default='dataset/sim_ts/output_report/',
         help='Directory to save the output report'
     )
 
@@ -42,7 +43,7 @@ def parse_args():
     parser.add_argument(
         '--output-graph-dir',
         type=str,
-        default='dataset/sachs/output_graph',
+        default='dataset/sim_ts/output_graph/',
         help='Directory to save the output graph'
     )
 
@@ -63,7 +64,7 @@ def parse_args():
     parser.add_argument(
         '--debug',
         action='store_true',
-        default=True,
+        default=False,
         help='Enable debugging mode'
     )
 
@@ -151,7 +152,8 @@ def main(args):
         global_state.user_data.processed_data = global_state.user_data.raw_data
         global_state.user_data.knowledge_docs = "This is fake domain knowledge for debugging purposes."
     else:
-        global_state = stat_info_collection(global_state)
+        global_state.statistics.time_series = True
+        global_state = stat_info_collection(global_state)     
         global_state = knowledge_info(args, global_state)
 
     # Convert statistics to text
@@ -180,16 +182,15 @@ def main(args):
 
     #############Visualization for Initial Graph###################
     my_visual_initial = Visualization(global_state)
-    if global_state.statistics.time_series:
-        # print("Converted Graph: ", global_state.results.converted_graph.shape)
-        converted_graph = global_state.results.converted_graph
-        pos_est = my_visual_initial.get_pos(converted_graph[0])
-        for i in range(converted_graph.shape[0]):
-            _ = my_visual_initial.plot_pdag(converted_graph[i], f'{global_state.algorithm.selected_algorithm}_initial_graph_{i}.pdf', pos=pos_est)
-        summary_graph = np.any(converted_graph, axis=0).astype(int)
-        # pos_est = my_visual_initial.get_pos(summary_graph)
-        _ = my_visual_initial.plot_pdag(summary_graph, f'{global_state.algorithm.selected_algorithm}_initial_graph_summary.pdf', pos=pos_est)
-        my_report = Report_generation(global_state, args)
+    if global_state.statistics.time_series and global_state.results.lagged_graph is not None:
+            converted_graph = global_state.results.lagged_graph
+            pos_est = my_visual_initial.get_pos(converted_graph[0])
+            for i in range(converted_graph.shape[0]):
+                _ = my_visual_initial.plot_pdag(converted_graph[i], f'{global_state.algorithm.selected_algorithm}_initial_graph_{i}.svg', pos=pos_est)
+            summary_graph = np.any(converted_graph, axis=0).astype(int)
+            # pos_est = my_visual_initial.get_pos(summary_graph)
+            _ = my_visual_initial.plot_pdag(summary_graph, f'{global_state.algorithm.selected_algorithm}_initial_graph_summary.svg', pos=pos_est)
+            my_report = Report_generation(global_state, args)
     else:
         # Get the position of the nodes
         pos_est = my_visual_initial.get_pos(global_state.results.converted_graph)
@@ -212,12 +213,12 @@ def main(args):
     
     #############Visualization for Revised Graph###################
     # Plot Revised Graph
-    my_visual_revise = Visualization(global_state)
-    pos_new = my_visual_revise.plot_pdag(global_state.results.revised_graph, f'{global_state.algorithm.selected_algorithm}_revised_graph.pdf', pos=pos_est)
-    global_state.results.revised_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.raw_data.columns, global_state.results.revised_graph)
-    # Plot Bootstrap Heatmap
-    boot_heatmap_path = my_visual_revise.boot_heatmap_plot()
-    global_state.results.refutation_analysis = judge.graph_refutation(global_state)
+    # my_visual_revise = Visualization(global_state)
+    # pos_new = my_visual_revise.plot_pdag(global_state.results.revised_graph, f'{global_state.algorithm.selected_algorithm}_revised_graph.pdf', pos=pos_est)
+    # global_state.results.revised_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.raw_data.columns, global_state.results.revised_graph)
+    # # Plot Bootstrap Heatmap
+    # boot_heatmap_path = my_visual_revise.boot_heatmap_plot()
+    # global_state.results.refutation_analysis = judge.graph_refutation(global_state)
 
     # algorithm selection process
     '''
@@ -231,6 +232,11 @@ def main(args):
     #############Report Generation###################
     import os 
     try_num = 1
+    global_state.results.raw_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.processed_data.columns, global_state.results.converted_graph)
+    global_state.logging.graph_conversion['initial_graph_analysis'] = my_report.graph_effect_prompts()
+    analysis_clean = global_state.logging.graph_conversion['initial_graph_analysis'].replace('"',"").replace("\\n\\n", "\n\n").replace("\\n", "\n").replace("'", "")
+    print(analysis_clean)
+    
     my_report = Report_generation(global_state, args)
     report = my_report.generation()
     my_report.save_report(report)
