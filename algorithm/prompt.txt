@@ -1,15 +1,15 @@
 Given the following user query:
-YES. Analyze causal relationships between variables in the CCS dataset. The data contains multiple continuous variables.
+
 
 For the data that have the following variables:
-Cement, Blast_furnace_slag, Fly_ash, Water, Superplasticizer, Coarse_aggregate, Fine_aggregate, Age, Compressive_strength
+age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal, target
 
 And the following statistics:
 The dataset has the following characteristics:
 
-Data Type: The overall data type is Continuous.
+Data Type: The overall data type is Mixture.
 
-The sample size is 1030 with 9 features. This dataset is not time-series data. 
+The sample size is 1025 with 14 features. This dataset is not time-series data. 
 
 Data Quality: There are no missing values in the dataset.
 

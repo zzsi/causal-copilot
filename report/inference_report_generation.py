@@ -18,11 +18,12 @@ class Inference_Report_generation(object):
         """
         self.global_state = global_state
         self.args = args 
-        self.client = OpenAI(api_key=args.apikey)
+        self.client = OpenAI()
         self.statistics_desc = global_state.statistics.description
         self.knowledge_docs = global_state.user_data.knowledge_docs[0]
         # Data info
-        self.data = global_state.user_data.processed_data
+        self.data = global_state.user_data.processed_data.copy()
+        self.data.columns = [var.replace('_', ' ') for var in self.data.columns]
         self.statistics = global_state.statistics
         # Inference info
         self.task_info = global_state.inference.task_info[global_state.inference.task_index]
@@ -73,7 +74,7 @@ class Inference_Report_generation(object):
 
 \\begin{{figure}}[H]
     \centering
-    \includegraphics[height=0.5\\textheight]{{{figs[0]}}}
+    \includegraphics[width=0.7\\textwidth]{{{figs[0]}}}
     \caption{{Distribution of Confounders before and after matching}}
 \end{{figure}}
 
@@ -87,7 +88,7 @@ class Inference_Report_generation(object):
 
 \\begin{{figure}}[H]
     \centering
-    \includegraphics[width=\\textwidth]{{{figs[1]}}}
+    \includegraphics[width=0.8\\textwidth]{{{figs[1]}}}
     \caption{{CATE Bar Plots grouped by different confounders}}
 \end{{figure}}
 
@@ -118,10 +119,10 @@ class Inference_Report_generation(object):
         else:
             analysis = f"""
 """     
-        replacement = {'[TREATMENT_VAR]': treatment, 
-                       '[OUTCOME_VAR]': outcome, 
-                       '[CONFOUNDER_VAR]': ','.join(confounder), 
-                       '[HTE_VAR]': ','.join(hte_var), 
+        replacement = {'[TREATMENT_VAR]': treatment.replace('_', ' '), 
+                       '[OUTCOME_VAR]': outcome.replace('_', ' '), 
+                       '[CONFOUNDER_VAR]': (','.join(confounder)).replace('_', ' '), 
+                       '[HTE_VAR]': (','.join(hte_var)).replace('_', ' '),
                        '[METHOD]': method.replace('_', ' '),
                        '[METHOD_REASON]': method_reason,
                        '[ANALYSIS]': analysis}
@@ -152,7 +153,7 @@ class Inference_Report_generation(object):
         fi_template = load_context("report/context/inference/feature_importance.tex")
         replacement = {'[MODEL]': model, 
                        '[MODEL_REASON]': reason, 
-                       '[RESULTS]': response, 
+                       '[RESULTS]': response.replace('_', ' '), 
                        '[GRAPH1]': figs[0], 
                        '[GRAPH2]': figs[1]}
         for placeholder, value in replacement.items():
@@ -178,8 +179,8 @@ class Inference_Report_generation(object):
         response = remove_redundant_title(response)
 
         at_template = load_context("report/context/inference/attribution.tex")
-        replacement = {'[METHOD]': method, 
-                       '[RESULTS]': response, 
+        replacement = {'[METHOD]': method.replace('_', ' '), 
+                       '[RESULTS]': response.replace('_', ' '), 
                        '[GRAPH]': figs[0]}
         for placeholder, value in replacement.items():
             at_template = at_template.replace(placeholder, value)
@@ -206,8 +207,8 @@ class Inference_Report_generation(object):
         print('2nd response', response)
 
         cf_template = load_context("report/context/inference/counterfact.tex")
-        replacement = {'[METHOD]': method, 
-                       '[RESULTS]': response.replace('\$','$'), 
+        replacement = {'[METHOD]': method.replace('_', ' '), 
+                       '[RESULTS]': response.replace('\$','$').replace('_', ' '), 
                        '[GRAPH1]': figs[0]}
         for placeholder, value in replacement.items():
             cf_template = cf_template.replace(placeholder, value)

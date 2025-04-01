@@ -793,7 +793,8 @@ def stat_info_collection(global_state):
     # Assumption checking for time-series data
     elif global_state.statistics.data_type=="Time-series":
         # estimate the time lag
-        global_state.statistics.time_lag = time_series_lag_est(df=imputed_data, nlags=20)
+        if global_state.statistics.time_lag is None:
+            global_state.statistics.time_lag = time_series_lag_est(df=imputed_data, nlags=20)
         # check linearity
         global_state = linearity_check_ts(df_raw=imputed_data, global_state=global_state)
         # check gaussianity
@@ -807,6 +808,7 @@ def stat_info_collection(global_state):
     # merge the domain index column back to the data if it exists
     if col_domain_index is not None:
         imputed_data['domain_index'] = col_domain_index
+        global_state.statistics.data_type_column['domain_index'] = 'Category'
 
     global_state.user_data.processed_data = imputed_data
 
@@ -826,17 +828,20 @@ def convert_stat_info_to_text(statistics):
     """
     text = f"The dataset has the following characteristics:\n\n"
     text += f"Data Type: The overall data type is {statistics.data_type}.\n\n"
-    text += f"The sample size is {statistics.sample_size} with {statistics.feature_number} features. "
+    text += f"The sample size is {statistics.sample_size} with {statistics.feature_number} features. \n\n"
     text += f"This dataset is {'time-series' if statistics.data_type == 'Time-series' else 'not time-series'} data. \n\n"
     text += f"Data Quality: {'There are' if statistics.missingness else 'There are no'} missing values in the dataset.\n\n"
     
     text += "Statistical Properties:\n"
     text += f"- Linearity: The relationships between variables {'are' if statistics.linearity else 'are not'} predominantly linear.\n"
     text += f"- Gaussian Errors: The errors in the data {'do' if statistics.gaussian_error else 'do not'} follow a Gaussian distribution.\n"
-    text += f"- Heterogeneity: The dataset {'is' if statistics.heterogeneous else 'is not'} heterogeneous. \n\n"
-
+    
     if statistics.time_series:
-        text += f"- Estimated time lag: {statistics.time_lag} \n\n"
+        text += f"- Time lag: {statistics.time_lag} \n\n"
+        text += f"- Stationarity: The dataset {'is' if statistics.stationary else 'is not'} stationary. \n\n"
+    else:
+        text += f"- Heterogeneity: The dataset {'is' if statistics.heterogeneous else 'is not'} heterogeneous. \n\n"
+        
     if statistics.domain_index is not None:
         text += f"- Domain Index: {statistics.domain_index}"
     else:

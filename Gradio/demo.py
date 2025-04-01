@@ -443,7 +443,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             # Statistical Analysis: Time Series
             chat_history.append((None, "Please indicate whether your dataset is Time-Series and set your time lag: \n"\
                                            "1️⃣ Clarify whether it is a Time-Series dataset;\n"\
-                                           "2️⃣ If it is a Time-Series dataset, set your time lag  by yourself or input 'continue' if you want the time lag to be set automatically;\n"\
+                                           "2️⃣ If it is a Time-Series dataset, set your time lag  by yourself or input 'default' if you want the time lag to be set automatically;\n"\
                                            "3️⃣ Leave the time_lag as None if it is not a Time-Series dataset.\n"
                                            """
     is_time_series: True/False
@@ -958,6 +958,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 control = 0
                 median_num = global_state.user_data.processed_data[treatment].median()
                 global_state.user_data.processed_data[treatment] = global_state.user_data.processed_data[treatment].apply(lambda x: 1 if x > median_num else 0)
+                global_state.statistics.data_type_column[treatment] = 'category'
             # if not is_binary:
             #     CURRENT_STAGE = "inference_info_collection_binary"
             #     chat_history.append((None, f"⚠️ Your treatment column is not binary, please specify another variable name or type 'NO' to skip the treatment effect estimation task."))
@@ -1002,7 +1003,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             # Allow user add confounder
             chat_history.append((None, f"These are Confounders between treatment {treatment} and outcome {key_node}: \n"
                       f"{','.join(confounders)}\n"
-                      "💡 Do you want to add any variables as confounders in your dataset? Please choose from the following:\n"
+                      "💡 Do you want to add any variables as confounders in your dataset? Please do not include too many variables as confounders. Please choose from the following:\n"
                       f"{','.join(remaining_var)}\n"))
             CURRENT_STAGE = "inference_info_collection_confounder1"
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -1089,7 +1090,19 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             tasks_list, descs_list, key_node_list = task_info['task'], task_info['desc'], task_info['key_node']
             for i, (task, desc, key_node) in enumerate(zip(tasks_list, descs_list, key_node_list)):
                 chat_history.append((f"🔍 Analyzing for {task}...", None))
-                info, figs, chat_history = analysis.forward(task, desc, key_node, chat_history)
+                try:
+                    info, figs, chat_history = analysis.forward(task, desc, key_node, chat_history)
+                except Exception as e:
+                    print('error during analysis:', e)
+                    traceback.print_exc()
+                    info = f"❌ An error occurred during the {task} analysis, please input your causal analysis query again, or input 'no' to end this part."\
+                        f"Error Information: {e}"
+                    chat_history.append((None, info))
+                    CURRENT_STAGE = 'parse_task'
+                    global_state.inference.task_index = -1
+                    global_state.inference.task_info = {}
+                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                    return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 global_state.inference.task_info[global_state.inference.task_index]['result'][task] = {'response': info,
                                                                                                        'figs': figs}
                 if info is None:

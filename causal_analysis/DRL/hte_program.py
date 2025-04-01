@@ -12,12 +12,14 @@ class HTE_Programming(object):
         self.X_col = X_col
         self.W_col = W_col
         self.model = None
+        print(f"[INFO] HTE Programming with T: {self.T_col}")
 
     def fit_model(self, global_state):
         algo_func = getattr(wrappers, global_state.inference.hte_algo_json['name'])
         self.model = algo_func(params=global_state.inference.hte_model_param, 
                           y_col=self.y_col, T_col=self.T_col, X_col=self.X_col, W_col=self.W_col,
                           T0=self.T0, T1=self.T1)
+        print(f"[INFO] Fitting HTE with T: {self.T_col}")
         self.model.fit(global_state.user_data.processed_data)
     
     def forward(self, global_state, task='hte'): 

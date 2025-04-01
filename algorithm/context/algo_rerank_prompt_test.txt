@@ -1,6 +1,6 @@
-You will conduct causal discovery on the Tabular Dataset ./demo_data/20250330_214809/CCS_Data/CCS_Data.csv containing the following Columns:
+You will conduct causal discovery on the Tabular Dataset ./demo_data/20250331_121107/heart disease/heart disease.csv containing the following Columns:
 
-Cement	Blast_furnace_slag	Fly_ash	Water	Superplasticizer	Coarse_aggregate	Fine_aggregate	Age	Compressive_strength
+age	sex	cp	trestbps	chol	fbs	restecg	thalach	exang	oldpeak	slope	ca	thal	target
 
 The Detailed Background Information is listed below:
 
@@ -10,9 +10,9 @@ The Statistics Information about the dataset is:
 
 The dataset has the following characteristics:
 
-Data Type: The overall data type is Continuous.
+Data Type: The overall data type is Mixture.
 
-The sample size is 1030 with 9 features. This dataset is not time-series data. 
+The sample size is 1025 with 14 features. This dataset is not time-series data. 
 
 Data Quality: There are no missing values in the dataset.
 
@@ -27,14 +27,14 @@ Statistical Properties:
 
 Based on the above information, please select the best-suited algorithm from the following candidate (the order of the algorithm candidates is not important):
 
-dict_keys(['CDNOD', 'PC', 'InterIAMB'])
+dict_keys(['PC', 'FCI', 'InterIAMB'])
 
 ===============================================
 Note that the user can only wait for 1440.0 minutes for the algorithm execution, please ensure the time cost of the selected algorithm would not exceed it!
 The estimated time costs of the following algorithms using linear estimation methods (e.g. Fisherz for constraint-based methods, BIC for score-based methods) are below. Use it as a reference for the algorithm runtime comparison, note that the absolute value might changes significantly when the estimation methods are not linear (e.g. KCI for constraint-based methods, Generalized score for score-based methods). Consider the time cost wisely when selecting the algorithm, it is critical but less important than the performance when the time cost does not exceed the waiting time. As long as the timecost difference is not that large 1440.0, you should pivot more on the performance.
 
-CDNOD: 1.3 minutes
 PC: 1.0 minutes
+FCI: 1.0 minutes
 InterIAMB: 1.0 minutes
 
 At the same time, be careful about the current device availability for GPU/CUDA acceleration. Note that some algorithm settings would need GPU to run, which could be a indirect limitation on the algorithm application potential:
@@ -44,224 +44,6 @@ Current machine doesn't support CUDA, do not choose any GPU-powered algorithms.
 
 ===============================================
 Detailed Profiles of the algorithm candidates are shown here. We also include the supported hyperparamerters as additional information to help you know the potentials of each algorithm combining various hyperparamerter settings. You MUST actively combine and reason with them:
-
-======================================
-
-# CDNOD
-
-Below is a structured profile of the CDNOD (Constraint-based causal Discovery from Nonstationary or heterogeneous Data) algorithm, following the seven dimensions specified in the meta-prompt. The information presented integrates the provided hyperparameter settings, benchmarking results, and external knowledge. 
-
-────────────────────────────────────────────────────────────
-1. Hyper-Parameters Sensitivity
-────────────────────────────────────────────────────────────
-
-• Number of Key Hyperparameters  
-  - CDNOD's primary hyperparameters include:  
-    1. α (alpha): The significance level for conditional independence tests.  
-    2. indep_test: The choice of independence test (e.g., "fisherz_cpu", "fisherz_gpu", "chisq_cpu", "chisq_gpu", "cmiknn_gpu", etc.).  
-    3. depth: The maximum depth in the skeleton discovery phase.  
-  - These three hyperparameters—alpha, indep_test, and depth—are generally the most influential in determining both the algorithm's accuracy and runtime.
-
-• Tuning Difficulty  
-  - Default settings are typically sufficient for many domains (e.g., alpha=0.05, indep_test="fisherz_cpu", depth=-1). However, the selected values can significantly affect performance when sample sizes or graph sizes are extreme.  
-  - The guidelines for alpha (e.g., 0.1 for <500 samples, 0.05 for mid-range, 0.01 for very large samples) offer straightforward, data-driven rules. This means domain experts or automated routines can tune alpha more reliably given the sample size.  
-  - For the independence test, recommended defaults exist depending on data type. GPU-accelerated tests are now available, providing significant performance improvements: "fisherz_gpu" for continuous data, "chisq_gpu" for discrete data, and "cmiknn_gpu" for nonparametric testing with GPU acceleration.
-
-• Sensitivity  
-  - Alpha exerts a substantial influence on the graph's sparsity: smaller alpha yields sparser graphs, reducing false positives but potentially missing weaker edges. Larger alpha leads to denser graphs, possibly increasing false positives.  
-  - Depth affects the thoroughness of the skeleton search. A high (or unlimited) depth can improve accuracy on complex graphs but may sharply increase runtime. Lower depth settings speed up computations while potentially missing longer-range conditional dependencies.
-  - Switching from CPU to GPU implementations (e.g., from "fisherz_cpu" to "fisherz_gpu") can dramatically improve runtime without affecting accuracy, making CDNOD much more practical for large datasets.
-
-• Critique/Extension  
-  - Hyperparameters controlling the search complexity (e.g., depth) most strongly influence runtime and can also affect correctness if restricted too aggressively.  
-  - Hyperparameters tied to statistical tests (alpha, indep_test) have a more direct effect on false positives/negatives. In practice, balancing both sets of parameters is essential for robust performance.
-  - The GPU-accelerated tests provide extreme speedups compared to their CPU counterparts, especially for large datasets, addressing one of the traditional limitations of constraint-based methods.
-
-────────────────────────────────────────────────────────────
-2. Robustness & Scalability
-────────────────────────────────────────────────────────────
-
-• Tolerance to Bad Data Quality  
-  - Missing Data: CDNOD is not natively specialized in sophisticated imputation, but it can accommodate partial missingness if the user or a preprocessing routine properly handles or imputes missing entries. The benchmarking results suggest it performs very well overall in missing-data scenarios (ranking near the top in that category).  
-  - Measurement/Observation Error: Benchmarks also indicate strong tolerance to moderate or even severe noise, placing CDNOD among the more robust methods tested in handling measurement error.
-
-• Tolerance to Sparse/Dense Connected Systems  
-  - While not extensively detailed in the provided reports, constraint-based methods typically show stable performance on sparse networks. Dense networks can still be handled, but the computational load and potential for spurious edges may grow. Depth constraints can partially mitigate these issues.
-
-• Scalability  
-  - With the integration of GPU-accelerated independence tests ('fisherz_gpu', 'chisq_gpu', and 'cmiknn_gpu'), CDNOD's scalability has significantly improved. The GPU tests provide extreme speedups compared to their CPU counterparts, especially for large datasets.
-  - According to the hyperparameter information, 'cmiknn_gpu' offers a 1000x speedup compared to CPU-based 'kci' with comparable accuracy, making nonparametric testing viable for much larger datasets.
-  - Even with GPU acceleration, restricting depth remains an important strategy for very large graphs to manage computational complexity.
-
-• Critique/Extension  
-  - Parallelization: Constraint-based methods (including CDNOD) can often be parallelized by splitting conditional independence tests across computing cores. The GPU-accelerated tests take this to another level, providing massive parallelization on GPU hardware.
-  - Approximation options like restricting the skeleton search depth or using GPU-accelerated tests strike an excellent balance between runtime and accuracy, making CDNOD much more competitive for large-scale applications.
-
-────────────────────────────────────────────────────────────
-3. Mixed Data & Complex Functions
-────────────────────────────────────────────────────────────
-
-• Noise Type  
-  - CDNOD does not assume strictly Gaussian noise. It supports a variety of independence tests (including kernel-based nonparametric methods), making it suitable for non-Gaussian scenarios.
-  - The GPU-accelerated 'cmiknn_gpu' test provides a powerful nonparametric option that can handle complex noise distributions with significantly improved performance.
-
-• Mixed Data (Continuous & Discrete)  
-  - CDNOD can integrate different conditional independence tests: 'fisherz_cpu'/'fisherz_gpu' for continuous variables; 'chisq_cpu'/'chisq_gpu' for discrete; or a mix for hybrid data.
-  - Both CPU and GPU implementations are available for different data types, allowing for efficient processing regardless of data characteristics.
-
-• Heterogeneous Data  
-  - CDNOD is specifically designed to address nonstationary and heterogeneous conditions, which is one of its defining strengths (confirmed by top performance in the "Heterogeneity" category of the provided benchmarks).
-  - The GPU-accelerated tests make it much more practical to apply CDNOD to large heterogeneous datasets that would be computationally prohibitive with CPU-only implementations.
-
-• Complex Functional Forms  
-  - When the relationships between variables are nonlinear, the 'cmiknn_gpu' test provides an excellent option for capturing complex dependencies with dramatically improved performance compared to CPU-based nonparametric tests.
-  - The 1000x speedup of 'cmiknn_gpu' compared to 'kci' makes nonparametric testing practical for much larger datasets, allowing CDNOD to handle complex functional forms at scale.
-
-• Critique/Extension  
-  - If users initially rely on purely linear tests (e.g., "fisherz_cpu" or "fisherz_gpu") for data that are strongly nonlinear, they risk underspecifying relationships. Therefore, domain knowledge or preliminary data checks can guide the choice of a more robust independence test like 'cmiknn_gpu'.
-  - Overfitting can occur if alpha is set too high while a flexible, nonlinear test is used. Proper emphasis on cross-validation or domain-driven alpha choices is advisable.
-
-────────────────────────────────────────────────────────────
-4. Computational Complexity
-────────────────────────────────────────────────────────────
-
-• Theoretical Time Complexity  
-  - As a constraint-based algorithm, skeleton discovery and orientation typically have a complexity that grows with both the number of variables and the maximum conditioning set size. A simplified notation for the worst-case complexity can be denoted as:  
-    O(p^k)  
-  where p is the number of variables and k depends on the search depth. Exact exponents vary based on independence test complexity and data sample size.
-
-• Variability in Practical Usage  
-  - If depth is set to -1 (unlimited), the search can become computationally heavy for large graphs. Reducing it to smaller values (e.g., 1–3) often substantially cuts runtime.  
-  - Selecting GPU-accelerated tests ('fisherz_gpu', 'chisq_gpu', 'cmiknn_gpu') provides dramatic efficiency gains with no trade-offs in accuracy, making CDNOD much more practical for large-scale applications.
-  - The 'cmiknn_gpu' test in particular offers a 1000x speedup compared to CPU-based 'kci', making nonparametric testing viable for much larger datasets.
-
-• Critique/Extension  
-  - In real-world datasets with many variables, worst-case complexity can be mitigatingly high, but typical performance can be significantly better when the underlying network is not extremely dense.  
-  - The GPU-accelerated tests provide massive parallelization, dramatically reducing the practical runtime for large datasets and making CDNOD much more competitive for large-scale applications.
-
-────────────────────────────────────────────────────────────
-5. Interpretability
-────────────────────────────────────────────────────────────
-
-• Output Format  
-  - CDNOD typically produces a directed acyclic graph (DAG) or partially directed graph (CPDAG) representing causal structures. It may also provide adjacency matrices and edge confidence scores, depending on the implementation.
-
-• Strength of the Output Format  
-  - Graphical outputs are straightforward for users to interpret, with edges representing putative causal directions. Some implementations offer p-values or confidence measures that accompany edge findings.
-
-• Limitations of the Output Format  
-  - Like most constraint-based methods, certain edges can remain unoriented if the data are insufficient or if the relevant conditional independence tests are ambiguous.  
-  - The underlying changing distribution (nonstationarity) can sometimes complicate orientation, leading to partial orientation in complex scenarios.
-
-• Critique/Extension  
-  - Domain experts often refine or prune orientations after the algorithm's initial output. In contexts like multi-stage or time-varying processes, additional domain knowledge can greatly enhance interpretability.
-  - The improved scalability from GPU-accelerated tests allows CDNOD to be applied to larger, more complex datasets, potentially yielding more comprehensive and informative causal graphs.
-
-────────────────────────────────────────────────────────────
-6. Assumptions
-────────────────────────────────────────────────────────────
-
-• Critical Assumptions  
-  - Markov and Faithfulness: Variables follow standard causal discovery assumptions that d-separations correspond to conditional independencies.  
-  - Causal Sufficiency (with a twist): CDNOD assumes no unobserved confounders that cannot be partly captured by domain indicators or time indices in nonstationary settings.  
-  - Nonstationarity/Heterogeneity: CDNOD leverages changes in distribution to help identify causal directions.
-
-• Violation Impact  
-  - If truly hidden confounders exist that are unrelated to domain/time indicators, performance may degrade or lead to incorrect orientations.  
-  - If the data deviate heavily from the faithfulness assumption, false positives or false negatives can increase in the learned graph.
-
-• Critique/Extension  
-  - Extensions of CDNOD can handle partially missing or ambiguous domain indices.  
-  - In practice, moderate violations of the assumptions (e.g., mild confounding) might still yield useful causal insights, but caution is warranted.
-  - The availability of GPU-accelerated nonparametric tests like 'cmiknn_gpu' makes it more practical to apply CDNOD to complex datasets where linear assumptions may not hold.
-
-────────────────────────────────────────────────────────────
-7. (Optional) Real-World Benchmarks
-────────────────────────────────────────────────────────────
-
-• Performance on Real Datasets  
-  - According to some demonstrations (e.g., financial market data applications), CDNOD performs successfully in capturing dynamic causal structures underlying changing market conditions.  
-  - Benchmarks indicate it is among the stronger algorithms in contexts involving noise, measurement error, and missing data. In those areas, CDNOD scored near the top in overall performance.
-  - The integration of GPU-accelerated tests makes CDNOD much more practical for large real-world datasets that would be computationally prohibitive with CPU-only implementations.
-
-• Practical Tips  
-  - For large sample sizes (>10,000), use a lower alpha (e.g., α=0.01) and consider a smaller depth to control runtime.  
-  - If data are suspected of containing strongly nonlinear relationships, opt for the GPU-accelerated 'cmiknn_gpu' test, which provides a 1000x speedup compared to CPU-based 'kci' with comparable accuracy.
-  - For large datasets, always use the GPU-accelerated tests ('fisherz_gpu', 'chisq_gpu', 'cmiknn_gpu') when GPU hardware is available, as they provide extreme speedups with no loss in accuracy.
-  - Domain-driven insights can help refine or interpret partially oriented edges, especially in real-world settings like finance, biology, or social sciences.
-
-────────────────────────────────────────────────────────────
-Summary
-────────────────────────────────────────────────────────────
-
-CDNOD is specifically designed for causal discovery in nonstationary and heterogeneous data. Its ability to handle various data types (continuous, discrete, mixed), along with flexible independence test choices, makes it adaptable across multiple domains. With the integration of GPU-accelerated tests ('fisherz_gpu', 'chisq_gpu', and 'cmiknn_gpu'), its scalability has significantly improved, making it much more practical for large datasets. The 'cmiknn_gpu' test in particular provides a 1000x speedup for nonparametric testing compared to CPU-based alternatives, making CDNOD much more competitive for complex, non-linear causal discovery tasks. As with most constraint-based methods, interpretability is straightforward in graph form, though some edges may remain unoriented without further domain knowledge. Its robust performance in the face of measurement error, missing data, and heterogeneous sources underscores its value for complex real-world applications where distributions shift across time or other conditions.
-
-────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics, which are represented as level scores from 1-5, with 5 being the best.
-  – Levels scores of composite metrics combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-[NOTE] The ranking is smaller, the better. The level score is higher, the better.
-
-• Algorithm Rankings
-
-| Scenario | Rank (Mean) | Rank (Std Dev) | Performance (Level) | Efficiency (Level) | Composite (Level) |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 9.4 | 2.29 | 2.0 | 5.0 | 3.0 |
-| Heterogeneity | 9.5 | 1.50 | 2.0 | 4.0 | 2.0 |
-| Measurement Error | 11.0 | 0.00 | 3.0 | 4.0 | 2.0 |
-| Noise Type | 13.0 | 2.00 | 1.0 | 4.0 | 2.0 |
-| Missing Data | 9.2 | 1.79 | 2.0 | 5.0 | 2.0 |
-| Edge Probability | 10.0 | 0.82 | 3.0 | 4.0 | 3.0 |
-| Discrete Ratio | 10.7 | 1.25 | 2.0 | 4.0 | 2.0 |
-
-• Analysis
-
-  – Overall mean ranking across 7 scenarios: 10.40
-  – Average standard deviation: 1.38
-
-
-## Supported hyperparameters: {
-    "algorithm_name": "CDNOD",
-    "alpha": {
-        "meaning": "Significance level in (0, 1)",
-        "available_values": {
-            "default": 0.05,
-            "small_sample": 0.1,
-            "large_sample": 0.01
-        },
-        "expert_suggestion": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
-    },
-    "indep_test": {
-        "meaning": "Independence test method",
-        "available_values": {
-            "default": "fisherz_cpu",
-            "continuous_cpu": "fisherz_cpu",
-            "continuous_gpu": "fisherz_gpu",
-            "discrete_cpu": "chisq_cpu",
-            "discrete_gpu": "chisq_gpu",
-            "robust_nonlinear_cpu": "kci_cpu",
-            "robust_nonlinear_gpu": "cmiknn_gpu",
-            "fast_robust_nonlinear_cpu": "fastkci_cpu",
-            "approximate_fast_nonlinear_cpu": "rcit_cpu"
-        },
-        "expert_suggestion": "Choose based on data type and hardware. CPU TESTS: 'fisherz_cpu' for linear continuous data; 'chisq_cpu' for discrete data (only applied for pure discrete data); 'kci_cpu' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci_cpu' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit_cpu' is the fastest approximation of kci (use with < 30 variables and sample size < 5000). GPU TESTS: 'fisherz_gpu' and 'chisq_gpu' (only applied for pure discrete data) work similarly but are extremely fast because of GPU's super parallel computing; 'cmiknn_gpu' is a GPU-accelerated nonparametric test that provides 1000x speedup compared to CPU-based 'kci' with comparable accuracy. GPU acceleration is strongly recommended for large datasets."
-    },
-    "depth": {
-        "meaning": "Maximum depth for skeleton search",
-        "available_values": {
-            "default": -1,
-            "small_graph": 6,
-            "medium_graph": 4,
-            "large_graph": 2,
-            "extra_large_graph": 1
-        },
-        "expert_suggestion": "Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 1-3) can significantly speed up the algorithm at the cost of some accuracy. A graph with node number < 10, use depth 6; A graph with node number 10 - 25, use depth 4; A graph with node number 25-50, use depth 2; A graph with node number > 50, use depth 1."
-    }
-}
 
 ======================================
 
@@ -469,6 +251,222 @@ Benchmarking Results
             "approximate_fast_nonlinear_cpu": "rcit_cpu"
         },
         "expert_suggestion": "Choose based on data type and hardware. CPU TESTS: 'fisherz_cpu' for linear continuous data; 'chisq_cpu' for discrete data (only applied for pure discrete data); 'kci_cpu' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci_cpu' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit_cpu' is the fastest approximation of kci (use with < 30 variables and sample size < 5000). GPU TESTS: 'fisherz_gpu' and 'chisq_gpu' (only applied for pure discrete data) work similarly but are extremely fast because of GPU's super parallel computing; 'cmiknn_gpu' is a GPU-accelerated nonparametric test that provides 1000x speedup compared to CPU-based 'kci' with comparable accuracy. GPU acceleration is strongly recommended for large datasets."
+    },
+    "depth": {
+        "meaning": "Maximum depth for skeleton search",
+        "available_values": {
+            "default": -1,
+            "small_graph": 6,
+            "medium_graph": 4,
+            "large_graph": 2,
+            "extra_large_graph": 1
+        },
+        "expert_suggestion": "Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 1-3) can significantly speed up the algorithm at the cost of some accuracy. A graph with node number < 10, use depth 6; A graph with node number 10 - 25, use depth 4; A graph with node number 25-50, use depth 2; A graph with node number > 50, use depth 1."
+    }
+}
+
+======================================
+
+# FCI
+
+Below is a comprehensive profile of the Fast Causal Inference (FCI) algorithm, structured according to the seven “degrees” (dimensions) of analysis. This profile synthesizes:  
+• File #1 (the hyperparameter settings),  
+• File #2 (benchmarking results),  
+• External knowledge about FCI (including peer-reviewed papers, publicly available documentation, and community discussions),  
+• General principles of causal discovery.  
+
+────────────────────────────────────────────────────────────────────
+1. Hyper-Parameters Sensitivity
+────────────────────────────────────────────────────────────────────
+
+• Number of Key Hyperparameters  
+  – FCI has three principal hyperparameters (based on File #1):  
+    1) α (significance level),  
+    2) The choice of independence test (indep_test),  
+    3) The depth parameter controlling how exhaustively conditional independence tests are performed.  
+
+• Tuning Difficulty  
+  – α (significance level) is among the most impactful parameters. Its default is often 0.05, though File #1 suggests using 0.1 for very small samples (< 500), 0.05 for moderate-sized samples (500 to 10,000), and 0.01 for extremely large samples (> 10,000).  
+  – The independence test parameter (indep_test) depends on data type and modeling assumptions. Commonly used options in practice include:  
+     “fisherz” for continuous data under a Gaussian assumption,  
+     “chisq” for discrete data,  
+     “gsq,” “kci,” or “rcit” for more general or non-linear data.  
+  – Depth settings can be unrestricted (-1) or limited to reduce computation. While the defaults are straightforward (e.g., unlimited depth for small graphs), tuning ultimately depends on computational constraints and how dense the graph might be.  
+
+• Sensitivity  
+  – α: Small changes (e.g., from 0.05 to 0.01) can sharply reduce false positives but potentially increase false negatives. Benchmarks in File #2 indicate that performance metrics (e.g., adjacency precision) shift when α is made more conservative.  
+  – Depth: Restricting depth can speed up the skeleton discovery step considerably but risks missing some indirect connections, as fewer conditional sets are tested.  
+
+• Critique/Extension  
+  – Parameters that control search complexity (e.g., depth) heavily influence runtime, particularly on large or dense graphs.  
+  – Parameters controlling statistical tests (e.g., α and the independence test selection) most directly affect the quality of the discovered causal structure (false positives / false negatives in edges).
+
+────────────────────────────────────────────────────────────────────
+2. Robustness & Scalability
+────────────────────────────────────────────────────────────────────
+
+• Tolerance to Bad Data Quality  
+  – Missing Data: FCI can tolerate missing data if the chosen independence test supports it (e.g., some tests impute or ignore missing cases). Benchmarks in File #2 show FCI performing around a moderate level (neither the best nor the worst) when data are missing.  
+  – Measurement/Observation Error: FCI’s performance decreases with severe noise but remains relatively stable for moderate noise levels. Its ability to discover latent structures can mitigate some confounding effects of measurement error, though the precision of edges can drop if noise is extreme.  
+
+• Tolerance to Sparse/Dense Connected Systems  
+  – Sparse Networks: FCI typically performs well in sparse graphs, because fewer edges mean fewer complex conditional independence tests.  
+  – Dense Networks: FCI can handle denser connectivity but at notably increased computational cost, as more conditional tests are required and orienting edges becomes more complex.  
+
+• Scalability  
+  – As the number of variables grows, the number of required conditional independence tests can explode. File #2 reports an above-average computational burden for FCI once the variable count is large.  
+  – FCI can still be applied to moderately high-dimensional data, but runtime may become prohibitive without restricting the depth parameter or using parallelization strategies.  
+
+• Critique/Extension  
+  – Parallel Implementation: Some implementations offer parallelized independence testing to help with large datasets.  
+  – Approximate or Bounded Depth: Restricting the maximum depth of search is a common strategy to reduce runtime (though this may sacrifice some accuracy).
+
+────────────────────────────────────────────────────────────────────
+3. Mixed Data & Complex Functions
+────────────────────────────────────────────────────────────────────
+
+• Noise Type  
+  – FCI itself does not strictly require Gaussian noise; it simply needs an appropriate conditional independence test (e.g., “kci” or “rcit” from File #1) to detect non-linear, non-Gaussian dependencies.  
+
+• Mixed Data (Continuous & Discrete)  
+  – Users can choose independence tests suited to mixed data (e.g., “gsq”) or generalized tests that handle a variety of variable types. According to File #1, “kci,” “fastkci,” and “rcit” may also address nonlinear interactions across data types.  
+
+• Heterogeneous Data  
+  – File #2 suggests moderate performance under heterogeneous conditions (e.g., data collected from different sources or distributions). FCI’s separation-of-independences approach can still work if independence tests remain valid across distributions.  
+
+• Complex Functional Forms  
+  – Non-linear relationships are detectable if the chosen independence test can pick them up. FCI, however, does not automatically model these relationships; it relies on test outcomes.  
+
+• Critique/Extension  
+  – The primary limitation is reliance on an accurate independence test. If the test poorly captures non-linear or complex interactions, FCI may miss true edges or introduce extraneous ones.  
+  – Some advanced versions of FCI or user-developed variations incorporate kernel-based tests, enabling more robust detection of complicated functional relationships.
+
+────────────────────────────────────────────────────────────────────
+4. Computational Complexity
+────────────────────────────────────────────────────────────────────
+
+• Theoretical Time Complexity  
+  – FCI is often cited as having an exponential worst-case time complexity with respect to the number of variables. A simplified expression is presented here: <temp>[O(2^n)]</temp>.  
+  – In practice, the real cost is heavily influenced by how many adjacency constraints it identifies early in the process.
+
+• Variability in Practical Usage  
+  – Depth-limited FCI can reduce runtime to something more manageable (potentially polynomial in many real-world scenarios).  
+  – Higher significance levels (larger α) may reduce the total number of conditional independence tests because edges are removed more slowly, but they risk more spurious edges that must be tested and oriented later.  
+
+• Critique/Extension  
+  – The worst-case complexity is rarely reached in sparse, real-world networks.  
+  – Parallel computing and caching of test results (mentioned in community forums) can improve runtime substantially.
+
+────────────────────────────────────────────────────────────────────
+5. Interpretability
+────────────────────────────────────────────────────────────────────
+
+• Output Format  
+  – FCI outputs a Partial Ancestral Graph (PAG), which represents causal constraints among variables, including potential latent confounders.  
+
+• Strength of the Output Format  
+  – PAGs explicitly encode uncertain edges (e.g., bidirected edges indicating hidden confounders, circle endpoints indicating ambiguous directions). This offers rich information about causal possibilities.  
+
+• Limitations of the Output Format  
+  – PAGs can be less intuitive than DAGs or CPDAGs. Edges may remain unoriented or partially oriented, especially if data alone cannot resolve their direction.  
+  – Users often require additional domain knowledge to interpret or further refine certain ambiguous edges.  
+
+• Critique/Extension  
+  – Researchers recommend domain experts consult the PAG’s edge marks to hypothesize plausible latent variables or refine uncertain orientations.  
+  – Visualization libraries for FCI exist but require a solid grasp of the edge nomenclature.
+
+────────────────────────────────────────────────────────────────────
+6. Assumptions
+────────────────────────────────────────────────────────────────────
+
+• Critical Assumptions  
+  – Markov and Faithfulness: The distribution of the data must align with the “true” causal graph’s conditional independencies, without pathological cancellations.  
+  – No Cycles: FCI assumes acyclicity among observed variables, even though it allows for the possibility of latent confounders.  
+  – Causal Sufficiency is relaxed compared to simpler algorithms (like PC), meaning FCI can account for possible hidden variables.  
+
+• Violation Impact  
+  – Violating faithfulness can produce incomplete or misleading PAGs (e.g., missing edges or unvalued circle endpoints).  
+  – When hidden confounding is extremely strong and the sample size is low, the discovered PAG can have many ambiguities.  
+
+• Critique/Extension  
+  – FCI is often chosen because it explicitly relaxes causal sufficiency assumptions. Indeed, that is a main strength over simpler methods.  
+  – Partial violations of faithfulness can degrade accuracy but do not necessarily invalidate the overall skeleton of the PAG.
+
+────────────────────────────────────────────────────────────────────
+7. Real-World Benchmarks
+────────────────────────────────────────────────────────────────────
+
+• Performance on Real Datasets  
+  – File #2 indicates that FCI often performs at a middle or upper-middle rank across different metrics (e.g., adjacency precision, sensitivity to hidden variables).  
+  – Empirical studies (from external references) report that FCI often outperforms algorithms that assume no latent confounders when hidden variables or selection bias are indeed present.
+
+• Practical Tips  
+  – Adjust α based on sample size: Larger samples can justify smaller α for fewer false positives; smaller samples may require a higher α to avoid missing genuine edges.  
+  – Parallelizing the conditional independence tests or limiting depth can make FCI more tractable for large-dimensional datasets.  
+  – Domain knowledge plays a crucial role in resolving uncertain orientations in the PAG, ensuring the final model is more interpretable and actionable.  
+
+• Common Pitfalls  
+  – Using an independence test misaligned with the data’s underlying distribution (e.g., only using Fisher’s Z in the presence of non-linear or discrete variables) can lead to incorrect edges.  
+  – Overly restrictive significance levels with small sample sizes can cause many missed edges, while overly lenient significance levels can flood the output with spurious edges.
+
+────────────────────────────────────────────────────────────────────
+Summary
+────────────────────────────────────────────────────────────────────
+FCI (Fast Causal Inference) is a widely respected causal discovery algorithm that relaxes the assumption of no hidden confounders, making it especially valuable when latent variables or selection bias may be present. Its key hyperparameters—significance level (α), independence test choice, and depth constraint—all substantially affect how many edges are retained and how computationally heavy the procedure becomes. Although FCI can handle both continuous and discrete data (and even mixed types) via different independence tests, its runtime grows quickly with the number of variables and the complexity of the network.
+
+Because FCI outputs a Partial Ancestral Graph (PAG), it can reveal potential latent confounding, but this representation may contain uncertain or bidirected edges requiring careful interpretation. This complexity can also make it challenging to tune parameters optimally without domain or statistical expertise. When properly configured, FCI has proven effective in real-world applications like genetics, climate science, and social networks—domains where hidden confounders often lurk. Overall, its flexibility and ability to account for unobserved variables are balanced by higher computational demands and some interpretability challenges relative to simpler methods.
+
+────────────────────────────────────────────────────────
+Benchmarking Results
+────────────────────────────────────────────────────────
+
+• Comparative Performance
+  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
+  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics, which are represented as level scores from 1-5, with 5 being the best.
+  – Levels scores of composite metrics combine performance and efficiency (weights: 0.8 and 0.2 respectively).
+[NOTE] The ranking is smaller, the better. The level score is higher, the better.
+
+• Algorithm Rankings
+
+| Scenario | Rank (Mean) | Rank (Std Dev) | Performance (Level) | Efficiency (Level) | Composite (Level) |
+|----------|-----------|---------|-------------|------------|------------|
+| Scalability | 6.1 | 1.96 | 4.0 | 4.0 | 4.0 |
+| Heterogeneity | 5.0 | 0.71 | 4.0 | 4.0 | 5.0 |
+| Measurement Error | 6.5 | 0.50 | 4.0 | 4.0 | 4.0 |
+| Noise Type | 8.0 | 2.00 | 3.0 | 4.0 | 3.0 |
+| Missing Data | 7.5 | 4.39 | 4.0 | 2.0 | 3.0 |
+| Edge Probability | 6.3 | 2.05 | 4.0 | 4.0 | 4.0 |
+| Discrete Ratio | 7.0 | 0.82 | 4.0 | 4.0 | 4.0 |
+
+• Analysis
+
+  – Overall mean ranking across 7 scenarios: 6.64
+  – Average standard deviation: 1.78
+
+
+
+## Supported hyperparameters: {
+    "algorithm_name": "FCI",
+    "alpha": {
+        "meaning": "Desired significance level in (0, 1)",
+        "available_values": {
+            "default": 0.05,
+            "small_sample": 0.1,
+            "large_sample": 0.01
+        },
+        "expert_suggestion": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
+    },
+    "indep_test": {
+        "meaning": "Independence test method",
+        "available_values": {
+            "default": "fisherz",
+            "continuous": "fisherz",
+            "discrete": "chisq",
+            "robust_nonlinear": "kci",
+            "fast_robust_nonlinear": "fastkci",
+            "approximate_fast_nonlinear": "rcit"
+        },
+        "expert_suggestion": "Choose based on data type, 'fisherz' for linear continuous data; 'chisq' for discrete data (only applied for pure discrete data); 'kci' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit' is the fastest approximation of kci (use with < 30 variables and sample size < 5000)."
     },
     "depth": {
         "meaning": "Maximum depth for skeleton search",

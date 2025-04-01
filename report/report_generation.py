@@ -85,15 +85,15 @@ class Report_generation(object):
             self.data_mode = 'real'
         else:
             self.data_mode = 'simulated'
-        self.data_file = args.data_file
-        # self.data_file = 'house_price'
+        self.data_file = global_state.user_data.output_graph_dir.split('/')[-2]
         self.global_state = global_state
         self.inference_global_state = inference_global_state
         self.args = args 
         self.statistics_desc = global_state.statistics.description
         self.knowledge_docs = global_state.user_data.knowledge_docs[0]
         # Data info
-        self.data = global_state.user_data.processed_data
+        self.data = global_state.user_data.processed_data.copy()
+        self.data.columns = [var.replace('_', ' ') for var in self.data.columns]
         self.statistics = global_state.statistics
         # EDA info
         self.eda_result = global_state.results.eda
@@ -181,7 +181,7 @@ class Report_generation(object):
 I want to conduct a causal discovery on a dataset and write a report. There is some background knowledge about this dataset.
 There are three sections:
 ### 1. Detailed Explanation about the Variables
-### 2. Possible Causal Relations among These Variables
+### 2. Possible Causal Relations among These Variables (Do not too much, only include important ones)
 ### 3. Other Background Domain Knowledge that may be Helpful for Experts
 Please extract all relationships in the second section ### 2. Possible Causal Relations among These Variables, and return in a JSON format
 **Thinking Steps**
@@ -322,11 +322,11 @@ The JSON should be
             symmetric_list = []
             for feature in dist_input_num.keys():
                 if dist_input_num[feature]['mean']<dist_input_num[feature]['median']:
-                    left_skew_list.append(feature.replace('_', '\_'))
+                    left_skew_list.append(feature.replace('_', ' '))
                 elif dist_input_num[feature]['mean']>dist_input_num[feature]['median']:
-                    right_skew_list.append(feature.replace('_', '\_'))
+                    right_skew_list.append(feature.replace('_', ' '))
                 else:
-                    symmetric_list.append(feature.replace('_', '\_'))
+                    symmetric_list.append(feature.replace('_', ' '))
             response_dist_doc += f"\item Slight left skew distributed variables: {', '.join(left_skew_list) if left_skew_list != [] else 'None'} \n"
             response_dist_doc += f"\item Slight right skew distributed variables: {', '.join(right_skew_list) if right_skew_list != [] else 'None'} \n"
             response_dist_doc += f"\item Symmetric distributed variables: {', '.join(symmetric_list) if symmetric_list != [] else 'None'} \n"
@@ -340,19 +340,19 @@ The JSON should be
         #print('response_dist_doc: ', response_dist_doc)
         # Description of Correlation
         response_corr_doc = "\\begin{itemize} \n"
-        high_corr_list = [f"{key[0]}".replace('_', '\\_') + " and " + f"{key[1]}".replace('_', '\\_') for key, value in corr_input.items() if abs(value) > 0.8]
+        high_corr_list = [f"{key[0]}".replace('_', ' ') + " and " + f"{key[1]}".replace('_', ' ') for key, value in corr_input.items() if abs(value) > 0.8]
         if len(high_corr_list)>10:
             response_corr_doc += f"\item Strong Correlated Variables ($\geq 0.9$): {', '.join(high_corr_list)}"
             response_corr_doc += ", etc. \n"
         else:
             response_corr_doc += f"\item Strong Correlated Variables ($\geq 0.9$): {', '.join(high_corr_list) if high_corr_list != [] else 'None'} \n"
-        med_corr_list = [f"{key[0]}".replace('_', '\\_') + " and " + f"{key[1]}".replace('_', '\\_') for key, value in corr_input.items() if (abs(value) <= 0.8 and abs(value) > 0.5)]
+        med_corr_list = [f"{key[0]}".replace('_', ' ') + " and " + f"{key[1]}".replace('_', ' ') for key, value in corr_input.items() if (abs(value) <= 0.8 and abs(value) > 0.5)]
         if len(med_corr_list)>10:
             response_corr_doc += f"\item Moderate Correlated Variables ($0.1-0.9$): {', '.join(med_corr_list)}"
             response_corr_doc += ", etc. \n"
         else:
             response_corr_doc += f"\item Moderate Correlated Variables ($0.1-0.9$): {', '.join(med_corr_list) if med_corr_list != [] else 'None'} \n"
-        low_corr_list = [f"{key[0]}".replace('_', '\\_') + " and " + f"{key[1]}".replace('_', '\\_') for key, value in corr_input.items() if abs(value) <= 0.5]
+        low_corr_list = [f"{key[0]}".replace('_', ' ') + " and " + f"{key[1]}".replace('_', ' ') for key, value in corr_input.items() if abs(value) <= 0.5]
         if len(low_corr_list)>10:
             response_corr_doc += f"\item Weak Correlated Variables ($\leq 0.1$): {', '.join(low_corr_list)}"
             response_corr_doc += ", etc. \n"
@@ -484,7 +484,7 @@ The JSON should be
                 ]
             )
             response_doc = response.choices[0].message.content
-            response_doc = response_doc.replace('_', '\_')
+            # response_doc = response_doc.replace('_', ' ')
         return response_doc
 
     def graph_revise_prompts(self):
@@ -542,7 +542,7 @@ The JSON should be
                 response += f"""
                 LLM doesn't decide any direction of edges.
                 """
-            response = response.replace('_', '\_')
+            # response = response.replace('_', ' ')
             response += """
             This structured approach ensures a comprehensive and methodical analysis of the causal relationships within the dataset.
             """
@@ -868,6 +868,7 @@ Help me to write a comparison of the following causal discovery results of diffe
                 # choose 10 columns randomly
                 random_columns = np.random.choice(df.columns, size=10, replace=False)
                 df = df[random_columns]
+            # df.columns = [var.replace('_', ' ') for var in df.columns]
             data_preview = df.head().to_latex(index=False)
             if len(self.data.columns) >= 9:
                 data_preview = f"""
@@ -1117,9 +1118,10 @@ def parse_args():
 import pickle  
 if __name__ == '__main__':
     args = parse_args()
-    with open('demo_data/20250201_151758/heart disease/output_graph/PC_global_state.pkl', 'rb') as file:
+    with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250331_115019/Federal Reserve Interest Rates/output_graph/CDNOD_global_state.pkl', 'rb') as file:
         global_state = pickle.load(file)
     test(args, global_state)
     # save_path = 'demo_data/20250130_130622/house_price/output_report'
     # compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
     
+

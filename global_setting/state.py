@@ -27,6 +27,7 @@ class UserData:
     meaningful_feature: Optional[bool] = None
     heterogeneity: Optional[str] = None
     accept_CPDAG: Optional[bool] = True
+    initial_query_type: Optional[str] = None
 
 @dataclass
 class Statistics:

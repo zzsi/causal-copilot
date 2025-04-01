@@ -15,7 +15,8 @@ class HTE_Param_Selector(object):
         self.W_col = W_col
 
     def prompt_generation(self, target_node, global_state):
-        node_type = global_state.statistics.data_type_column[target_node]
+        # node_type = global_state.statistics.data_type_column[target_node]
+        node_type = 'category'
 
         if node_type =='continuous':
             prompt_path = 'causal_analysis/hte/context/regressor_select_prompt.txt'

@@ -16,7 +16,6 @@ class HTE_Param_Selector(object):
 
     def prompt_generation(self, target_node, global_state):
         node_type = global_state.statistics.data_type_column[target_node]
-
         if node_type =='Continuous':
             prompt_path = 'causal_analysis/DRL/context/regressor_select_prompt.txt'
             algo_text_path = 'causal_analysis/DRL/context/regressor.txt'

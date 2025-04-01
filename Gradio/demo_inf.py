@@ -86,6 +86,7 @@ from user.discuss import Discussion
 from openai import OpenAI
 from pydantic import BaseModel
 from causal_analysis.help_functions import *
+from Gradio.help_functions import *
 
 
 print('##########Initialize Global Variables##########')
@@ -847,7 +848,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 return process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn)
         
         if CURRENT_STAGE == 'inference_analysis_check':
-            with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250327_115101/house_price/output_graph/CDNOD_global_state.pkl', 'rb') as file:
+            with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250331_115019/Federal Reserve Interest Rates/output_graph/CDNOD_global_state.pkl', 'rb') as file:
                 global_state = pickle.load(file)
                 global_state.inference.task_index = -1
                 global_state.inference.task_info = {}
@@ -1030,10 +1031,10 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
         if CURRENT_STAGE == "method_selection":
-            exp_data, chat_history, download_btn, CURRENT_STAGE = parse_intention_query(message, chat_history, download_btn, CURRENT_STAGE)
+            # exp_data, chat_history, download_btn, CURRENT_STAGE = parse_intention_query(message, chat_history, download_btn, CURRENT_STAGE)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-            if exp_data is None:
-                return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            # if exp_data is None:
+            #     return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             
             task_info = global_state.inference.task_info[global_state.inference.task_index]
             confounders = task_info['confounders']
@@ -1046,8 +1047,8 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 method = "iv"
                 iv_variable = None
                 global_state.inference.task_info[global_state.inference.task_index]['IV'] = iv_variable
-            if exp_data:
-                method = "uplift"
+            # if exp_data:
+            #     method = "uplift"
             if len(confounders) <= 5:
                 if len(confounders) - len(cont_confounders) > len(cont_confounders):  # If more than half discrete confounders
                     method = "cem"
@@ -1130,11 +1131,11 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             try_num = 1
             report_path = call_report_generation(global_state, args, REQUIRED_INFO['output_dir'])
-            while not os.path.isfile(report_path) and try_num < 3:
-                chat_history.append((None, "❌ An error occurred during the Report Generation, we are trying again and please wait for a few minutes."))
-                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                try_num += 1
-                report_path = call_report_generation(global_state, args, REQUIRED_INFO['output_dir'])
+            # while not os.path.isfile(report_path) and try_num < 3:
+            #     chat_history.append((None, "❌ An error occurred during the Report Generation, we are trying again and please wait for a few minutes."))
+            #     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            #     try_num += 1
+            #     report_path = call_report_generation(global_state, args, REQUIRED_INFO['output_dir'])
             chat_history.append((None, "🎉 Analysis complete!"))
             chat_history.append((None, "📥 You can now download your detailed report using the download button below."))
             download_btn = gr.DownloadButton(

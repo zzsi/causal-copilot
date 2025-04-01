@@ -199,11 +199,13 @@ def LLM_select_confounders(treatment, key_node, args, data):
     class ConfounderList(BaseModel):
         confounders: list[str]
     prompt = f"""
-I'm doing the Treatment Effect Estimation analysis, please identify possible confounders between the treatment and result variables.
+I'm doing the Treatment Effect Estimation analysis, please identify confounders between the treatment and result variables.
 Treatment: {treatment}
 Result: {key_node}
 The confounders must be among these variables: {data.columns}
 Only return me with the variable name, do not include anything else.
+Do not include the treatment and result variables in the confounders list, and do not include too many confounders.
+Please limit the number of confounders within 5!
 """
     parsed_response = LLM_parse_query(args, ConfounderList, 'You are an expert in Causal Discovery.', prompt)
     LLM_confounders = parsed_response.confounders

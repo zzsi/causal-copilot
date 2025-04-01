@@ -105,6 +105,7 @@ def meaningful_feature_query(global_state, message, chat_history, download_btn, 
     "Column names like 'X1', 'X2', 'X3' are not meaningful."\
     "Column names like 'Age', 'Height', 'Weight' are meaningful."\
     f"Columns: {global_state.user_data.raw_data.columns}"
+    f"User provided message: {global_state.user_data.initial_query}"
     response = LLM_parse_query(None, "You are a helpful assistant, help me to answer this question with Yes or No", prompt)
     
     if 'yes' in response.lower():
@@ -144,6 +145,7 @@ def heterogeneity_query(global_state, message, chat_history, download_btn, CURRE
             unique_num = global_state.user_data.raw_data[col].nunique()
             col_line += f"Unique values: {unique_num}"
         prompt += col_line + "\n"
+    # print(prompt)
     
     parsed_vars = LLM_parse_query(DomainIndexResponse, "You are a helpful assistant, specifically checking for the presence of a heterogeneous domain index in a dataset.", prompt)
     exist_domain_index, candidate_domain_index = parsed_vars.exist_domain_index, parsed_vars.candidate_domain_index
@@ -328,7 +330,7 @@ def LLM_var_selection(message, global_state, chat_history):
 def parse_ts_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
     class TimeSeriesInput(BaseModel):
         is_time_series: bool
-        time_lag: Union[int, Literal['continue'], None]
+        time_lag: Union[int, Literal['default'], None]
     prompt = """
             You are helping parse a user's input regarding time-series settings for their dataset.
 
@@ -337,16 +339,16 @@ def parse_ts_query(message, chat_history, download_btn, global_state, REQUIRED_I
             1. Whether their dataset is time-series.
             2. If it is time-series:
             - They can provide a specific integer `time_lag`, or
-            - They can input `'continue'` to let the system determine the lag automatically.
+            - They can input `'default'` to let the system determine the lag automatically.
             3. If it is NOT a time-series dataset, they must leave `time_lag` as `None`.
 
             Please extract two fields from the user's input and return them in JSON format:
             - `is_time_series`: a boolean (`true` or `false`)
-            - `time_lag`: an integer, `"continue"`, or `None`
+            - `time_lag`: an integer, `"default"`, or `None`
 
             ⚠️ Rules:
             - If `is_time_series` is false, `time_lag` must be `None`.
-            - If `is_time_series` is true, `time_lag` must be either an integer or `"continue"`.
+            - If `is_time_series` is true, `time_lag` must be either an integer or `"default"`.
             """
     parsed_response = LLM_parse_query(TimeSeriesInput, prompt, message)
     is_time_series, time_lag = parsed_response.is_time_series, parsed_response.time_lag
