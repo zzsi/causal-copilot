@@ -1410,6 +1410,7 @@ class Analysis(object):
             ### Suggest method based on dataset characteristics
             # Check for IV in the Causal Graph
             exist_IV, iv_variable = self.contains_iv(treatment, key_node)
+            exist_IV = False
             if exist_IV:
                 self.global_state.inference.task_info[self.global_state.inference.task_index]['IV'] = iv_variable
                 method = "iv"
