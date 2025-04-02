@@ -484,6 +484,25 @@ def parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED
         #process_message(message, chat_history, download_btn)
     return message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
+def prepare_hyperparameter_text(global_state, chat_history):
+    algorithm = global_state.algorithm.selected_algorithm
+    with open(f"/Users/wwy/Documents/Project/Causal-Copilot/algorithm/context/hyperparameters/{algorithm}.json", "r") as f:
+        param_hint = json.load(f)
+    instruction = "Do you want to specify values for parameters instead of the selected one? If so, please specify your parameter following the template below: \n"
+    for key in list(param_hint.keys())[1:]:
+        instruction += f"{key}: value\n"
+    instruction += "Otherwise please reply NO."
+    chat_history.append((None, instruction))
+    hint = "Here are instructions for hyper-parameter tuning:\n"
+    for key, value in list(param_hint.items())[1:]:
+        param_info = f"Parameter Meaning: {value['meaning']}, \n Parameter Selection Suggestion: {value['expert_suggestion']}"
+        prompt = "You are an expert in causal discovery, I need to write a hint for the user to choose values for causal discovery algorithm hyper-parameters"\
+            "I will give you information about the parameter, please help me to write a hint with 1-2 sentences for the user to choose values for this parameter."
+        param_info = LLM_parse_query(None, prompt, param_info)
+        hint += f"- {key}: \n{param_info};\n "
+    chat_history.append((None, hint))
+    return chat_history
+    
 def parse_hyperparameter_query(args, message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
     if message.lower()=='no' or message=='':
         CURRENT_STAGE = 'algo_running'    
@@ -496,12 +515,14 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
                 param_values: list[Union[str, int, float]]
                 valid_params: bool
                 error_messages: str
-            with open("Gradio/parameter_range_context.json", "r") as f:
-                param_specs = json.load(f)
+            # with open("Gradio/parameter_range_context.json", "r") as f:
+            #     param_specs = json.load(f)
 
             # Get current algorithm specs
             algorithm = global_state.algorithm.selected_algorithm
-            algorithm_specs = param_specs.get(algorithm, {})
+            # algorithm_specs = param_specs.get(algorithm, {})
+            with open(f"/Users/wwy/Documents/Project/Causal-Copilot/algorithm/context/hyperparameters/{algorithm}.json", "r") as f:
+                algorithm_specs = json.load(f)
             prompt = f"""You are a parameter validation assistant. Please parse and validate the user's parameter inputs based on the provided context:
 
             **Context**

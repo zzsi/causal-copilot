@@ -1,6 +1,6 @@
-You will conduct causal discovery on the Tabular Dataset ./demo_data/20250331_121107/heart disease/heart disease.csv containing the following Columns:
+You will conduct causal discovery on the Tabular Dataset ./demo_data/20250402_161403/Abalone/Abalone.csv containing the following Columns:
 
-age	sex	cp	trestbps	chol	fbs	restecg	thalach	exang	oldpeak	slope	ca	thal	target
+Age	Length	Shell_weight	Diameter	Height	Whole_weight	Shucked_weight	Viscera_weight
 
 The Detailed Background Information is listed below:
 
@@ -10,9 +10,11 @@ The Statistics Information about the dataset is:
 
 The dataset has the following characteristics:
 
-Data Type: The overall data type is Mixture.
+Data Type: The overall data type is Continuous.
 
-The sample size is 1025 with 14 features. This dataset is not time-series data. 
+The sample size is 4177 with 8 features. 
+
+This dataset is not time-series data. 
 
 Data Quality: There are no missing values in the dataset.
 
