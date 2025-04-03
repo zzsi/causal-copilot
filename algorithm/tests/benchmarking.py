@@ -304,7 +304,9 @@ class BenchmarkRunner:
                 # Check if timeout occurred and mark this configuration
                 if not result['success'] and 'timeout' in str(result.get('error', '')).lower():
                     timeout_config[config_signature] = True
-                    print(f"Timeout occurred for configuration {config_signature}. Will skip remaining datasets with similar configuration.")
+                    print(f"Timeout occurred for configuration {config_signature}. Ending benchmark.")
+                    print(f"Benchmark results saved to: {self.output_dir}")
+                    return  # End the program when the first timeout occurs
                 
             if self.debug_mode:
                 break  # Only test the first dataset in debug mode
