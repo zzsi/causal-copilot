@@ -45,6 +45,10 @@ class ICALiNGAM(CausalDiscoveryAlgorithm):
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, CLICALiNGAM]:
+        # Check and remove domain_index if it exists
+        if 'domain_index' in data.columns:
+            data = data.drop(columns=['domain_index'])
+            
         node_names = list(data.columns)
         data_values = data.values
 

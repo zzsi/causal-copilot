@@ -417,25 +417,114 @@ class DataSimulator:
             base_data = []
             for i in range(self.n_domains):
                 base_data.append(simulate_nonlinear_sem(self.graph, n_samples, function_type, noise_scale, discrete_ratio, max_categories))
-        
-        # Randomly select a subset of nodes to be affected by domain
+        # Find nodes that don't have many connections to simulate confounding with domain
         n_nodes = self.graph.shape[0]
-        # affected_nodes = np.random.choice(n_nodes, size=int(edge_probability * n_nodes), replace=False)
-        # print(f"Domain index affects variables: {[self.variable_names[i] for i in affected_nodes]}")    
-        # Generate domain-specific linear noise and inject it to realize linear effects of domain index
-        data = []
-        scaling_factors = np.arange(1, 1 + n_nodes) * 0.5 # * np.random.choice([-1, 1], size=n_nodes)
-        scaling_factors = np.random.permutation(scaling_factors)
-        for i in range(self.n_domains):
-            domain_data = base_data[i].copy()
-            # Small noise amplitude and range to make sure the domain transition is smooth
-            domain_noise = (i + 1) + np.random.normal(0, 0.1, size=n_samples)
-            
-            for j in range(n_nodes):
-                domain_data[:, j] += scaling_factors[j] * domain_noise
-            
-            data.extend(domain_data)
+        # Get nodes with fewer connections (potential targets for domain confounding)
+        node_connections = np.sum(self.graph, axis=1) + np.sum(self.graph, axis=0)
+        # Sort nodes by connection count (ascending)
+        less_connected_nodes = np.argsort(node_connections)
+        # Select a subset of less connected nodes to be affected by domain
+        n_affected = max(3, int(edge_probability * n_nodes))
+        affected_nodes = less_connected_nodes[:n_affected]
         
+        print(f"Domain index affects variables: {[self.variable_names[i] for i in affected_nodes]}")
+        
+        # Generate domain-specific effects
+        data = []
+        N = 10
+        step = 10 / self.n_domains
+        
+        # Calculate correlation matrix for base data before adding domain effects
+        base_data_array = np.vstack([d for d in base_data])
+        base_correlation_matrix = np.corrcoef(base_data_array.T)
+        print(f"Base correlation matrix shape (before domain effects): {base_correlation_matrix.shape}")
+        
+        # Find highly correlated pairs in base data
+        n_vars = base_correlation_matrix.shape[0]
+        high_corr_threshold = 0.7
+        high_corr_pairs_base = []
+        
+        for i in range(n_vars):
+            for j in range(i+1, n_vars):
+                corr = base_correlation_matrix[i, j]
+                if abs(corr) > high_corr_threshold:
+                    high_corr_pairs_base.append((self.variable_names[i], self.variable_names[j], corr))
+        
+        if high_corr_pairs_base:
+            print(f"Before domain effects - Found {len(high_corr_pairs_base)} highly correlated pairs (|r| > {high_corr_threshold}):")
+            for var1, var2, corr in high_corr_pairs_base:
+                print(f"  {var1} and {var2}: r = {corr:.4f}")
+        else:
+            print(f"Before domain effects - No variable pairs with correlation above {high_corr_threshold} threshold")
+        
+        # Iteratively adjust domain effects until we find new highly correlated pairs
+        domain_effect_multiplier = 0.3
+        max_attempts = 5
+        attempts = 0
+        new_high_corr_pairs_found = False
+        
+        while attempts < max_attempts and not new_high_corr_pairs_found:
+            # Try with current domain effect multiplier
+            temp_data = []
+            for i in range(self.n_domains):
+                domain_data = base_data[i].copy()
+                # Domain effect increases with domain index to create clear domain separation
+                
+                if function_type == 'linear':
+                    # Linear domain effect
+                    domain_effect = (i + 1) * step * domain_effect_multiplier
+                    for node_idx in affected_nodes:
+                        domain_data[:, node_idx] += domain_effect
+                else:
+                    # Nonlinear domain effect
+                    domain_effect = (i + 1) * step * domain_effect_multiplier
+                    for node_idx in affected_nodes:
+                        # Quadratic effect: domain_effect * x^2
+                        base_values = domain_data[:, node_idx]
+                        domain_data[:, node_idx] += domain_effect * np.sign(base_values) * (base_values ** 2)
+                
+                temp_data.extend(domain_data)
+            
+            # Calculate correlation matrix after adding domain effects
+            temp_data_array = np.vstack(temp_data)
+            temp_correlation_matrix = np.corrcoef(temp_data_array.T)
+            
+            # Find highly correlated pairs after domain effects
+            high_corr_pairs_temp = []
+            for i in range(n_vars):
+                for j in range(i+1, n_vars):
+                    corr = temp_correlation_matrix[i, j]
+                    if abs(corr) > high_corr_threshold:
+                        high_corr_pairs_temp.append((self.variable_names[i], self.variable_names[j], corr))
+            
+            # Check if we found new highly correlated pairs
+            if len(high_corr_pairs_temp) > len(high_corr_pairs_base):
+                new_high_corr_pairs_found = True
+                data = temp_data
+                correlation_matrix = temp_correlation_matrix
+                high_corr_pairs = high_corr_pairs_temp
+            else:
+                # Increase domain effect multiplier and try again
+                domain_effect_multiplier *= 1.5
+                attempts += 1
+        
+        # If we couldn't find new correlations, use the last attempt
+        if not new_high_corr_pairs_found:
+            data = temp_data
+            correlation_matrix = temp_correlation_matrix
+            high_corr_pairs = high_corr_pairs_temp
+        
+        # Print correlation information after domain effects
+        print(f"Correlation matrix shape (after domain effects): {correlation_matrix.shape}")
+        
+        if high_corr_pairs:
+            print(f"After domain effects - Found {len(high_corr_pairs)} highly correlated pairs (|r| > {high_corr_threshold}):")
+            for var1, var2, corr in high_corr_pairs:
+                print(f"  {var1} and {var2}: r = {corr:.4f}")
+        else:
+            print(f"After domain effects - No variable pairs with correlation above {high_corr_threshold} threshold")
+        
+        # Create the final dataframe with domain index
         data_df = pd.DataFrame(data, columns=self.variable_names)
         data_df['domain_index'] = np.repeat(range(1, 1 + self.n_domains), n_samples)
         return data_df
@@ -483,8 +572,8 @@ class DataSimulator:
         if self.data is None:
             raise ValueError("Generate data first")
 
-        n_cols = int(error_rate * len(self.data.columns))
         available_cols = [col for col in self.data.columns if col != 'domain_index']
+        n_cols = int(error_rate * len(available_cols))
         columns = np.random.choice(available_cols, size=n_cols, replace=False)
 
         for col in columns:
@@ -492,6 +581,8 @@ class DataSimulator:
                 self.data[col] += np.random.randn(len(self.data)) * error_std
         
         self.ground_truth['measurement_error'] = {col: error_std for col in columns}
+        self.ground_truth['measurement_error_value'] = error_rate
+        self.ground_truth['measurement_error_desc'] = f"The measurement error is Gaussian with a standard deviation of {error_std} on {error_rate} of the columns (some are selected, some are not, except domain_index), and the measurement error is added to the original data."
 
     def add_missing_values(self, missing_rate: float = 0.1) -> None:
         """Introduce missing values to the whole dataframe with a specified missing rate."""
@@ -510,6 +601,8 @@ class DataSimulator:
         # Record which columns were affected
         affected_columns = [col for col in columns if mask[:, columns.index(col)].any()]
         self.ground_truth['missing_rate'] = {col: missing_rate for col in affected_columns}
+        self.ground_truth['missing_rate_value'] = missing_rate
+        self.ground_truth['missing_data_desc'] = f"The missing values are randomly sampled with a missing rate of {missing_rate} on all column data (except domain_index), and the missing values are replaced with NaN."
 
     def generate_dataset(self, n_nodes: int, n_samples: int, edge_probability: float = 0.3,
                          noise_scale: float = 1.0, noise_type: str = 'gaussian',
@@ -525,9 +618,17 @@ class DataSimulator:
                     
         if add_measurement_error:
             self.add_measurement_error(error_std=error_std, error_rate=error_rate)
+        else:
+            self.ground_truth['measurement_error'] = None
+            self.ground_truth['measurement_error_value'] = None
+            self.ground_truth['measurement_error_desc'] = None
         
         if add_missing_values:
             self.add_missing_values(missing_rate=missing_rate)
+        else:
+            self.ground_truth['missing_rate'] = None
+            self.ground_truth['missing_rate_value'] = None
+            self.ground_truth['missing_data_desc'] = None
         
         # original (i, j) == 1 (i -> j), here we return the transpose of the graph to be (i, j) == 1 -> (j -> i)
         return self.graph.T, self.data
@@ -581,6 +682,10 @@ class DataSimulator:
             'edge_probability': self.ground_truth.get('edge_probability'),
             'discrete_ratio': self.ground_truth.get('discrete_ratio'),
             'max_categories': self.ground_truth.get('max_categories'),
+            'missing_rate_value': self.ground_truth.get('missing_rate_value'),
+            'measurement_error_value': self.ground_truth.get('measurement_error_value'),
+            'missing_data_desc': self.ground_truth.get('missing_data_desc'),
+            'measurement_error_desc': self.ground_truth.get('measurement_error_desc'),
         }
         with open(config_filename, 'w') as f:
             json.dump(config, f, indent=2, default=str)

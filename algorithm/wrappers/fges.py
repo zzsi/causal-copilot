@@ -33,14 +33,18 @@ class FGES(CausalDiscoveryAlgorithm):
         return self._params
 
     def get_primary_params(self):
-        self._primary_param_keys = []
+        self._primary_param_keys = ['sparsity']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def get_secondary_params(self):
-        self._secondary_param_keys = ['sparsity']
+        self._secondary_param_keys = []
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, Dict]:
+        # Check and remove domain_index if it exists
+        if 'domain_index' in data.columns:
+            data = data.drop(columns=['domain_index'])
+            
         node_names = list(data.columns)
         data_values = data.values
 

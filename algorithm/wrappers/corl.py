@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union
 import torch
 import os
 import sys
@@ -66,7 +66,14 @@ class CORL(CausalDiscoveryAlgorithm):
                                       'random_seed', 'device_type', 'device_ids']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
-    def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, None]:
+    def fit(self, data: Union[pd.DataFrame, np.ndarray]) -> Tuple[np.ndarray, Dict]:
+        # Check and remove domain_index if it exists
+        if isinstance(data, pd.DataFrame) and 'domain_index' in data.columns:
+            data = data.drop(columns=['domain_index'])
+            
+        if isinstance(data, pd.DataFrame):
+            node_names = list(data.columns)
+        
         # Initialize CORL algorithm
         corl = TrustAI_CORL(**self._params)
         
@@ -83,7 +90,7 @@ class CORL(CausalDiscoveryAlgorithm):
             'reward_mode': self._params['reward_mode']
         }
         
-        return causal_matrix, info, None
+        return causal_matrix, info
 
     def test_algorithm(self):
         """Test the CORL algorithm with synthetic data"""
@@ -109,7 +116,7 @@ class CORL(CausalDiscoveryAlgorithm):
         corl_test = CORL()
         
         # Fit the model
-        adj_matrix, info, _ = corl_test.fit(data)
+        adj_matrix, info = corl_test.fit(data)
         
         print("\nInferred Adjacency Matrix:")
         print(adj_matrix)

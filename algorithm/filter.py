@@ -3,7 +3,7 @@ import os
 import torch
 from algorithm.llm_client import LLMClient
 
-TOP_K = 3
+TOP_K = 2
 
 class Filter(object):
     def __init__(self, args):
@@ -26,22 +26,16 @@ class Filter(object):
             return  global_state
         prompt = self.create_prompt(global_state.user_data.initial_query, global_state.user_data.processed_data, global_state.statistics.description, global_state.user_data.accept_CPDAG)
 
-        # save the prompt to a file for debugging
-        with open(os.path.join(os.path.dirname(__file__), "prompt.txt"), "w") as f:
-            f.write(prompt)
-
         output = self.llm_client.chat_completion(
-            prompt="Please choose the most suitable algorithms up to top 3, for the data user provided and explain why these algorithms were chosen over the others. For the unselected algorithms, illustrate the reasons for each of them, why we do not choose it.",
+            prompt=f"Please choose the algorithms that provide most reliable and accurate results, up to top {TOP_K}, for the data user provided. ",
             system_prompt=prompt,
             json_response=True,
-            model="gpt-4o"
+            model="gpt-4o",
+            temperature=0.0
         )
-
+        print(output)
         algorithm_candidates = self.parse_response(output)
 
-        print(algorithm_candidates)
-
-        print(output['algorithms_unwanted'])
 
         global_state.algorithm.algorithm_candidates = algorithm_candidates
         global_state.logging.select_conversation.append({
@@ -60,7 +54,7 @@ class Filter(object):
         # with open(guidelines_path, "r") as f:
         #     guidelines = f.read()
         
-        with open(tagging_path, "r") as f:
+        with open(tagging_path, "r", encoding="utf-8") as f:
             tags = f.read()
 
         # algo_context = "Here are the guidelines for causal discovery algorithms:\n" + guidelines + "\n\nHere are the tags for causal discovery algorithms:\n" + tags
@@ -68,7 +62,7 @@ class Filter(object):
         algo_context = tags
         
         # Load select prompt template
-        select_prompt = open(f"algorithm/context/algo_select_prompt.txt", "r").read()
+        select_prompt = open(f"algorithm/context/algo_select_prompt.txt", "r", encoding="utf-8").read()
         
         return algo_context, select_prompt
     
@@ -77,16 +71,16 @@ class Filter(object):
         algo_context, prompt_template = self.load_prompt_context()
         replacements = {
             "[USER_QUERY]": user_query,
+            # "[TABLE_NAME]": self.args.data_file,
             "[COLUMNS]": ', '.join(data.columns),
             "[STATISTICS_DESC]": statistics_desc,
             "[ALGO_CONTEXT]": algo_context,
-            "[CUDA_WARNING]": "Current machine supports CUDA, so you can choose GPU-powered algorithms." if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.",
+            "[CUDA_WARNING]": "Current machine supports CUDA, some algorithms can be accelerated by GPU if necessary (PC, CDNOD, DirectLiNGAM)." if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.",
             "[TOP_K]": str(TOP_K),
             "[ACCEPT_CPDAG]": "The user accepts the output graph including undirected edges/undeterministic directions (CPDAG/PAG)" if accept_CPDAG else "The user does not accept the output graph including undirected edges/undeterministic directions (CPDAG/PAG), so the output graph should be a DAG."
         }
 
         for placeholder, value in replacements.items():
-            print(placeholder, value)
             prompt_template = prompt_template.replace(placeholder, value)
 
         return prompt_template

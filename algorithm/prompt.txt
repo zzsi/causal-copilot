@@ -1,28 +1,24 @@
 Given the following user query:
-
+YES. Find causal relationships between physical measurements and age of abalone. The dataset contains numerical measurements of physical characteristics.
 
 For the data that have the following variables:
-year, month, day, richter, area, region, deaths
+Age, Length, Shell_weight, Diameter, Height, Whole_weight, Shucked_weight, Viscera_weight, domain_index
 
 And the following statistics:
 The dataset has the following characteristics:
 
 Data Type: The overall data type is Continuous.
 
-The sample size is 123 with 7 features. 
+The sample size is 4177 with 8 features. This dataset is not time-series data. 
 
-This dataset is not time-series data. 
-
-Data Quality: There are missing values in the dataset.
+Data Quality: There are no missing values in the dataset.
 
 Statistical Properties:
-- Linearity: The relationships between variables are predominantly linear.
+- Linearity: The relationships between variables are not predominantly linear.
 - Gaussian Errors: The errors in the data do not follow a Gaussian distribution.
-- Heterogeneity: The dataset is not heterogeneous. 
+- Heterogeneity: The dataset is heterogeneous. 
 
-
-
-
+- Domain Index: Whole_weight
 
 All candidate algorithms, their descriptions and tags:
 # Causal Discovery Algorithm Tagging
@@ -30,7 +26,7 @@ All candidate algorithms, their descriptions and tags:
 Below is a concise description of each tag category and its possible values:
 
 1. Availability: Indicates if the algorithm is ready to use.
-    ***ONLY USE AVAILABLE ALGORITHMS FOR NOW***
+    ***ONLY USE AVAILABLE ALGORITHMSFOR NOW***
    - Available: Ready to use in the current codebase.
    - Unavailable: No longer maintained because of being not useful.
 
@@ -367,20 +363,6 @@ DYNOTEARS: {
     Data Type: Time-series
 }
 
-NTSNOTEARS: {
-    Availability: Available,
-    Method Type: Continuous-optimization,
-    Functional form: Nonlinear,
-    Noise: Flexible,
-    Latent Variable Tolerance: Moderate,
-    Distribution Shift: Homogenous,
-    Scalability: Medium-scale,
-    Efficiency: Moderate,
-    Empirical Performance: Moderate,
-    Output Format: DAG,
-    Data Type: Time-series
-}
-
 
 --- Functional Model-based Methods (LiNGAM Family) ----------------------------------
 
@@ -427,20 +409,6 @@ VARLiNGAM: {
 }
 
 --- Hybrid Methods -----------------------------------------------------------------
-
-GrangerCausality: {
-    Availability: Available,
-    Method Type: Hybrid,
-    Functional form: Linear,
-    Noise: Gaussian,
-    Latent Variable Tolerance: Moderate,
-    Distribution Shift: Homogenous,
-    Scalability: Medium-scale,
-    Efficiency: Fast (CPU),
-    Empirical Performance: Moderate,
-    Output Format: DAG,
-    Data Type: Time-series
-}
 
 Hybrid: {
     Availability: Unavailable,

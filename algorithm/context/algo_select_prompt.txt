@@ -1,58 +1,78 @@
 Given the following user query:
 [USER_QUERY]
 
-For the data that have the following variables:
+For the dataset [TABLE_NAME] that have the following variables:
 [COLUMNS]
 
 And the following statistics:
 [STATISTICS_DESC]
 
+And the relevant domain knowledge:
+[DOMAIN_KNOWLEDGE]
+
 All candidate algorithms, their descriptions and tags:
 [ALGO_CONTEXT]
 
-Please choose the most suitable causal discovery algorithms up to top [TOP_K], for the data user provided and explain why these algorithms were chosen over the others. For the unselected algorithms, illustrate the reasons for each of them, why we do not choose it.
-
-At the same time, be careful about the current device availability for GPU/CUDA acceleration. Note that some algorithm settings would need GPU to run, which could be a indirect limitation on the algorithm application potential:
+At the same time, be careful about the current device availability for GPU/CUDA acceleration:
 
 [CUDA_WARNING]
 
 [ACCEPT_CPDAG].
 
-Think in-depth and thoroughly step by step. Please include the justifications, the descriptions and finally the selected algorithms in a JSON object. For example:
+I need you to carefully analyze and select the most suitable causal discovery algorithms (up to [TOP_K]) through a comprehensive multi-stage decision process.
+
+## Primary Analysis: Data and Requirements Assessment
+1. **Data Characteristics Analysis**:
+   - Sample size (n): Is it sufficient for statistical power? (small: <500, medium: 500-5000, large: >5000)
+   - Variable count (p): How many variables need to be considered? (small: <10, medium: 10-50, large: >50)
+   - Data structure: Tabular or time-series? Are there temporal dependencies?
+   - Missing data: What percentage of values are missing? How are they distributed?
+   - Variable types: Continuous, discrete, categorical, mixed? What proportion of each?
+   - Distribution characteristics: Evidence of Gaussian or non-Gaussian distributions?
+   - Relationship patterns: Any evidence of non-linear relationships?
+   - Potential confounders: Are there likely unmeasured confounding variables?
+   - Graph density: Is this simulated data or from an unknown domain (prioritize algorithms that are highly stable to unknown graph density)? For real-world data, can we infer likely graph density (sparse vs. dense interconnections between variables)?
+
+2. **User Goal Analysis**:
+   - What is the primary causal question the user is trying to answer?
+   - Is the focus on prediction, explanation, or intervention?
+   - What degree of interpretability is required?
+   - Are there domain-specific constraints or requirements?
+
+3. **Resource Constraints**:
+   - Computational resources: GPU availability, memory limitations, time constraints
+   - Output format requirements: Is a DAG, CPDAG, or PAG preferred or required?
+   - Graph size considerations: For small graphs (5-25 variables), prioritize algorithm performance empirical performance rating (Robust > Strong > Moderate)ABSOLUTELY over computational efficiency
+
+4. **Counter-factual Reasoning**:
+   - For each algorithm not selected (especially GRaSP, FCI, XGES and other prominent ones):
+     * Under what circumstances would this algorithm be preferred?
+     * What specific aspects of the current problem make it less suitable?
+
+## REQUIRED: Extensive Reasoning Process
+You MUST provide comprehensive reasoning at each step, explicitly connecting dataset characteristics to algorithm selection decisions. Include detailed analysis of why certain algorithms are superior for THIS SPECIFIC dataset while others are unsuitable.
+
+## CRITICAL INSTRUCTION
+FOCUS EXCLUSIVELY ON THE CURRENT DATASET CHARACTERISTICS. Analyze only the actual properties of this specific dataset without discussing how algorithms might perform on different datasets or in hypothetical scenarios. PRIORITIZE ALGORITHMIC DIVERSITY by selecting algorithms from different methodological families (e.g., score-based, constraint-based, hybrid approaches) when multiple algorithms are equally compatible with the requirements. This ensures a comprehensive causal discovery approach leveraging complementary strengths of different algorithmic principles.
+
+Your final response should include the complete reasoning process, for each algorithm, include justification, description, and selected algorithm in a JSON object.
 
 {
+  "reasoning": "Detailed step-by-step reasoning process",
   "algorithms": [
     {
-      "justification": "Explanation of why this algorithm is suitable for the given dataset.",
-      "description": "Brief description of the algorithm.", 
-      "name": "Algorithm Name",
+      "justification": "Comprehensive explanation connecting THIS dataset's specific characteristics to algorithm strengths and showing why this algorithm outperforms alternatives for this particular use case.",
+      "description": "Concise description of the algorithm's approach and capabilities.", 
+      "name": "Algorithm Name (Key name of candidates, not full name)",
     },
-    {
-      "justification": "Explanation of why this algorithm is suitable for the given dataset.",
-      "description": "Brief description of the algorithm.", 
-      "name": "Algorithm Name",
-    },
-    {
-      "justification": "Explanation of why this algorithm is suitable for the given dataset.",
-      "description": "Brief description of the algorithm.", 
-      "name": "Algorithm Name",
-    }
+    ...
   ],
   "algorithms_unwanted": [
     {
-      "justification": "Explanation of why this algorithm is suitable for the given dataset.",
-      "description": "Brief description of the algorithm.", 
-      "name": "Algorithm Name",
+      "justification": "Precise explanation of why this algorithm is unsuitable for THIS specific dataset despite its general popularity or strengths.",
+      "description": "Concise description of the algorithm.", 
+      "name": "Algorithm Name (Key name of candidates, not full name)",
     },
-    {
-      "justification": "Explanation of why this algorithm is suitable for the given dataset.",
-      "description": "Brief description of the algorithm.", 
-      "name": "Algorithm Name",
-    },
-    {
-      "justification": "Explanation of why this algorithm is suitable for the given dataset.",
-      "description": "Brief description of the algorithm.", 
-      "name": "Algorithm Name",
-    }
+    ...
   ]
 }

@@ -1,153 +1,31 @@
-### VARLiNGAM  
-────────────────────────────────────────────────────────────────────────
-1. HYPER-PARAMETERS SENSITIVITY
-────────────────────────────────────────────────────────────────────────
+# VARLiNGAM
 
-• Number of Key Hyperparameters   
-  - VARLiNGAM extends the LiNGAM framework to time-series data by incorporating vector autoregression (VAR). The key hyperparameters in your implementation include:
-    1. lags: Number of past time lags to consider in the autoregressive model.
-    2. criterion: Model selection criterion for determining the best lags (aic, bic, hqic, fpe).
-    3. prune: Boolean flag to enable pruning of spurious edges in the adjacency matrix.
-    4. ar_coefs: User-specified AR coefficients (skips estimation if provided).
-    5. lingam_model: Specifies the LiNGAM causal discovery model; defaults to DirectLiNGAM if unspecified
+## Hyperparameters Sensitivity
+- **Number of Hyperparameters**: Moderate (3-5 key parameters)
+- **Default Performance**: Good on datasets with non-Gaussian noise, but requires lag selection
+- **Tuning Difficulty**: Moderate - lag selection is crucial but can be guided by domain knowledge
 
-• Tuning Difficulty
-  - lags is a crucial parameter—higher values increase model complexity but capture longer dependencies.
-  - criterion automates lag selection—bic is recommended for smaller datasets, while aic allows more flexibility.
-  - Pruning (prune=True) helps remove false positive edges, but may lead to missing weak causal links.
-  - If AR coefficients (ar_coefs) are provided, estimation is skipped, which can be beneficial for incorporating prior knowledge. 
+## Robustness & Scalability
+- **Data Quality Tolerance**: Sensitive to noise and outliers; requires complete data
+- **Scalability**: Scales well for moderate dimensions (10-30 variables), struggles with high dimensions
+- **Computational Cost**: O(n² × lags) complexity, where n is number of variables
 
-• Sensitivity  
-  - Setting lags too high increases computational cost and overfitting risk.
-  - Incorrect criterion selection may lead to underfitting (too few lags) or overfitting (too many lags).
-  - Disabling pruning (prune=False) may retain noisy edges, reducing model interpretability.
+## Mixed Data & Complex Functions
+- **Functional Assumptions**: Assumes linear causal relationships between variables
+- **Noise Assumptions**: Specifically designed for non-Gaussian noise distributions
+- **Data Type Handling**: Primarily for continuous data; requires preprocessing for discrete variables
 
-•  Critique/Extension   
-  - Adaptive pruning techniques could improve performance by dynamically adjusting thresholds.
-  - Hybrid approaches integrating nonlinear relationships (e.g., kernel-based LiNGAM) may enhance robustness.
+## Interpretability
+- **Output Format**: Fully directed graph showing both contemporaneous and time-lagged causal effects
+- **Edge Meanings**: Edge weights represent direct causal effect strengths
+- **Uncertainty Metrics**: Limited support for confidence intervals on causal effects
 
-────────────────────────────────────────────────────────────────────────
-2. ROBUSTNESS & SCALABILITY
-────────────────────────────────────────────────────────────────────────
+## Assumptions
+- **Critical Assumptions**: Non-Gaussian noise, linear relationships, stationarity, causal sufficiency
+- **Robustness to Violations**: Sensitive to Gaussian noise, non-stationarity, and hidden confounders
+- **Requirement Level**: Core assumptions (non-Gaussianity) cannot be relaxed
 
-• Tolerance to Bad Data Quality   
-  - VARLiNGAM assumes no missing values—preprocessing is required.
-  - Sensitive to noise and outliers, especially when estimating AR coefficients.
-  - Pruning helps mitigate false positive edges, improving robustness in noisy datasets.
-
-• Tolerance to Sparse vs. Dense Connected Systems
-  - Works well for moderately sparse graphs, where causal effects are time-lagged.
-  - Dense graphs may introduce high false positives—pruning is essential in such cases.
-
-• Scalability  
-  - Scales well for moderate-dimensional data, but computational cost increases with lags.
-  - Using predefined ar_coefs reduces the need for expensive AR model estimation.
-
-• Critique/Extension   
-  - Parallel implementations for AR estimation could improve scalability.
-  - Hybrid pruning strategies combining statistical and machine learning approaches could enhance edge filtering. 
-
-────────────────────────────────────────────────────────────────────────
-3. MIXED DATA & COMPLEX FUNCTIONS
-────────────────────────────────────────────────────────────────────────
-• Noise Type   
-  - Assumes non-Gaussian noise, a key requirement for LiNGAM-based causal discovery.
-  - Highly sensitive to noise distributions—robust estimation techniques may be required for heavy-tailed distributions. 
-
-• Mixed Data (Continuous & Discrete)   
-  - VARLiNGAM is optimized for continuous data—discrete extensions would require modified statistical assumptions.  
-
-• Heterogeneous Data   
-  - Works well if causal relationships remain stable over time.
-  - Sensitive to non-stationary effects—requires adaptations for dynamic environments. 
-
-• Complex Functional Forms   
-  - Assumes linear causal relationships, like standard LiNGAM.
-  - Extending to nonlinear cases requires modifications, such as kernel-based LiNGAM.  
-
-• Critique/Extension   
-  - Kernel or neural network extensions could improve causal discovery in nonlinear settings.
-  - Accounting for regime shifts in time-series data would enhance robustness in dynamic systems.  
-
-────────────────────────────────────────────────────────────────────────
-4. COMPUTATIONAL COMPLEXITY
-────────────────────────────────────────────────────────────────────────
-
-• Theoretical Time Complexity   
-  - VARLiNGAM has a complexity of O(n² lags), where n is the number of variables.
-  - Selecting criterion=bic reduces computation by automatically finding optimal lags.  
-
-• Variability in Practical Usage   
-  - Higher lags significantly increase runtime.
-  - Using predefined AR coefficients (ar_coefs) reduces computational burden. 
-
-• Critique/Extension   
-  - Sparse matrix representations could improve efficiency in large-scale settings.
-  - Adaptive lag selection using cross-validation may improve model performance.  
-
-────────────────────────────────────────────────────────────────────────
-5. INTERPRETABILITY
-────────────────────────────────────────────────────────────────────────
-
-• Output Format   
-  - Produces a time-lagged causal DAG, showing directed causal influences over multiple time steps. 
-
-• Strength of the Output Format   
-  - Fully directed graph, removing CPDAG ambiguity seen in constraint-based approaches.
-  - Allows for explicit control over pruning to improve interpretability.  
-
-• Limitations of the Output Format   
-  - Causal relationships are assumed linear—nonlinear interactions are not captured.
-  - Thresholding and pruning require careful tuning to avoid omitting true causal links.   
-
-• Critique/Extension   
-  - Bootstrap-based confidence intervals could improve reliability of inferred edges.
-  - Graph regularization techniques may enhance robustness in high-dimensional settings.   
-
-────────────────────────────────────────────────────────────────────────
-6. ASSUMPTIONS
-────────────────────────────────────────────────────────────────────────
-
-• Critical Assumptions   
-  - Non-Gaussian noise is required for independent component analysis (ICA) in LiNGAM.
-  - Causal Markov Condition: Each variable is independent of its non-descendants given its parents.
-  - Faithfulness: All and only the conditional independencies in the true structure are observed.
-  - Acyclicity: Assumes no feedback loops (though extensions exist for cyclic structures).
-  - Stationarity: Assumes causal relationships do not change over time. 
-
-• Violation Impact   
-  - Gaussian noise violates LiNGAM assumptions, making causal inference unreliable.
-  - Non-stationarity may lead to incorrect causal links if relationships change over time.
-  - Feedback loops cannot be modeled with standard VARLiNGAM.  
-
-• Critique/Extension   
-  - Relaxing the acyclicity assumption could allow for feedback loops in causal discovery.
-  - Time-varying causal models could extend applicability to dynamic systems.   
-
-────────────────────────────────────────────────────────────────────────
-7. (OPTIONAL) REAL-WORLD BENCHMARKS
-──────────────────────────────────────────────────────────────────────── 
-
-• Performance on Real Datasets   
-  - VARLiNGAM outperforms standard Granger causality in non-Gaussian settings.
-  - Well-suited for finance, neuroscience, and climatology applications.
-  - Struggles with highly nonlinear interactions unless extended with kernel methods. 
-
-• Practical Tips   
-  - Choosing the right lags is crucial—high values increase computation time.
-  - Applying pruning (prune=True) improves interpretability by reducing false edges.
-  - Using criterion=bic automates lag selection, balancing accuracy and efficiency. 
-
-────────────────────────────────────────────────────────────────────────
-CONCLUSION
-────────────────────────────────────────────────────────────────────────
-VARLiNGAM extends LiNGAM to time-series causal discovery, offering a fully directed DAG structure while leveraging non-Gaussianity for causal inference. It excels in:
-  - Capturing lagged causal relationships via autoregression.
-  - Handling non-Gaussian noise, unlike Granger causality.
-  - Providing interpretable, fully directed causal graphs. 
-
-However, limitations include:
-  - Assumes linearity—does not capture complex functional relationships.
-  - Sensitive to noise and outliers, requiring careful preprocessing.
-  - Struggles with non-stationary or feedback-loop systems. 
-────────────────────────────────────────────────────────
+## Real-World Applications
+- **Successful Domains**: Economics (firm growth analysis), finance (monetary policy effects), neuroimaging with non-Gaussian signals
+- **Performance Limitations**: Underperforms in systems with nonlinear interactions or high dimensions
+- **Scientific Evidence**: Successfully applied in macroeconomic studies and financial time series analysis

@@ -23,7 +23,7 @@ import itertools
 sys.path.append(os.path.join(root_dir, 'externals', 'pc_adjacency_search'))
 import gpucmiknn
 import globals
-from gpu_ci import gpu_single
+from gpu_ci import gpu_single, gpu_row
 
 def apply_rules(dag: nx.DiGraph):
     def non_adjacent(g, v_1, v_2):
@@ -238,13 +238,15 @@ def cmiknn_gpu(data: np.ndarray, alpha: float, depth: int, node_names: list) -> 
     globals.start_level = 0
 
     globals.split_size = None
-    globals.k_cmi = min(int(data.shape[0] * 0.07), 200) # min(400, int(data.shape[0] * 0.2)) #'adaptive' # int(data.shape[0] * 0.2)
+    globals.k_cmi = int(np.sqrt(data.shape[0]) / 5) # min(400, int(data.shape[0] * 0.2)) #'adaptive' # int(data.shape[0] * 0.2)
+
+    print(f"CMI KNN hyperparameters: alpha={alpha}, depth={depth}, k_cmi={globals.k_cmi}, max_sepset_size={globals.max_sepset_size}, permutations={globals.permutations}, split_size={globals.split_size}, start_level={globals.start_level}")
     
     # Initialize GPU
-    gpucmiknn.init_gpu()
+    globals.gpu_free_mem = gpucmiknn.init_gpu()
         
     # Get skeleton and sepsets using GPU-accelerated CMIknn
-    skeleton, sepsets = gpu_single(data)
+    skeleton, sepsets = gpu_row(data)
 
     for i in range(skeleton.shape[0]):
         skeleton[i, i] = 0

@@ -35,7 +35,6 @@ def MB2CPDAG(data: pd.DataFrame, mb_dict: Dict[int, List[int]], indep_test: str 
     n_vars = data.shape[1]
     merged_cpdag = np.zeros((n_vars, n_vars))
     
-    from joblib import Parallel, delayed
     def compute_local_cpdag(target, mb_nodes):
         local_indices = [target] + mb_nodes
         if len(local_indices) < 2:
@@ -54,9 +53,11 @@ def MB2CPDAG(data: pd.DataFrame, mb_dict: Dict[int, List[int]], indep_test: str 
         local_adj = cg.G.graph
         return (local_indices, local_adj)
 
-    results = Parallel(n_jobs=n_jobs)(
-        delayed(compute_local_cpdag)(target, mb_nodes) for target, mb_nodes in mb_dict.items()
-    )
+    results = []
+    for target, mb_nodes in mb_dict.items():
+        result = compute_local_cpdag(target, mb_nodes)
+        results.append(result)
+
     for res in results:
         if res is None:
             continue

@@ -39,7 +39,7 @@ class TSCDNOD(CausalDiscoveryAlgorithm):
         self._params = {
             'alpha': 0.05,
             'indep_test': 'fisherz',
-            'depth': 3,
+            'depth': 4,
             'tau_max': 3,
             'use_gpu': False,
             'verbose': False
@@ -151,6 +151,10 @@ class TSCDNOD(CausalDiscoveryAlgorithm):
             - info dictionary
             - CausalGraph object (if available)
         """
+        # Check and remove domain_index if it exists
+        if 'domain_index' in data.columns:
+            data = data.drop(columns=['domain_index'])
+            
         # Get parameters
         alpha = self._params['alpha']
         indep_test = self._params['indep_test']

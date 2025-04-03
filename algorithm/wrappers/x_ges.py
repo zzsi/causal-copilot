@@ -14,6 +14,7 @@ from xges import XGES as xges
 
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
+from data.simulation.dummy import DataSimulator
 
 class XGES(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
@@ -35,6 +36,10 @@ class XGES(CausalDiscoveryAlgorithm):
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, Dict]:
+        # Check and remove domain_index if it exists
+        if 'domain_index' in data.columns:
+            data = data.drop(columns=['domain_index'])
+            
         node_names = list(data.columns)
         data_values = data.values
 
@@ -69,43 +74,74 @@ class XGES(CausalDiscoveryAlgorithm):
         return custom_matrix
 
     def test_algorithm(self):
-        # Generate sample data with linear relationships
+        # Import the DataSimulator from the benchmark module
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        from data.simulation.dummy import DataSimulator
+        
+        # Create a simulator instance
+        simulator = DataSimulator()
+        
+        # Generate sample data with MLP (non-linear) relationships
         np.random.seed(42)
-        n_samples = 1000
-        X1 = np.random.normal(0, 1, n_samples)
-        X2 = 0.5 * X1 + np.random.normal(0, 0.5, n_samples)
-        X3 = 0.3 * X1 + 0.7 * X2 + np.random.normal(0, 0.3, n_samples)
-        X4 = 0.6 * X2 + np.random.normal(0, 0.4, n_samples)
-        X5 = 0.4 * X3 + 0.5 * X4 + np.random.normal(0, 0.2, n_samples)
+        n_nodes = 20
+        n_samples = 3000
+        
+        # Generate synthetic dataset with MLP relationships similar to benchmark.py
+        gt_graph, df = simulator.generate_dataset(
+            n_nodes=n_nodes,
+            n_samples=n_samples,
+            edge_probability=0.5,
+            function_type="mlp",  # Using MLP for non-linear relationships
+            noise_type="gaussian",
+            noise_scale=1.0,
+            discrete_ratio=0.0,  # All continuous variables
+            n_domains=1
+        )
+        
+        # Extract the data and ground truth graph
+        df = pd.DataFrame(df)
+        
+        # # Define the dataset path
+        # dataset_name = "simulated_data/copilot_benchmark_v3/1_basic_scenarios/linear_gaussian_normal_sample/20250401_222840_seed_2_nodes10_samples1500"
+        
+        # # Load the data
+        # data_file = [os.path.join(dataset_name, file) for file in os.listdir(dataset_name) if file.endswith(".csv")][0]
+        # graph_file = [os.path.join(dataset_name, file) for file in os.listdir(dataset_name) if file.endswith(".npy")][0]
+        
+        # # Load the data and ground truth graph
+        # df = pd.read_csv(data_file)
+        # gt_graph = np.load(graph_file)
+        
+        # # If the results file exists, we can also print some information from it
+        # results_file = os.path.join(base_dir, "copilot_benchmark_v3_results", "20250401_224330", f"{dataset_name}_results.json")
+        # if os.path.exists(results_file):
+        #     with open(results_file, 'r') as f:
+        #         results_data = json.load(f)
+        #         print(f"Previous benchmark results available: F1={results_data[0]['metrics']['f1']:.4f}")
 
-        df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
-
-        print("Testing XGES algorithm with pandas DataFrame:")
+        print(gt_graph)
+        
+        print(f"Testing XGES algorithm with MLP data ({n_nodes} nodes, {n_samples} samples):")
         params = {
             'alpha': 2.0
         }
+        
+        # Set parameters and fit the model
+        self._params = params
         adj_matrix, info, _ = self.fit(df)
-        print("Adjacency Matrix:")
-        print(adj_matrix)
-
-        # Ground truth graph
-        gt_graph = np.array([
-            [0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0],
-            [1, 1, 0, 0, 0],
-            [0, 1, 0, 0, 0],
-            [0, 0, 1, 1, 0]
-        ])
-
-        # Use GraphEvaluator to compute metrics
+        
+        # print("Adjacency Matrix (subset):")
+        # print(gt_graph)  # Print just a subset for readability
+        
         evaluator = GraphEvaluator()
         metrics = evaluator.compute_metrics(gt_graph, adj_matrix)
-
+        
         print("\nMetrics:")
         print(f"F1 Score: {metrics['f1']:.4f}")
         print(f"Precision: {metrics['precision']:.4f}")
         print(f"Recall: {metrics['recall']:.4f}")
-        print(f"SHD: {metrics['shd']:.4f}") 
+        print(f"SHD: {metrics['shd']}")
+        print(f"Best Graph (subset):\n{adj_matrix}")
 
 if __name__ == "__main__":
     xges_algo = XGES({})

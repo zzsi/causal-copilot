@@ -1,145 +1,33 @@
-### NTSNOTEARS
-────────────────────────────────────────────────────────────────────────
-1. HYPER-PARAMETERS SENSITIVITY
-────────────────────────────────────────────────────────────────────────
-• Number of Key Hyperparameters:
-  - NTS-NOTEARS extends NOTEARS for nonlinear causal discovery in time series, using neural networks to model dependencies. The key hyperparameters include::
-    1. p (Lookback window length): Defines how far back in time causal relationships are considered.
-    2. λ_1 (lambda1): lambdas for convolutional parameters in each time step.
-    3. λ_2 (lambda2): L1 regularization smoothness over time for causal relations.
-    4. max_iter: Maximum number of optimization steps in the dual ascent method.
-    5. h_tol: Tolerance for acyclicity enforcement—ensures a DAG structure.
-    6. w_threshold: Threshold for pruning weak edges in the learned adjacency matrix.
+# NTS-NOTEARS
 
-• Tuning Difficulty:
-  - p (Lookback window) Affects long-term dependencies—should be determined using preprocessing (e.g., autocorrelation analysis).
-  - λ_1 and λ_2 control sparsity—higher values promote simpler graphs but may remove true causal links.
-  - h_tol ensures strict DAG constraints—lower values enforce acyclicity but may slow down optimization.
-  - w_threshold filters weak edges—higher values yield sparser graphs, reducing false positives but possibly missing weak causal relationships.
+## Hyperparameters Sensitivity
+- **Number of Hyperparameters**: High (8-10 key parameters)
+- **Default Performance**: Requires careful tuning for good performance
+- **Tuning Difficulty**: High - neural network and regularization parameters need dataset-specific tuning
 
-• Sensitivity:
-  - p significantly affects discovered causal lags—shorter values may miss long-term dependencies, while longer values increase computation time.
-  - λ_1 and λ_2 strongly influence graph density—too high removes meaningful connections, too low introduces noise.
-  - h_tol must be carefully chosen—too strict, and the optimization may not converge; too relaxed, and cycles may appear.
+## Robustness & Scalability
+- **Data Quality Tolerance**: More robust to various noise distributions than linear methods
+- **Scalability**: Moderate - handles medium-sized networks but with high computational cost
+- **Computational Cost**: O(n² log n) complexity with significant constants due to neural network training
 
-• Critique/Extension:
-  - Adaptive regularization could help balance intra- and inter-slice dependencies dynamically.
-  - More robust hyperparameter tuning methods, such as Bayesian optimization, could improve performance.
+## Mixed Data & Complex Functions
+- **Functional Assumptions**: Captures nonlinear causal relationships via neural networks
+- **Noise Assumptions**: Flexible - handles non-Gaussian noise well
+- **Data Type Handling**: Primarily for continuous data, extensions needed for categorical variables
 
-────────────────────────────────────────────────────────────────────────
-2. ROBUSTNESS & SCALABILITY
-────────────────────────────────────────────────────────────────────────
-• Tolerance to Bad Data Quality
-  - Handles moderate noise well but assumes no missing values—preprocessing is required.
-  - More robust than linear models but still sensitive to extreme outliers—alternative loss functions (e.g., Huber loss) could improve robustness.
-  - Regularization helps suppress noisy edges, improving generalization.
+## Interpretability
+- **Output Format**: Time-lagged directed graph with edge strengths
+- **Edge Meanings**: Edge strengths reflect complex nonlinear relationships
+- **Uncertainty Metrics**: Limited support for uncertainty quantification
 
-• Tolerance to Sparse vs. Dense Connected Systems
-  - Works well for moderately sparse graphs—regularization prevents overfitting.
-  - For denser graphs, lower λ values are needed to preserve meaningful connections.
+## Assumptions
+- **Critical Assumptions**: Acyclicity within time slices, causal sufficiency, stationarity
+- **Robustness to Violations**: More robust to functional form violations than linear methods
+- **Requirement Level**: Core acyclicity assumption cannot be relaxed
 
-• Scalability  
-  - Scales worse than linear methods due to neural network complexity.
-  - Memory and runtime depend on hidden_units and activation complexity.
-  - Parallelized optimization over GPU can improve computational efficiency.
+## Real-World Applications
+- **Successful Domains**: Sports analytics (ice hockey event analysis), manufacturing process analysis
+- **Performance Limitations**: Requires substantial data for reliable neural network training
+- **Scientific Evidence**: Validated on professional ice hockey game data and ceramic substrate manufacturing process data
 
-• Critique/Extension  
-  - Batch processing techniques or adaptive depth selection could improve scalability for large datasets.
-  - Pre-filtering irrelevant variables can reduce computational burden.
-
-────────────────────────────────────────────────────────────────────────
-3. MIXED DATA & COMPLEX FUNCTIONS
-────────────────────────────────────────────────────────────────────────
-• Noise Type  
-  - Handles nonlinear noise better than other functional-model based methods.
-  - Still assumes noise is iid—may struggle with heteroskedasticity.
-  - Alternative architectures (e.g., Variational Autoencoders) could enhance robustness.
-
-• Mixed Data (Continuous & Discrete)  
-  - Supports continuous variables natively
-  - Discrete data requires modifications, such as sigmoid activations or Gumbel-softmax.
-
-• Heterogeneous Data  
-  - Better than linear models for non-stationary data but still assumes a relatively stable underlying distribution.
-  - Adaptive neural architectures (e.g., recurrent models) could improve robustness.
-
-• Complex Functional Forms  
-  - Captures nonlinear dependencies, unlike linear methods.
-  - Can model higher-order interactions if the architecture has sufficient capacity.
-
-• Critique/Extension  
-  - Kernel-based or attention-based architectures could further improve causal discovery for complex systems.
-
-────────────────────────────────────────────────────────────────────────
-4. COMPUTATIONAL COMPLEXITY
-────────────────────────────────────────────────────────────────────────
-• Theoretical Time Complexity  
-  - Higher than linear methods (O(n² log n)) due to neural network training.
-  - More complex activation functions increase runtime.
-
-• Variability in Practical Usage  
-  - Longer lookbacks (higher p) significantly increase computation time.
-  - Larger networks (higher hidden_units) require more data to avoid overfitting.
-
-• Critique/Extension  
-  - Pruning weak connections early could speed up optimization.
-  - Using low-rank approximations could reduce matrix operations' cost.
-
-────────────────────────────────────────────────────────────────────────
-5. INTERPRETABILITY
-────────────────────────────────────────────────────────────────────────
-• Output Format  
-  - Produces a time-lagged DAG, where edges indicate causal influences with specific time lags.
-  - Edges reflect learned nonlinear relationships, rather than simple coefficients.
-
-• Strength of the Output Format  
-  - More expressive than linear models—captures complex interactions.
-  - Includes explicit time-lagged relationships as well as contemporaneous relations, making it useful for real-world applications.
-
-• Limitations of the Output Format  
-  - Edge strengths are non-trivial to analyze due to activation nonlinearities.
-
-• Critique/Extension  
-  - Saliency-based post-processing could improve interpretability.
-
-────────────────────────────────────────────────────────────────────────
-6. ASSUMPTIONS
-────────────────────────────────────────────────────────────────────────
-• Critical Assumptions  
-  - Causal Markov condition: Each variable is conditionally independent of its non-descendants, given its parents.  
-  - Faithfulness: All and only the conditional independencies in the true structure are reflected in the data.  
-  - Causal sufficiency: No unobserved confounders of the measured variables.  
-  - Acyclicity: Enforced through continuous optimization constraints - past affects the future
-  - Stationarity: Assumes causal relations do not change over time.
-
-• Violation Impact  
-  - Unobserved confounders can lead to biased estimates.
-  - Unfaithful data-generating mechanisms can hide true edges or create extra independencies.  
-  - Non-stationarity could cause incorrect causal edges.
-
-• Critique/Extension  
-  - Extending NTS-NOTEARS for dynamic causal graphs could help with non-stationary environments.
-
-────────────────────────────────────────────────────────────────────────
-7. (OPTIONAL) REAL-WORLD BENCHMARKS
-────────────────────────────────────────────────────────────────────────
-• Performance on Real Datasets  
-  - Outperforms linear models like Granger Causality and DYNOTEARS when causal effects are highly nonlinear.
-  - Higher computational cost, but captures richer dependencies in economic, neuroscience, and financial data.
-
-• Practical Tips  
-  - Choosing p based on domain knowledge is crucial—p=2 for short-range dependencies, p=10 for long-range.
-  - Regularization (λ_1, λ_2) should be cross-validated to find the best sparsity setting.
-
-────────────────────────────────────────────────────────────────────────
-CONCLUSION
-────────────────────────────────────────────────────────────────────────
-NTS-NOTEARS is a neural-based causal discovery method for time-series data, improving on linear models by capturing nonlinear dependencies while enforcing acyclicity constraints.
-  - More expressive than DYNOTEARS (captures nonlinear causal effects). Works well when causal effects are highly nonlinear.
-  - Learns from data using neural networks, avoiding fixed parametric assumptions.
-  - Scales well to moderate-sized graphs with proper regularization.
-However, it has limitations, including:
-  - More computationally expensive than linear models.
-  - Requires careful tuning of neural network hyperparameters.
-  - Assumes stationarity, limiting its applicability to evolving systems.
-────────────────────────────────────────────────────────
+These profiles highlight the distinctive characteristics of each algorithm to help an LLM agent select the most appropriate one based on data characteristics and application requirements.

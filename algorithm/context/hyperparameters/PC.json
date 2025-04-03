@@ -2,37 +2,17 @@
   "algorithm_name": "PC",
   "alpha": {
     "meaning": "Desired significance level in (0, 1)",
-    "available_values": {
-      "default": 0.05,
-      "small_sample": 0.1,
-      "large_sample": 0.01
-    },
-    "expert_suggestion": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
+    "available_values": [0.05, 0.1, 0.01],
+    "expert_suggestion": "Use 0.05 as default. Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
   },
   "indep_test": {
     "meaning": "Independence test method",
-    "available_values": {
-      "default": "fisherz_cpu",
-      "continuous_cpu": "fisherz_cpu",
-      "continuous_gpu": "fisherz_gpu",
-      "discrete_cpu": "chisq_cpu",
-      "discrete_gpu": "chisq_gpu",
-      "robust_nonlinear_cpu": "kci_cpu",
-      "robust_nonlinear_gpu": "cmiknn_gpu",
-      "fast_robust_nonlinear_cpu": "fastkci_cpu",
-      "approximate_fast_nonlinear_cpu": "rcit_cpu"
-    },
-    "expert_suggestion": "Choose based on data type and hardware. CPU TESTS: 'fisherz_cpu' for linear continuous data; 'chisq_cpu' for discrete data (only applied for pure discrete data); 'kci_cpu' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci_cpu' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit_cpu' is the fastest approximation of kci (use with < 30 variables and sample size < 5000). GPU TESTS: 'fisherz_gpu' and 'chisq_gpu' (only applied for pure discrete data) work similarly but are extremely fast because of GPU's super parallel computing; 'cmiknn_gpu' is a GPU-accelerated nonparametric test that provides 1000x speedup compared to CPU-based 'kci' with comparable accuracy. GPU acceleration is strongly recommended for large datasets."
+    "available_values": ["fisherz_cpu", "fisherz_gpu", "chisq_cpu", "chisq_gpu", "kci_cpu", "cmiknn_gpu", "fastkci_cpu", "rcit_cpu"],
+    "expert_suggestion": "Use fisherz_cpu as default (for linear data). Choose based on data type and hardware. DON'T use nonlinear/nonparametric tests for linear/discrete data. CPU TESTS: 'fisherz_cpu' for linear data; 'chisq_cpu' for discrete data (only applied for pure discrete data); 'kci_cpu' for nonlinear data (very slow, use only when both condition fulfilled: variable size < 10 and sample size < 1500); 'fastkci_cpu' is faster than kci (use only when both condition fulfilled: < 20 variables and sample size < 3000); 'rcit_cpu' is the fastest approximation of kci (use only when both condition fulfilled: < 30 variables and sample size < 5000). GPU TESTS: While GPU tests offer speed advantages, they are less accurate than their CPU counterparts and should primarily be used for large datasets. ONLY use 'fisherz_gpu' and 'chisq_gpu' if both condition fulfilled: variable size > 50 and sample size > 7500; ONLY be able to use 'cmiknn_gpu' when: data is nonlinear, and variable size > 25 or sample size > 3000. For smaller datasets, use CPU tests for better accuracy even though GPU is available. You MUST use GPU tests for large datasets (variable size > 100) if GPU is available."
   },
   "depth": {
     "meaning": "Maximum depth for skeleton search",
-    "available_values": {
-      "default": -1,
-      "small_graph": 6,
-      "medium_graph": 4,
-      "large_graph": 2,
-      "extra_large_graph": 1
-    },
-    "expert_suggestion": "Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 1-3) can significantly speed up the algorithm at the cost of some accuracy. A graph with node number < 10, use depth 6; A graph with node number 10 - 25, use depth 4; A graph with node number 25-50, use depth 2; A graph with node number > 50, use depth 1."
+    "available_values": [-1, 6, 5, 4, 3],
+    "expert_suggestion": "Use -1 as default. Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 2-4) can significantly speed up the algorithm with a minor trade-off in accuracy. For CPU-based independence tests: A graph with node number < 10, use depth 6; A graph with node number 10-25, use depth 5; A graph with node number 25-50, use depth 4; A graph with node number > 50, use depth 3. For GPU-accelerated independence tests: A graph with node number < 50, use depth -1; A graph with node number 50-100, use depth 5; A graph with node number > 100, use depth 4."
   }
 }

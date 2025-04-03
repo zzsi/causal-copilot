@@ -87,6 +87,10 @@ class Hybrid(CausalDiscoveryAlgorithm):
         cg : CausalGraph
             The final oriented CausalGraph object.
         """
+        # Check and remove domain_index if it exists
+        if 'domain_index' in data.columns:
+            data = data.drop(columns=['domain_index'])
+            
         node_names = list(data.columns)
         data_values = data.values
         first_stage_algo = self._params.get('first_stage_algo', 'pc')

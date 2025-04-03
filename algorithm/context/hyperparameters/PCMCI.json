@@ -2,92 +2,57 @@
     "algorithm_name": "PCMCI",
     "cond_ind_test": {
         "meaning": "Independence tests",
-        "available_values": {
-        "default": "parcorr",
-        "non_gaussian": "robustparcorr",
-        "non_linear": "gpdc",
-        "categorical": "gsq",
-        "mixed": "regression",
-        "accuracy": "cmi"
-        },
-        "expert_suggestion": "parcorr, gpdc for non-linear causal relations, cmi for better accuracy but slow runtime, gsq for categorical, regression for mixed data"
+        "available_values": ["parcorr", "robustparcorr", "gpdc", "gsq", "regression", "cmi"],
+        "expert_suggestion": "Use parcorr as default. parcorr, gpdc for non-linear causal relations, cmi for better accuracy but slow runtime, gsq for categorical, regression for mixed data"
     },
     "tau_min": {
         "meaning": "Minimum time lag to consider",
-        "available_values": {
-        "default": 0,
-        "lagged":1
-        },
-        "expert_suggestion": "Adjust if results are required for a specific time window"
+        "available_values": [0, 1],
+        "expert_suggestion": "Use 0 as default. Adjust if results are required for a specific time window"
     },
     "tau_max": {
         "meaning": "Maximum time lag",
-        "available_values": {
-        "default": 1,
-        "short_term": 5,
-        "long_term": 10
-        },
-        "expert_suggestion": "Usually adjusted based on pre-processing results"
+        "available_values": [1, 5, 10],
+        "expert_suggestion": "Use 1 as default. Usually adjusted based on pre-processing results"
     },
     "pc_alpha": {
         "meaning": "Significance level of PC algorithm.",
-        "available_values": {
-        "default": 0.05,
-        "small_sample": 0.1,
-        "large_sample": 0.01
-        },
-        "expert_suggestion": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
+        "available_values": [0.05, 0.1, 0.01],
+        "expert_suggestion": "Use 0.05 as default. Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
     },
     "alpha_level": {
         "meaning": "Significance level at which the p_matrix is thresholded to get graph.",
-        "available_values": {
-        "default": 0.05,
-        "small_sample": 0.1,
-        "large_sample": 0.01
-        },
-        "expert_suggestion": "Adjust based on estimated time lag, number of nodes and sample size. Larger and denser graph means low alpha value."
+        "available_values": [0.05, 0.1, 0.01],
+        "expert_suggestion": "Use 0.05 as default. Adjust based on estimated time lag, number of nodes and sample size. Larger and denser graph means low alpha value."
     },
     "fdr_method": {
         "meaning": "Correction method, currently implemented is Benjamini-Hochberg False Discovery Rate method. ",
-        "available_values": {
-        "default": "none",
-        "correction": "fdr_bh"
-        },
-        "expert_suggestion": "Implement a false discovery rate correction over the PCMCI result, can be required for larger and denser graphs"
+        "available_values": ["none", "fdr_bh"],
+        "expert_suggestion": "Use none as default. Implement a false discovery rate correction over the PCMCI result, can be required for larger and denser graphs"
     },
     "link_assumptions": {
         "meaning": "Background knowledge links added as a dict",
-        "available_values": {
-        "default": null
-        },
-        "expert_suggestion": "Add some links as dictionary of form {j:{(i, -tau): link_type, ...}, ...} specifying assumptions about links. This initializes the graph with entries graph[i,j,tau] = link_type. For example, graph[i,j,0] = '-->' implies that a directed link from i to j at lag 0 must exist. Valid link types are 'o-o', '-->', '<--'."
+        "available_values": [null],
+        "expert_suggestion": "Use null as default. Add some links as dictionary of form {j:{(i, -tau): link_type, ...}, ...} specifying assumptions about links. This initializes the graph with entries graph[i,j,tau] = link_type. For example, graph[i,j,0] = '-->' implies that a directed link from i to j at lag 0 must exist. Valid link types are 'o-o', '-->', '<--'."
     },   
     "max_conds_dim": {
         "meaning": "Maximum number of conditions to test.",
-        "available_values": {
-        "default": null
-        },
-        "expert_suggestion": "Default none value means unrestricted testing, can be assigned a value for large datasets with sparse graphs to speed up the discovery"
+        "available_values": [null],
+        "expert_suggestion": "Use null as default. Default none value means unrestricted testing, can be assigned a value for large datasets with sparse graphs to speed up the discovery"
     },
     "max_combinations": {
         "meaning": "Maximum number of combinations of conditions of current cardinality to test in PC1 step.",
-        "available_values": {
-        "default": 1
-        },
-        "expert_suggestion": "Adjust to increase accuracy by trading off processing speed"
+        "available_values": [1],
+        "expert_suggestion": "Use 1 as default. Adjust to increase accuracy by trading off processing speed"
     },
     "max_conds_py": {
         "meaning": "Restricts the number of parent nodes to consider in the MCI step",
-        "available_values": {
-        "default": null
-        },
-        "expert_suggestion": "Adjust to increase accuracy by trading off processing speed, none value means unrestricted"
+        "available_values": [null],
+        "expert_suggestion": "Use null as default. Adjust to increase accuracy by trading off processing speed, none value means unrestricted"
     },
     "max_conds_px": {
         "meaning": "Maximum number of variables to condition on",
-        "available_values": {
-        "default": null
-        },
-        "expert_suggestion": "Adjust to increase accuracy by trading off processing speed, none value means unrestricted"
+        "available_values": [null],
+        "expert_suggestion": "Use null as default. Adjust to increase accuracy by trading off processing speed, none value means unrestricted"
     }
 }       

@@ -1,16 +1,14 @@
 Given a dataset with the following properties:
 
-1. Columns: year	month	day	richter	area	region	deaths
+1. Columns: Age	Length	Shell_weight	Diameter	Height	Whole_weight	Shucked_weight	Viscera_weight	domain_index
 2. Statistics:
 The dataset has the following characteristics:
 
 Data Type: The overall data type is Continuous.
 
-The sample size is 123 with 7 features. 
+The sample size is 4177 with 8 features. This dataset is not time-series data. 
 
-This dataset is not time-series data. 
-
-Data Quality: There are missing values in the dataset.
+Data Quality: There are no missing values in the dataset.
 
 Statistical Properties:
 - Linearity: The relationships between variables are predominantly linear.
@@ -20,12 +18,13 @@ Statistical Properties:
 
 
 
+- Domain Index: Whole_weight
 
 We have selected the following algorithm for causal discovery:
 
-Algorithm: PC
-Description: PC is a constraint-based algorithm that finds causal structures using conditional independence tests. It provides CPDAG as output, accommodating both directed and undirected edges.
-PC is chosen because it balances among handling continuous data, linear relationships, adaptively tuning parameters for the sample size, and outputting interpretable CPDAGs, all while maintaining tolerable execution efficiency without GPU. These factors collectively make it more suitable compared to DirectLiNGAM, which lacks robust missing data handling, and InterIAMB, which is limited by its output format.
+Algorithm: CDNOD
+Description: CDNOD is a constraint-based method known for its strength in managing heterogenous data and providing a Conditional Independency-based graph structure.
+CDNOD is the best-suited algorithm because it is specifically designed to handle nonstationary and heterogeneous data, which aligns with the dataset's characteristics. Its ability to select between multiple independence tests allows it to handle the continuous data effectively. Although the time cost and accuracy of IAMBnPC and InterIAMB are competitive, CDNOD's superior ability to adapt to heterogeneous data environments and handle noise makes it the optimal choice.
 
 Now, we need to set up the primary hyperparameters for this algorithm. Please consider the dataset characteristics and the algorithm requirements to suggest appropriate values for the following hyperparameters:
 
@@ -36,7 +35,6 @@ For each primary hyperparameter, provide:
 2. The suggested value
 3. A brief explanation of why this value is appropriate given the dataset characteristics and algorithm requirements
 4. Each primary hyperparameter is provided with a default value, which should be adjusted based on the dataset characteristics and algorithm requirements
-5. For time-series data, give a higher priority to the statistically estimated lag order provided under the Statistics section.
 
 Here is the CUDA/GPU availability to help you decide hyperparameters:
 
@@ -45,7 +43,7 @@ Current machine doesn't support CUDA, do not choose any GPU-powered algorithms.
 
 Actively use and reason with the following information about each hyperparameter to inform your decisions:
 
-"{\n  \"algorithm_name\": \"PC\",\n  \"alpha\": {\n    \"meaning\": \"Desired significance level in (0, 1)\",\n    \"available_values\": {\n      \"default\": 0.05,\n      \"small_sample\": 0.1,\n      \"large_sample\": 0.01\n    },\n    \"expert_suggestion\": \"Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\"\n  },\n  \"indep_test\": {\n    \"meaning\": \"Independence test method\",\n    \"available_values\": {\n      \"default\": \"fisherz_cpu\",\n      \"continuous_cpu\": \"fisherz_cpu\",\n      \"continuous_gpu\": \"fisherz_gpu\",\n      \"discrete_cpu\": \"chisq_cpu\",\n      \"discrete_gpu\": \"chisq_gpu\",\n      \"robust_nonlinear_cpu\": \"kci_cpu\",\n      \"robust_nonlinear_gpu\": \"cmiknn_gpu\",\n      \"fast_robust_nonlinear_cpu\": \"fastkci_cpu\",\n      \"approximate_fast_nonlinear_cpu\": \"rcit_cpu\"\n    },\n    \"expert_suggestion\": \"Choose based on data type and hardware. CPU TESTS: 'fisherz_cpu' for linear continuous data; 'chisq_cpu' for discrete data (only applied for pure discrete data); 'kci_cpu' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci_cpu' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit_cpu' is the fastest approximation of kci (use with < 30 variables and sample size < 5000). GPU TESTS: 'fisherz_gpu' and 'chisq_gpu' (only applied for pure discrete data) work similarly but are extremely fast because of GPU's super parallel computing; 'cmiknn_gpu' is a GPU-accelerated nonparametric test that provides 1000x speedup compared to CPU-based 'kci' with comparable accuracy. GPU acceleration is strongly recommended for large datasets.\"\n  },\n  \"depth\": {\n    \"meaning\": \"Maximum depth for skeleton search\",\n    \"available_values\": {\n      \"default\": -1,\n      \"small_graph\": 6,\n      \"medium_graph\": 4,\n      \"large_graph\": 2,\n      \"extra_large_graph\": 1\n    },\n    \"expert_suggestion\": \"Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 1-3) can significantly speed up the algorithm at the cost of some accuracy. A graph with node number < 10, use depth 6; A graph with node number 10 - 25, use depth 4; A graph with node number 25-50, use depth 2; A graph with node number > 50, use depth 1.\"\n  }\n}"
+"{\n  \"algorithm_name\": \"CDNOD\",\n  \"alpha\": {\n    \"meaning\": \"Significance level in (0, 1)\",\n    \"suggested_values\": {\n      \"default\": 0.05,\n      \"small_sample\": 0.1,\n      \"large_sample\": 0.01\n    },\n    \"reasoning\": \"Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\"\n  },\n  \"indep_test\": {\n    \"meaning\": \"Independence test method\",\n    \"suggested_values\": {\n      \"default\": \"fisherz_cpu\",\n      \"continuous_cpu\": \"fisherz_cpu\",\n      \"continuous_gpu\": \"fisherz_gpu\",\n      \"discrete_cpu\": \"chisq_cpu\",\n      \"discrete_gpu\": \"chisq_gpu\",\n      \"mixed_cpu\": \"gsq_cpu\",\n      \"robust_nonlinear_cpu\": \"kci_cpu\",\n      \"robust_nonlinear_gpu\": \"cmiknn_gpu\",\n      \"fast_robust_nonlinear_cpu\": \"fastkci_cpu\",\n      \"approximate_fast_nonlinear_cpu\": \"rcit_cpu\"\n    },\n    \"reasoning\": \"Choose based on data type and hardware. CPU TESTS: 'fisherz_cpu' for linear continuous data; 'chisq_cpu' for discrete data; 'gsq_cpu' for mixed data types; 'kci_cpu' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci_cpu' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit_cpu' is the fastest approximation of kci (use with < 30 variables and sample size < 5000). GPU TESTS: 'fisherz_gpu' and 'chisq_gpu' work similarly but are extremely fast because of GPU's super parallel computing; 'cmiknn_gpu' is a GPU-accelerated nonparametric test that provides 1000x speedup compared to CPU-based 'kci' with comparable accuracy. GPU acceleration is strongly recommended for large datasets.\"\n  },\n  \"depth\": {\n    \"meaning\": \"Maximum depth for skeleton search\",\n    \"suggested_values\": {\n      \"default\": -1,\n      \"small_graph\": 6,\n      \"medium_graph\": 4,\n      \"large_graph\": 2,\n      \"extra_large_graph\": 1\n    },\n    \"reasoning\": \"Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 1-3) can significantly speed up the algorithm at the cost of some accuracy. A graph with node number < 10, use depth 6; A graph with node number 10 - 25, use depth 4; A graph with node number 25-50, use depth 2; A graph with node number > 50, use depth 1.\"\n  },\n  \"device\": {\n    \"meaning\": \"Computation device to use for independence tests\",\n    \"suggested_values\": {\n      \"default\": \"auto\",\n      \"cpu\": \"cpu\",\n      \"gpu\": \"cuda\"\n    },\n    \"reasoning\": \"Use 'auto' to automatically select GPU if available, otherwise CPU. Use 'cuda' to force GPU usage (requires compatible independence tests like 'cmiknn'). Use 'cpu' to force CPU usage. GPU acceleration can provide 10-100x speedup for nonlinear tests with large datasets.\"\n  }\n} "
 
 Please provide your suggestions in a structured JSON format. Your response should look like this:
 
@@ -69,7 +67,5 @@ Please provide your suggestions in a structured JSON format. Your response shoul
 Please always determine the hyperparameters from its corresponding "Suggested Values" part, DO NOT use any values just exist in other context but not in "Suggested Values".
 
 Please consider the trade-offs between accuracy and computational efficiency when suggesting values. If you're unsure about a specific value, you may suggest using the default value and explain why.
-
-Please consider using the estimated time lag value. If you think a different value might be useful for the given context, you may suggest the value and explain why it will be better.
 
 Please provide your hyperparameter suggestions following this JSON structure.

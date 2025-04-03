@@ -4,6 +4,7 @@ from .wrappers import __all__ as all_algos
 from .hyperparameter_selector import HyperparameterSelector
 from .runtime_estimators.runtime_estimator import RuntimeEstimator
 from .llm_client import LLMClient
+from .context.algos.utils.json2txt import create_ranking_benchmarking_results
 
 class Reranker:
     def __init__(self, args):
@@ -27,38 +28,49 @@ class Reranker:
         return global_state
     
     def create_prompt(self, global_state, algo_info, time_info):
-        algorithm_guidelines = open(f"algorithm/context/algos/guidelines.txt", "r").read()
-        prompt_template = open(f"algorithm/context/algo_rerank_prompt.txt", "r").read()
+        # Read algorithm guidelines with proper encoding to handle Unicode characters
+        with open(f"algorithm/context/benchmarking/algorithm_performance_analysis.json", "r", encoding="utf-8") as f:
+            algorithm_benchmarking_results = json.load(f)
+            algorithm_benchmarking_results = create_ranking_benchmarking_results(algorithm_benchmarking_results, list(global_state.algorithm.algorithm_candidates.keys()))
+            
+        with open(f"algorithm/context/algo_rerank_prompt.txt", "r", encoding="utf-8") as f:
+            prompt_template = f.read()
 
-        # load the candidates' profiles
+        # load the candidates' profiles with proper encoding
         algorithm_profiles = ""
         for algo in global_state.algorithm.algorithm_candidates:
             profile_path = f"algorithm/context/algos/{algo}.txt"
             hyperparameters_path = f"algorithm/context/hyperparameters/{algo}.json"
+            
             with open(profile_path, "r", encoding="utf-8") as f:
-                algorithm_profiles += f"======================================\n\n" + f"# {algo}\n\n" + f.read() + "\n\n"
+                algorithm_profiles += f"======================================\n\n"  +  f"# {algo}\n\n" + f.read() + "\n\n"
+            
             with open(hyperparameters_path, "r", encoding="utf-8") as f:
-                algorithm_profiles += f"## Supported hyperparameters: " + json.dumps(json.load(f), indent=4) + "\n\n"
-
+                hyperparams = json.load(f)
+                algorithm_profiles += f"## Supported hyperparameters: " + json.dumps(hyperparams, indent=4, ensure_ascii=False) + "\n\n"
 
         replacements = {
-            "[TABLE_NAME]": self.args.data_file,
+            "[USER_QUERY]": global_state.user_data.initial_query,
+            # "[TABLE_NAME]": self.args.data_file,
             "[COLUMNS]": '\t'.join(global_state.user_data.processed_data.columns._data),
+            "[SAMPLES]": str(global_state.user_data.processed_data.shape[0]),
+            "[DIMENSIONS]": str(global_state.user_data.processed_data.shape[1]),
             "[KNOWLEDGE_INFO]": str(global_state.user_data.knowledge_docs),
             "[STATISTICS_INFO]": global_state.statistics.description,
-            "[CUDA_WARNING]": "Current machine supports CUDA, so you can choose GPU-powered algorithms." if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.",
-            "[ALGORITHM_CANDIDATES]": str(global_state.algorithm.algorithm_candidates.keys()),
+            "[CUDA_WARNING]": "Current machine supports CUDA, some algorithms can be accelerated by GPU if necessary (PC, CDNOD, DirectLiNGAM)." if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.",
+            "[ALGORITHM_CANDIDATES]": str(list(global_state.algorithm.algorithm_candidates.keys())),
             "[WAIT_TIME]": str(global_state.algorithm.waiting_minutes),
             "[TIME_INFO]": time_info,
-            # "[ALGORITHM_GUIDELINES]": algorithm_guidelines,
-            "[ALGORITHM_PROFILES]": algorithm_profiles
+            "[ALGORITHM_BENCHMARKING_RESULTS]": algorithm_benchmarking_results,
+            "[ALGORITHM_PROFILES]": algorithm_profiles,
+            "[ACCEPT_CPDAG]": "The user accepts the output graph including undirected edges/undeterministic directions (CPDAG/PAG)" if global_state.user_data.accept_CPDAG else "The user does not accept the output graph including undirected edges/undeterministic directions (CPDAG/PAG), so the output graph should be a DAG."
         }
 
         for placeholder, value in replacements.items():
             prompt_template = prompt_template.replace(placeholder, value)
 
-        with open(f"algorithm/context/algo_rerank_prompt_test.txt", "w", encoding="utf-8") as f:
-            f.write(prompt_template)
+        print(prompt_template)
+
 
         return prompt_template
     
@@ -98,7 +110,7 @@ class Reranker:
         time_info = self.runtime_estimate(algo_candidates, global_state.statistics.sample_size, global_state.statistics.feature_number)
         
         prompt = self.create_prompt(global_state, algo_info, time_info)
-        output = self.llm_client.chat_completion(prompt, json_response=True, model="gpt-4o")
+        output = self.llm_client.chat_completion(system_prompt=prompt, prompt="Please choose the best algorithm considering all relevant factors.", json_response=True, model="gpt-4o", temperature=0.0)
         print("-"*25, "\n", "The received answer for rerank is: ", "\n", output)
         selected_algo = output['algorithm']
         global_state.algorithm.algorithm_optimum = output
@@ -147,3 +159,66 @@ class Reranker:
             algo_strings.append(algo_string)
             
         return "\n\n".join(algo_strings), algo2des_cond_hyper
+    
+    def filter_benchmarking_results(self, benchmarking_results, filtered_algos):
+        """
+        Filter the benchmarking results to only include algorithms that are in the filtered_algos list.
+        
+        Args:
+            benchmarking_results (str): The full benchmarking results text
+            filtered_algos (list): List of algorithm names to keep
+        
+        Returns:
+            str: Filtered benchmarking results with only relevant algorithms
+        """
+        filtered_results = []
+        current_section = []
+        in_table = False
+        table_header = []
+        
+        # Process the benchmarking results line by line
+        for line in benchmarking_results.split('\n'):
+            # Check if this is a section header
+            if line.startswith('##') or line.startswith('# '):
+                # If we were in a table, add the processed table to the current section
+                if in_table:
+                    in_table = False
+                    if current_section:
+                        filtered_results.extend(current_section)
+                    current_section = []
+                
+                # Add the section header
+                filtered_results.append(line)
+                continue
+            
+            # Check if this is the start of a table
+            if '|' in line and ':--' in line:
+                in_table = True
+                table_header = current_section[-1] if current_section else ""
+                filtered_results.extend(current_section)
+                current_section = [table_header, line]
+                continue
+            
+            # If we're in a table, filter the rows
+            if in_table and '|' in line:
+                # Check if this is a table header row
+                if 'Algorithm' in line and '|' in line:
+                    current_section.append(line)
+                    continue
+                
+                # For data rows, check if the algorithm is in our filtered list
+                algo_name = line.split('|')[1].strip()
+                # Extract the base algorithm name (before any underscore)
+                base_algo = algo_name.split('_')[0] if '_' in algo_name else algo_name
+                
+                if any(filtered_algo in algo_name for filtered_algo in filtered_algos):
+                    current_section.append(line)
+            else:
+                # Not in a table, just add the line
+                current_section.append(line)
+        
+        # Add any remaining section
+        if current_section:
+            filtered_results.extend(current_section)
+        
+        return '\n'.join(filtered_results)

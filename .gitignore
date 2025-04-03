@@ -159,3 +159,13 @@ algorithm/evaluation/benchmarking_integrated.sh
 test_output/
 externals/trustworthyAI/
 
+plot.ipynb
+complex_plot.ipynb
+benchmark.ipynb
+
+
+ts_eda.py
+data/simulation/benchmark.py
+data/simulation/evaluation.py
+algorithm/context/algos/consolidated_benchmarking_results.txt
+algorithm/context/benchmarking/algorithm_performance_analysis.json

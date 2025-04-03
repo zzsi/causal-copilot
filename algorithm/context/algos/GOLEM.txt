@@ -1,165 +1,44 @@
-Below is a seven‑part profile of the GOLEM causal discovery algorithm, synthesizing the provided hyperparameter definitions (File #1), benchmarking results (File #2), external information (File #3), and general knowledge of causal discovery methods.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. Hyper-Parameters Sensitivity
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# GOLEM Algorithm
 
-• Number of Key Hyperparameters  
-  GOLEM, as presented, has three principal hyperparameters:
-  1) λ₁ (lambda_1): L1 regularization weight on the adjacency matrix.  
-  2) num_iter: The maximum number of iterations in the optimization routine.  
-  3) graph_thres: A threshold for pruning edges in the learned adjacency matrix.
+## Executive Summary
+- **Optimal Use**: Medium-sized networks (5-50 variables) with primarily linear relationships, continuous data, and sufficient sample sizes
+- **Alternatives**: Consider PC or CDNOD for non-linear relationships; FGES for missing data; GRaSP for discrete variables
 
-• Tuning Difficulty  
-  – Default and Suggested Values:  
-    The default for λ₁ is 0.01, with sparser or denser graphs encouraged by values 0.1 or 0.001, respectively. num_iter defaults to 10,000 but can be increased if the graph is more complex or if learning non-trivial functional relationships (50,000 to 100,000). graph_thres typically defaults to 0.3 and can be raised (e.g., 0.5) to prune weaker edges or lowered (e.g., 0.1) to keep more edges.  
-  – Who Can Tune:  
-    In many cases, domain experts or automated tuning approaches (including LLMs) can set these parameters based on practical constraints (e.g., target sparsity level or runtime limits).
+## 1. Data Handling Capabilities
+- **Variable Types**: Specialized for continuous data; limited capability for discrete variables
+- **Relationship Complexity**: Primarily designed for linear relationships; significantly underperforms with non-linear causal mechanisms
+- **Noise Tolerance**: Good performance with both Gaussian and non-Gaussian noise; offers GOLEM-NV variant for handling non-equal noise variances
 
-• Sensitivity  
-  – λ₁ (lambda_1): Even modest changes can shift the discovered structure toward fewer or more edges. In scenarios where λ₁ is too large, important causal links might be pruned. When too small, the algorithm may infer overly dense graphs.  
-  – num_iter: Under certain benchmark settings, insufficient iterations can degrade the final structure’s accuracy, while very large values lead to longer runtimes with diminishing returns in performance.  
-  – graph_thres: Acts as a final filter for edge selection. A higher threshold can produce fewer edges and reduce false positives, but risks discarding weaker true links.  
+## 2. Assumptions
+- **Core Assumptions**: Requires relationships to form a DAG; assumes linear dependencies; assumes causal sufficiency (no unmeasured confounders); assumes independent noise terms
+- **Violation Effects**: Performance deteriorates with hidden confounders; accuracy decreases significantly with non-linear relationships; may recover partial structure with mild assumption violations
 
-• Critique/Extension  
-  – Graph-Search vs. Statistical Regularization:  
-    λ₁ directly affects the optimization objective and hence the overall graph sparsity, while graph_thres is a simpler post-processing cut-off that can drastically alter the final adjacency matrix. By contrast, num_iter primarily governs how thoroughly the algorithm converges to a solution.
+## 3. Real-World Applications
+- **Best Uses**: Gene regulatory network inference with approximately linear relationships; economic systems with moderate dimensionality; financial data with primarily linear dependencies
+- **Limitations**: Ineffective for highly non-linear systems; poor performance with time-series data; unsuitable when substantial unmeasured confounding exists
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2. Robustness & Scalability
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## 4. Robustness & Scalability
+- **Missing Data**: Limited built-in capability; requires preprocessing/imputation
+- **Measurement Error**: Moderately robust to noise and measurement errors
+- **Network Density**: Handles varying densities when appropriately tuned via λ₁ and threshold
+- **Variable Scaling**: Performance decreases with increasing variables (>50); strong performance for small to medium networks
+- **Heterogeneity**: Performs well on heterogeneous data according to benchmarks
 
-• Tolerance to Bad Data Quality  
-  – Missing Data:  
-    From the benchmarking results, GOLEM shows a moderate to good composite score when data are partially missing. It can handle missingness reasonably well but may require imputation or a carefully designed data preprocessing step to maintain consistency.  
-  – Measurement/Observation Error:  
-    The algorithm’s performance metrics under moderate noise are fairly strong, indicating it remains stable. Severe measurement error can still degrade performance, but benchmark evidence suggests it handles such noise at least comparably to other popular methods.
+## 5. Computational Complexity
+- **Time Complexity**: O(d² × n × α) where d=variables, n=samples, α=optimization overhead
+- **Runtime Characteristics**: Efficiency decreases substantially with increasing variables
+- **Memory Usage**: Scales with the square of variable count
+- **Hardware Requirements**: Standard CPU sufficient for small networks; larger networks benefit from additional memory
 
-• Tolerance to Sparse/Dense Connected Systems  
-  – In extremely sparse networks, a suitably larger λ₁ or higher graph_thres can help reduce false positives.  
-  – In denser networks, adopting a smaller λ₁ or lowering graph_thres can uncover more edges, though it may increase runtime and the risk of overfitting.
+## 6. Hyperparameters
+- **Key Parameters**: λ₁ (L1 regularization), num_iter (optimization iterations), graph_thres (edge pruning threshold)
+- **Default Performance**: Reasonable results with defaults (λ₁=0.01, num_iter=10,000, graph_thres=0.3)
+- **Tuning Difficulty**: Moderate to high; continuous optimization parameters lack clear heuristics; performance highly sensitive to λ₁
+- **Incorrect Settings**: Too large λ₁ removes important causal links; too small λ₁ produces overly dense graphs; insufficient iterations can prevent convergence
 
-• Scalability  
-  – GOLEM shows decent performance for moderately high-dimensional datasets, but according to one efficiency metric from the benchmarks, it may be less resource-efficient than some competitors.  
-  – For extremely large numbers of variables, runtime can spike—especially if num_iter is also set very high. Practitioners often tune these settings or apply warm starts to manage complexity.
-
-• Critique/Extension  
-  – Parallelization or Approximation Strategies:  
-    While not necessarily built in by default, the gradient-based nature of GOLEM could, in principle, benefit from distributed optimization across multiple cores or machines. Some users combine adjacency-threshold techniques with mini-batch approaches to manage memory usage on very large datasets.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-3. Mixed Data & Complex Functions
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-• Noise Type  
-  – Benchmarks suggest GOLEM adapts to various noise distributions (including non-Gaussian), though it may trade off some computational efficiency if the noise is highly non-standard.  
-  – A strong “performance” level for noise handling (as shown in the benchmark’s composite rating) indicates it recovers edges reliably even under moderate departures from Gaussian assumptions.
-
-• Mixed Data: Continuous & Discrete  
-  – GOLEM is primarily designed for continuous data under a differentiable structural equation modeling framework.  
-  – Extensions or custom modifications could handle mixed data, but such usage typically requires specialized modifications to the learning objective or the independence-testing modules.
-
-• Heterogeneous Data  
-  – The benchmark results labeled “Heterogeneity” signal that GOLEM can operate with shifts or variations in distributions, scoring relatively high. However, large domain shifts (e.g., drastically different variable scales) may still need careful normalization or weighting schemes.
-
-• Complex Functional Forms  
-  – The default GOLEM formulation is well-suited to linear or mildly non-linear relationships. In practice, it can detect non-linearities if the user’s implementation includes appropriate penalty structures or transformations of the variables.  
-  – Overfitting concerns arise if one lowers λ₁ too aggressively on small samples, potentially forcing the algorithm to fit intricate but spurious relationships.
-
-• Critique/Extension  
-  – Most standard GOLEM implementations target a linear or partly non-linear SEM. For highly non-linear real-world phenomena, domain experts sometimes add non-linear basis expansions or kernels to strengthen the algorithm’s expressiveness.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-4. Computational Complexity
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-• Theoretical Time Complexity  
-  A common expression for gradient-based DAG learning like GOLEM may be represented as:  
-  <temp>[O(d² · n · α)]</temp>  
-  Here, d is the number of variables, n is the sample size, and α captures overhead from iterative optimization. The exact form can vary based on the implementation details and optimization approach.
-
-• Variability in Practical Usage  
-  – Increasing num_iter raises computational time proportionally, as more gradient steps are taken.  
-  – Larger λ₁ (i.e., stronger regularization) can sometimes lead to faster convergence (fewer edges to optimize), while smaller λ₁ generally requires more fine-grained optimization.
-
-• Critique/Extension  
-  – Worst-case scenarios can grow quickly in complexity, albeit typical real-world usage might remain within polynomial time for moderate d.  
-  – If employing parallel or GPU-based methods, the practical runtime can be significantly reduced, but naive single-threaded operation may be relatively slow for large d.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-5. Interpretability
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-• Output Format  
-  – GOLEM typically returns a weighted adjacency matrix from which the user extracts a directed acyclic graph (DAG) via a threshold step (graph_thres).
-
-• Strength of the Output Format  
-  – The adjacency matrix is straightforward to interpret: each cell’s value indicates the discovered influence from one variable to another.  
-  – Users often appreciate direct control over the threshold that yields a final binary adjacency.
-
-• Limitations of the Output Format  
-  – If the threshold is ill-chosen, important edges might be pruned (or unimportant edges retained).  
-  – GOLEM does not inherently provide p-values or confidence intervals; instead, it relies on the optimization landscape dictated by the regularization terms.
-
-• Critique/Extension  
-  – Practitioners commonly supplement the adjacency matrix output with domain knowledge or further stability selection techniques (e.g., re-running the algorithm on bootstrapped samples) to increase orientation confidence.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-6. Assumptions
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-• Critical Assumptions  
-  – The causal relationships among variables can be represented by a DAG (Markov and faithfulness conditions).  
-  – Causal sufficiency: typically assumes no unmeasured confounders.  
-  – Errors or noise terms are often treated as independent across variables (though GOLEM can be robust to moderate deviations).
-
-• Violation Impact  
-  – If hidden confounders or strong feedback loops exist, performance can deteriorate, leading to mis-specified or partially oriented edges.  
-  – When the faithfulness condition is violated (e.g., canceling effects in the data), many causal discovery methods—including GOLEM—may struggle to identify the true structure.
-
-• Critique/Extension  
-  – Some implementations incorporate penalty adjustments or domain input for partial confounder correction.  
-  – Mild assumption violations often degrade results gradually; severe violations can invalidate critical parts of the inferred graph.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-7. Real-World Benchmarks
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-• Performance on Real Datasets  
-  – According to the summary data (File #2), GOLEM has overall mid-to-high scores on a variety of empirical benchmarks involving missing data, measurement noise, and heterogeneous sources. Its performance is typically competitive with other state-of-the-art approaches for structure learning.
-
-• Practical Tips  
-  – Users frequently set a moderate λ₁ for typical usage, then refine graph_thres based on domain knowledge of likely causal strengths.  
-  – Parallelizing gradient steps or restricting search depth can mitigate runtime overhead on larger datasets.  
-  – Overly small λ₁ sometimes leads to denser, less interpretable graphs—so pilot runs and domain insight help optimize hyperparameters for clarity and accuracy.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Overall, GOLEM is a gradient-based causal discovery algorithm that balances regularization with iterative optimization to recover causal structures. It is moderately robust to data imperfections, supports adjustable sparsity (through λ₁ and graph_thres), and can scale to a fair number of variables if tuned properly. Its reliance on standard DAG assumptions is typical in causal discovery, and while it offers a direct adjacency matrix output, users may wish to combine it with domain expertise or post-processing methods to finalize and interpret causal edges.
-
-────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics, which are represented as level scores from 1-5, with 5 being the best.
-  – Levels scores of composite metrics combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-[NOTE] The ranking is smaller, the better. The level score is higher, the better.
-
-• Algorithm Rankings
-
-| Scenario | Rank (Mean) | Rank (Std Dev) | Performance (Level) | Efficiency (Level) | Composite (Level) |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 5.6 | 5.05 | 5.0 | 1.0 | 5.0 |
-| Heterogeneity | 9.0 | 5.20 | 5.0 | 1.0 | 3.0 |
-| Measurement Error | 2.8 | 0.83 | 5.0 | 1.0 | 5.0 |
-| Noise Type | 3.0 | 1.00 | 5.0 | 1.0 | 5.0 |
-| Missing Data | 10.8 | 5.07 | 4.0 | 2.0 | 3.0 |
-| Edge Probability | 3.3 | 1.89 | 5.0 | 1.0 | 5.0 |
-| Discrete Ratio | 3.3 | 0.94 | 5.0 | 1.0 | 5.0 |
-
-• Analysis
-
-  – Overall mean ranking across 7 scenarios: 5.40
-  – Average standard deviation: 2.85
-
+## 7. Interpretability
+- **Output Format**: Weighted adjacency matrix converted to DAG via threshold
+- **Confidence Measures**: No built-in statistical tests or confidence intervals
+- **Validation Methods**: Edge strength values indicate relative importance but lack formal significance tests
+- **User Accessibility**: Straightforward interpretation of weighted causal edges

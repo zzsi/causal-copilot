@@ -1,0 +1,6082 @@
+{
+  "Variable Scaling (linear)": {
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 4.125,
+        "std": 2.027159342528357
+      },
+      "levels": {
+        "performance": 8.094640068189614,
+        "efficiency": 4.972809823278215,
+        "composite": 7.625
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 6.875,
+        "std": 4.3714271125114275
+      },
+      "levels": {
+        "performance": 7.8330764336723115,
+        "efficiency": 4.985749787169868,
+        "composite": 7.5
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 6.125,
+        "std": 2.8912583765550943
+      },
+      "levels": {
+        "performance": 7.463075774712541,
+        "efficiency": 4.949847167981028,
+        "composite": 7.25
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 8.75,
+        "std": 4.493050188902857
+      },
+      "levels": {
+        "performance": 7.425003480967587,
+        "efficiency": 4.991994649676297,
+        "composite": 7.125
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 4.125,
+        "std": 4.19635258289863
+      },
+      "levels": {
+        "performance": 7.416031098252343,
+        "efficiency": 4.136400532028313,
+        "composite": 6.75
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 5.5,
+        "std": 5.220153254455275
+      },
+      "levels": {
+        "performance": 7.457778157915934,
+        "efficiency": 4.470800550733211,
+        "composite": 6.75
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 10.875,
+        "std": 3.7893765978060294
+      },
+      "levels": {
+        "performance": 6.663745851087093,
+        "efficiency": 4.70931720274612,
+        "composite": 6.625
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 7.75,
+        "std": 5.629165124598851
+      },
+      "levels": {
+        "performance": 7.016856792443862,
+        "efficiency": 4.114681441736623,
+        "composite": 6.375
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 3.0
+      },
+      "levels": {
+        "performance": 6.085108857390885,
+        "efficiency": 4.506890989091755,
+        "composite": 5.75
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 4.06201920231798
+      },
+      "levels": {
+        "performance": 5.833641591360647,
+        "efficiency": 4.423342858687897,
+        "composite": 5.5
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 13.5,
+        "std": 4.55521678957215
+      },
+      "levels": {
+        "performance": 5.6473687211276635,
+        "efficiency": 4.447247942844924,
+        "composite": 5.25
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 12.25,
+        "std": 3.8649062084350767
+      },
+      "levels": {
+        "performance": 5.328894432054493,
+        "efficiency": 4.444848730099178,
+        "composite": 5.125
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 4.69041575982343
+      },
+      "levels": {
+        "performance": 5.048754650517203,
+        "efficiency": 4.142548898901967,
+        "composite": 5.125
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 10.375,
+        "std": 6.872726896945637
+      },
+      "levels": {
+        "performance": 5.197149958775151,
+        "efficiency": 3.809248311172125,
+        "composite": 4.875
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 4.444097208657794
+      },
+      "levels": {
+        "performance": 4.7010623945968,
+        "efficiency": 3.799287917809022,
+        "composite": 4.625
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 11.625,
+        "std": 5.048205126577168
+      },
+      "levels": {
+        "performance": 4.6686585417037305,
+        "efficiency": 3.9840910482529943,
+        "composite": 4.375
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 13.625,
+        "std": 3.07967124868873
+      },
+      "levels": {
+        "performance": 4.384888512073669,
+        "efficiency": 4.392622640847027,
+        "composite": 4.25
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 16.375,
+        "std": 6.498797965777979
+      },
+      "levels": {
+        "performance": 3.8570669408667912,
+        "efficiency": 3.7371034835922523,
+        "composite": 3.625
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 15.75,
+        "std": 4.322904116447646
+      },
+      "levels": {
+        "performance": 3.095081178573202,
+        "efficiency": 4.125274396054218,
+        "composite": 3.125
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 1.4142135623730951
+      },
+      "levels": {
+        "performance": 2.0729148501219976,
+        "efficiency": 4.495271643631103,
+        "composite": 2.25
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 20.125,
+        "std": 1.5360257159305635
+      },
+      "levels": {
+        "performance": 2.029463242065563,
+        "efficiency": 4.492827399610094,
+        "composite": 2.25
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 17.25,
+        "std": 4.520785330006281
+      },
+      "levels": {
+        "performance": 1.8581206212960826,
+        "efficiency": 4.167483185785699,
+        "composite": 1.875
+      }
+    }
+  },
+  "Sample Scaling (linear)": {
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 2.0,
+        "std": 0.6324555320336759
+      },
+      "levels": {
+        "performance": 9.79048687964843,
+        "efficiency": 4.996879102446849,
+        "composite": 9.0
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 4.6,
+        "std": 1.8547236990991407
+      },
+      "levels": {
+        "performance": 9.655279636152027,
+        "efficiency": 3.821497409059865,
+        "composite": 9.0
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 3.4,
+        "std": 1.019803902718557
+      },
+      "levels": {
+        "performance": 9.191811881529521,
+        "efficiency": 4.996957681137675,
+        "composite": 8.6
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 2.4,
+        "std": 2.8
+      },
+      "levels": {
+        "performance": 8.922686107659963,
+        "efficiency": 4.996704355259622,
+        "composite": 8.2
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 6.4,
+        "std": 2.727636339397171
+      },
+      "levels": {
+        "performance": 8.050636687200226,
+        "efficiency": 4.996228595566866,
+        "composite": 7.8
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 6.0,
+        "std": 2.0976176963403033
+      },
+      "levels": {
+        "performance": 8.023525656543049,
+        "efficiency": 4.997262878614836,
+        "composite": 7.6
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 11.6,
+        "std": 3.261901286060018
+      },
+      "levels": {
+        "performance": 7.6123559868327195,
+        "efficiency": 4.965875277110106,
+        "composite": 7.4
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 7.4,
+        "std": 4.317406628984581
+      },
+      "levels": {
+        "performance": 7.764353816357539,
+        "efficiency": 4.9259131708723505,
+        "composite": 7.4
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 11.6,
+        "std": 4.363484845854286
+      },
+      "levels": {
+        "performance": 7.251537500361496,
+        "efficiency": 4.998804398785786,
+        "composite": 7.0
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 2.6832815729997477
+      },
+      "levels": {
+        "performance": 7.303930942389597,
+        "efficiency": 4.983072353732028,
+        "composite": 6.8
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 14.8,
+        "std": 2.6381811916545836
+      },
+      "levels": {
+        "performance": 6.898820180719667,
+        "efficiency": 4.987925342542728,
+        "composite": 6.8
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 12.4,
+        "std": 3.7202150475476548
+      },
+      "levels": {
+        "performance": 6.279610417836322,
+        "efficiency": 4.999385474930039,
+        "composite": 6.4
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 14.8,
+        "std": 2.3151673805580453
+      },
+      "levels": {
+        "performance": 6.3101996380437715,
+        "efficiency": 4.999849408665751,
+        "composite": 6.2
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 10.2,
+        "std": 3.7094473981982814
+      },
+      "levels": {
+        "performance": 6.221012513561089,
+        "efficiency": 4.999198887742995,
+        "composite": 6.2
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 13.4,
+        "std": 4.17612260356422
+      },
+      "levels": {
+        "performance": 6.0635436614498825,
+        "efficiency": 4.999418894905572,
+        "composite": 6.2
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 14.4,
+        "std": 2.4166091947189146
+      },
+      "levels": {
+        "performance": 6.292570291851115,
+        "efficiency": 4.998832796199986,
+        "composite": 6.0
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 14.6,
+        "std": 4.223742416388575
+      },
+      "levels": {
+        "performance": 5.8767682326565,
+        "efficiency": 4.899895749900472,
+        "composite": 6.0
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 4.049691346263317
+      },
+      "levels": {
+        "performance": 5.901066730474097,
+        "efficiency": 4.9984211554445235,
+        "composite": 5.8
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 19.6,
+        "std": 1.2000000000000002
+      },
+      "levels": {
+        "performance": 4.441618707891281,
+        "efficiency": 4.090836370204114,
+        "composite": 4.6
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 2.0
+      },
+      "levels": {
+        "performance": 3.211132003550292,
+        "efficiency": 4.999001355323107,
+        "composite": 3.6
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 20.6,
+        "std": 1.854723699099141
+      },
+      "levels": {
+        "performance": 3.1462852797678442,
+        "efficiency": 4.99921883705259,
+        "composite": 3.6
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 19.8,
+        "std": 3.4292856398964493
+      },
+      "levels": {
+        "performance": 2.630283016458136,
+        "efficiency": 3.6550182150884973,
+        "composite": 2.6
+      }
+    }
+  },
+  "Heterogeneity (linear)": {
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 3.25,
+        "std": 1.7853571071357126
+      },
+      "levels": {
+        "performance": 7.621514989603075,
+        "composite": 7.621514989603075
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 2.75,
+        "std": 1.920286436967152
+      },
+      "levels": {
+        "performance": 7.555442219686645,
+        "composite": 7.555442219686645
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 5.0,
+        "std": 3.4641016151377544
+      },
+      "levels": {
+        "performance": 6.844545592349935,
+        "composite": 6.844545592349935
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 6.75,
+        "std": 3.031088913245535
+      },
+      "levels": {
+        "performance": 6.499209960686601,
+        "composite": 6.499209960686601
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 6.0,
+        "std": 4.415880433163924
+      },
+      "levels": {
+        "performance": 6.27093678677916,
+        "composite": 6.27093678677916
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 5.75,
+        "std": 1.7853571071357126
+      },
+      "levels": {
+        "performance": 6.263124598535185,
+        "composite": 6.263124598535185
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 5.70087712549569
+      },
+      "levels": {
+        "performance": 6.167628023744153,
+        "composite": 6.167628023744153
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 8.5,
+        "std": 6.837397165588672
+      },
+      "levels": {
+        "performance": 5.923217431108344,
+        "composite": 5.923217431108344
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 4.123105625617661
+      },
+      "levels": {
+        "performance": 5.773603482375721,
+        "composite": 5.773603482375721
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 8.25,
+        "std": 2.48746859276655
+      },
+      "levels": {
+        "performance": 5.730554676294489,
+        "composite": 5.730554676294489
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 12.25,
+        "std": 2.165063509461097
+      },
+      "levels": {
+        "performance": 5.334820210301396,
+        "composite": 5.334820210301396
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 13.5,
+        "std": 3.3541019662496847
+      },
+      "levels": {
+        "performance": 5.044246167386573,
+        "composite": 5.044246167386573
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 13.5,
+        "std": 2.5
+      },
+      "levels": {
+        "performance": 4.881180592917406,
+        "composite": 4.881180592917406
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 13.75,
+        "std": 2.8613807855648994
+      },
+      "levels": {
+        "performance": 4.866698969397166,
+        "composite": 4.866698969397166
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 5.1478150704935
+      },
+      "levels": {
+        "performance": 4.852356545015872,
+        "composite": 4.852356545015872
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 12.5,
+        "std": 3.2015621187164243
+      },
+      "levels": {
+        "performance": 4.82623202150793,
+        "composite": 4.82623202150793
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 15.25,
+        "std": 5.261891294962297
+      },
+      "levels": {
+        "performance": 4.4872022456071115,
+        "composite": 4.4872022456071115
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 3.5355339059327378
+      },
+      "levels": {
+        "performance": 3.9565310605082065,
+        "composite": 3.9565310605082065
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 16.5,
+        "std": 2.692582403567252
+      },
+      "levels": {
+        "performance": 3.6911196782535933,
+        "composite": 3.6911196782535933
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 19.75,
+        "std": 1.299038105676658
+      },
+      "levels": {
+        "performance": 3.5163761259043858,
+        "composite": 3.5163761259043858
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 20.0,
+        "std": 1.224744871391589
+      },
+      "levels": {
+        "performance": 3.514563395572011,
+        "composite": 3.514563395572011
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 20.75,
+        "std": 1.299038105676658
+      },
+      "levels": {
+        "performance": 3.435317721176326,
+        "composite": 3.435317721176326
+      }
+    }
+  },
+  "Measurement Error (linear)": {
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 1.5,
+        "std": 0.5
+      },
+      "levels": {
+        "performance": 9.744087593336776,
+        "composite": 9.744087593336776
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 3.0,
+        "std": 1.0
+      },
+      "levels": {
+        "performance": 9.664062836664899,
+        "composite": 9.664062836664899
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 1.0
+      },
+      "levels": {
+        "performance": 9.356870848206306,
+        "composite": 9.356870848206306
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 2.5,
+        "std": 1.5
+      },
+      "levels": {
+        "performance": 9.06288381440514,
+        "composite": 9.06288381440514
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 1.0
+      },
+      "levels": {
+        "performance": 8.270774002677989,
+        "composite": 8.270774002677989
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.586301660711582,
+        "composite": 7.586301660711582
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 6.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.3473482407374835,
+        "composite": 7.3473482407374835
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 8.5,
+        "std": 1.5
+      },
+      "levels": {
+        "performance": 6.839968603350584,
+        "composite": 6.839968603350584
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.53865219092808,
+        "composite": 6.53865219092808
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 13.5,
+        "std": 1.5
+      },
+      "levels": {
+        "performance": 6.435967470655753,
+        "composite": 6.435967470655753
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.17260147930444,
+        "composite": 6.17260147930444
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 8.5,
+        "std": 1.5
+      },
+      "levels": {
+        "performance": 6.089146745341523,
+        "composite": 6.089146745341523
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 2.0
+      },
+      "levels": {
+        "performance": 5.865130227735163,
+        "composite": 5.865130227735163
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 16.5,
+        "std": 1.5
+      },
+      "levels": {
+        "performance": 5.824966977955273,
+        "composite": 5.824966977955273
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 3.0
+      },
+      "levels": {
+        "performance": 5.76497554812116,
+        "composite": 5.76497554812116
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 16.5,
+        "std": 0.5
+      },
+      "levels": {
+        "performance": 5.220661309734499,
+        "composite": 5.220661309734499
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 17.5,
+        "std": 0.5
+      },
+      "levels": {
+        "performance": 5.176520507458553,
+        "composite": 5.176520507458553
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 15.0,
+        "std": 1.0
+      },
+      "levels": {
+        "performance": 4.93458811460473,
+        "composite": 4.93458811460473
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 19.5,
+        "std": 0.5
+      },
+      "levels": {
+        "performance": 4.735367719372131,
+        "composite": 4.735367719372131
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 19.5,
+        "std": 0.5
+      },
+      "levels": {
+        "performance": 4.376530634535391,
+        "composite": 4.376530634535391
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 21.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.610536620658743,
+        "composite": 3.610536620658743
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 22.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.4914024256557026,
+        "composite": 3.4914024256557026
+      }
+    }
+  },
+  "Noise Type (linear)": {
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 2.5,
+        "std": 1.5
+      },
+      "levels": {
+        "performance": 9.91270286652018,
+        "composite": 9.91270286652018
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 3.5,
+        "std": 1.5
+      },
+      "levels": {
+        "performance": 9.91270286652018,
+        "composite": 9.91270286652018
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 4.5,
+        "std": 1.5
+      },
+      "levels": {
+        "performance": 9.91270286652018,
+        "composite": 9.91270286652018
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 5.5,
+        "std": 1.5
+      },
+      "levels": {
+        "performance": 9.831641242574632,
+        "composite": 9.831641242574632
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 1.0
+      },
+      "levels": {
+        "performance": 9.685730319472645,
+        "composite": 9.685730319472645
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 7.5,
+        "std": 1.5
+      },
+      "levels": {
+        "performance": 8.238618506783922,
+        "composite": 8.238618506783922
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 2.0
+      },
+      "levels": {
+        "performance": 7.950441967899664,
+        "composite": 7.950441967899664
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 15.5,
+        "std": 4.5
+      },
+      "levels": {
+        "performance": 7.2913365503393965,
+        "composite": 7.2913365503393965
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 2.0
+      },
+      "levels": {
+        "performance": 7.2540457329881765,
+        "composite": 7.2540457329881765
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.249525142185552,
+        "composite": 7.249525142185552
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 10.0
+      },
+      "levels": {
+        "performance": 6.885162078754929,
+        "composite": 6.885162078754929
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 2.0
+      },
+      "levels": {
+        "performance": 6.756915631517789,
+        "composite": 6.756915631517789
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 9.5,
+        "std": 2.5
+      },
+      "levels": {
+        "performance": 6.748030833353302,
+        "composite": 6.748030833353302
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 1.0
+      },
+      "levels": {
+        "performance": 6.73225212045031,
+        "composite": 6.73225212045031
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 12.0,
+        "std": 10.0
+      },
+      "levels": {
+        "performance": 6.72304526929881,
+        "composite": 6.72304526929881
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 2.0
+      },
+      "levels": {
+        "performance": 6.542120007318616,
+        "composite": 6.542120007318616
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.8376814357995634,
+        "composite": 5.8376814357995634
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.8376814357995634,
+        "composite": 5.8376814357995634
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 13.5,
+        "std": 5.5
+      },
+      "levels": {
+        "performance": 5.698697574808408,
+        "composite": 5.698697574808408
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 20.0,
+        "std": 1.0
+      },
+      "levels": {
+        "performance": 5.569655739480588,
+        "composite": 5.569655739480588
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 1.0
+      },
+      "levels": {
+        "performance": 4.878255254072595,
+        "composite": 4.878255254072595
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 18.0,
+        "std": 4.0
+      },
+      "levels": {
+        "performance": 3.8570217768412927,
+        "composite": 3.8570217768412927
+      }
+    }
+  },
+  "Missing Data (linear)": {
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 2.0,
+        "std": 1.7320508075688772
+      },
+      "levels": {
+        "performance": 8.087356688459838,
+        "composite": 8.087356688459838
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 5.25,
+        "std": 3.491060010942235
+      },
+      "levels": {
+        "performance": 6.978561681105841,
+        "composite": 6.978561681105841
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 4.25,
+        "std": 2.48746859276655
+      },
+      "levels": {
+        "performance": 6.93277486069595,
+        "composite": 6.93277486069595
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 8.5,
+        "std": 4.272001872658765
+      },
+      "levels": {
+        "performance": 6.571518384117552,
+        "composite": 6.571518384117552
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 9.25,
+        "std": 5.3091901453988255
+      },
+      "levels": {
+        "performance": 6.340299966117547,
+        "composite": 6.340299966117547
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 8.25,
+        "std": 3.2691742076555053
+      },
+      "levels": {
+        "performance": 6.339882035454737,
+        "composite": 6.339882035454737
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 8.5,
+        "std": 3.640054944640259
+      },
+      "levels": {
+        "performance": 6.1105862325246285,
+        "composite": 6.1105862325246285
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 7.25,
+        "std": 3.960744879438715
+      },
+      "levels": {
+        "performance": 5.797715910041533,
+        "composite": 5.797715910041533
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 10.5,
+        "std": 7.22841614740048
+      },
+      "levels": {
+        "performance": 5.606333225766863,
+        "composite": 5.606333225766863
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 11.25,
+        "std": 2.48746859276655
+      },
+      "levels": {
+        "performance": 5.187903432503703,
+        "composite": 5.187903432503703
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 8.75,
+        "std": 4.322904116447646
+      },
+      "levels": {
+        "performance": 5.171169299006152,
+        "composite": 5.171169299006152
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 8.25,
+        "std": 4.710360920354193
+      },
+      "levels": {
+        "performance": 5.104368841860648,
+        "composite": 5.104368841860648
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 9.75,
+        "std": 2.277608394786075
+      },
+      "levels": {
+        "performance": 5.089985749835726,
+        "composite": 5.089985749835726
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 12.25,
+        "std": 3.2691742076555053
+      },
+      "levels": {
+        "performance": 4.787169572926344,
+        "composite": 4.787169572926344
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 11.25,
+        "std": 4.322904116447646
+      },
+      "levels": {
+        "performance": 4.769693978822787,
+        "composite": 4.769693978822787
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 17.5,
+        "std": 3.2015621187164243
+      },
+      "levels": {
+        "performance": 4.2658739073059495,
+        "composite": 4.2658739073059495
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 15.5,
+        "std": 4.387482193696061
+      },
+      "levels": {
+        "performance": 4.16903790586434,
+        "composite": 4.16903790586434
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 17.25,
+        "std": 2.5860201081971503
+      },
+      "levels": {
+        "performance": 3.9717977100639,
+        "composite": 3.9717977100639
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 18.25,
+        "std": 2.5860201081971503
+      },
+      "levels": {
+        "performance": 3.9717977100639,
+        "composite": 3.9717977100639
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 18.75,
+        "std": 1.6393596310755
+      },
+      "levels": {
+        "performance": 3.3999125627981117,
+        "composite": 3.3999125627981117
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 19.75,
+        "std": 1.6393596310755
+      },
+      "levels": {
+        "performance": 2.919642936883304,
+        "composite": 2.919642936883304
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 20.75,
+        "std": 1.6393596310755
+      },
+      "levels": {
+        "performance": 2.8281074983159513,
+        "composite": 2.8281074983159513
+      }
+    }
+  },
+  "Edge Probability (linear)": {
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 5.8,
+        "std": 4.664761515876241
+      },
+      "levels": {
+        "performance": 9.235253580116503,
+        "composite": 9.235253580116503
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 4.6,
+        "std": 3.2
+      },
+      "levels": {
+        "performance": 7.484585984166715,
+        "composite": 7.484585984166715
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 6.6,
+        "std": 4.317406628984581
+      },
+      "levels": {
+        "performance": 7.435678787697202,
+        "composite": 7.435678787697202
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 6.8,
+        "std": 4.534313619501853
+      },
+      "levels": {
+        "performance": 7.4194358226818125,
+        "composite": 7.4194358226818125
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 10.2,
+        "std": 5.912698199637793
+      },
+      "levels": {
+        "performance": 7.091738012673436,
+        "composite": 7.091738012673436
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 5.403702434442518
+      },
+      "levels": {
+        "performance": 6.988384278156493,
+        "composite": 6.988384278156493
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 8.6,
+        "std": 4.498888751680798
+      },
+      "levels": {
+        "performance": 6.975316828479467,
+        "composite": 6.975316828479467
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 2.1908902300206643
+      },
+      "levels": {
+        "performance": 6.776344511195491,
+        "composite": 6.776344511195491
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 5.6,
+        "std": 3.0724582991474434
+      },
+      "levels": {
+        "performance": 6.7058757446830075,
+        "composite": 6.7058757446830075
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 9.4,
+        "std": 6.916646586316233
+      },
+      "levels": {
+        "performance": 6.529215704923007,
+        "composite": 6.529215704923007
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 6.6,
+        "std": 2.4166091947189146
+      },
+      "levels": {
+        "performance": 6.480330065446284,
+        "composite": 6.480330065446284
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 5.621387729022079
+      },
+      "levels": {
+        "performance": 6.470477627807631,
+        "composite": 6.470477627807631
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 9.4,
+        "std": 2.8705400188814645
+      },
+      "levels": {
+        "performance": 6.468244346810309,
+        "composite": 6.468244346810309
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 9.2,
+        "std": 2.481934729198171
+      },
+      "levels": {
+        "performance": 6.286260783210663,
+        "composite": 6.286260783210663
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 15.2,
+        "std": 2.5612496949731396
+      },
+      "levels": {
+        "performance": 6.127040358565968,
+        "composite": 6.127040358565968
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 15.4,
+        "std": 3.2619012860600183
+      },
+      "levels": {
+        "performance": 5.786901233281265,
+        "composite": 5.786901233281265
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 16.6,
+        "std": 2.8705400188814645
+      },
+      "levels": {
+        "performance": 5.786901233281265,
+        "composite": 5.786901233281265
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 15.8,
+        "std": 5.3814496188294845
+      },
+      "levels": {
+        "performance": 5.46690262684159,
+        "composite": 5.46690262684159
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 19.6,
+        "std": 1.3564659966250536
+      },
+      "levels": {
+        "performance": 4.782768410137125,
+        "composite": 4.782768410137125
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 20.2,
+        "std": 0.7483314773547883
+      },
+      "levels": {
+        "performance": 3.919475396244632,
+        "composite": 3.919475396244632
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 18.2,
+        "std": 3.4871191548325386
+      },
+      "levels": {
+        "performance": 3.0872529788487197,
+        "composite": 3.0872529788487197
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 19.2,
+        "std": 3.4871191548325386
+      },
+      "levels": {
+        "performance": 3.0224062550662723,
+        "composite": 3.0224062550662723
+      }
+    }
+  },
+  "Discrete Ratio (linear)": {
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 1.3333333333333333,
+        "std": 0.4714045207910317
+      },
+      "levels": {
+        "performance": 9.488634096331896,
+        "composite": 9.488634096331896
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 2.3333333333333335,
+        "std": 0.4714045207910317
+      },
+      "levels": {
+        "performance": 9.488634096331896,
+        "composite": 9.488634096331896
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 4.666666666666667,
+        "std": 0.9428090415820634
+      },
+      "levels": {
+        "performance": 9.362702033694942,
+        "composite": 9.362702033694942
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 4.333333333333333,
+        "std": 0.9428090415820634
+      },
+      "levels": {
+        "performance": 9.279120975980327,
+        "composite": 9.279120975980327
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 1.4142135623730951
+      },
+      "levels": {
+        "performance": 7.863279623853512,
+        "composite": 7.863279623853512
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 9.666666666666666,
+        "std": 3.858612300930075
+      },
+      "levels": {
+        "performance": 7.829640564124882,
+        "composite": 7.829640564124882
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 12.333333333333334,
+        "std": 1.8856180831641267
+      },
+      "levels": {
+        "performance": 7.6049600293039665,
+        "composite": 7.6049600293039665
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 5.354126134736337
+      },
+      "levels": {
+        "performance": 7.563863214179794,
+        "composite": 7.563863214179794
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 6.666666666666667,
+        "std": 1.699673171197595
+      },
+      "levels": {
+        "performance": 7.560005586427298,
+        "composite": 7.560005586427298
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 4.320493798938574
+      },
+      "levels": {
+        "performance": 7.110830068457548,
+        "composite": 7.110830068457548
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 12.0,
+        "std": 1.4142135623730951
+      },
+      "levels": {
+        "performance": 7.106700807241135,
+        "composite": 7.106700807241135
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 7.333333333333333,
+        "std": 4.642796092394707
+      },
+      "levels": {
+        "performance": 7.0248856817592396,
+        "composite": 7.0248856817592396
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 10.333333333333334,
+        "std": 2.0548046676563256
+      },
+      "levels": {
+        "performance": 6.761948294873956,
+        "composite": 6.761948294873956
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 11.666666666666666,
+        "std": 4.109609335312651
+      },
+      "levels": {
+        "performance": 6.561937358297196,
+        "composite": 6.561937358297196
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 13.666666666666666,
+        "std": 3.6817870057290873
+      },
+      "levels": {
+        "performance": 6.535760350381159,
+        "composite": 6.535760350381159
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 14.666666666666666,
+        "std": 2.494438257849294
+      },
+      "levels": {
+        "performance": 6.188208915040588,
+        "composite": 6.188208915040588
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 0.816496580927726
+      },
+      "levels": {
+        "performance": 5.659501970663963,
+        "composite": 5.659501970663963
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 0.816496580927726
+      },
+      "levels": {
+        "performance": 5.659501970663963,
+        "composite": 5.659501970663963
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 19.333333333333332,
+        "std": 0.4714045207910317
+      },
+      "levels": {
+        "performance": 4.27972534831848,
+        "composite": 4.27972534831848
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 20.333333333333332,
+        "std": 1.247219128924647
+      },
+      "levels": {
+        "performance": 4.084520103426172,
+        "composite": 4.084520103426172
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 20.666666666666668,
+        "std": 0.4714045207910317
+      },
+      "levels": {
+        "performance": 3.83892969081778,
+        "composite": 3.83892969081778
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 21.666666666666668,
+        "std": 0.4714045207910317
+      },
+      "levels": {
+        "performance": 3.730851817847034,
+        "composite": 3.730851817847034
+      }
+    }
+  },
+  "Variable Scaling (mlp)": {
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 4.5,
+        "std": 4.092676385936225
+      },
+      "levels": {
+        "performance": 5.8097640510679796,
+        "efficiency": 4.991276704867259,
+        "composite": 5.75
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 7.625,
+        "std": 6.518003912241845
+      },
+      "levels": {
+        "performance": 5.764183795868404,
+        "efficiency": 4.997218003843294,
+        "composite": 5.75
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 9.25,
+        "std": 6.139014578904337
+      },
+      "levels": {
+        "performance": 5.305268410815698,
+        "efficiency": 4.995968137548482,
+        "composite": 5.5
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 5.625,
+        "std": 2.057759704144291
+      },
+      "levels": {
+        "performance": 5.073636531473076,
+        "efficiency": 4.553907356996936,
+        "composite": 5.0
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 7.75,
+        "std": 4.520785330006281
+      },
+      "levels": {
+        "performance": 5.004249823602223,
+        "efficiency": 4.979427991725385,
+        "composite": 5.0
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 6.461423991660043
+      },
+      "levels": {
+        "performance": 4.78073957721236,
+        "efficiency": 4.425021680301111,
+        "composite": 4.875
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 6.375,
+        "std": 5.721396245672904
+      },
+      "levels": {
+        "performance": 4.810518542403305,
+        "efficiency": 4.08087153182924,
+        "composite": 4.5
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 6.125,
+        "std": 6.333196270446701
+      },
+      "levels": {
+        "performance": 4.700215664836051,
+        "efficiency": 4.1978460461421,
+        "composite": 4.5
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 11.875,
+        "std": 4.2260353760942415
+      },
+      "levels": {
+        "performance": 4.04127399494935,
+        "efficiency": 4.591091975586755,
+        "composite": 4.0
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 12.5,
+        "std": 5.431390245600108
+      },
+      "levels": {
+        "performance": 3.8345948995925743,
+        "efficiency": 4.54204009781315,
+        "composite": 3.875
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 11.875,
+        "std": 3.950870157319777
+      },
+      "levels": {
+        "performance": 3.7618623271189544,
+        "efficiency": 4.11553675061376,
+        "composite": 3.75
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 10.5,
+        "std": 3.5
+      },
+      "levels": {
+        "performance": 3.614699532322199,
+        "efficiency": 4.478207823248845,
+        "composite": 3.625
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 11.125,
+        "std": 3.179524335494226
+      },
+      "levels": {
+        "performance": 3.7948496616548506,
+        "efficiency": 4.263844893890659,
+        "composite": 3.625
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 11.625,
+        "std": 4.998437255783052
+      },
+      "levels": {
+        "performance": 3.670431339347413,
+        "efficiency": 3.705798797714289,
+        "composite": 3.5
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 14.125,
+        "std": 3.75624480032918
+      },
+      "levels": {
+        "performance": 3.008371886029746,
+        "efficiency": 4.043807600310524,
+        "composite": 3.125
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 13.875,
+        "std": 3.515590277606308
+      },
+      "levels": {
+        "performance": 2.9508118150952614,
+        "efficiency": 4.382555619357276,
+        "composite": 3.0
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 13.125,
+        "std": 5.599944196150529
+      },
+      "levels": {
+        "performance": 2.9027719238152105,
+        "efficiency": 3.8514554254029822,
+        "composite": 2.75
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 16.25,
+        "std": 6.7592529172978875
+      },
+      "levels": {
+        "performance": 2.613571628319151,
+        "efficiency": 3.8436039021267665,
+        "composite": 2.5
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 13.125,
+        "std": 6.845390785046534
+      },
+      "levels": {
+        "performance": 2.347760198025198,
+        "efficiency": 4.222589342027862,
+        "composite": 2.25
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 15.75,
+        "std": 4.710360920354193
+      },
+      "levels": {
+        "performance": 2.243284414581534,
+        "efficiency": 4.055948284890622,
+        "composite": 2.25
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 19.125,
+        "std": 1.2686114456365274
+      },
+      "levels": {
+        "performance": 1.3411023778811044,
+        "efficiency": 4.444679006471531,
+        "composite": 1.5
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 19.875,
+        "std": 1.6153559979150107
+      },
+      "levels": {
+        "performance": 1.3396681578490148,
+        "efficiency": 4.48997000564267,
+        "composite": 1.5
+      }
+    }
+  },
+  "Sample Scaling (mlp)": {
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 6.2,
+        "std": 5.1536394906900505
+      },
+      "levels": {
+        "performance": 6.880753864042868,
+        "efficiency": 4.960544231441519,
+        "composite": 6.8
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 5.6,
+        "std": 3.7202150475476548
+      },
+      "levels": {
+        "performance": 6.997005394637772,
+        "efficiency": 4.995495747974709,
+        "composite": 6.8
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 4.8,
+        "std": 3.7094473981982814
+      },
+      "levels": {
+        "performance": 6.955420675070561,
+        "efficiency": 4.996306975394081,
+        "composite": 6.8
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 3.8,
+        "std": 3.1874754901018454
+      },
+      "levels": {
+        "performance": 6.785556586538928,
+        "efficiency": 4.9958368084084075,
+        "composite": 6.6
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 7.4,
+        "std": 2.727636339397171
+      },
+      "levels": {
+        "performance": 6.568036488595162,
+        "efficiency": 4.958478971217106,
+        "composite": 6.4
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 5.6,
+        "std": 3.826225293941798
+      },
+      "levels": {
+        "performance": 6.405876519436769,
+        "efficiency": 4.993459392303155,
+        "composite": 6.2
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 8.2,
+        "std": 3.1240998703626617
+      },
+      "levels": {
+        "performance": 6.388274371711594,
+        "efficiency": 4.986472415061707,
+        "composite": 6.2
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 3.40587727318528
+      },
+      "levels": {
+        "performance": 5.699243320914073,
+        "efficiency": 4.995044192470926,
+        "composite": 5.8
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 9.8,
+        "std": 5.418486873657627
+      },
+      "levels": {
+        "performance": 5.413319774946959,
+        "efficiency": 4.998722411504855,
+        "composite": 5.6
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 10.8,
+        "std": 3.4292856398964493
+      },
+      "levels": {
+        "performance": 5.4776907009105775,
+        "efficiency": 4.93835908345753,
+        "composite": 5.6
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 13.2,
+        "std": 4.791659420284375
+      },
+      "levels": {
+        "performance": 5.600846156554483,
+        "efficiency": 3.5239418886473954,
+        "composite": 5.2
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 10.4,
+        "std": 3.4409301068170506
+      },
+      "levels": {
+        "performance": 5.193639741761777,
+        "efficiency": 4.9993792900452245,
+        "composite": 5.2
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 11.8,
+        "std": 5.192301994298868
+      },
+      "levels": {
+        "performance": 4.862281263450919,
+        "efficiency": 4.999667683981463,
+        "composite": 5.0
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 15.6,
+        "std": 2.33238075793812
+      },
+      "levels": {
+        "performance": 4.867807047327203,
+        "efficiency": 4.865369766990349,
+        "composite": 5.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 17.2,
+        "std": 1.9390719429665315
+      },
+      "levels": {
+        "performance": 4.867807047327203,
+        "efficiency": 4.94394992625933,
+        "composite": 5.0
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 4.516635916254486
+      },
+      "levels": {
+        "performance": 4.823833801352141,
+        "efficiency": 4.987175144064695,
+        "composite": 4.8
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 14.4,
+        "std": 5.4626001134990645
+      },
+      "levels": {
+        "performance": 4.483550906427494,
+        "efficiency": 4.999772994086088,
+        "composite": 4.8
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 13.2,
+        "std": 4.833218389437829
+      },
+      "levels": {
+        "performance": 5.076094964722884,
+        "efficiency": 3.8559857481929654,
+        "composite": 4.8
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 4.604345773288535
+      },
+      "levels": {
+        "performance": 4.677769118591343,
+        "efficiency": 4.9989032059233525,
+        "composite": 4.6
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 16.8,
+        "std": 5.912698199637793
+      },
+      "levels": {
+        "performance": 3.4469258627356596,
+        "efficiency": 3.7776096102320595,
+        "composite": 3.4
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 20.6,
+        "std": 0.4898979485566356
+      },
+      "levels": {
+        "performance": 1.2401641687666771,
+        "efficiency": 4.9993836775132925,
+        "composite": 1.8
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 21.6,
+        "std": 0.4898979485566356
+      },
+      "levels": {
+        "performance": 1.2401641687666771,
+        "efficiency": 4.9995655939355945,
+        "composite": 1.8
+      }
+    }
+  },
+  "Heterogeneity (mlp)": {
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 2.75,
+        "std": 1.299038105676658
+      },
+      "levels": {
+        "performance": 4.772986009289401,
+        "composite": 4.772986009289401
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 4.5,
+        "std": 5.5
+      },
+      "levels": {
+        "performance": 4.675669829468774,
+        "composite": 4.675669829468774
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 5.0,
+        "std": 3.082207001484488
+      },
+      "levels": {
+        "performance": 4.580069447518724,
+        "composite": 4.580069447518724
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 7.25,
+        "std": 2.384848003542364
+      },
+      "levels": {
+        "performance": 4.291072764271569,
+        "composite": 4.291072764271569
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 9.25,
+        "std": 6.179603547154137
+      },
+      "levels": {
+        "performance": 4.082532017623108,
+        "composite": 4.082532017623108
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 9.25,
+        "std": 3.031088913245535
+      },
+      "levels": {
+        "performance": 3.927807210341186,
+        "composite": 3.927807210341186
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 12.25,
+        "std": 7.39509972887452
+      },
+      "levels": {
+        "performance": 3.923084240177453,
+        "composite": 3.923084240177453
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 9.75,
+        "std": 6.49519052838329
+      },
+      "levels": {
+        "performance": 3.8408032754644683,
+        "composite": 3.8408032754644683
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 11.25,
+        "std": 5.402545696243577
+      },
+      "levels": {
+        "performance": 3.774883183704598,
+        "composite": 3.774883183704598
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 11.25,
+        "std": 2.165063509461097
+      },
+      "levels": {
+        "performance": 3.7098586746365867,
+        "composite": 3.7098586746365867
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 8.75,
+        "std": 5.402545696243577
+      },
+      "levels": {
+        "performance": 3.7093303182552857,
+        "composite": 3.7093303182552857
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 12.0,
+        "std": 4.242640687119285
+      },
+      "levels": {
+        "performance": 3.6872782380541773,
+        "composite": 3.6872782380541773
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 14.5,
+        "std": 2.692582403567252
+      },
+      "levels": {
+        "performance": 3.6622669783809654,
+        "composite": 3.6622669783809654
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 15.0,
+        "std": 4.527692569068709
+      },
+      "levels": {
+        "performance": 3.498622759856695,
+        "composite": 3.498622759856695
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 12.75,
+        "std": 4.437059837324712
+      },
+      "levels": {
+        "performance": 3.497513906209876,
+        "composite": 3.497513906209876
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 13.75,
+        "std": 3.2691742076555053
+      },
+      "levels": {
+        "performance": 3.333401313988504,
+        "composite": 3.333401313988504
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 16.5,
+        "std": 5.722761571129799
+      },
+      "levels": {
+        "performance": 3.149772216869243,
+        "composite": 3.149772216869243
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 13.5,
+        "std": 5.024937810560445
+      },
+      "levels": {
+        "performance": 3.1077433897030513,
+        "composite": 3.1077433897030513
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 15.5,
+        "std": 6.264982043070834
+      },
+      "levels": {
+        "performance": 3.028689761392386,
+        "composite": 3.028689761392386
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 18.75,
+        "std": 2.384848003542364
+      },
+      "levels": {
+        "performance": 2.777910592259616,
+        "composite": 2.777910592259616
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 14.25,
+        "std": 6.977642868476432
+      },
+      "levels": {
+        "performance": 2.5925157096448674,
+        "composite": 2.5925157096448674
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 15.25,
+        "std": 6.977642868476432
+      },
+      "levels": {
+        "performance": 2.5925157096448674,
+        "composite": 2.5925157096448674
+      }
+    }
+  },
+  "Measurement Error (mlp)": {
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 3.5,
+        "std": 0.5
+      },
+      "levels": {
+        "performance": 6.513668723073884,
+        "composite": 6.513668723073884
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 2.0
+      },
+      "levels": {
+        "performance": 6.3288834690860005,
+        "composite": 6.3288834690860005
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 3.0,
+        "std": 2.0
+      },
+      "levels": {
+        "performance": 6.269243044883968,
+        "composite": 6.269243044883968
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 2.5,
+        "std": 0.5
+      },
+      "levels": {
+        "performance": 6.249068292443171,
+        "composite": 6.249068292443171
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 4.5,
+        "std": 3.5
+      },
+      "levels": {
+        "performance": 6.056551684923299,
+        "composite": 6.056551684923299
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 3.0
+      },
+      "levels": {
+        "performance": 5.9274362451123,
+        "composite": 5.9274362451123
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 8.5,
+        "std": 1.5
+      },
+      "levels": {
+        "performance": 5.8747069476026015,
+        "composite": 5.8747069476026015
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 3.0
+      },
+      "levels": {
+        "performance": 5.771316238595228,
+        "composite": 5.771316238595228
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 1.0
+      },
+      "levels": {
+        "performance": 5.727130743862495,
+        "composite": 5.727130743862495
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 3.0
+      },
+      "levels": {
+        "performance": 5.646354022575416,
+        "composite": 5.646354022575416
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 7.5,
+        "std": 3.5
+      },
+      "levels": {
+        "performance": 5.638314343594102,
+        "composite": 5.638314343594102
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 15.5,
+        "std": 3.5
+      },
+      "levels": {
+        "performance": 5.576051954007749,
+        "composite": 5.576051954007749
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 2.0
+      },
+      "levels": {
+        "performance": 5.522695472265362,
+        "composite": 5.522695472265362
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 14.5,
+        "std": 5.5
+      },
+      "levels": {
+        "performance": 5.0254771158272655,
+        "composite": 5.0254771158272655
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 4.0
+      },
+      "levels": {
+        "performance": 4.934863234358995,
+        "composite": 4.934863234358995
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.898204864840067,
+        "composite": 4.898204864840067
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 18.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.898204864840067,
+        "composite": 4.898204864840067
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 17.5,
+        "std": 1.5
+      },
+      "levels": {
+        "performance": 4.8655990233183015,
+        "composite": 4.8655990233183015
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 15.5,
+        "std": 0.5
+      },
+      "levels": {
+        "performance": 4.689989758079245,
+        "composite": 4.689989758079245
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 17.5,
+        "std": 2.5
+      },
+      "levels": {
+        "performance": 3.952197449112178,
+        "composite": 3.952197449112178
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 21.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.158141097369222,
+        "composite": 1.158141097369222
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 22.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.158141097369222,
+        "composite": 1.158141097369222
+      }
+    }
+  },
+  "Noise Type (mlp)": {
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.932113409105497,
+        "composite": 6.932113409105497
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 3.5,
+        "std": 0.5
+      },
+      "levels": {
+        "performance": 6.750150019169082,
+        "composite": 6.750150019169082
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 8.5,
+        "std": 5.5
+      },
+      "levels": {
+        "performance": 5.982944145845785,
+        "composite": 5.982944145845785
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 6.0,
+        "std": 4.0
+      },
+      "levels": {
+        "performance": 5.9797908004692175,
+        "composite": 5.9797908004692175
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 5.5,
+        "std": 3.5
+      },
+      "levels": {
+        "performance": 5.917886733896845,
+        "composite": 5.917886733896845
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 6.0
+      },
+      "levels": {
+        "performance": 5.850717792414551,
+        "composite": 5.850717792414551
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 4.0
+      },
+      "levels": {
+        "performance": 5.842527277920555,
+        "composite": 5.842527277920555
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 9.5,
+        "std": 1.5
+      },
+      "levels": {
+        "performance": 5.822294217039043,
+        "composite": 5.822294217039043
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 9.5,
+        "std": 0.5
+      },
+      "levels": {
+        "performance": 5.702392478412043,
+        "composite": 5.702392478412043
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 4.0
+      },
+      "levels": {
+        "performance": 5.69664899373142,
+        "composite": 5.69664899373142
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 1.0
+      },
+      "levels": {
+        "performance": 5.628544257447372,
+        "composite": 5.628544257447372
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 1.0
+      },
+      "levels": {
+        "performance": 5.628544257447372,
+        "composite": 5.628544257447372
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 9.5,
+        "std": 2.5
+      },
+      "levels": {
+        "performance": 5.619285323250345,
+        "composite": 5.619285323250345
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 6.0
+      },
+      "levels": {
+        "performance": 5.569719394546152,
+        "composite": 5.569719394546152
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 11.5,
+        "std": 7.5
+      },
+      "levels": {
+        "performance": 5.521096019437083,
+        "composite": 5.521096019437083
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 14.5,
+        "std": 1.5
+      },
+      "levels": {
+        "performance": 5.018261041326268,
+        "composite": 5.018261041326268
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 9.5,
+        "std": 1.5
+      },
+      "levels": {
+        "performance": 4.989018290466264,
+        "composite": 4.989018290466264
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 13.5,
+        "std": 1.5
+      },
+      "levels": {
+        "performance": 4.7200113676577,
+        "composite": 4.7200113676577
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 1.0
+      },
+      "levels": {
+        "performance": 4.659020615615636,
+        "composite": 4.659020615615636
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 7.0
+      },
+      "levels": {
+        "performance": 4.599812588867364,
+        "composite": 4.599812588867364
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 21.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.5104202068914871,
+        "composite": 1.5104202068914871
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 22.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.5104202068914871,
+        "composite": 1.5104202068914871
+      }
+    }
+  },
+  "Missing Data (mlp)": {
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 3.75,
+        "std": 3.2691742076555053
+      },
+      "levels": {
+        "performance": 6.3346422952219195,
+        "composite": 6.3346422952219195
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 3.4641016151377544
+      },
+      "levels": {
+        "performance": 6.291553358811929,
+        "composite": 6.291553358811929
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 7.5,
+        "std": 2.958039891549808
+      },
+      "levels": {
+        "performance": 6.0700975289633625,
+        "composite": 6.0700975289633625
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 3.9370039370059056
+      },
+      "levels": {
+        "performance": 5.86186108178745,
+        "composite": 5.86186108178745
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 7.5,
+        "std": 4.387482193696061
+      },
+      "levels": {
+        "performance": 5.807069092758943,
+        "composite": 5.807069092758943
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 6.25,
+        "std": 4.548351349665063
+      },
+      "levels": {
+        "performance": 5.712694135284958,
+        "composite": 5.712694135284958
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 10.5,
+        "std": 6.5383484153110105
+      },
+      "levels": {
+        "performance": 5.6938815117064605,
+        "composite": 5.6938815117064605
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 5.477225575051661
+      },
+      "levels": {
+        "performance": 5.645752687597288,
+        "composite": 5.645752687597288
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 1.0
+      },
+      "levels": {
+        "performance": 5.504375734842742,
+        "composite": 5.504375734842742
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 7.75,
+        "std": 4.968651728587948
+      },
+      "levels": {
+        "performance": 5.282712645520946,
+        "composite": 5.282712645520946
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 1.5811388300841898
+      },
+      "levels": {
+        "performance": 5.168824575913067,
+        "composite": 5.168824575913067
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 13.5,
+        "std": 5.5
+      },
+      "levels": {
+        "performance": 5.116802304424064,
+        "composite": 5.116802304424064
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 11.5,
+        "std": 3.3541019662496847
+      },
+      "levels": {
+        "performance": 5.073447027411127,
+        "composite": 5.073447027411127
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 10.5,
+        "std": 5.408326913195984
+      },
+      "levels": {
+        "performance": 5.021349581696544,
+        "composite": 5.021349581696544
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 11.75,
+        "std": 3.832427429188973
+      },
+      "levels": {
+        "performance": 4.9064197470809825,
+        "composite": 4.9064197470809825
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 14.5,
+        "std": 5.678908345800274
+      },
+      "levels": {
+        "performance": 4.880416576697767,
+        "composite": 4.880416576697767
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 12.5,
+        "std": 6.689544080129826
+      },
+      "levels": {
+        "performance": 4.713213724587506,
+        "composite": 4.713213724587506
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 13.5,
+        "std": 6.689544080129826
+      },
+      "levels": {
+        "performance": 4.713213724587506,
+        "composite": 4.713213724587506
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 19.75,
+        "std": 1.0897247358851685
+      },
+      "levels": {
+        "performance": 4.405474581958635,
+        "composite": 4.405474581958635
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 13.75,
+        "std": 4.710360920354193
+      },
+      "levels": {
+        "performance": 4.326370005529108,
+        "composite": 4.326370005529108
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 19.75,
+        "std": 1.299038105676658
+      },
+      "levels": {
+        "performance": 2.7305007127041634,
+        "composite": 2.7305007127041634
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 20.75,
+        "std": 1.299038105676658
+      },
+      "levels": {
+        "performance": 2.7305007127041634,
+        "composite": 2.7305007127041634
+      }
+    }
+  },
+  "Edge Probability (mlp)": {
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 7.4,
+        "std": 4.715930449020639
+      },
+      "levels": {
+        "performance": 6.352212661783212,
+        "composite": 6.352212661783212
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 7.4,
+        "std": 5.607138307550474
+      },
+      "levels": {
+        "performance": 6.215325702189463,
+        "composite": 6.215325702189463
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 3.03315017762062
+      },
+      "levels": {
+        "performance": 6.134678271851124,
+        "composite": 6.134678271851124
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 5.6,
+        "std": 3.4985711369071804
+      },
+      "levels": {
+        "performance": 6.121079166386842,
+        "composite": 6.121079166386842
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 5.2,
+        "std": 3.7629775444453557
+      },
+      "levels": {
+        "performance": 5.964015487142338,
+        "composite": 5.964015487142338
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 8.4,
+        "std": 5.314132102234569
+      },
+      "levels": {
+        "performance": 5.833693107584608,
+        "composite": 5.833693107584608
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 8.2,
+        "std": 2.9257477676655586
+      },
+      "levels": {
+        "performance": 5.736786641329991,
+        "composite": 5.736786641329991
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 12.8,
+        "std": 3.7629775444453557
+      },
+      "levels": {
+        "performance": 5.695232773858106,
+        "composite": 5.695232773858106
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 7.8,
+        "std": 2.6381811916545836
+      },
+      "levels": {
+        "performance": 5.552971016850837,
+        "composite": 5.552971016850837
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 9.8,
+        "std": 4.534313619501853
+      },
+      "levels": {
+        "performance": 5.408692230353091,
+        "composite": 5.408692230353091
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 10.4,
+        "std": 6.118823416311343
+      },
+      "levels": {
+        "performance": 5.139369284509002,
+        "composite": 5.139369284509002
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 10.6,
+        "std": 6.468384651518491
+      },
+      "levels": {
+        "performance": 4.999107117911923,
+        "composite": 4.999107117911923
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 12.2,
+        "std": 2.2271057451320084
+      },
+      "levels": {
+        "performance": 4.888470514982583,
+        "composite": 4.888470514982583
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 11.6,
+        "std": 5.2
+      },
+      "levels": {
+        "performance": 4.822302315576779,
+        "composite": 4.822302315576779
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 13.6,
+        "std": 3.4409301068170506
+      },
+      "levels": {
+        "performance": 4.736688644018363,
+        "composite": 4.736688644018363
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 14.8,
+        "std": 6.241794613730893
+      },
+      "levels": {
+        "performance": 4.607995211998855,
+        "composite": 4.607995211998855
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 16.2,
+        "std": 5.74108003776293
+      },
+      "levels": {
+        "performance": 4.589951777168891,
+        "composite": 4.589951777168891
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 17.2,
+        "std": 5.74108003776293
+      },
+      "levels": {
+        "performance": 4.589951777168891,
+        "composite": 4.589951777168891
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 14.2,
+        "std": 5.706137047074843
+      },
+      "levels": {
+        "performance": 4.455073048943141,
+        "composite": 4.455073048943141
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 17.6,
+        "std": 2.244994432064365
+      },
+      "levels": {
+        "performance": 4.1401409044599795,
+        "composite": 4.1401409044599795
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 19.2,
+        "std": 3.4871191548325386
+      },
+      "levels": {
+        "performance": 2.027593728558217,
+        "composite": 2.027593728558217
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 18.8,
+        "std": 2.7129319932501073
+      },
+      "levels": {
+        "performance": 1.985200651343592,
+        "composite": 1.985200651343592
+      }
+    }
+  },
+  "Discrete Ratio (mlp)": {
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 2.6666666666666665,
+        "std": 1.247219128924647
+      },
+      "levels": {
+        "performance": 6.189244240339755,
+        "composite": 6.189244240339755
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 6.333333333333333,
+        "std": 3.2998316455372216
+      },
+      "levels": {
+        "performance": 5.569283481135446,
+        "composite": 5.569283481135446
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 6.683312551921141
+      },
+      "levels": {
+        "performance": 5.526506835406015,
+        "composite": 5.526506835406015
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 6.333333333333333,
+        "std": 5.557777333511022
+      },
+      "levels": {
+        "performance": 5.4730009329394065,
+        "composite": 5.4730009329394065
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 8.333333333333334,
+        "std": 4.4969125210773475
+      },
+      "levels": {
+        "performance": 5.323283317806241,
+        "composite": 5.323283317806241
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 7.0,
+        "std": 2.160246899469287
+      },
+      "levels": {
+        "performance": 5.2012857875380885,
+        "composite": 5.2012857875380885
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 12.333333333333334,
+        "std": 3.39934634239519
+      },
+      "levels": {
+        "performance": 4.936551426108928,
+        "composite": 4.936551426108928
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 13.333333333333334,
+        "std": 3.39934634239519
+      },
+      "levels": {
+        "performance": 4.936551426108928,
+        "composite": 4.936551426108928
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 2.943920288775949
+      },
+      "levels": {
+        "performance": 4.5930975870148005,
+        "composite": 4.5930975870148005
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 10.666666666666666,
+        "std": 7.363574011458175
+      },
+      "levels": {
+        "performance": 4.560124624882502,
+        "composite": 4.560124624882502
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 8.666666666666666,
+        "std": 5.185449728701348
+      },
+      "levels": {
+        "performance": 4.4484917896156135,
+        "composite": 4.4484917896156135
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 10.333333333333334,
+        "std": 6.847546194724712
+      },
+      "levels": {
+        "performance": 4.426221589382006,
+        "composite": 4.426221589382006
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 6.164414002968976
+      },
+      "levels": {
+        "performance": 4.4102873061820365,
+        "composite": 4.4102873061820365
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 12.0,
+        "std": 2.449489742783178
+      },
+      "levels": {
+        "performance": 4.392339569972729,
+        "composite": 4.392339569972729
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 2.449489742783178
+      },
+      "levels": {
+        "performance": 4.352102954614775,
+        "composite": 4.352102954614775
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 11.333333333333334,
+        "std": 6.018490028422597
+      },
+      "levels": {
+        "performance": 3.984984260648986,
+        "composite": 3.984984260648986
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 10.333333333333334,
+        "std": 4.784233364802441
+      },
+      "levels": {
+        "performance": 3.923198666052352,
+        "composite": 3.923198666052352
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 15.333333333333334,
+        "std": 2.0548046676563256
+      },
+      "levels": {
+        "performance": 3.8113153107647393,
+        "composite": 3.8113153107647393
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 15.0,
+        "std": 3.265986323710904
+      },
+      "levels": {
+        "performance": 3.7660590120060085,
+        "composite": 3.7660590120060085
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 3.559026084010437
+      },
+      "levels": {
+        "performance": 3.14400992865516,
+        "composite": 3.14400992865516
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 21.666666666666668,
+        "std": 0.4714045207910317
+      },
+      "levels": {
+        "performance": 1.9062679492273642,
+        "composite": 1.9062679492273642
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 21.333333333333332,
+        "std": 0.4714045207910317
+      },
+      "levels": {
+        "performance": 1.4079885088711181,
+        "composite": 1.4079885088711181
+      }
+    }
+  },
+  "Linear Function": {
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.081771808609975,
+        "efficiency": 4.0,
+        "composite": 6.0
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 2.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.958509955544628,
+        "efficiency": 4.0,
+        "composite": 5.0
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 3.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.122053945128085,
+        "efficiency": 4.0,
+        "composite": 5.0
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.388141449503353,
+        "efficiency": 4.0,
+        "composite": 4.0
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 5.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.818666136837177,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 6.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.483198012885833,
+        "efficiency": 4.0,
+        "composite": 5.0
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 7.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.822850706802448,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.9593180470488,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.844860605398156,
+        "efficiency": 4.0,
+        "composite": 5.0
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.78836154512679,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.4392290777303716,
+        "efficiency": 4.0,
+        "composite": 3.0
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 12.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.375796123938956,
+        "efficiency": 4.0,
+        "composite": 4.0
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.076136799090534,
+        "efficiency": 4.0,
+        "composite": 4.0
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.780198818296112,
+        "efficiency": 4.0,
+        "composite": 5.0
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 15.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.07394739105396,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.349213071783485,
+        "efficiency": 4.0,
+        "composite": 4.0
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.5211765611291623,
+        "efficiency": 4.0,
+        "composite": 3.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 18.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.284391185293417,
+        "efficiency": 4.0,
+        "composite": 3.0
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.931321210163236,
+        "efficiency": 4.0,
+        "composite": 3.0
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 20.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.0,
+        "efficiency": 4.0,
+        "composite": 1.0
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 21.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.6687111376424175,
+        "efficiency": 4.0,
+        "composite": 2.0
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 22.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.6814257107871873,
+        "efficiency": 4.0,
+        "composite": 2.0
+      }
+    }
+  },
+  "Non-Linear Function": {
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.8336964765138397,
+        "efficiency": 4.0,
+        "composite": 4.0
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 2.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.9338004138382425,
+        "efficiency": 4.0,
+        "composite": 4.0
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 3.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.92970187592412,
+        "efficiency": 4.0,
+        "composite": 4.0
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.039835137184366,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 5.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.537556306821288,
+        "efficiency": 4.0,
+        "composite": 4.0
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 6.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.051854716842436,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 7.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.4554984283161536,
+        "efficiency": 4.0,
+        "composite": 4.0
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.16481884664042,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.965645188719062,
+        "efficiency": 4.0,
+        "composite": 3.0
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.4928636066145673,
+        "efficiency": 4.0,
+        "composite": 3.0
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.090573469407018,
+        "efficiency": 5.0,
+        "composite": 3.0
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 12.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.59445741819415,
+        "efficiency": 4.0,
+        "composite": 3.0
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.355350733576833,
+        "efficiency": 4.0,
+        "composite": 3.0
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.302922048478053,
+        "efficiency": 4.0,
+        "composite": 2.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 15.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.7033364792874868,
+        "efficiency": 4.0,
+        "composite": 3.0
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.2186854735050283,
+        "efficiency": 5.0,
+        "composite": 3.0
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.4922052860051975,
+        "efficiency": 4.0,
+        "composite": 3.0
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 18.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.2022285632579854,
+        "efficiency": 4.0,
+        "composite": 2.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.7441299134198474,
+        "efficiency": 4.0,
+        "composite": 3.0
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 20.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.0940964063420608,
+        "efficiency": 4.0,
+        "composite": 1.0
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 21.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.565639863748998,
+        "efficiency": 4.0,
+        "composite": 2.0
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 22.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.5519392067493238,
+        "efficiency": 4.0,
+        "composite": 2.0
+      }
+    }
+  },
+  "Gaussian Noise": {
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 10.0,
+        "efficiency": 5.0,
+        "composite": 10.0
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 2.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 10.0,
+        "efficiency": 5.0,
+        "composite": 10.0
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 3.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 10.0,
+        "efficiency": 5.0,
+        "composite": 10.0
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 10.0,
+        "efficiency": 5.0,
+        "composite": 10.0
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 5.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 9.37146063894529,
+        "efficiency": 5.0,
+        "composite": 9.0
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 6.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.787810118371286,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 7.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.187321183723405,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.851764584660163,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.11819118673615,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.001936798707528,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.975959096508292,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 12.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.075478202758969,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.098094213973942,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.972588397682252,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 15.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.138298445246876,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.0714407815210585,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.0714407815210585,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 18.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.967927786198756,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.061624671813194,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 20.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.4287743464906626,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 21.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.770324157509857,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 22.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.446090538597619,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    }
+  },
+  "Non-Gaussian Noise": {
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 10.0,
+        "efficiency": 5.0,
+        "composite": 10.0
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 2.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 10.0,
+        "efficiency": 5.0,
+        "composite": 10.0
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 3.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 10.0,
+        "efficiency": 5.0,
+        "composite": 10.0
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 9.825405733040359,
+        "efficiency": 5.0,
+        "composite": 9.0
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 5.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 9.825405733040359,
+        "efficiency": 5.0,
+        "composite": 9.0
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 6.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 9.825405733040359,
+        "efficiency": 5.0,
+        "composite": 9.0
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 7.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 9.663282485149264,
+        "efficiency": 5.0,
+        "composite": 9.0
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 9.825405733040359,
+        "efficiency": 5.0,
+        "composite": 9.0
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 9.68942689519656,
+        "efficiency": 5.0,
+        "composite": 9.0
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 8.497113485663576,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 8.369793020729478,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 12.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.308740482983199,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.395640076299429,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 8.116312228438476,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 15.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.366410026926678,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.6039220900780675,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.6039220900780675,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 18.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.327736161654529,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.545630564956653,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 20.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.6067140041705015,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 21.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.077686807147981,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 22.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.7414551560003337,
+        "efficiency": 5.0,
+        "composite": 3.0
+      }
+    }
+  },
+  "Dense Graph": {
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 9.226052279298306,
+        "efficiency": 5.0,
+        "composite": 9.0
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 2.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.273242813110535,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 3.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.243563798650616,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.896087473874358,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 5.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.1910932312026015,
+        "efficiency": 5.0,
+        "composite": 3.0
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 6.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.675877962248231,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 7.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.896269571672587,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.254148235881677,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.79606330981074,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.9304753543633213,
+        "efficiency": 5.0,
+        "composite": 3.0
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.134087381702678,
+        "efficiency": 5.0,
+        "composite": 3.0
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 12.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.19534249746797,
+        "efficiency": 5.0,
+        "composite": 3.0
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.17380454511954,
+        "efficiency": 5.0,
+        "composite": 3.0
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.551958287457368,
+        "efficiency": 5.0,
+        "composite": 3.0
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 15.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.5861777836787883,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.5861777836787883,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.542487012043406,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 18.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.542487012043406,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.5709999703714326,
+        "efficiency": 5.0,
+        "composite": 3.0
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 20.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.435590035996544,
+        "efficiency": 5.0,
+        "composite": 3.0
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 21.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.3848522872780538,
+        "efficiency": 5.0,
+        "composite": 2.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 22.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.1491127115560187,
+        "efficiency": 5.0,
+        "composite": 2.0
+      }
+    }
+  },
+  "Sparse Graph": {
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 10.0,
+        "efficiency": 5.0,
+        "composite": 10.0
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 2.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 10.0,
+        "efficiency": 5.0,
+        "composite": 10.0
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 3.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 10.0,
+        "efficiency": 5.0,
+        "composite": 10.0
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 10.0,
+        "efficiency": 5.0,
+        "composite": 10.0
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 5.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 10.0,
+        "efficiency": 5.0,
+        "composite": 10.0
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 6.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 10.0,
+        "efficiency": 5.0,
+        "composite": 10.0
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 7.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 10.0,
+        "efficiency": 5.0,
+        "composite": 10.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 9.214325798681614,
+        "efficiency": 5.0,
+        "composite": 9.0
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 9.214325798681614,
+        "efficiency": 5.0,
+        "composite": 9.0
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 9.214325798681614,
+        "efficiency": 5.0,
+        "composite": 9.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 9.214325798681614,
+        "efficiency": 5.0,
+        "composite": 9.0
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 12.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 9.214325798681614,
+        "efficiency": 5.0,
+        "composite": 9.0
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 8.71435130693355,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.86616442825032,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 15.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.86616442825032,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.86616442825032,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.86616442825032,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 18.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.880249889002297,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.114381916835873,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 20.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.0812827854928395,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 21.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.4012654359457115,
+        "efficiency": 5.0,
+        "composite": 2.0
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 22.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.4012654359457115,
+        "efficiency": 5.0,
+        "composite": 2.0
+      }
+    }
+  },
+  "High Missing Data": {
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 8.2622920949958,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 2.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.905106882178429,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 3.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.297947583573286,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.555412590559062,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 5.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.078510967077164,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 6.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.792587872216633,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 7.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.088849574883838,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.612933152500599,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.491505533468699,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.853415318865718,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.220488044422096,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 12.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.477011963268292,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.221106040027287,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.143134127281572,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 15.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.143134127281572,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.275951940611733,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.9537148451197774,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 18.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.5413630745704388,
+        "efficiency": 5.0,
+        "composite": 3.0
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.425938911141038,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 20.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.3084887536220675,
+        "efficiency": 5.0,
+        "composite": 3.0
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 21.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.2665806182648938,
+        "efficiency": 5.0,
+        "composite": 3.0
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 22.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 1.8375049179679435,
+        "efficiency": 5.0,
+        "composite": 2.0
+      }
+    }
+  },
+  "High Measurement Error": {
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 9.48817518667355,
+        "efficiency": 5.0,
+        "composite": 9.0
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 2.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 9.328125673329797,
+        "efficiency": 5.0,
+        "composite": 9.0
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 3.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 9.342281057467321,
+        "efficiency": 5.0,
+        "composite": 9.0
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 8.125767628810278,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 5.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.5415480053559785,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 6.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.906886363103681,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 7.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.6780004079936415,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.654782252711358,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.227011771872729,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.990972306959641,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.196644224914873,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 12.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.733636496064631,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.9792101678822185,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.678186511582156,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 15.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.68200616971179,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.896587831527208,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.369881837947941,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 18.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.2816002333960475,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.32428692258012,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 20.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.409110766931068,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 21.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.450749083807628,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 22.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.5367143127137863,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    }
+  },
+  "Highly Mixed Data": {
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 8.78001122363085,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 2.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 8.78001122363085,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 3.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 8.78001122363085,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 8.78001122363085,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 5.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 8.78001122363085,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 6.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 8.671892820883702,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 7.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 8.805473390141179,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 8.805473390141179,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.568545610552924,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.084293432087266,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.961007135327915,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 12.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.164950648440951,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.393614731346034,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.8542385165873565,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 15.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.290931808628663,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.047448997239421,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.934375509123615,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 18.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.934375509123615,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.478918612257784,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 20.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.250750072972746,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 21.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.5987924588828024,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 22.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.5987924588828024,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    }
+  },
+  "Highly Heterogeneous": {
+    "NOTEARSLinear_lambda1=0.01_loss_type=l2": {
+      "ranking": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 8.25183174195357,
+        "efficiency": 5.0,
+        "composite": 8.0
+      }
+    },
+    "XGES_alpha=2": {
+      "ranking": {
+        "mean": 2.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.328311115426596,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "GRaSP_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 3.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 7.434645341779592,
+        "efficiency": 5.0,
+        "composite": 7.0
+      }
+    },
+    "IAMBnPC_indep_test=fisherz": {
+      "ranking": {
+        "mean": 4.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.222210139230559,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "BAMB_indep_test=fisherz": {
+      "ranking": {
+        "mean": 5.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.205543399650873,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "XGES_alpha=0.5": {
+      "ranking": {
+        "mean": 6.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.763737620405032,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "XGES_alpha=1": {
+      "ranking": {
+        "mean": 7.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.937650398173805,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "XGES_alpha=4": {
+      "ranking": {
+        "mean": 8.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 6.278728481884208,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 9.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.976806091930696,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "FCI_indep_test=fisherz": {
+      "ranking": {
+        "mean": 10.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.709958592238822,
+        "efficiency": 5.0,
+        "composite": 6.0
+      }
+    },
+    "PC_indep_test=fisherz_gpu": {
+      "ranking": {
+        "mean": 11.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.950217984068175,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "PC_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 12.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.460132331339109,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "FGES_sparsity=1": {
+      "ranking": {
+        "mean": 13.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 5.531081068195691,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "CDNOD_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 14.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.392888117163065,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "FGES_sparsity=2": {
+      "ranking": {
+        "mean": 15.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.578283026689318,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "GES_score_func=local_score_BIC": {
+      "ranking": {
+        "mean": 16.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.611964682704727,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "CDNOD_indep_test=fisherz_cpu": {
+      "ranking": {
+        "mean": 17.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.30867450607694,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    },
+    "DirectLiNGAM_gpu=True_measure=pwling": {
+      "ranking": {
+        "mean": 18.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.474165449614083,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "DirectLiNGAM_gpu=False_measure=pwling": {
+      "ranking": {
+        "mean": 19.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 4.474165449614083,
+        "efficiency": 5.0,
+        "composite": 5.0
+      }
+    },
+    "PC_indep_test=cmiknn_gpu": {
+      "ranking": {
+        "mean": 20.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.990696501653325,
+        "efficiency": 5.0,
+        "composite": 3.0
+      }
+    },
+    "FGES_sparsity=10": {
+      "ranking": {
+        "mean": 21.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 2.3164124257463152,
+        "efficiency": 5.0,
+        "composite": 3.0
+      }
+    },
+    "FGES_sparsity=5": {
+      "ranking": {
+        "mean": 22.0,
+        "std": 0.0
+      },
+      "levels": {
+        "performance": 3.344827291040498,
+        "efficiency": 5.0,
+        "composite": 4.0
+      }
+    }
+  }
+}

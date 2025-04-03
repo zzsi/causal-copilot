@@ -1,149 +1,158 @@
 # Causal Discovery Algorithm Tagging
 
-Below is a concise description of each tag category and its possible values:
+## Performance Categories
+- **Robust**: Consistently strong performance (score ≥ 5.5) across multiple scenarios with low variability (std < 0.8)
+- **Strong**: Good performance (score 4.5-5.5) with moderate variability (std 0.8-1.2) across scenarios  
+- **Moderate**: Generally reliable performance (score 3.5-4.5) with moderate to high variability (std 1.2-1.6)
+- **Limited**: Weaker performance (score 2.0-3.5) with significant variability (std 1.6-2.0)
+- **Poor**: Unreliable performance (score < 2.0) or high variability (std > 2.0) across most scenarios
 
-1. Availability: Indicates if the algorithm is ready to use.
-    ***ONLY USE AVAILABLE ALGORITHMS FOR NOW***
-   - Available: Ready to use in the current codebase.
-   - Unavailable: No longer maintained because of being not useful.
+## Algorithm Tag Categories
 
+1. **Availability**: Available, Unavailable
 
-2. Method Type: Reflects the underlying approach.
-   - Constraint-based: Utilizes conditional independence tests.
-   - Score-based: Leverages score metrics for structure learning.
-   - Functional Model-based: Employs functional models (e.g., LiNGAM) to capture relationships.
-   - Hybrid: Integrates Constraint-based and Functional Model-based approaches to combine strengths.
-   - MB-based: Finding causal graph mainly by discovering, aggregating and orienting Markov Blankets.
-   - Continuous-optimization: Uses continuous optimization techniques to learn causal structure.
+2. **Method Type**: Constraint-based, Score-based, Functional Model-based, Hybrid, MB-based, Continuous-optimization
 
-3. Functional form: Describes the assumed relationship between variables.
-   - Linear: Assumes relationships are strictly linear.
-   - Nonlinear: Assumes relationships are nonlinear.
-   - Flexible: Accommodates both linear and nonlinear patterns.
+3. **Functional Form**: 
+   - Linear: Optimized for linear relationships (linear/non-linear difference > +0.5)
+   - Nonlinear: Optimized for non-linear relationships (linear/non-linear difference < -0.5)
+   - Flexible: Handles both linear and non-linear relationships effectively (linear/non-linear difference between -0.5 and +0.5)
 
-4. Noise: Specifies the noise assumptions.
-   - Gaussian: Assumes noise follows a Gaussian distribution.
-   - NonGaussian: Assumes noise deviates from a Gaussian distribution.
-   - Flexible: Accommodates both Gaussian and NonGaussian noise.
+4. **Noise**: 
+   - Gaussian: Performance drops >20% with non-Gaussian noise
+   - NonGaussian: Performance improves >20% with non-Gaussian noise
+   - Flexible: Performance change <20% between Gaussian and non-Gaussian noise
 
-5. Latent Variable Tolerance: Indicates capability in handling unobserved confounders.
-   - Robust: Highly tolerant to latent confounders.
-   - Moderate: Acceptable tolerance toward latent variables.
+5. **Latent Variable Tolerance**: 
+   - Robust: Maintains >80% performance with latent variables
+   - Moderate: Maintains 50-80% performance with latent variables
 
-6. Distribution Shift: Denotes assumptions about data distribution.
-   - Heterogenous: Designed for datasets including varied or shifting distributions and indicators (domain index) of distribution shifts.
-   - Homogenous: Assumes a consistent data distribution.
+6. **Distribution Shift**: 
+   - Heterogenous: Maintains >80% performance under heterogeneity (score ≥ 7.0 in heterogeneity benchmarks)
+   - Homogenous: Performance drops >20% under heterogeneity (score < 7.0 in heterogeneity benchmarks)
 
-7. Scalability: Reflects the method's maximum capacity for handling dataset sizes (number of variables and samples). Note that some algorithms have different implementations (CPU & GPU), which may result in a range of scalability capabilities.
-   - Large-scale: Able to handle very large datasets (e.g., 1000 variables and 10000 samples).
-   - Medium-to-large-scale: Able to handle medium-sized datasets (e.g., 100 variables and 10000 samples).
-   - Medium-scale: Able to handle moderately sized datasets (e.g., 50 variables and 5000 samples).
-   - Small-to-medium-scale: Able to handle small-to-medium-sized datasets (e.g., 25 variables and 5000 samples).
-   - Small-scale: Only able to handle smaller datasets (e.g., 15 variables and 2500 samples).
+7. **Scalability**: 
+   - Large-scale: Handles >100 variables efficiently
+   - Medium-to-large-scale: Handles 50-100 variables efficiently
+   - Medium-scale: Handles 20-50 variables efficiently
+   - Small-to-medium-scale: Handles 10-20 variables efficiently
+   - Small-scale: Limited to <10 variables
 
-8. Efficiency: Highlights computational speed and hardware utilization. Note that some algorithms have different implementations (CPU & GPU), which may result in a range of efficiency capabilities.
-   - Extreme Fast (GPU): Optimized for GPU acceleration to have extreme fast speed.
-   - Fast (GPU): Optimized for GPU acceleration to have fast speed.
-   - Fast (CPU): Optimized with improvements on algorithm logic and parallelization to have fast speed.
-   - Moderate: Reasonable speed with typical resources.
-   - Slow: Computation-intensive with slower execution.
-   - Extreme Slow: Significantly slow due to complex computations.
+8. **Efficiency**: 
+   - Extreme Fast (GPU): Runtime <0.5 seconds per 1000 samples with 50 variables
+   - Fast (GPU): Runtime 0.5-2 seconds per 1000 samples with 50 variables
+   - Fast (CPU): Runtime 2-10 seconds per 1000 samples with 50 variables
+   - Moderate: Runtime 10-60 seconds per 1000 samples with 50 variables
+   - Slow: Runtime 1-10 minutes per 1000 samples with 50 variables
+   - Extreme Slow: Runtime >10 minutes per 1000 samples with 50 variables
 
-9. Empirical Performance: Summarizes reliability and robustness based on experiments.
-   - Robust: Consistently strong performance (Level 4-5 in benchmarks).
-   - Moderate: Generally reliable with some variability (Level 2-3 in benchmarks).
-   - Limited: Weaker performance with significant variability (Level 1 in benchmarks).
+9. **Empirical Performance**: Based on overall benchmark score
+   - Robust: Overall score ≥ 6.0
+   - Strong: Overall score 4.5-6.0
+   - Moderate: Overall score 3.0-4.5
+   - Limited: Overall score 1.5-3.0
+   - Poor: Overall score < 1.5
 
-10. Output Format: Specifies the graph structure produced.
-    - DAG: Directed Acyclic Graph with full directional information.
-    - CPDAG: Completed Partially Directed Acyclic Graph.
-    - PAG: Partial Ancestral Graph accommodating latent confounding.
+10. **Output Format**: DAG, CPDAG, PAG
 
-11. Data Type: Specifies the type of data the algorithm is designed to handle.
-    - Tabular: Designed for cross-sectional data without temporal dependencies.
-    - Time-series: Designed for sequential data with temporal dependencies.
-    - Both: Can handle both tabular and time-series data.
+11. **Data Type**: Tabular, Time-series, Both
 
-Below is the listing of causal discovery algorithms annotated with each tag type:
+12. **Graph Density Stability**:
+   - High: Algorithm maintains consistent accuracy regardless of graph density; performs equally well on very sparse networks and densely connected variables (>30% of possible edges)
+   - Moderate: Algorithm performs best on sparse to medium-density graphs (up to 30% of possible edges), with declining performance on denser networks
 
---- Constraint-based Methods -----------------------------------------------------------
+## Algorithm Listings (key are the algorithm names)
+
+### Constraint-based Methods
 
 PC: {
+    Full Name: "Peter-Clark Algorithm",
     Availability: Available,
     Method Type: Constraint-based,
-    Functional form: Flexible,
+    Functional Form: Flexible,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability: from Medium-to-large-scale to Large-scale,
-    Efficiency: from Fast (CPU) to Extreme Fast (GPU),
-    Empirical Performance: Moderate,
+    Scalability: Medium-to-large-scale with default settings, can scale to large datasets (thousands of variables) with GPU acceleration,
+    Efficiency: Fast with CPU, Extreme Fast with GPU acceleration,
+    Empirical Performance: Strong,
     Output Format: CPDAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: Moderate
 }
 
 FCI: {
+    Full Name: "Fast Causal Inference",
     Availability: Available,
     Method Type: Constraint-based,
-    Functional form: Flexible, 
+    Functional Form: Flexible, 
     Noise: Flexible,
     Latent Variable Tolerance: Robust,
     Distribution Shift: Homogenous,
     Scalability: Medium-to-large-scale,
     Efficiency: Fast (CPU),
-    Empirical Performance: Moderate,
-    Output Format: CPDAG,
-    Data Type: Tabular
+    Empirical Performance: Strong,
+    Output Format: PAG,
+    Data Type: Tabular,
+    Graph Density Stability: Moderate
 }
 
 CDNOD: {
+    Full Name: "Constraint-based causal Discovery from Nonstationary/heterogeneous Data",
     Availability: Available,
     Method Type: Constraint-based,
-    Functional form: Flexible,
+    Functional Form: Flexible,
     Noise: Flexible,
     Latent Variable Tolerance: Robust,
-    Distribution Shift: Heterogenous,
-    Scalability: from Medium-to-large-scale to Large-scale,
-    Efficiency: from Fast (CPU) to Extreme Fast (GPU),
-    Empirical Performance: Moderate (Especially good at heterogenous data),
+    Scalability: Medium-to-large-scale with default settings, can scale to large datasets (thousands of variables) with GPU acceleration,
+    Efficiency: Fast with CPU, Extreme Fast with GPU acceleration,
+    Empirical Performance: Strong,
     Output Format: CPDAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: Moderate,
+    Note: "Requires heterogeneity in data with explicit domain_index column indicating different environments/domains",
+    Distribution Shift: Heterogeneous
 }
 
 PCMCI: {
+    Full Name: "Peter and Clark algorithm with Momentary Conditional Independence",
     Availability: Available,
     Method Type: Constraint-based,
-    Functional form: Flexible,
+    Functional Form: Flexible,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
     Scalability: Medium-to-large-scale,
-    Efficiency: Fast (CPU),
-    Empirical Performance: Robust,
+    Efficiency: Fast,
+    Empirical Performance: Strong,
     Output Format: DAG,
-    Data Type: Time-series
+    Data Type: Time-series,
+    Graph Density Stability: Moderate
 }
 
---- MB-based Methods --------------------------------------------------------------
+### MB-based Methods
 
 InterIAMB: {
+    Full Name: "Interleaved Incremental Association Markov Blanket",
     Availability: Available,
     Method Type: MB-based,
-    Functional form: Flexible,
+    Functional Form: Flexible,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
     Scalability: Medium-to-large-scale,
-    Efficiency: Fast (CPU),
-    Empirical Performance: Robust,
+    Efficiency: Fast,
+    Empirical Performance: Limited,
     Output Format: CPDAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: Moderate
 }
 
 BAMB: {
+    Full Name: "Bootstrap Augmented Markov Blanket",
     Availability: Available,
     Method Type: MB-based,
-    Functional form: Flexible,
+    Functional Form: Flexible,
     Noise: Flexible,
     Latent Variable Tolerance: Robust,
     Distribution Shift: Homogenous,
@@ -151,13 +160,15 @@ BAMB: {
     Efficiency: Moderate,
     Empirical Performance: Limited,
     Output Format: CPDAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: Moderate
 }
 
 HITONMB: {
+    Full Name: "HITON Markov Blanket",
     Availability: Unavailable,
     Method Type: MB-based,
-    Functional form: Flexible,
+    Functional Form: Flexible,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
@@ -165,115 +176,131 @@ HITONMB: {
     Efficiency: Moderate,
     Empirical Performance: Limited,
     Output Format: CPDAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: Moderate
 }
 
 IAMBnPC: {
+    Full Name: "Incremental Association Markov Blanket with PC algorithm",
     Availability: Available,
     Method Type: Hybrid,
-    Functional form: Flexible,
+    Functional Form: Flexible,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
     Scalability: Medium-to-large-scale,
-    Efficiency: Fast (CPU),
-    Empirical Performance: Robust,
+    Efficiency: Fast,
+    Empirical Performance: Limited,
     Output Format: CPDAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: Moderate
 }
 
 MBOR: {
+    Full Name: "Markov Blanket OR",
     Availability: Available,
     Method Type: MB-based,
-    Functional form: Flexible,
+    Functional Form: Flexible,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
     Scalability: Medium-scale,
     Efficiency: Moderate,
-    Empirical Performance: Moderate,
+    Empirical Performance: Limited,
     Output Format: CPDAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: Moderate
 }
 
---- Score-based Methods --------------------------------------------------------------
+### Score-based Methods
 
 GES: {
+    Full Name: "Greedy Equivalence Search",
     Availability: Available,
     Method Type: Score-based,
-    Functional form: Flexible,
+    Functional Form: Linear,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
     Scalability: Medium-scale,
-    Efficiency: Slow,
-    Empirical Performance: Limited,
+    Efficiency: Moderate,
+    Empirical Performance: Strong,
     Output Format: CPDAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: Moderate
 }
 
 FGES: {
+    Full Name: "Fast Greedy Equivalence Search",
     Availability: Available,
     Method Type: Score-based,
-    Functional form: Linear,
-    Noise: Gaussian,
+    Functional Form: Linear,
+    Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
     Scalability: Large-scale,
     Efficiency: Fast (CPU),
-    Empirical Performance: Moderate,
+    Empirical Performance: Strong,
     Output Format: CPDAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: Moderate
 }
 
 XGES: {
+    Full Name: "eXtremely Greedy Equivalence Search",
     Availability: Available,
     Method Type: Score-based,
-    Functional form: Linear,
-    Noise: Gaussian,
+    Functional Form: Flexible,
+    Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
     Scalability: Medium-to-large-scale,
     Efficiency: Fast (CPU),
     Empirical Performance: Robust,
     Output Format: CPDAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: High
 }
 
 GRaSP: {
+    Full Name: "Greedy Relaxations of the Sparsest Permutation",
     Availability: Available,
     Method Type: Score-based,
-    Functional form: Flexible,
+    Functional Form: Flexible,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
     Scalability: Medium-scale,
     Efficiency: Moderate,
-    Empirical Performance: Robust,
+    Empirical Performance: Strong,
     Output Format: CPDAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: High
 }
 
---- Continuous-optimization Methods -------------------------------------------------
+### Continuous-optimization Methods
 
 GOLEM: {
+    Full Name: "Gradient-based Optimization of dag-penalized Likelihood for learning linEar dag Models",
     Availability: Available,
     Method Type: Continuous-optimization,
-    Functional form: Linear,
+    Functional Form: Linear,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
     Scalability: Medium-to-large-scale,
-    Efficiency: Fast (CPU),
-    Empirical Performance: Robust,
+    Efficiency: Moderate,
+    Empirical Performance: Strong,
     Output Format: DAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: High
 }
 
 CALM: {
+    Full Name: "Causal Additive Linear Model",
     Availability: Unavailable,
     Method Type: Continuous-optimization,
-    Functional form: Linear,
+    Functional Form: Linear,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
@@ -281,13 +308,15 @@ CALM: {
     Efficiency: Extreme Slow,
     Empirical Performance: Moderate,
     Output Format: DAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: High
 }
 
 CORL: {
+    Full Name: "Causal discovery with Ordering-based Reinforcement Learning",
     Availability: Unavailable,
     Method Type: Continuous-optimization,
-    Functional form: Linear,
+    Functional Form: Linear,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
@@ -295,27 +324,31 @@ CORL: {
     Efficiency: Extreme Slow,
     Empirical Performance: Moderate,
     Output Format: DAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: High
 }
 
 NOTEARSLinear: {
+    Full Name: "Nonlinear Optimization with Trace Exponential and Augmented lagRangian for Structure learning (Linear)",
     Availability: Available,
     Method Type: Continuous-optimization,
-    Functional form: Linear,
+    Functional Form: Linear,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
     Scalability: Medium-scale,
     Efficiency: Moderate,
-    Empirical Performance: Robust,
+    Empirical Performance: Strong,
     Output Format: DAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: High
 }
 
 NOTEARSNonlinear: {
+    Full Name: "Nonlinear Optimization with Trace Exponential and Augmented lagRangian for Structure learning (Nonlinear)",
     Availability: Unavailable,
     Method Type: Continuous-optimization,
-    Functional form: Nonlinear,
+    Functional Form: Nonlinear,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
@@ -323,58 +356,65 @@ NOTEARSNonlinear: {
     Efficiency: Slow,
     Empirical Performance: Moderate,
     Output Format: DAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: High
 }
 
 DYNOTEARS: {
+    Full Name: "Dynamic Nonlinear Optimization with Trace Exponential and Augmented lagRangian for Structure learning",
     Availability: Available,
     Method Type: Continuous-optimization,
-    Functional form: Linear,
+    Functional Form: Linear,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
     Scalability: Medium-scale,
     Efficiency: Moderate,
-    Empirical Performance: Moderate,
+    Empirical Performance: Strong,
     Output Format: DAG,
-    Data Type: Time-series
+    Data Type: Time-series,
+    Graph Density Stability: High
 }
 
 NTSNOTEARS: {
+    Full Name: "Non-linear Time Series Nonlinear Optimization with Trace Exponential and Augmented lagRangian for Structure learning",
     Availability: Available,
     Method Type: Continuous-optimization,
-    Functional form: Nonlinear,
+    Functional Form: Nonlinear,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
     Scalability: Medium-scale,
     Efficiency: Moderate,
-    Empirical Performance: Moderate,
+    Empirical Performance: Strong,
     Output Format: DAG,
-    Data Type: Time-series
+    Data Type: Time-series,
+    Graph Density Stability: High
 }
 
-
---- Functional Model-based Methods (LiNGAM Family) ----------------------------------
+### Functional Model-based Methods (LiNGAM Family)
 
 DirectLiNGAM: {
+    Full Name: "Direct Linear Non-Gaussian Acyclic Model",
     Availability: Available,
     Method Type: Functional Model-based,
-    Functional form: Linear,
+    Functional Form: Linear,
     Noise: NonGaussian,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability: Large-scale,
-    Efficiency: from Fast (CPU) to Fast (GPU),
-    Empirical Performance: Robust(Only good at nongaussian noise data, limited in Gaussian noise data),
+    Scalability: Medium-to-large-scale with default settings, can scale to large datasets with GPU acceleration,
+    Efficiency: Fast with CPU, Faster with GPU acceleration,
+    Empirical Performance: Limited,
     Output Format: DAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: Moderate
 }
 
 ICALiNGAM: {
+    Full Name: "Independent Component Analysis Linear Non-Gaussian Acyclic Model",
     Availability: Unavailable,
     Method Type: Functional Model-based,
-    Functional form: Linear,
+    Functional Form: Linear,
     Noise: NonGaussian,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
@@ -382,43 +422,49 @@ ICALiNGAM: {
     Efficiency: Slow,
     Empirical Performance: Limited,
     Output Format: DAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: Moderate
 }
 
 VARLiNGAM: {
+    Full Name: "Vector Autoregressive Linear Non-Gaussian Acyclic Model",
     Availability: Available,
     Method Type: Functional Model-based,
-    Functional form: Linear,
+    Functional Form: Linear,
     Noise: NonGaussian,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability: from Medium-scale to Large-scale,
-    Efficiency: from Fast (CPU) to Fast (GPU),
-    Empirical Performance: Robust (Good at both noise gaussian and nongaussian noise data),
+    Scalability: Medium-to-large-scale with default settings, can scale to large datasets with GPU acceleration,
+    Efficiency: Fast with CPU, Faster with GPU acceleration,
+    Empirical Performance: Strong,
     Output Format: DAG,
-    Data Type: Time-series
+    Data Type: Time-series,
+    Graph Density Stability: Moderate
 }
 
---- Hybrid Methods -----------------------------------------------------------------
+### Hybrid Methods
 
 GrangerCausality: {
+    Full Name: "Granger Causality",
     Availability: Available,
     Method Type: Hybrid,
-    Functional form: Linear,
+    Functional Form: Linear,
     Noise: Gaussian,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
     Scalability: Medium-scale,
-    Efficiency: Fast (CPU),
+    Efficiency: Fast,
     Empirical Performance: Moderate,
     Output Format: DAG,
-    Data Type: Time-series
+    Data Type: Time-series,
+    Graph Density Stability: Moderate
 }
 
 Hybrid: {
+    Full Name: "Hybrid Causal Structure Learning",
     Availability: Unavailable,
     Method Type: Hybrid,
-    Functional form: Flexible,
+    Functional Form: Flexible,
     Noise: Gaussian,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
@@ -426,5 +472,6 @@ Hybrid: {
     Efficiency: Slow,
     Empirical Performance: Moderate,
     Output Format: DAG,
-    Data Type: Tabular
+    Data Type: Tabular,
+    Graph Density Stability: Moderate
 }
