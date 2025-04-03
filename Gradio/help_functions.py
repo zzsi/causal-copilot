@@ -182,7 +182,7 @@ def parse_preliminary_feedback(global_state, message):
             if heterogeneity:
                 if domin_index and domin_index in global_state.user_data.raw_data.columns:
                     global_state.statistics.domain_index = domin_index
-                    global_state.user_data.important_features.expand(domin_index)
+                    # global_state.user_data.important_features.expand(domin_index)
                     text += f"- ✅ Adjusted Domain Index: {domin_index}\n"
                 elif domin_index and domin_index not in global_state.user_data.raw_data.columns:
                     text += f"- ❌ The provided domain index {domin_index} is not in the dataset, we do not adjust it.\n"
@@ -460,7 +460,7 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
                 param_values: list[Union[str, int, float]]
                 valid_params: bool = True
                 error_messages: list[str] = []
-            with open("parameter_range_context.json", "r") as f:
+            with open("Gradio/parameter_range_context.json", "r") as f:
                 param_specs = json.load(f)
 
             # Get current algorithm specs

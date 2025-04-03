@@ -23,7 +23,7 @@ from algorithm.wrappers.utils.ts_utils import generate_stationary_linear
 import torch
 cuda_available = torch.cuda.is_available()
 try:
-    from culingam.varlingam import VarLiNGAM as AcVarLiNGAM
+    from culingam.varlingam import VARLiNGAM as AcVarLiNGAM
 except ImportError:
     if not cuda_available:
         print("CUDA is not available, will not use GPU acceleration")

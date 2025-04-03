@@ -1,7 +1,6 @@
 from typing import List, Optional, Tuple
 import networkx as nx
-
-
+import numpy as np
 def _draw_pag_edges(
     dot,
     directed_edges: List[Tuple] = None,
@@ -96,6 +95,8 @@ def draw(
         DOT language representation of the graph.
     """
     from graphviz import Digraph
+    fill_color = "#e6f3ff"
+    arrow_color = "#000080"
 
     # make a dict to pass to the Digraph object
     g_attr = {"label": name}
@@ -109,7 +110,13 @@ def draw(
         dot.engine = 'neato'  
         dot.graph_attr['overlap'] = 'false'
         dot.graph_attr['splines'] = 'true'
-        dot.graph_attr['K'] = '0.5'
+        print('yes')
+        dot.graph_attr['K'] = '2'
+        dot.graph_attr['nodesep'] = '2.0'
+        dot.graph_attr['ranksep'] = '2.0'
+        dot.graph_attr['size'] = '10,10'
+        dot.graph_attr['ratio'] = 'fill',
+
 
     # set direction from left to right if that's preferred
     if direction == "LR":
@@ -136,12 +143,18 @@ def draw(
         undirected_edges=undirected_edges,
         bidirected_edges=bidirected_edges,
     )
+    size = int(np.sqrt(len(G.nodes())))+1
+    dot.graph_attr['K'] = '2'
+    dot.graph_attr['nodesep'] = '0.5'
+    dot.graph_attr['ranksep'] = '0.5'
+    dot.graph_attr['size'] = str(size)+','+str(size)
+    dot.graph_attr['ratio'] = 'fill'
 
     # add the nodes that in the G but not in the PAG
     for node in full_node_names:
         if node not in dot.body:
-            if len(full_node_names)<=10:
-                dot.node(str(node), shape=shape, height=".5", width=".5")
+            if True:
+                dot.node(str(node), shape=shape, height="0.5", width="0.5", fillcolor=fill_color, style="filled", color=arrow_color, font_color = arrow_color, fixedsize="true", fontsize = str(24/len(str(node))))
 
     # get the directed graph component and add any remaining nodes
     if hasattr(G, "get_graphs"):
@@ -151,15 +164,15 @@ def draw(
     # add any nodes from full_node_names that aren't in directed_G
     for node in full_node_names:
         if node not in directed_G:
-            if len(full_node_names)<=10:
+            if True:
                 directed_G.add_node(node)
 
     for v in full_node_names:
         child = str(v)
         if pos and pos.get(v) is not None:
-            dot.node(child, shape=shape, height=".5", width=".5", pos=f"{pos[v][0]*10},{pos[v][1]*10}!")
+            dot.node(child, shape=shape, height="0.5", width="0.5", pos=f"{pos[v][0]*10},{pos[v][1]*10}!", fillcolor=fill_color, style="filled", color=arrow_color, font_color = arrow_color, fixedsize="true", fontsize = str(24/len(child)))
         else:
-            dot.node(child, shape=shape, height=".5", width=".5")
+            dot.node(child, shape=shape, height="0.5", width="0.5", fillcolor=fill_color, style="filled", color=arrow_color, font_color = arrow_color, fixedsize="true",fontsize = str(24/len(child)))
         
         try:
             for parent in directed_G.predecessors(v):
@@ -173,7 +186,7 @@ def draw(
                 if parent == v:
                     dot.edge(parent, child, style="invis", **attrs)
                 else:
-                    dot.edge(parent, child, color="blue", **attrs)
+                    dot.edge(parent, child, color="#000080", **attrs)
         except nx.exception.NetworkXError as e:
             # the node is completely independent in the inferred graph
             pass

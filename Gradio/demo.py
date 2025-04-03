@@ -270,7 +270,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                     texts += "- The following variables are highly correlated with others, but due to the variable number limitation, we will not drop them: \n"\
                                             f"{', '.join(list(set(global_state.user_data.high_corr_drop_features)))}"
             chat_history.append((None, texts))
-            print('preliminary check', global_state.user_data.processed_data.columns)
+            # print('preliminary check', global_state.user_data.selected_features)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             if not enough_sample:
                 texts += "- " + info 
@@ -300,7 +300,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
         if CURRENT_STAGE == 'preliminary_feedback':
             chat_history.append((message, None))
             global_state, text = parse_preliminary_feedback(global_state, message)
-            print('preliminary_feedback', global_state.user_data.processed_data.columns)
+            # print('preliminary_feedback', global_state.user_data.selected_features)
             if text != "":
                 chat_history.append((None, text))
             else:
@@ -440,7 +440,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
 
             user_linear = global_state.statistics.linearity
             user_gaussian = global_state.statistics.gaussian_error
-
+            # print('stat_analysis', global_state.user_data.selected_features)
             global_state = stat_info_collection(global_state)
             global_state.statistics.description = convert_stat_info_to_text(global_state.statistics)
 

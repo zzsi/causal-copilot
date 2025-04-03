@@ -14,7 +14,7 @@ sys.path.append(nts_dir)
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
 from algorithm.wrappers.utils.ts_utils import generate_stationary_linear
-from notears.nts_model import MODEL_NTS_NOTEARS, train_NTS_NOTEARS
+# from notears.nts_model import MODEL_NTS_NOTEARS, train_NTS_NOTEARS
 from sklearn import preprocessing
 
 
@@ -22,7 +22,7 @@ class NTSNOTEARS(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
         self._params = {
-            'p': int,
+            'p': 1,
             'lambda1': 0.1, #lambdas for convolutional parameters in each time step. In the order of ..., lag2, lag1, instantaneous. E.g. [0.02, 0.01]
             'lambda2': 0.1, #The lambda for all parameters.
             'w_threshold': 5, #list of w_thresholds for convolutional parameters in each time step. In the order of ..., lag2, lag1, instantaneous. E.g. [0.3, 0.3]
@@ -66,7 +66,7 @@ class NTSNOTEARS(CausalDiscoveryAlgorithm):
         else:
             node_names = [f"X{i}" for i in range(data.shape[1])]
             data = np.array(data)
-        
+        print("p =", self._params['p'], "type =", type(self._params['p']))
         scaler = preprocessing.StandardScaler().fit(data)
         data_normalized = scaler.transform(data)
         max_lag = self._params['p']
