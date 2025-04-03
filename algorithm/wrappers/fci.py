@@ -28,7 +28,7 @@ class FCI(CausalDiscoveryAlgorithm):
         self._params = {
             'alpha': 0.05,
             'indep_test': 'fisherz',
-            'depth': 3, # -1,
+            'depth': 4, # -1,
             'max_path_length': -1,
             'verbose': False,
             'background_knowledge': None,
@@ -52,6 +52,10 @@ class FCI(CausalDiscoveryAlgorithm):
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, Tuple[CausalGraph, List]]:
+        # Check and remove domain_index if it exists
+        if 'domain_index' in data.columns:
+            data = data.drop(columns=['domain_index'])
+            
         node_names = list(data.columns)
         data_values = data.values
 
@@ -109,25 +113,42 @@ class FCI(CausalDiscoveryAlgorithm):
         
         df = pd.DataFrame({'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5})
 
+        # Define the dataset path
+        dataset_name = "1_basic_scenarios/mlp_gaussian_extra_large_sample/20250401_222842_seed_0_nodes10_samples10000"
+        base_dir = os.path.join(root_dir, "simulated_data", "copilot_benchmark_v3")
+        
+        # Load the data
+        data_file = [os.path.join(base_dir, dataset_name, file) for file in os.listdir(os.path.join(base_dir, dataset_name)) if file.endswith(".csv")][0]
+        graph_file = [os.path.join(base_dir, dataset_name, file) for file in os.listdir(os.path.join(base_dir, dataset_name)) if file.endswith(".npy")][0]
+        
+        # Load the data and ground truth graph
+        df = pd.read_csv(data_file)
+        gt_graph = np.load(graph_file)
+        
+        print(f"Loaded dataset from {dataset_name}")
+        print(f"Data shape: {df.shape}")
+        print(f"Ground truth graph shape: {gt_graph.shape}")
+
         print("Testing FCI algorithm with pandas DataFrame:")
         params = {
             'alpha': 0.05,
-            'indep_test': 'fisherz',
+            'indep_test': 'rcit',
             'verbose': False,
-            'show_progress': False
+            'show_progress': True
         }
+        self._params.update(params)
         adj_matrix, info, _ = self.fit(df)
         print("Adjacency Matrix:")
         print(adj_matrix)
 
-        # Ground truth graph
-        gt_graph = np.array([
-            [0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0],
-            [1, 1, 0, 0, 0],
-            [0, 1, 0, 0, 0],
-            [0, 0, 1, 1, 0]
-        ])
+        # # # Ground truth graph
+        # gt_graph = np.array([
+        #     [0, 0, 0, 0, 0],
+        #     [1, 0, 0, 0, 0],
+        #     [1, 1, 0, 0, 0],
+        #     [0, 1, 0, 0, 0],
+        #     [0, 0, 1, 1, 0]
+        # ])
 
         # Use GraphEvaluator to compute metrics
         evaluator = GraphEvaluator()
@@ -138,3 +159,7 @@ class FCI(CausalDiscoveryAlgorithm):
         print(f"Precision: {metrics['precision']:.4f}")
         print(f"Recall: {metrics['recall']:.4f}")
         print(f"SHD: {metrics['shd']:.4f}")
+
+if __name__ == "__main__":
+    fci = FCI()
+    fci.test_algorithm()

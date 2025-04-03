@@ -27,7 +27,7 @@ class PC(CausalDiscoveryAlgorithm):
         self._params = {
             'alpha': 0.05,
             'indep_test': 'fisherz',
-            'depth': -1,
+            'depth': 4,
             'stable': True,
             'uc_rule': 0,
             'uc_priority': -1,

@@ -67,6 +67,10 @@ class NOTEARSNonlinear(CausalDiscoveryAlgorithm):
             info: Additional information from the algorithm
             model: Fitted model object
         """
+        # Check and remove domain_index if it exists
+        if isinstance(data, pd.DataFrame) and 'domain_index' in data.columns:
+            data = data.drop(columns=['domain_index'])
+            
         if isinstance(data, pd.DataFrame):
             node_names = list(data.columns)
             data = data.values

@@ -36,11 +36,11 @@ class CDNOD(CausalDiscoveryAlgorithm):
         super().__init__(params)
         self._params = {
             'alpha': 0.05,
-            'indep_test': 'fisherz_cpu',  # Default to CPU KCI
+            'indep_test': 'fisherz_cpu',
             'stable': True,
             'uc_rule': 0,
             'uc_priority': 2,
-            'depth': 4, #-1,
+            'depth': 5, #-1,
             'mvcdnod': False,
             'correction_name': 'MV_Crtn_Fisher_Z',
             'background_knowledge': None,
@@ -151,21 +151,41 @@ class CDNOD(CausalDiscoveryAlgorithm):
         # Generate sample data with linear relationships and multiple domains
         np.random.seed(42)
         n_samples = 1000
-        n_nodes = 5
-        n_domains = 3
-        edge_probability = 0.3
+        n_nodes = 10
+        n_domains = 10
+        # 0.5 prob = 2 / 4
+        # 0.095 prob = 2 / 9
+        edge_probability = 2/9 # 2/(n_nodes - 1)
+        # print(f"Edge probability: {edge_probability}")
         
         # Create a DataSimulator instance
         simulator = DataSimulator()
                 
         # Generate multi-domain data with the same graph structure but domain-specific parameters
         gt_graph, df = simulator.generate_dataset(n_samples=n_samples, n_nodes=n_nodes, noise_type='gaussian',
-                               function_type='linear', edge_probability=edge_probability, n_domains=n_domains)
+                               function_type='mlp', edge_probability=edge_probability, n_domains=n_domains)
+
+        # Fill missing values with 0 (as done in the benchmarking code)
+        # df = df.fillna(0)
+        
+        # Ensure domain_index column exists
+        if 'domain_index' not in df.columns:
+            print("Warning: domain_index column not found in the dataset. Adding a default domain index.")
+            df['domain_index'] = np.ones(df.shape[0])
                 
         print(f"Testing CDNOD algorithm with {n_domains} domains:")
         print(f"Domain distribution: {df['domain_index'].value_counts().sort_index().values}")
         print(f"Ground truth graph structure:")
         print(gt_graph)
+
+        pc = PC()
+        print("Indep test: ", pc._params['indep_test'])
+        # Test CPU implementation
+        print("\nRunning CPU implementation:")
+        start_time = time.time()
+        adj_matrix_pc, info_pc, _ = pc.fit(df)
+        time_elapsed = time.time() - start_time
+        print(f"Time elapsed: {time_elapsed:.4f} seconds")
 
         cdnod = CDNOD()
         print("Indep test: ", cdnod._params['indep_test'])
@@ -176,16 +196,16 @@ class CDNOD(CausalDiscoveryAlgorithm):
         time_elapsed = time.time() - start_time
         print(f"Time elapsed: {time_elapsed:.4f} seconds")
 
-        cdnod_nl = CDNOD({'indep_test': 'kci_cpu'})
-        print("Indep test: ", cdnod_nl._params['indep_test'])
-        # Test CPU implementation
-        print("\nRunning CPU implementation:")
-        start_time = time.time()
-        adj_matrix_nl, info_nl, _ = cdnod_nl.fit(df)
-        time_elapsed = time.time() - start_time
-        print(f"Time elapsed: {time_elapsed:.4f} seconds")
+        # cdnod_nl = CDNOD({'indep_test': 'kci_cpu'})
+        # print("Indep test: ", cdnod_nl._params['indep_test'])
+        # # Test CPU implementation
+        # print("\nRunning CPU implementation:")
+        # start_time = time.time()
+        # adj_matrix_nl, info_nl, _ = cdnod_nl.fit(df)
+        # time_elapsed = time.time() - start_time
+        # print(f"Time elapsed: {time_elapsed:.4f} seconds")
 
-        cdnod_cmi = CDNOD({'indep_test': 'cmiknn_gpu'})
+        cdnod_cmi = CDNOD({'indep_test': 'rcit_cpu'})
         print("Indep test: ", cdnod_cmi._params['indep_test'])
         # Test CPU implementation
         print("\nRunning CPU implementation:")
@@ -197,12 +217,14 @@ class CDNOD(CausalDiscoveryAlgorithm):
         # Use GraphEvaluator to compute metrics
         evaluator = GraphEvaluator()
         metrics = evaluator.compute_metrics(gt_graph, adj_matrix)
-        metrics_nl = evaluator.compute_metrics(gt_graph, adj_matrix_nl)
+        # metrics_nl = evaluator.compute_metrics(gt_graph, adj_matrix_nl)
         metrics_cmi = evaluator.compute_metrics(gt_graph, adj_matrix_cmi)
+        metrics_pc = evaluator.compute_metrics(gt_graph, adj_matrix_pc)
 
         print(f"\nMetrics: {'|'.join([f'{k}: {v:.3f}' for k, v in metrics.items() if k != 'best_graph'])}")
-        print(f"NL Metrics: {'|'.join([f'{k}: {v:.3f}' for k, v in metrics_nl.items() if k != 'best_graph'])}")
+        # print(f"NL Metrics: {'|'.join([f'{k}: {v:.3f}' for k, v in metrics_nl.items() if k != 'best_graph'])}")
         print(f"CMI Metrics: {'|'.join([f'{k}: {v:.3f}' for k, v in metrics_cmi.items() if k != 'best_graph'])}")
+        print(f"PC Metrics: {'|'.join([f'{k}: {v:.3f}' for k, v in metrics_pc.items() if k != 'best_graph'])}")
 
 if __name__ == "__main__":
     cdnod = CDNOD()

@@ -345,18 +345,22 @@ class GraphEvaluator:
         true_edges = (true_graph != self.EDGE_TYPES['no_edge']).astype(int)
         pred_edges = (pred_graph != self.EDGE_TYPES['no_edge']).astype(int)
         
-        # Compute true positives, false positives, false negatives
-        tp = np.sum((true_edges == 1) & (pred_edges == 1))
-        fp = np.sum((true_edges == 0) & (pred_edges == 1))
-        fn = np.sum((true_edges == 1) & (pred_edges == 0))
+        # Create masks to skip diagonal elements (no self-loops)
+        n = true_edges.shape[0]
+        mask = ~np.eye(n, dtype=bool)
+        
+        # Apply mask to compute true positives, false positives, false negatives
+        tp = np.sum((true_edges[mask] == 1) & (pred_edges[mask] == 1))
+        fp = np.sum((true_edges[mask] == 0) & (pred_edges[mask] == 1))
+        fn = np.sum((true_edges[mask] == 1) & (pred_edges[mask] == 0))
         
         # Compute metrics
         precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
         recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
         f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
         
-        # Compute SHD
-        shd = np.sum(true_edges != pred_edges)
+        # Compute SHD (skipping diagonal elements)
+        shd = np.sum(true_edges[mask] != pred_edges[mask])
         
         return {
             'precision': precision,

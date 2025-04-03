@@ -131,7 +131,10 @@ class SEMBicScore:
     def local_score_diff_parents(self, node1, node2, parents):
         parents = frozenset(parents)
         r = self.recursive_partial_corr(node1, node2, parents)
-        return -self.sample_size * math.log(1.0 - r * r) - self.penalty * math.log(self.sample_size)
+        # Clamp r to avoid perfect correlation edge cases
+        r = max(min(r, 0.9999), -0.9999)
+        # Add small epsilon to avoid math domain error
+        return -self.sample_size * math.log(1.0 - r * r + 1e-10) - self.penalty * math.log(self.sample_size)
         #return self.local_score(node2, parents + [node1]) - self.local_score(node2, parents)
 
     def local_score_diff(self, node1, node2):

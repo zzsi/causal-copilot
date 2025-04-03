@@ -198,6 +198,9 @@ def grasp(
         order.set_local_score(y, local_score)
         order.bump_edges(len(y_parents))
 
+    if depth < 0:
+        depth = X.shape[1]
+
     while dfs(depth - 1, set(), [], order, gsts):
         if verbose:
             sys.stdout.write("\rGRaSP edge count: %i    " % order.get_edges())

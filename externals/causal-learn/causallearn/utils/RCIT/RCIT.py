@@ -16,7 +16,7 @@ class RCIT(object):
     [1] Strobl, E. V., Zhang, K., and Visweswaran, S. (2019). "Approximate kernel-based conditional
     independence tests for fast non-parametric causal discovery." Journal of Causal Inference, 7(1), 20180017.
     """
-    def __init__(self, approx="lpd4", num_f=100, num_f2=5, rcit=True):
+    def __init__(self, approx="lpd4", num_f=100, num_f2=5, rcit=False):
         """
         Initialize the RCIT object.
 

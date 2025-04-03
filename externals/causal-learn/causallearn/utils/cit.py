@@ -211,19 +211,25 @@ class FastKCI(CIT_Base):
         kci_ci_kwargs = {k: v for k, v in kwargs.items() if k in
                          ['K', 'J', 'alpha', 'use_gp']}
         self.check_cache_method_consistent(
-            'kci', hashlib.md5(json.dumps(kci_ci_kwargs, sort_keys=True).encode('utf-8')).hexdigest())
+            'fastkci', hashlib.md5(json.dumps(kci_ci_kwargs, sort_keys=True).encode('utf-8')).hexdigest())
         self.assert_input_data_is_valid()
         self.kci_ui = FastKCI_UInd(**kci_ui_kwargs)
         self.kci_ci = FastKCI_CInd(**kci_ci_kwargs)
+        self.kci_backup = KCI(data, **kwargs)  # Initialize KCI as a backup
 
     def __call__(self, X, Y, condition_set=None):
-        # Kernel-based conditional independence test.
+        # Kernel-based conditional independence test with FastKCI and KCI as backup.
         Xs, Ys, condition_set, cache_key = self.get_formatted_XYZ_and_cachekey(X, Y, condition_set)
         if cache_key in self.pvalue_cache: return self.pvalue_cache[cache_key]
-        p = self.kci_ui.compute_pvalue(self.data[:, Xs], self.data[:, Ys])[0] if len(condition_set) == 0 else \
-            self.kci_ci.compute_pvalue(self.data[:, Xs], self.data[:, Ys], self.data[:, condition_set])[0]
+        try:
+            p = self.kci_ui.compute_pvalue(self.data[:, Xs], self.data[:, Ys])[0] if len(condition_set) == 0 else \
+                self.kci_ci.compute_pvalue(self.data[:, Xs], self.data[:, Ys], self.data[:, condition_set])[0]
+        except Exception as e:
+            print(f"FastKCI encountered an error: {e}. Falling back to KCI.")
+            p = self.kci_backup(X, Y, condition_set)
         self.pvalue_cache[cache_key] = p
         return p
+
 
 class RCIT(CIT_Base):
     def __init__(self, data, **kwargs):

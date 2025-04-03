@@ -2,29 +2,17 @@
   "algorithm_name": "GOLEM",
   "lambda_1": {
     "meaning": "L1 regularization parameter for sparsity",
-    "available_values": {
-      "default": 0.01,
-      "sparse": 0.1,
-      "dense": 0.001
-    },
-    "expert_suggestion": "Higher values promote sparser graphs, lower values allow more connections."
+    "available_values": [0.01, 0.1, 0.001],
+    "expert_suggestion": "Use 0.01 as default. Higher values promote sparser graphs, lower values allow more connections."
   },
   "num_iter": {
     "meaning": "Maximum number of dual ascent steps during optimization",
-    "available_values": {
-      "default": 10000,
-      "medium": 50000,
-      "thorough": 100000
-    },
-    "expert_suggestion": "Increase for more complex graphs and functional relationships."
+    "available_values": [10000, 50000, 100000],
+    "expert_suggestion": "Use 10000 as default. Increase for more complex graphs and functional relationships."
   },
   "graph_thres": {
     "meaning": "Threshold for edge weights in adjacency matrix",
-    "available_values": {
-      "default": 0.3,
-      "conservative": 0.5,
-      "liberal": 0.1
-    },
-    "expert_suggestion": "Higher values lead to sparser graphs by pruning weak connections, which is a kind of implicit sparsity."
+    "available_values": [0.3, 0.5, 0.1],
+    "expert_suggestion": "Use 0.3 as default. Higher values lead to sparser graphs by pruning weak connections, which is a kind of implicit sparsity."
   }
 } 

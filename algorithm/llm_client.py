@@ -7,7 +7,7 @@ class LLMClient:
         self.client = OpenAI()
         self.model = "gpt-4o-mini"  # Default model
 
-    def chat_completion(self, prompt, system_prompt="You are a helpful assistant.", json_response=False, model=None):
+    def chat_completion(self, prompt, system_prompt="You are a helpful assistant.", json_response=False, model=None,  temperature=0.0):
         """
         Send a chat completion request to the LLM.
         
@@ -31,6 +31,8 @@ class LLMClient:
         
         if json_response:
             kwargs["response_format"] = {"type": "json_object"}
+
+        kwargs["temperature"] = temperature
 
         messages = self.client.chat.completions.create(**kwargs).choices[0].message.content
 

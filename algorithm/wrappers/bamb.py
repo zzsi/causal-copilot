@@ -56,6 +56,10 @@ class BAMB(CausalDiscoveryAlgorithm):
             - adj_matrix: numpy array representing the adjacency matrix
             - info: dictionary with additional information
         """
+        # Check and remove domain_index if it exists
+        if 'domain_index' in data.columns:
+            data = data.drop(columns=['domain_index'])
+            
         n_vars = data.shape[1]
         mb_dict = {}  # Dictionary to store MB results
         

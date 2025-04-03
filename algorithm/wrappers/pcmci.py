@@ -52,6 +52,10 @@ class PCMCI(CausalDiscoveryAlgorithm):
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, PCMCI_model]:
+        # Check and remove domain_index if it exists
+        if 'domain_index' in data.columns:
+            data = data.drop(columns=['domain_index'])
+            
         # PCMCI
         node_names = list(data.columns)
         data_t = pp.DataFrame(data.values, var_names=node_names)

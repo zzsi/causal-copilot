@@ -53,6 +53,10 @@ class CALM(CausalDiscoveryAlgorithm):
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, Dict]:
+        # Check and remove domain_index if it exists
+        if 'domain_index' in data.columns:
+            data = data.drop(columns=['domain_index'])
+            
         # Convert data to numpy array
         X = data.values
 

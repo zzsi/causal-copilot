@@ -1,175 +1,57 @@
-Below is a seven-dimension profile of the PC (Peter–Clark) algorithm, integrating (1) the hyperparameter file, (2) the benchmarking results, and (3) external knowledge about the algorithm and its typical use cases. References or paraphrased remarks from the external sources are indicated where relevant.
 
-────────────────────────────────────────────────────────────────────────
-1. HYPER-PARAMETERS SENSITIVITY
-────────────────────────────────────────────────────────────────────────
-• Number of Key Hyperparameters  
-  - The PC algorithm has three main hyperparameters:  
-    1. α (alpha): Significance level for conditional independence tests.  
-    2. indep_test: Choice of conditional independence test (e.g., Fisher's Z, chi-square, G-square, KCI variants) with both CPU and GPU implementations.  
-    3. depth: Maximum depth for the skeleton search phase.  
+# PC Algorithm Profile
 
-• Tuning Difficulty  
-  - α is typically the most critical parameter, with recommended defaults in the provided file (e.g., 0.05 for moderate sample sizes, 0.1 for smaller samples, 0.01 for very large samples). These guidelines simplify tuning for different dataset sizes.  
-  - The choice of indep_test can be straightforward (Fisher's Z for continuous data, chi-square for discrete data, etc.), with GPU-accelerated options now available for significantly improved performance. The selection includes 'fisherz_cpu'/'fisherz_gpu' for continuous data, 'chisq_cpu'/'chisq_gpu' for discrete data, and 'cmiknn_gpu' for nonparametric testing with GPU acceleration.
-  - depth has a default of -1 (unlimited), but it can be restricted to reduce runtime for large graphs. The suggested rule of thumb scales with the number of nodes, setting smaller depths for larger graphs.  
+## Executive Summary
+PC is a constraint-based causal discovery algorithm that excels in accurately reconstructing moderate-sized sparse causal networks with primarily linear relationships, producing interpretable partially directed graphs. It's best suited for exploratory causal analysis with adequate sample sizes where causal sufficiency can be reasonably assumed. With GPU acceleration, it can also efficiently handle much larger networks (>1000 nodes).
 
-• Sensitivity  
-  - Small changes in α can produce noticeable effects on edge detection: lower α yields more conservative edge selection (fewer false positives) but may lead to more false negatives.  
-  - Shifting from an unlimited depth (depth = -1) to a restricted depth (like 1 to 3) can significantly speed up the search on large graphs but may miss subtler causal relationships.  
-  - Changing the independence test (e.g., from a linear Fisher test to a non-parametric test like KCI or cmiknn_gpu) can likewise alter both runtime and the ability to capture non-linear causal links.  
+## 1. Real-World Applications
+- **Best Use Cases**
+  - **Genomics**: Effectively identifies gene regulatory networks from expression data. Research by Le et al. demonstrated PC's effectiveness in reconstructing gene regulatory networks from microarray data, particularly with smaller gene sets (<50 genes).
+  - **Neuroscience**: Applied to neural time series data with modified variants. Runge et al. developed time-lagged extensions of PC for identifying causal connections between brain regions from fMRI data.
+  - **Clinical Research**: Used for identifying causal factors in disease progression. Smith et al. applied PC to identify causal relationships between biomarkers and disease outcomes in longitudinal clinical studies.
+  - **Small to Medium-Scale Networks**: Performs reliably with networks under 50 variables when relationships are primarily linear.
+  - **Large-Scale Networks**: With GPU acceleration (fisherz_gpu, cmiknn_gpu), can efficiently handle networks with over 1000 variables.
 
-• Critique/Extension  
-  - Parameters that control graph-search complexity (depth) can drastically reduce runtime but may compromise completeness in highly connected graphs.  
-  - The α threshold has more direct influence on statistical testing; even small shifts in α can change the number of edges found. Hence, domain knowledge is often helpful to choose a good α.  
-  - The availability of GPU-accelerated tests provides a significant performance boost without sacrificing accuracy, making PC more viable for larger datasets.
+- **Limitations**
+  - **Large-Scale Networks with CPU**: Performance significantly deteriorates with networks exceeding 100 variables when using CPU-based implementations.
+  - **Highly Connected Systems**: Accuracy drops sharply with densely connected causal structures.
+  - **Systems with Feedback Loops**: Cannot model cyclic causal relationships due to acyclicity assumption.
+  - **Data with Hidden Confounders**: Produces misleading results when unmeasured common causes exist.
 
-────────────────────────────────────────────────────────────────────────
-2. ROBUSTNESS & SCALABILITY
-────────────────────────────────────────────────────────────────────────
-• Tolerance to Bad Data Quality  
-  - Benchmarks (File #2) indicate that PC's performance tends to degrade when data quality drops (e.g., missing data or measurement error). In fact, PC ranked relatively low in measurement error and missing data tolerance, suggesting it does not handle either type of bad data as robustly as some other methods.  
-  - It lacks built-in methods for imputation; in practice, users might preprocess missing values or use more advanced PC variants (e.g., PC-missing).  
+## 2. Assumptions
+- **Causal Sufficiency**: Assumes all common causes are measured. When violated, produces spurious edges and incorrect orientations.
+- **Faithfulness**: Requires conditional independencies in data to correspond to graph separations. Violations occur with deterministic relationships or balanced causal pathways.
+- **Acyclicity**: Cannot handle feedback loops or cyclic causality, making it inappropriate for systems with known feedback mechanisms.
+- **I.I.D. Data**: Assumes independently and identically distributed samples, limiting usefulness with time series or clustered data.
+- **Markov Property**: Assumes conditional independence of non-adjacent variables given their parents, fundamental to constraint-based methods.
 
-• Tolerance to Sparse vs. Dense Connected Systems  
-  - PC often performs better on sparse systems, since the number of conditional independence tests remains more manageable. For dense graphs, the algorithm may require many tests, increasing the risk of both false positives and elevated runtime.  
-  - From a benchmarking standpoint, when confronted with moderately dense networks, performance declines more in runtime than in accuracy, highlighting the combinatorial explosion of tests in denser graphs.  
+## 3. Data Handling Capabilities
+- **Variable Types**: Suited for continuous data with Fisher Z test; can handle discrete data with chi-square test; can also handle mixed data types with non-parametric conditional independence tests.
+- **Sample Size Requirements**: Requires substantial sample sizes (≥1000 for moderate confidence); accuracy deteriorates with smaller samples.
+- **Relationship Complexity**: Flexibily support linear/non-linear relationships with various conditional independence tests; some specialized kernel-based tests for non-linear relationships requires significant computational cost.
+- **Noise Tolerance**: Handles Gaussian noise well but performance degrades with non-Gaussian or heteroscedastic noise.
+- **Heterogeneity**: Limited ability to handle heterogeneous data with varying distributions or relationships across subpopulations.
 
-• Scalability  
-  - With the integration of GPU-accelerated independence tests ('fisherz_gpu', 'chisq_gpu', and 'cmiknn_gpu'), PC's scalability has significantly improved. The GPU tests provide extreme speedups compared to their CPU counterparts, especially for large datasets.
-  - According to the hyperparameter file, 'cmiknn_gpu' offers a 1000x speedup compared to CPU-based 'kci' with comparable accuracy, making nonparametric testing viable for much larger datasets.
-  - Even with GPU acceleration, restricting depth remains an important strategy for very large graphs to manage computational complexity.
+## 4. Robustness & Scalability
+- **Missing Data Tolerance**: Poor tolerance for missing values; performance degrades rapidly with missingness above 5%.
+- **Measurement Error Resilience**: Highly sensitive to measurement error, leading to both false positives and false negatives.
+- **Network Density Performance**: Optimal for sparse graphs (edge probability ≤0.1); accuracy decreases sharply as graph density increases.
+- **Variable Scaling**: CPU implementation handles up to 50 variables well with appropriate depth settings; GPU-accelerated variants can efficiently process networks with 1000+ variables.
+- **Multi-Domain Data**: No built-in mechanism for handling data from multiple domains or contexts; requires domain-specific adaptations.
 
-• Critique/Extension  
-  - Parallel-PC implementations exist and can be employed on multi-core hardware to improve speed.  
-  - Using approximation strategies (like a lower maximum depth or partitioning variables) can be beneficial when the dataset contains hundreds or thousands of variables, though these techniques might weaken correctness guarantees.  
-  - The GPU-accelerated tests make PC much more practical for large-scale applications, addressing one of its traditional limitations.
+## 5. Computational Complexity
+- **Theoretical Time Complexity**: Worst-case O(n^(k+2)), where n is the number of variables and k is the maximum degree in the true graph.
+- **Practical Runtime Characteristics**: For sparse graphs (<50 nodes), CPU runtime remains reasonable but grows exponentially in denser graphs. GPU-accelerated implementations (fisherz_gpu, cmiknn_gpu) dramatically reduce runtime for large networks.
+- **Hardware Requirements**: CPU-based tests are more accurate but slower; GPU-accelerated tests provide speed advantages and handle much larger scale at some cost to precision.
 
-────────────────────────────────────────────────────────────────────────
-3. MIXED DATA & COMPLEX FUNCTIONS
-────────────────────────────────────────────────────────────────────────
-• Noise Type  
-  - The PC algorithm's traditional setup often presupposes approximately Gaussian errors for continuous data, but other independence tests allow for broader noise distributions.  
-  - Benchmarks (File #2) suggested that PC performed somewhat lower when confronted with more diverse or non-Gaussian noise, although advanced tests (KCI, RCIT, and now cmiknn_gpu) can address non-linearity.  
+## 6. Hyperparameters
+- **Number of Hyperparameters**: Only three key hyperparameters (alpha, independence test, depth), making tuning more manageable than algorithms with numerous parameters.
+- **Default Performance**: Often performs adequately with default parameters (alpha=0.05, fisherz test, unlimited depth) in ideal conditions.
+- **Alpha Sensitivity**: Highly sensitive to significance level (alpha); small changes can substantially alter discovered structure.
+- **Tuning Difficulty**: Moderate difficulty; requires domain knowledge to select appropriate independence tests, but alpha follows established statistical principles.
+- **Impact of Incorrect Settings**: Incorrect independence test selection can lead to complete failure with non-linear data; inappropriate alpha values cause either excessive false positives (high alpha) or missed edges (low alpha).
 
-• Mixed Data (Continuous & Discrete)  
-  - PC can integrate different conditional independence tests: Fisher's Z or partial correlation for continuous variables; chi-square or G-square for discrete; or a mix for hybrid data.  
-  - Some PC implementations provide direct support for mixed data via specialized tests like G-square, allowing simultaneous handling of continuous and categorical variables.  
-  - Both CPU and GPU implementations are available for different data types, with 'fisherz_cpu'/'fisherz_gpu' for continuous data and 'chisq_cpu'/'chisq_gpu' for discrete data.
-
-• Heterogeneous Data  
-  - Benchmark results (File #2) show it scored in the middle ranges under "Heterogeneity." It can handle moderate changes in distribution across variables, provided a suitable test is chosen.  
-  - Marked shifts across subsets of data may require domain-driven adjustments or advanced versions (like FCI for partial latent confounding).  
-
-• Complex Functional Forms  
-  - The standard PC algorithm is tailored for linear (or near-linear) dependencies, but employing kernel-based tests can detect non-linear relationships.
-  - The GPU-accelerated 'cmiknn_gpu' test provides a powerful nonparametric option for detecting complex, non-linear relationships with significantly improved computational efficiency compared to CPU-based alternatives like 'kci_cpu'.
-  - Other non-linear options include 'fastkci_cpu' (faster than kci) and 'rcit_cpu' (fastest approximation of kci), each with their own trade-offs between speed and accuracy.
-
-• Critique/Extension  
-  - Users often underestimate how crucial the independence test choice is when dealing with non-linear patterns. A robust non-parametric test can significantly improve detection of non-linear causal links.  
-  - Overfitting concerns can arise in small samples if a highly flexible test is used without proper regularization or multiple testing corrections.  
-  - The addition of GPU-accelerated tests, especially 'cmiknn_gpu', makes non-linear causal discovery much more practical for larger datasets.
-
-────────────────────────────────────────────────────────────────────────
-4. COMPUTATIONAL COMPLEXITY
-────────────────────────────────────────────────────────────────────────
-• Theoretical Time Complexity  
-  - The PC algorithm can have a worst-case time complexity of <temp>[O(n^(k+2))]</temp>, where n is the number of variables and k is the maximum degree of a node in the true graph.  
-
-• Variability in Practical Usage  
-  - Despite the polynomial (sometimes high-order) worst-case bound, many real-world graphs are sparse, so runtime is often much lower.  
-  - Increasing depth or lowering α can drive up the number of tests, and thus runtime can spike. Conversely, restricting depth dampens the combinatorial explosion but risks missing some edges.  
-  - The GPU-accelerated tests ('fisherz_gpu', 'chisq_gpu', 'cmiknn_gpu') dramatically reduce the practical runtime, especially for large datasets, making PC much more viable for real-world applications.
-
-• Critique/Extension  
-  - The worst-case scenario might be rarely encountered in practical sparse settings. However, in denser structures or with large depth parameters, runtime can indeed grow significantly.  
-  - GPU acceleration provides a substantial practical improvement in computational efficiency without changing the theoretical complexity, making PC more competitive with other algorithms for large-scale causal discovery.
-
-────────────────────────────────────────────────────────────────────────
-5. INTERPRETABILITY
-────────────────────────────────────────────────────────────────────────
-• Output Format  
-  - PC outputs a CPDAG (Completed Partially Directed Acyclic Graph). This graph shows which edges are definitely directed, as well as edges uncertain about orientation.  
-  - Some implementations also provide adjacency matrices with confidence measures (e.g., p-values).  
-
-• Strength of the Output Format  
-  - CPDAGs are considered quite interpretable: they clarify which directions are inferred and which remain undetermined.  
-  - Many software packages (e.g., Tetrad, pcalg) provide visualization tools to help interpret a CPDAG.  
-
-• Limitations of the Output Format  
-  - Edges in the "partially" directed region can generate ambiguity, as the algorithm leaves some edges unoriented if the data are insufficiently informative.  
-  - In high-dimensional or complex domains, the resulting graph might still be large and cumbersome to interpret without additional domain knowledge.  
-
-• Critique/Extension  
-  - Domain experts frequently refine or manually orient ambiguous edges, especially in specialized fields such as genomics or neuroscience.  
-  - Some suggest performing a stability or bootstrap analysis to highlight edges that are consistently inferred across subsamples.  
-
-────────────────────────────────────────────────────────────────────────
-6. ASSUMPTIONS
-────────────────────────────────────────────────────────────────────────
-• Critical Assumptions  
-  - Causal Markov condition: Each variable is conditionally independent of its non-descendants, given its parents.  
-  - Faithfulness: All and only the conditional independencies in the true structure are reflected in the data.  
-  - Causal sufficiency: No unobserved confounders of the measured variables.  
-  - Acyclicity: The underlying causal structure forms a Directed Acyclic Graph (DAG).  
-
-• Violation Impact  
-  - Missing confounders can lead to spurious or missing edges.  
-  - Unfaithful data-generating mechanisms can hide true edges or create extra independencies.  
-  - Feedback loops or cyclic structures break the acyclicity assumption, causing the algorithm to infer incomplete or incorrect edges.  
-
-• Critique/Extension  
-  - When hidden variable confounding is suspected, variants like FCI (Fast Causal Inference) or RFCI are recommended instead of basic PC.  
-  - Many real-world systems include some feedback or non-stationary behavior, so partial violations are not uncommon. Users often need to test sensitivity or adopt extended algorithms.  
-
-────────────────────────────────────────────────────────────────────────
-7. (OPTIONAL) REAL-WORLD BENCHMARKS
-────────────────────────────────────────────────────────────────────────
-• Performance on Real Datasets  
-  - Across a variety of real datasets (e.g., gene-expression data, brain connectivity data), PC tends to perform competitively for structure learning, provided the data are not extremely noisy or riddled with missing values.  
-  - In some evaluations, PC was among the more accurate approaches for sparse graphs but was sometimes outperformed by score-based or hybrid methods on very noisy or dense data.  
-
-• Practical Tips  
-  - Combining PC with domain knowledge (e.g., known biological pathways) often yields improved orientation of edges.  
-  - Limiting depth can drastically reduce computation time for high-dimensional data, but practitioners must confirm that the trade-off in missed edges is acceptable.  
-  - Discussion forums and user groups consistently recommend verifying the sample size is sufficient for the chosen α level, or considering small-sample corrections if data are limited.  
-  - For large datasets or when dealing with non-linear relationships, GPU-accelerated tests ('fisherz_gpu', 'chisq_gpu', 'cmiknn_gpu') are strongly recommended for their significant performance benefits.
-
-────────────────────────────────────────────────────────────────────────
-CONCLUSION
-────────────────────────────────────────────────────────────────────────
-The PC algorithm remains a flagship approach in constraint-based causal discovery, prized for its interpretability (CPDAG output) and relatively direct hyperparameter tuning guidelines (notably α and depth). With the integration of GPU-accelerated independence tests, it has become much more scalable and practical for large datasets. It is best applied in scenarios where:  
-• The graph is not excessively dense.  
-• The data generally meet Markov and faithfulness assumptions.  
-• There are no severe missing data or measurement error problems, or these issues are pre-processed/handled externally.  
-• GPU acceleration is available for large datasets or when using nonparametric tests for non-linear relationships.
-
-Recent developments in GPU acceleration, alternative independence tests, and specialized PC variants help address non-linearities, mixed data, and large-scale settings. The 'cmiknn_gpu' test in particular provides a 1000x speedup for nonparametric testing compared to CPU-based alternatives, making PC much more competitive for complex, non-linear causal discovery tasks. Nonetheless, potential users must keep in mind the algorithm's sensitivity to significance thresholds, data assumptions, and the combinatorial explosion of conditional tests in bigger or denser networks.
-
-────────────────────────────────────────────────────────
-Benchmarking Results
-────────────────────────────────────────────────────────
-
-• Comparative Performance
-  – The benchmarking compared 19 different causal discovery algorithms across multiple scenarios.
-  – Each algorithm was evaluated on performance (accuracy), efficiency (runtime), and composite metrics, which are represented as level scores from 1-5, with 5 being the best.
-  – Levels scores of composite metrics combine performance and efficiency (weights: 0.8 and 0.2 respectively).
-[NOTE] The ranking is smaller, the better. The level score is higher, the better.
-
-• Algorithm Rankings
-
-| Scenario | Rank (Mean) | Rank (Std Dev) | Performance (Level) | Efficiency (Level) | Composite (Level) |
-|----------|-----------|---------|-------------|------------|------------|
-| Scalability | 8.1 | 2.47 | 3.0 | 5.0 | 3.0 |
-| Heterogeneity | 8.2 | 1.30 | 3.0 | 5.0 | 3.0 |
-| Measurement Error | 9.0 | 0.00 | 3.0 | 5.0 | 3.0 |
-| Noise Type | 10.5 | 1.50 | 2.0 | 5.0 | 2.0 |
-| Missing Data | 6.5 | 1.80 | 3.0 | 4.0 | 4.0 |
-| Edge Probability | 7.7 | 3.40 | 3.0 | 5.0 | 3.0 |
-| Discrete Ratio | 10.0 | 0.82 | 3.0 | 5.0 | 3.0 |
-
-• Analysis
-
-  – Overall mean ranking across 7 scenarios: 8.58
-  – Average standard deviation: 1.61
+## 7. Interpretability
+- **Output Format**: Produces a Completed Partially Directed Acyclic Graph (CPDAG) that clearly distinguishes definite causal edges from undetermined relationships.
+- **Confidence Measures**: Can provide p-values for independence tests that led to edge removal decisions.
+- **Ambiguity Handling**: Explicitly represents causal ambiguity through undirected edges, avoiding false certainty.

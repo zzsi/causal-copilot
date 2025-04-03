@@ -59,6 +59,10 @@ class InterIAMB(CausalDiscoveryAlgorithm):
         n_vars = data.shape[1]
         mb_dict = {}  # Dictionary to store MB results
         
+        # Check and remove domain_index if it exists
+        if 'domain_index' in data.columns:
+            data = data.drop(columns=['domain_index'])
+            
         params = {**self.get_primary_params(), **self.get_secondary_params()}
         total_ci_tests = 0
         

@@ -25,7 +25,7 @@ class GRaSP(CausalDiscoveryAlgorithm):
         super().__init__(params)
         self._params = {
             'score_func': 'local_score_BIC_from_cov',
-            'depth': 3,
+            'depth': 4,
             'parameters': None,
             'verbose': False
         }
@@ -47,6 +47,10 @@ class GRaSP(CausalDiscoveryAlgorithm):
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, CausalGraph]:
+        # Check and remove domain_index if it exists
+        if 'domain_index' in data.columns:
+            data = data.drop(columns=['domain_index'])
+            
         node_names = list(data.columns)
         data_values = data.values
 
@@ -101,7 +105,7 @@ class GRaSP(CausalDiscoveryAlgorithm):
         print("Testing GRaSP algorithm with pandas DataFrame:")
         params = {
             'score_func': 'local_score_BIC_from_cov',
-            'depth': 3,
+            'depth': 4,
             'verbose': True
         }
         adj_matrix, info, _ = self.fit(df)

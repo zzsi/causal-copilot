@@ -55,6 +55,10 @@ class MBOR(CausalDiscoveryAlgorithm):
             - adj_matrix: numpy array representing the adjacency matrix with edge type 2 for MB
             - info: dictionary with additional information
         """
+        # Check and remove domain_index if it exists
+        if 'domain_index' in data.columns:
+            data = data.drop(columns=['domain_index'])
+            
         n_vars = data.shape[1]
         adj_matrix = np.zeros((n_vars, n_vars))
         

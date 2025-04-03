@@ -2,46 +2,32 @@
     "algorithm_name": "VARLiNGAM",
     "lags": {
       "meaning": "Number of lags.",
-      "available_values": {
-        "default": 1
-      },
-      "expert_suggestion": "Number of past time lags to search"
+      "available_values": [1],
+      "expert_suggestion": "Use 1 as default. Number of past time lags to search"
     },
     "criterion": {
       "meaning": "Criterion to decide the best lags within lags. Searching the best lags is disabled if criterion is none.",
-      "available_values": {
-        "default": "bic"
-      },
-      "expert_suggestion": "aic - Prioritizes capturing all causal relationships, even at the risk of overfitting, fpe - Aims to fit data as closely as possible, but may overfit, hqic - Balances complexity and fit, bic - More conservative, avoids overfitting by penalizing model complexity."
+      "available_values": ["bic"],
+      "expert_suggestion": "Use bic as default. aic - Prioritizes capturing all causal relationships, even at the risk of overfitting, fpe - Aims to fit data as closely as possible, but may overfit, hqic - Balances complexity and fit, bic - More conservative, avoids overfitting by penalizing model complexity."
     },
     "prune": {
       "meaning": "Whether to prune the adjacency matrix of lags.",
-      "available_values": {
-        "default": true
-      },
-      "expert_suggestion": "If the dataset is noisy or high-dimensional, set prune=True to prevent overfitting, reduce false positives, improving interpretability."
+      "available_values": [true, false],
+      "expert_suggestion": "Use true as default. If the dataset is noisy or high-dimensional, set prune=True to prevent overfitting, reduce false positives, improving interpretability."
     },
     "ar_coefs": {
       "meaning": "Coefficients of AR model. Estimating AR model is skipped if specified.",
-      "available_values": {
-        "default": null
-      },
-      "expert_suggestion": "If previous knowledge about autoregressive relationships exists, set ar_coefs manually to enforce constraints."
+      "available_values": [null],
+      "expert_suggestion": "Use null as default. If previous knowledge about autoregressive relationships exists, set ar_coefs manually to enforce constraints."
     },
     "lingam_model": {
       "meaning": "LiNGAM model for causal discovery. If None, DirectLiNGAM algorithm is selected.",
-      "available_values": {
-        "default": null
-      },
-      "expert_suggestion": "DirectLiNGAM - Standard setting, assumes purely linear causal effects. Alternatively ICA-LiNGAM can be used under strong ICA assumptions on data"
+      "available_values": [null],
+      "expert_suggestion": "Use null as default. DirectLiNGAM - Standard setting, assumes purely linear causal effects. Alternatively ICA-LiNGAM can be used under strong ICA assumptions on data"
     },
     "gpu": {
       "meaning": "Whether to use GPU acceleration.",
-      "available_values": {
-        "default": false,
-        "use_cpu": false,
-        "use_gpu": true
-      },
-      "expert_suggestion": "If GPU is available, set gpu=True to use GPU acceleration. It is recommended to use GPU acceleration for large datasets."
+      "available_values": [false, true],
+      "expert_suggestion": "Use false as default. If GPU is available, set gpu=True to use GPU acceleration. It is recommended to use GPU acceleration for large datasets."
     }
 } 

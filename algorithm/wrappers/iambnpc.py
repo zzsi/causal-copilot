@@ -57,6 +57,10 @@ class IAMBnPC(CausalDiscoveryAlgorithm):
             - info: dictionary with additional information
         """
         from joblib import Parallel, delayed
+        # Check and remove domain_index if it exists
+        if 'domain_index' in data.columns:
+            data = data.drop(columns=['domain_index'])
+            
         n_vars = data.shape[1]
         params = {**self.get_primary_params(), **self.get_secondary_params()}
         results = Parallel(n_jobs=params['n_jobs'])(

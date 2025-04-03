@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from itertools import combinations
+from functools import partial
 from typing import List, Dict, Tuple, Set
 
+import joblib
+import numpy as np
 from numpy import ndarray
 from tqdm.auto import tqdm
 
@@ -14,9 +17,101 @@ from causallearn.utils.cit import *
 from causallearn.utils.PCUtils.BackgroundKnowledge import BackgroundKnowledge
 
 
+def _process_node_pair(
+    x: int, 
+    y: int, 
+    depth: int, 
+    cg: CausalGraph, 
+    alpha: float, 
+    stable: bool, 
+    knowledge: BackgroundKnowledge | None, 
+    verbose: bool
+) -> Tuple[List[Tuple[int, int]], Dict[Tuple[int, int], Set[int]], Dict[Tuple[int, int, Set[int]], float]]:
+    """
+    Process a single node pair for conditional independence testing
+    
+    Parameters
+    ----------
+    x : int, first node index
+    y : int, second node index
+    depth : int, current depth of conditioning set
+    cg : CausalGraph, the current causal graph
+    alpha : float, significance level
+    stable : bool, whether to use stable PC
+    knowledge : background knowledge
+    verbose : bool, whether to print verbose output
+
+    Returns
+    -------
+    edge_removal : list of tuples, edges to remove
+    sepsets_dict : dict, separation sets for each edge
+    test_results : dict, results of conditional independence tests
+    """
+    edge_removal = []
+    sepsets_dict = {}
+    test_results = {}
+    
+    knowledge_ban_edge = False
+    sepsets = set()
+    
+    if knowledge is not None and (
+            knowledge.is_forbidden(cg.G.nodes[x], cg.G.nodes[y])
+            and knowledge.is_forbidden(cg.G.nodes[y], cg.G.nodes[x])):
+        knowledge_ban_edge = True
+        
+    if knowledge_ban_edge:
+        if not stable:
+            edge1 = cg.G.get_edge(cg.G.nodes[x], cg.G.nodes[y])
+            if edge1 is not None:
+                edge_removal.append((x, y))
+            edge2 = cg.G.get_edge(cg.G.nodes[y], cg.G.nodes[x])
+            if edge2 is not None:
+                edge_removal.append((y, x))
+            sepsets_dict[(x, y)] = set()
+            sepsets_dict[(y, x)] = set()
+            return edge_removal, sepsets_dict, test_results
+        else:
+            edge_removal.append((x, y))
+            edge_removal.append((y, x))
+            
+    Neigh_x = cg.neighbors(x)
+    Neigh_x_noy = np.delete(Neigh_x, np.where(Neigh_x == y))
+    
+    for S in combinations(Neigh_x_noy, depth):
+        p = cg.ci_test(x, y, S)
+        test_results[(x, y, S)] = p
+        
+        if p > alpha:
+            if verbose:
+                print('%d ind %d | %s with p-value %f\n' % (x, y, S, p))
+            if not stable:
+                edge1 = cg.G.get_edge(cg.G.nodes[x], cg.G.nodes[y])
+                if edge1 is not None:
+                    edge_removal.append((x, y))
+                edge2 = cg.G.get_edge(cg.G.nodes[y], cg.G.nodes[x])
+                if edge2 is not None:
+                    edge_removal.append((y, x))
+                sepsets_dict[(x, y)] = set(S)
+                sepsets_dict[(y, x)] = set(S)
+                return edge_removal, sepsets_dict, test_results
+            else:
+                edge_removal.append((x, y))
+                edge_removal.append((y, x))
+                for s in S:
+                    sepsets.add(s)
+        else:
+            if verbose:
+                print('%d dep %d | %s with p-value %f\n' % (x, y, S, p))
+                
+    sepsets_dict[(x, y)] = sepsets
+    sepsets_dict[(y, x)] = sepsets
+    
+    return edge_removal, sepsets_dict, test_results
+
+
 def fas(data: ndarray, nodes: List[Node], independence_test_method: CIT_Base, alpha: float = 0.05,
         knowledge: BackgroundKnowledge | None = None, depth: int = -1,
-        verbose: bool = False, stable: bool = True, show_progress: bool = True) -> Tuple[
+        verbose: bool = False, stable: bool = True, show_progress: bool = True, n_jobs: int = 4) -> Tuple[
     GeneralGraph, Dict[Tuple[int, int], Set[int]], Dict[Tuple[int, int, Set[int]], float]]:
     """
     Implements the "fast adjacency search" used in several causal algorithm in this file. In the fast adjacency
@@ -44,6 +139,7 @@ def fas(data: ndarray, nodes: List[Node], independence_test_method: CIT_Base, al
     verbose: True is verbose output should be printed or logged
     stable: run stabilized skeleton discovery if True (default = True)
     show_progress: whether to use tqdm to show progress bar
+    n_jobs: int, number of parallel jobs (default = 4)
     Returns
     -------
     graph: Causal graph skeleton, where graph.graph[i,j] = graph.graph[j,i] = -1 indicates i --- j.
@@ -80,68 +176,67 @@ def fas(data: ndarray, nodes: List[Node], independence_test_method: CIT_Base, al
         if edge is not None:
             cg.G.remove_edge(edge)
 
-    var_range = tqdm(range(no_of_var), leave=True) if show_progress \
-        else range(no_of_var)
+    pbar = tqdm(total=no_of_var) if show_progress else None
     current_depth: int = -1
+    
     while cg.max_degree() - 1 > current_depth and current_depth < depth:
         current_depth += 1
-        edge_removal = set()
-        for x in var_range:
+        if show_progress:
+            pbar.reset(total=no_of_var)
+            pbar.set_description(f'Depth={current_depth}')
+            
+        # Collect all node pairs to test at this depth
+        node_pairs = []
+        for x in range(no_of_var):
             if show_progress:
-                var_range.set_description(f'Depth={current_depth}, working on node {x}')
-                var_range.update()
+                pbar.update(1)
             Neigh_x = cg.neighbors(x)
             if len(Neigh_x) < current_depth - 1:
                 continue
             for y in Neigh_x:
-                sepsets = set()
-                if (knowledge is not None and
-                    knowledge.is_forbidden(cg.G.nodes[x], cg.G.nodes[y])
-                    and knowledge.is_forbidden(cg.G.nodes[y], cg.G.nodes[x])):
-                    if not stable:
-                        remove_if_exists(x, y)
-                        remove_if_exists(y, x)
-                        append_value(cg.sepset, x, y, ())
-                        append_value(cg.sepset, y, x, ())
-                        sep_sets[(x, y)] = set()
-                        sep_sets[(y, x)] = set()
-                        break
-                    else:
-                        edge_removal.add((x, y))  # after all conditioning sets at
-                        edge_removal.add((y, x))  # depth l have been considered
+                if x < y:  # Process each pair only once
+                    node_pairs.append((x, y))
+        
+        if not node_pairs:
+            continue
+            
+        # Process node pairs in parallel
+        process_func = partial(
+            _process_node_pair, 
+            depth=current_depth, 
+            cg=cg, 
+            alpha=alpha, 
+            stable=stable, 
+            knowledge=knowledge, 
+            verbose=verbose
+        )
+        
+        results = joblib.Parallel(n_jobs=n_jobs)(
+            joblib.delayed(process_func)(x, y) for x, y in node_pairs
+        )
+        
+        # Collect all edges to remove, sepsets, and test results
+        all_edge_removals = []
+        all_sepsets = {}
+        
+        for edge_removal, sepsets_dict, test_result_dict in results:
+            all_edge_removals.extend(edge_removal)
+            all_sepsets.update(sepsets_dict)
+            test_results.update(test_result_dict)
+        
+        # Update sepsets
+        for (x, y), sepset in all_sepsets.items():
+            if (x, y) in all_edge_removals or not cg.G.get_edge(cg.G.nodes[x], cg.G.nodes[y]):
+                append_value(cg.sepset, x, y, tuple(sepset))
+                sep_sets[(x, y)] = sepset
+        
+        # Remove edges
+        for (x, y) in list(set(all_edge_removals)):
+            edge = cg.G.get_edge(cg.G.nodes[x], cg.G.nodes[y])
+            if edge is not None:
+                cg.G.remove_edge(edge)
 
-                Neigh_x_noy = np.delete(Neigh_x, np.where(Neigh_x == y))
-                for S in combinations(Neigh_x_noy, current_depth):
-                    p = cg.ci_test(x, y, S)
-                    test_results[(x, y, S)] = p
-                    if p > alpha:
-                        if verbose:
-                            print('%d ind %d | %s with p-value %f\n' % (x, y, S, p))
-                        if not stable:
-                            remove_if_exists(x, y)
-                            remove_if_exists(y, x)
-                            append_value(cg.sepset, x, y, S)
-                            append_value(cg.sepset, y, x, S)
-                            sep_sets[(x, y)] = set(S)
-                            sep_sets[(y, x)] = set(S)
-                            break
-                        else:
-                            edge_removal.add((x, y))  # after all conditioning sets at
-                            edge_removal.add((y, x))  # depth l have been considered
-                            for s in S:
-                                sepsets.add(s)
-                    else:
-                        if verbose:
-                            print('%d dep %d | %s with p-value %f\n' % (x, y, S, p))
-                append_value(cg.sepset, x, y, tuple(sepsets))
-                append_value(cg.sepset, y, x, tuple(sepsets))
-
-        for (x, y) in edge_removal:
-            remove_if_exists(x, y)
-            if cg.sepset[x, y] is not None:
-                origin_set = set(l_in for l_out in cg.sepset[x, y]
-                                 for l_in in l_out)
-                sep_sets[(x, y)] = origin_set
-                sep_sets[(y, x)] = origin_set
+    if show_progress:
+        pbar.close()
 
     return cg.G, sep_sets, test_results

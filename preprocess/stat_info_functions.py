@@ -675,8 +675,11 @@ def stat_info_collection(global_state):
         col_domain_index = global_state.user_data.raw_data[domain_index]
     else:
         col_domain_index = None
-
     data = global_state.user_data.raw_data[global_state.user_data.selected_features]
+
+    if col_domain_index is not None and domain_index in data.columns:
+        data = data.drop(columns=[domain_index])
+    
     n, m = data.shape
 
     # Update global state
@@ -695,6 +698,10 @@ def stat_info_collection(global_state):
         imputed_data = imputation(df=data, column_type=each_type, ts=global_state.statistics.time_series)
     else:
         imputed_data = data
+
+    # drop domain index from visual selected features
+    if global_state.statistics.heterogeneous and global_state.statistics.domain_index in global_state.user_data.visual_selected_features:
+        global_state.user_data.visual_selected_features = [feature for feature in global_state.user_data.visual_selected_features if feature != global_state.statistics.domain_index]
 
     # Check assumption for continuous data
     if global_state.statistics.data_type == "Continuous":

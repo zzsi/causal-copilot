@@ -1,145 +1,32 @@
-### DYNOTEARS
-────────────────────────────────────────────────────────────────────────
-1. HYPER-PARAMETERS SENSITIVITY
-────────────────────────────────────────────────────────────────────────
-• Number of Key Hyperparameters:
-  - DYNOTEARS uses continuous optimization for learning time-lagged causal graphs. The key hyperparameters in the implementation are:
-    1. p (Lookback window length): Defines how far back in time causal relationships are considered.
-    2. λ_w (lambda_w): L1 regularization for intra-slice (same time step) edges.
-    3. λ_a (lambda_a): L1 regularization for inter-slice (time-lagged) edges.
-    4. max_iter: Maximum number of optimization steps in the dual ascent method.
-    5. h_tol: Tolerance for acyclicity enforcement—ensures a DAG structure.
-    6. w_threshold: Threshold for pruning weak edges in the learned adjacency matrix.
 
-• Tuning Difficulty:
-  - p (Lookback window) is dataset-dependent—should be determined through preprocessing (e.g., autocorrelation analysis).
-  - λ_w and λ_a control sparsity—higher values promote simpler graphs but may remove true causal links.
-  - h_tol ensures strict DAG constraints—lower values enforce acyclicity but may slow down optimization.
-  - w_threshold filters weak edges—higher values yield sparser graphs, reducing false positives but possibly missing weak causal relationships.
+# DYNOTEARS
 
-• Sensitivity:
-  - p significantly affects discovered causal lags—shorter values may miss long-term dependencies, while longer values increase computation time.
-  - λ_w and λ_a strongly influence graph density—too high removes meaningful connections, too low introduces noise.
-  - h_tol must be carefully chosen—too strict, and the optimization may not converge; too relaxed, and cycles may appear.
+## Real-World Applications
+- **Successful Domains**: Neuroscience (fMRI data analysis), sports analytics (NHL event analysis)
+- **Performance Limitations**: Less effective for highly nonlinear systems or data with many hidden confounders
+- **Scientific Evidence**: Validated on resting-state human fMRI data from the Human Connectome Project
 
-• Critique/Extension:
-  - Hyperparameter tuning is dataset-specific—using preprocessing steps like partial autocorrelation functions (PACF) can help set p.
-  - Adaptive regularization could help balance intra- and inter-slice dependencies dynamically.
+## Hyperparameters Sensitivity
+- **Number of Hyperparameters**: Moderate (5-7 key parameters)
+- **Default Performance**: Decent with default settings, regularization parameters require tuning
+- **Tuning Difficulty**: Medium - regularization parameters (λ_w, λ_a) require careful adjustment
 
-────────────────────────────────────────────────────────────────────────
-2. ROBUSTNESS & SCALABILITY
-────────────────────────────────────────────────────────────────────────
-• Tolerance to Bad Data Quality
-  - Handles moderate noise well but assumes no missing values—preprocessing is required.
-  - Sensitive to outliers—alternative loss functions (e.g., Huber loss) could improve robustness.
-  - Regularization (λ_w, λ_a) helps suppress noisy edges, improving generalization.
+## Robustness & Scalability
+- **Data Quality Tolerance**: Handles moderate noise well, sensitive to outliers
+- **Scalability**: Good for medium-sized graphs (up to 50-100 variables)
+- **Computational Cost**: O(n²) complexity; highly dependent on lookback window length
 
-• Tolerance to Sparse vs. Dense Connected Systems
-  - Works well for moderate sparsity—λ_w and λ_a encourage sparsity, preventing overfitting.
-  - For denser graphs, lower λ values are needed to preserve meaningful connections.
+## Mixed Data & Complex Functions
+- **Functional Assumptions**: Assumes linear causal relationships
+- **Noise Assumptions**: Assumes Gaussian noise, but somewhat robust to violations
+- **Data Type Handling**: Primarily for continuous variables, extensions exist for discrete data
 
-• Scalability  
-  - Scales quadratically in the number of nodes (O(n²)), but benefits from parallelized solvers.
-  - Higher lag values significantly increase complexity—setting it too high makes optimization slow and memory-intensive.
+## Interpretability
+- **Output Format**: Time-lagged directed acyclic graph (DAG)
+- **Edge Meanings**: Edge weights directly represent causal effect strengths
+- **Uncertainty Metrics**: Limited support for uncertainty quantification
 
-• Critique/Extension  
-  - Batch processing techniques or adaptive depth selection could improve scalability for large datasets.
-  - Pre-filtering irrelevant variables before running DYNOTEARS helps reduce computation time.
-
-────────────────────────────────────────────────────────────────────────
-3. MIXED DATA & COMPLEX FUNCTIONS
-────────────────────────────────────────────────────────────────────────
-• Noise Type  
-  - Standard DYNOTEARS assumes Gaussian noise, but can be adapted to other distributions.
-  - Heavy-tailed noise or heteroskedasticity can degrade performance—alternative loss functions may be needed.
-
-• Mixed Data (Continuous & Discrete)  
-  - Supports continuous variables by default; discrete data requires modified loss functions.
-  - Extensions exist for categorical data (e.g., logistic loss).
-
-• Heterogeneous Data  
-  - Performs well in relatively stable environments but may struggle if distributions change over time.
-  - Non-stationary relationships require adaptive methods like PCMCI+.
-
-• Complex Functional Forms  
-  - Assumes linear relationships—non-linear extensions (e.g. NTS-NOTEARS) may be needed for more complex patterns.
-  - Thresholding (w_threshold) is essential to remove weak connections from overfitting.
-
-• Critique/Extension  
-  - Hybrid methods using kernel-based tests could enhance non-linear discovery.
-  - Using multi-scale embeddings before causal discovery could improve robustness for heterogeneous datasets.
-
-────────────────────────────────────────────────────────────────────────
-4. COMPUTATIONAL COMPLEXITY
-────────────────────────────────────────────────────────────────────────
-• Theoretical Time Complexity  
-  - O(n²) complexity due to acyclicity constraints and L1-regularized optimization. Increasing p makes computation more expensive (p=2 is much faster than p=10).
-
-• Variability in Practical Usage  
-  - Computational cost is highly dependent on p—longer lookbacks require solving larger adjacency matrices.
-  - h_tol settings affect runtime—lower values make the problem harder to solve.
-
-• Critique/Extension  
-  - Parallelized implementations can improve performance. 
-  - Approximations like low-rank factorization of the adjacency matrix could reduce complexity in large-scale settings.
-
-────────────────────────────────────────────────────────────────────────
-5. INTERPRETABILITY
-────────────────────────────────────────────────────────────────────────
-• Output Format  
-  - Produces a time-lagged DAG, where edges indicate causal influences with specific time lags.
-
-• Strength of the Output Format  
-  - Fully directed causal graph (unlike PC, which produces CPDAGs). 
-  - Includes explicit time-lagged relationships as well as contemporaneous relations, making it useful for real-world applications.
-
-• Limitations of the Output Format  
-  - Requires proper w_threshold tuning to remove spurious edges. 
-  - Regularization strength impacts interpretability—aggressive pruning may remove true effects
-
-• Critique/Extension  
-  - Post-processing with bootstrapping could improve stability of inferred edges.
-
-────────────────────────────────────────────────────────────────────────
-6. ASSUMPTIONS
-────────────────────────────────────────────────────────────────────────
-• Critical Assumptions  
-  - Causal Markov condition: Each variable is conditionally independent of its non-descendants, given its parents.  
-  - Faithfulness: All and only the conditional independencies in the true structure are reflected in the data.  
-  - Causal sufficiency: No unobserved confounders of the measured variables.  
-  - Acyclicity: Enforced through continuous optimization constraints - past affects the future
-  - Stationarity: Assumes causal relations do not change over time.
-
-• Violation Impact  
-  - Missing confounders can lead to spurious or missing edges.  
-  - Unfaithful data-generating mechanisms can hide true edges or create extra independencies.  
-  - If stationarity is violated, discovered causal relations may not hold over time.
-
-• Critique/Extension  
-  - Relaxing stationarity assumptions could improve robustness in dynamic environments.
-
-────────────────────────────────────────────────────────────────────────
-7. (OPTIONAL) REAL-WORLD BENCHMARKS
-────────────────────────────────────────────────────────────────────────
-• Performance on Real Datasets  
-  - Outperforms Granger causality in many settings.
-  - More efficient than constraint-based methods like PCMCI.
-  - Works well for economic, neuroscience, and environmental data.
-
-• Practical Tips  
-  - Choosing p based on domain knowledge is crucial—p=2 for short-range dependencies, p=10 for long-range.
-  - Regularization (λ_w, λ_a) should be cross-validated to find the best sparsity setting.
-  - For non-stationary data, consider hybrid approaches like PCMCI+.
-
-────────────────────────────────────────────────────────────────────────
-CONCLUSION
-────────────────────────────────────────────────────────────────────────
-DYNOTEARS is a powerful differentiable causal discovery algorithm for time-series data, leveraging continuous optimization to enforce acyclicity while capturing time-lagged causal structures. Its key strengths include:
-  - Faster than combinatorial search methods (e.g., PC or Granger causality).
-  - Naturally enforces time constraints and acyclicity.
-  - Scales well to moderate-sized graphs with proper regularization.
-However, it has limitations, including:
-  - Strong sensitivity to hyperparameters (especially p, λ_w, and λ_a).
-  - Computational cost increases with longer lookback windows.
-  - Assumes stationarity, limiting its applicability to evolving systems.
-────────────────────────────────────────────────────────
+## Assumptions
+- **Critical Assumptions**: Acyclicity within time slices, causal sufficiency, stationarity
+- **Robustness to Violations**: Moderate sensitivity to non-stationarity and hidden confounders
+- **Requirement Level**: Core acyclicity assumption cannot be relaxed

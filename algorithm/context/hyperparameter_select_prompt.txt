@@ -3,54 +3,73 @@ Given a dataset with the following properties:
 1. Columns: [COLUMNS]
 2. Statistics:
 [STATISTICS INFO]
+3. Background Knowledge:
+[KNOWLEDGE_INFO]
 
 We have selected the following algorithm for causal discovery:
 
 Algorithm: [ALGORITHM_NAME]
 Description: [ALGORITHM_DESCRIPTION]
 
-Now, we need to set up the primary hyperparameters for this algorithm. Please consider the dataset characteristics and the algorithm requirements to suggest appropriate values for the following hyperparameters:
+Now, we need to determine the optimal hyperparameters for this algorithm. I'll guide you through a systematic approach to select values that prioritize accuracy while maintaining computational efficiency for moderate graph sizes.
 
-[PRIMARY_HYPERPARAMETERS]
+Primary hyperparameters to configure: [PRIMARY_HYPERPARAMETERS]
 
-For each primary hyperparameter, provide:
-1. The full name of the hyperparameter that is aligned with your understanding ('independence test', 'max depth', 'score function', etc.)
-2. The suggested value
-3. A brief explanation of why this value is appropriate given the dataset characteristics and algorithm requirements
-4. Each primary hyperparameter is provided with a default value, which should be adjusted based on the dataset characteristics and algorithm requirements
-5. For time-series data, give a higher priority to the statistically estimated lag order provided under the Statistics section.
+For each hyperparameter, please follow this structured approach:
 
-Here is the CUDA/GPU availability to help you decide hyperparameters:
+Step 1: Understand the dataset characteristics
+   - Consider the number of variables (graph size)
+   - Analyze sample size and data distribution
+   - Note if data is linear/nonlinear, continuous/discrete/mixed
+   - For time-series data, prioritize the statistically estimated lag order
 
-[CUDA_WARNING]
+Step 2: Assess computational resources
+   - Consider the hardware constraints and GPU availability:
+   [CUDA_WARNING]
 
-Actively use and reason with the following information about each hyperparameter to inform your decisions:
+   - Prioritize to GPU implemented hyperparameter when dealing with large graph (variable size > 100) to achieve more efficient speedup
 
-[HYPERPARAMETER_INFO]
+Step 3: Evaluate each hyperparameter's impact on accuracy vs. efficiency
+   - Critical parameters affecting accuracy (e.g., significance levels, independence tests)
+   - Parameters affecting computational complexity (e.g., search depth, maximum conditions)
+   - Parameters controlling sparsity (e.g., regularization, thresholds)
 
-Please provide your suggestions in a structured JSON format. Your response should look like this:
+Step 4: Analyze algorithm-specific recommendations
+   - Review expert suggestions for each parameter:
+   [HYPERPARAMETER_INFO]
+
+Step 5: Make final decisions based on:
+   - For moderate graph sizes (<50 variables), prioritize accuracy over speed
+   - For large graphs (>50 variables), balance accuracy with feasibility and EFFICIENCY
+   - For time-series data, carefully consider temporal parameters
+
+Please provide your suggestions in a structured JSON format, with detailed reasoning for each hyperparameter. Your response should look like this:
 
 {
   "algorithm": "[ALGORITHM_NAME]",
   "hyperparameters": {
     "[HYPERPARAMETER_1_NAME]": {
       "full_name": "[HYPERPARAMETER_1_FULL_NAME]",
+      "reasoning": "[YOUR_STEP_BY_STEP_REASONING_PROCESS]",
       "value": [SUGGESTED_VALUE],
-      "explanation": "[BRIEF_EXPLANATION]"
+      "explanation": "[BRIEF_EXPLANATION_OF_TRADEOFFS]"
     },
     "[HYPERPARAMETER_2_NAME]": {
       "full_name": "[HYPERPARAMETER_2_FULL_NAME]",
+      "reasoning": "[YOUR_STEP_BY_STEP_REASONING_PROCESS]",
       "value": [SUGGESTED_VALUE],
-      "explanation": "[BRIEF_EXPLANATION]"
+      "explanation": "[BRIEF_EXPLANATION_OF_TRADEOFFS]"
     },
     ...
   }
 }
 
-Please always determine the hyperparameters from its corresponding "Suggested Values" part, DO NOT use any values just exist in other context but not in "Suggested Values".
+Important guidelines:
+1. Only select values from the "available_values" list for each hyperparameter
+2. For moderate graph sizes (10-50 variables), prioritize accuracy over speed
+3. For time-series data, give special attention to lag parameters based on statistical estimates
+4. Consider independence test selection carefully based on data type and computational resources
+5. For regularization parameters, consider the expected graph density
+6. For search depth parameters, consider the complexity of potential causal relationships
 
-Please consider the trade-offs between accuracy and computational efficiency when suggesting values. If you're unsure about a specific value, you may suggest using the default value and explain why.
-
-Please consider using the estimated time lag value. If you think a different value might be useful for the given context, you may suggest the value and explain why it will be better.
-
-Please provide your hyperparameter suggestions following this JSON structure.
+Please provide your hyperparameter suggestions following this JSON structure, with clear reasoning that demonstrates you've considered the dataset characteristics, algorithm requirements, and computational constraints.

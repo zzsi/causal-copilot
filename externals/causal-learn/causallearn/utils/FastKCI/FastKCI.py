@@ -47,7 +47,7 @@ class FastKCI_CInd(object):
         self.use_gp = use_gp
         self.nullss = 5000
 
-    def compute_pvalue(self, data_x=None, data_y=None, data_z=None):
+    def compute_pvalue(self, data_x=None, data_y=None, data_z=None, n_jobs=4):
         """
         Main function: compute the p value of H_0: X|Y conditional on Z.
 
@@ -66,8 +66,8 @@ class FastKCI_CInd(object):
         self.data_z = data_z
         self.n = data_x.shape[0]
 
-        self.Z_proposal = Parallel(n_jobs=-1)(delayed(self.partition_data)() for i in range(self.J))
-        block_res = Parallel(n_jobs=-1)(delayed(self.pvalue_onblocks)(self.Z_proposal[i]) for i in range(self.J))
+        self.Z_proposal = Parallel(n_jobs=n_jobs)(delayed(self.partition_data)() for i in range(self.J))
+        block_res = Parallel(n_jobs=n_jobs)(delayed(self.pvalue_onblocks)(self.Z_proposal[i]) for i in range(self.J))
         test_stat, null_samples, log_likelihood = zip(*block_res)
 
         log_likelihood = np.array(log_likelihood)
@@ -399,25 +399,56 @@ class FastKCI_UInd(object):
 
     def partition_data(self):
         """
-        Partitions data into K Gaussians
+        Partitions data into K Gaussians, with special handling for discrete data
+        with limited unique values.
 
         Returns
         _________
         Z: Latent Gaussian that was drawn for each observation (nx1 array)
         prob_Y: Log-Likelihood of that random assignment (scalar)
         """
+        # Check for constant columns and count unique values per column
+        unique_counts = np.array([len(np.unique(self.data_y[:, i])) for i in range(self.data_y.shape[1])])
+        constant_cols = unique_counts == 1
+        
+        # Adjust K if data is highly discrete (has few unique values)
+        effective_K = min(self.K, np.min(unique_counts[~constant_cols]) if np.any(~constant_cols) else self.K)
+        if effective_K < self.K:
+            # Adjust K to avoid overfitting with too many clusters for discrete data
+            adjusted_K = max(2, effective_K)  # Ensure at least 2 clusters
+        else:
+            adjusted_K = self.K
+            
+        # Calculate mean and standard deviation, handling constant columns
         Y_mean = self.data_y.mean(axis=0)
         Y_sd = self.data_y.std(axis=0)
-        mu_k = np.random.normal(Y_mean, Y_sd, size=(self.K, self.data_y.shape[1]))
+        # Replace zero standard deviations with small value to avoid division by zero
+        Y_sd[Y_sd == 0] = 1e-8
+        
+        # Initialize cluster centers with appropriate noise level for discrete data
+        mu_k = np.random.normal(Y_mean, Y_sd, size=(adjusted_K, self.data_y.shape[1]))
         sigma_k = np.eye(self.data_y.shape[1])
-        pi_j = np.random.dirichlet([self.alpha]*self.K)
+        
+        # For constant columns, ensure variance is small but non-zero in covariance matrix
+        for i in range(self.data_y.shape[1]):
+            if constant_cols[i]:
+                sigma_k[i, i] = 1e-6
+        
+        pi_j = np.random.dirichlet([self.alpha] * adjusted_K)
         ll = np.tile(np.log(pi_j), (self.n, 1))
-        for k in range(self.K):
+        
+        for k in range(adjusted_K):
             ll[:, k] += stats.multivariate_normal.logpdf(self.data_y, mu_k[k, :], cov=sigma_k, allow_singular=True)
-        Z = np.array([np.random.multinomial(1, np.exp(ll[n, :]-logsumexp(ll[n, :]))).argmax() for n in range(self.n)])
+        
+        # Assign each observation to a cluster
+        Z = np.array([np.random.multinomial(1, np.exp(ll[n, :] - logsumexp(ll[n, :])), size=1).argmax() 
+                      for n in range(self.n)])
         prop_Y = np.take_along_axis(ll, Z[:, None], axis=1).sum()
+        
+        # Encode cluster labels as integers
         le = LabelEncoder()
         Z = le.fit_transform(Z)
+        
         return (Z, prop_Y)
 
     def pvalue_onblocks(self, Z_proposal):

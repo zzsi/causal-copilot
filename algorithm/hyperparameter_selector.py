@@ -26,26 +26,33 @@ class HyperparameterSelector:
 
     def load_hp_context(self, selected_algo):
         # Load hyperparameters context
-        # hp_context = {}
-        # hyperparameters_folder = "algorithm/context/hyperparameters"
-        return open(f"algorithm/context/hyperparameters/{selected_algo}.json", "r").read()
-            
-        # # Load additional context files for parameters that have them
-        # # for algo in hp_context:
-        # #     for param in hp_context[algo]:
-        # #         if 'context_file' in hp_context[algo][param]:
-        # #             context_file_path = hp_context[algo][param]['context_file']
-        # #             with open(context_file_path, "r") as cf:
-        # #                 hp_context[algo][param]['context_content'] = cf.read()
+        with open(f"algorithm/context/hyperparameters/{selected_algo}.json", "r") as f:
+            hp_context = json.load(f)
         
-        # return hp_context
+        # Convert the hyperparameters context to natural language
+        def convert_to_natural_language(hp_context):
+            natural_language_context = ""
+            # Skip the algorithm_name field
+            for param, details in hp_context.items():
+                if param == "algorithm_name":
+                    continue
+                natural_language_context += f"**Parameter:** {param}\n"
+                if isinstance(details, dict) and "meaning" in details:
+                    natural_language_context += f"- **Meaning:** {details['meaning']}\n"
+                    natural_language_context += "- **Available Values:**\n"
+                    for value in details['available_values']:
+                        natural_language_context += f"  - {value}\n"
+                    natural_language_context += f"- **Expert Suggestion:** {details['expert_suggestion']}\n\n"
+            return natural_language_context
+        
+        return convert_to_natural_language(hp_context)
 
     def create_prompt(self, global_state, selected_algo, hp_context, algorithm_optimum_reason):
         with open("algorithm/context/hyperparameter_select_prompt.txt", "r") as f:
             hp_prompt = f.read()
         
         print(selected_algo)
-        primary_params = getattr(wrappers, selected_algo)().get_primary_params()
+        primary_params = list(getattr(wrappers, selected_algo)().get_primary_params().keys())
         hp_info_str = json.dumps(hp_context)
         table_columns = '\t'.join(global_state.user_data.processed_data.columns._data)
         knowledge_info = '\n'.join(global_state.user_data.knowledge_docs)
@@ -53,10 +60,10 @@ class HyperparameterSelector:
         hp_prompt = hp_prompt.replace("[COLUMNS]", table_columns)
         hp_prompt = hp_prompt.replace("[KNOWLEDGE_INFO]", knowledge_info)
         hp_prompt = hp_prompt.replace("[STATISTICS INFO]", global_state.statistics.description)
-        hp_prompt = hp_prompt.replace("[CUDA_WARNING]", "Current machine supports CUDA, so you can choose GPU-powered algorithms." if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.")
+        hp_prompt = hp_prompt.replace("[CUDA_WARNING]", "Current machine supports CUDA, some algorithms can be accelerated by GPU if necessary (PC, CDNOD, DirectLiNGAM)." if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.")
         hp_prompt = hp_prompt.replace("[ALGORITHM_NAME]", selected_algo)
-        hp_prompt = hp_prompt.replace("[ALGORITHM_DESCRIPTION]", algorithm_optimum_reason)
-        # hp_prompt = hp_prompt.replace("[PRIMARY_HYPERPARAMETERS]", str(primary_params))
+        # hp_prompt = hp_prompt.replace("[ALGORITHM_DESCRIPTION]", algorithm_optimum_reason)
+        hp_prompt = hp_prompt.replace("[PRIMARY_HYPERPARAMETERS]", ', '.join(primary_params))
         hp_prompt = hp_prompt.replace("[HYPERPARAMETER_INFO]", hp_info_str)
 
         with open(f"algorithm/context/hp_rerank_prompt_test.txt", "w", encoding="utf-8") as f:
@@ -76,9 +83,12 @@ class HyperparameterSelector:
         #                 f'As the user can wait for {global_state.algorithm.waiting_minutes} minutes for the algorithm execution. If kci can not exceed it, we MUST select it:\n\n'
         #                 f'The estimated time costs of CDNOD algorithms using the two indep_test settings are: {time_info_cdnod}')
         #     hp_prompt = hp_prompt + kci_prompt
+
+        print(hp_prompt)
         
-        response = self.llm_client.chat_completion(hp_prompt,
-                                                    system_prompt="You are a causal discovery expert. Provide your response in JSON format.", json_response=True)
+        response = self.llm_client.chat_completion("Please select the best hyperparameters for the algorithm.",
+                                                    system_prompt=hp_prompt, json_response=True,  temperature=0.0,
+                                                    model="gpt-4o")
 
         hyper_suggest = response
         global_state.algorithm.algorithm_arguments_json = hyper_suggest
