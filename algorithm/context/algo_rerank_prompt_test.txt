@@ -1,6 +1,6 @@
-You will conduct causal discovery on the Tabular Dataset ./demo_data/20250402_161403/Abalone/Abalone.csv containing the following Columns:
+You will conduct causal discovery on the Tabular Dataset ./demo_data/20250402_230105/earthquakes/earthquakes.csv containing the following Columns:
 
-Age	Length	Shell_weight	Diameter	Height	Whole_weight	Shucked_weight	Viscera_weight
+year	month	day	richter	area	region	deaths
 
 The Detailed Background Information is listed below:
 
@@ -12,14 +12,14 @@ The dataset has the following characteristics:
 
 Data Type: The overall data type is Continuous.
 
-The sample size is 4177 with 8 features. 
+The sample size is 123 with 7 features. 
 
 This dataset is not time-series data. 
 
-Data Quality: There are no missing values in the dataset.
+Data Quality: There are missing values in the dataset.
 
 Statistical Properties:
-- Linearity: The relationships between variables are not predominantly linear.
+- Linearity: The relationships between variables are predominantly linear.
 - Gaussian Errors: The errors in the data do not follow a Gaussian distribution.
 - Heterogeneity: The dataset is not heterogeneous. 
 
@@ -29,14 +29,14 @@ Statistical Properties:
 
 Based on the above information, please select the best-suited algorithm from the following candidate (the order of the algorithm candidates is not important):
 
-dict_keys(['PC', 'FCI', 'InterIAMB'])
+dict_keys(['PC', 'DirectLiNGAM', 'InterIAMB'])
 
 ===============================================
 Note that the user can only wait for 1440.0 minutes for the algorithm execution, please ensure the time cost of the selected algorithm would not exceed it!
 The estimated time costs of the following algorithms using linear estimation methods (e.g. Fisherz for constraint-based methods, BIC for score-based methods) are below. Use it as a reference for the algorithm runtime comparison, note that the absolute value might changes significantly when the estimation methods are not linear (e.g. KCI for constraint-based methods, Generalized score for score-based methods). Consider the time cost wisely when selecting the algorithm, it is critical but less important than the performance when the time cost does not exceed the waiting time. As long as the timecost difference is not that large 1440.0, you should pivot more on the performance.
 
 PC: 1.0 minutes
-FCI: 1.0 minutes
+DirectLiNGAM: 1.0 minutes
 InterIAMB: 1.0 minutes
 
 At the same time, be careful about the current device availability for GPU/CUDA acceleration. Note that some algorithm settings would need GPU to run, which could be a indirect limitation on the algorithm application potential:
@@ -269,154 +269,138 @@ Benchmarking Results
 
 ======================================
 
-# FCI
+# DirectLiNGAM
 
-Below is a comprehensive profile of the Fast Causal Inference (FCI) algorithm, structured according to the seven “degrees” (dimensions) of analysis. This profile synthesizes:  
-• File #1 (the hyperparameter settings),  
-• File #2 (benchmarking results),  
-• External knowledge about FCI (including peer-reviewed papers, publicly available documentation, and community discussions),  
-• General principles of causal discovery.  
+Below is a detailed profile of DirectLiNGAM according to the requested seven dimensions. The information comes from:  
+• File #1 (Hyperparameter JSON)  
+• File #2 (Benchmarking results)  
+• File #3 (External knowledge, including research papers, library docs, and community discussions)  
+• General knowledge about causal discovery methods  
 
-────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────
 1. Hyper-Parameters Sensitivity
-────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────
 
 • Number of Key Hyperparameters  
-  – FCI has three principal hyperparameters (based on File #1):  
-    1) α (significance level),  
-    2) The choice of independence test (indep_test),  
-    3) The depth parameter controlling how exhaustively conditional independence tests are performed.  
+  – From File #1: DirectLiNGAM exposes relatively few critical hyperparameters. The main one is the “measure” used for independence checks, which can be set to "pwling" (default), "kernel", or potentially other variants.  
 
 • Tuning Difficulty  
-  – α (significance level) is among the most impactful parameters. Its default is often 0.05, though File #1 suggests using 0.1 for very small samples (< 500), 0.05 for moderate-sized samples (500 to 10,000), and 0.01 for extremely large samples (> 10,000).  
-  – The independence test parameter (indep_test) depends on data type and modeling assumptions. Commonly used options in practice include:  
-     “fisherz” for continuous data under a Gaussian assumption,  
-     “chisq” for discrete data,  
-     “gsq,” “kci,” or “rcit” for more general or non-linear data.  
-  – Depth settings can be unrestricted (-1) or limited to reduce computation. While the defaults are straightforward (e.g., unlimited depth for small graphs), tuning ultimately depends on computational constraints and how dense the graph might be.  
+  – The default “pwling” measure generally works well in practice. Switching to "kernel" can help model more complex non-linearities but may require domain knowledge or experimentation to confirm usefulness.  
+  – Because the core parameter set is small, most users find it straightforward to adopt default settings. An LLM or a modestly experienced user can typically manage hyperparameter tuning without extensive domain expertise.  
 
 • Sensitivity  
-  – α: Small changes (e.g., from 0.05 to 0.01) can sharply reduce false positives but potentially increase false negatives. Benchmarks in File #2 indicate that performance metrics (e.g., adjacency precision) shift when α is made more conservative.  
-  – Depth: Restricting depth can speed up the skeleton discovery step considerably but risks missing some indirect connections, as fewer conditional sets are tested.  
+  – Changing the “measure” parameter can have a noticeable effect on both runtime and estimation quality. For example, the kernel-based approach may capture non-linear effects but can be slower for larger datasets.  
+  – Relatively small changes to other parameters (e.g., random seeds) do not typically affect causal estimates dramatically; they mainly influence reproducibility rather than the final structure.  
 
 • Critique/Extension  
-  – Parameters that control search complexity (e.g., depth) heavily influence runtime, particularly on large or dense graphs.  
-  – Parameters controlling statistical tests (e.g., α and the independence test selection) most directly affect the quality of the discovered causal structure (false positives / false negatives in edges).
+  – Parameters governing the independence measure directly affect how the algorithm assesses statistical relationships. By contrast, parameters related to search heuristics or other complexities (if present) could alter the graph-search process. Because DirectLiNGAM’s parameter set is focused on the independence measure, the main tuning burden lies there.  
 
-────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────
 2. Robustness & Scalability
-────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────
 
 • Tolerance to Bad Data Quality  
-  – Missing Data: FCI can tolerate missing data if the chosen independence test supports it (e.g., some tests impute or ignore missing cases). Benchmarks in File #2 show FCI performing around a moderate level (neither the best nor the worst) when data are missing.  
-  – Measurement/Observation Error: FCI’s performance decreases with severe noise but remains relatively stable for moderate noise levels. Its ability to discover latent structures can mitigate some confounding effects of measurement error, though the precision of edges can drop if noise is extreme.  
+  – Missing Data: File #2 suggests that DirectLiNGAM performed relatively poorly in robustness tests that introduced missing observations, ranking near the lower end among compared methods. It typically requires complete-case analysis or other imputation strategies since it does not natively handle missing data.  
+  – Measurement/Observation Error: The same benchmarking (File #2) indicates that measurement error also has a stronger degrading effect on DirectLiNGAM compared to some other methods, though the magnitude depends on the severity of the noise.  
 
 • Tolerance to Sparse/Dense Connected Systems  
-  – Sparse Networks: FCI typically performs well in sparse graphs, because fewer edges mean fewer complex conditional independence tests.  
-  – Dense Networks: FCI can handle denser connectivity but at notably increased computational cost, as more conditional tests are required and orienting edges becomes more complex.  
+  – Empirically, DirectLiNGAM can work with both sparse and moderately dense networks. In external forums (File #3), users note that the algorithm can handle networks of varying degrees of connectivity so long as the linear and non-Gaussian assumptions hold.  
 
 • Scalability  
-  – As the number of variables grows, the number of required conditional independence tests can explode. File #2 reports an above-average computational burden for FCI once the variable count is large.  
-  – FCI can still be applied to moderately high-dimensional data, but runtime may become prohibitive without restricting the depth parameter or using parallelization strategies.  
+  – From the scalability benchmarks in File #2, DirectLiNGAM showed moderate performance when the number of variables is not excessively large. However, in higher-dimensional settings, its efficiency can suffer compared to more optimized or approximate search methods.  
+  – Some implementations offer faster “pwling” variants (e.g., “pwling_fast”) that can partially mitigate runtime for larger datasets, especially if GPU resources are available.  
 
 • Critique/Extension  
-  – Parallel Implementation: Some implementations offer parallelized independence testing to help with large datasets.  
-  – Approximate or Bounded Depth: Restricting the maximum depth of search is a common strategy to reduce runtime (though this may sacrifice some accuracy).
+  – Parallelization options exist in certain implementations for the independence measure calculation, which can help in large-scale scenarios but do not change the underlying complexity.  
 
-────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────
 3. Mixed Data & Complex Functions
-────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────
 
 • Noise Type  
-  – FCI itself does not strictly require Gaussian noise; it simply needs an appropriate conditional independence test (e.g., “kci” or “rcit” from File #1) to detect non-linear, non-Gaussian dependencies.  
+  – DirectLiNGAM is predicated on non-Gaussian noise assumptions. This is a defining feature that typically improves its ability to recover causal directions when data deviate from Gaussian distributions.  
 
 • Mixed Data (Continuous & Discrete)  
-  – Users can choose independence tests suited to mixed data (e.g., “gsq”) or generalized tests that handle a variety of variable types. According to File #1, “kci,” “fastkci,” and “rcit” may also address nonlinear interactions across data types.  
+  – The method is best suited for continuous variables with non-Gaussian errors. It is not natively optimized for discrete or mixed-type variables, so practitioners often resort to discrete-to-continuous transformations or alternative approaches for categorical data.  
 
 • Heterogeneous Data  
-  – File #2 suggests moderate performance under heterogeneous conditions (e.g., data collected from different sources or distributions). FCI’s separation-of-independences approach can still work if independence tests remain valid across distributions.  
+  – File #2’s heterogeneity tests showed that DirectLiNGAM can cope with shifts in data distributions, provided the underlying linear non-Gaussian assumptions remain valid. Its relative performance was in a mid-range among all methods tested.  
 
 • Complex Functional Forms  
-  – Non-linear relationships are detectable if the chosen independence test can pick them up. FCI, however, does not automatically model these relationships; it relies on test outcomes.  
+  – The core algorithm assumes linear relationships. If the real causal processes are substantially non-linear, performance may degrade unless one uses a kernel-based measure or extends the baseline approach with non-linear adaptations.  
 
 • Critique/Extension  
-  – The primary limitation is reliance on an accurate independence test. If the test poorly captures non-linear or complex interactions, FCI may miss true edges or introduce extraneous ones.  
-  – Some advanced versions of FCI or user-developed variations incorporate kernel-based tests, enabling more robust detection of complicated functional relationships.
+  – Researchers often propose hybrid strategies (e.g., combining DirectLiNGAM with generalized additive models) to better capture non-linearities while retaining the core non-Gaussian principle. Overfitting risks can emerge if kernel-based approaches are used on smaller datasets without careful hyperparameter control.  
 
-────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────
 4. Computational Complexity
-────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────
 
 • Theoretical Time Complexity  
-  – FCI is often cited as having an exponential worst-case time complexity with respect to the number of variables. A simplified expression is presented here: <temp>[O(2^n)]</temp>.  
-  – In practice, the real cost is heavily influenced by how many adjacency constraints it identifies early in the process.
+  – <temp>[O(n^4)]</temp> in the worst case, where n is the number of variables, due to the iterative nature of removing exogenous variables and recalculating partial correlations or independence measures.  
 
 • Variability in Practical Usage  
-  – Depth-limited FCI can reduce runtime to something more manageable (potentially polynomial in many real-world scenarios).  
-  – Higher significance levels (larger α) may reduce the total number of conditional independence tests because edges are removed more slowly, but they risk more spurious edges that must be tested and oriented later.  
+  – Runtime scales unfavorably as n grows large, though in practice, many real-world datasets remain in dimensional ranges where DirectLiNGAM is still tractable.  
+  – Certain hyperparameters (e.g., the “kernel” measure) can inflate the computational cost substantially compared to the default “pwling.”  
 
 • Critique/Extension  
-  – The worst-case complexity is rarely reached in sparse, real-world networks.  
-  – Parallel computing and caching of test results (mentioned in community forums) can improve runtime substantially.
+  – In typical applications with moderately sized data sets, DirectLiNGAM can be faster than multi-stage iterative search algorithms that re-check all pairwise relationships repeatedly.  
+  – Parallelization on modern hardware can reduce the practical runtime but does not eliminate the fundamental worst-case growth.  
 
-────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────
 5. Interpretability
-────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────
 
 • Output Format  
-  – FCI outputs a Partial Ancestral Graph (PAG), which represents causal constraints among variables, including potential latent confounders.  
+  – DirectLiNGAM outputs a causal ordering among variables and a corresponding adjacency matrix that shows directed edges and their connection strengths. Users can readily translate this matrix into a Directed Acyclic Graph (DAG).  
 
 • Strength of the Output Format  
-  – PAGs explicitly encode uncertain edges (e.g., bidirected edges indicating hidden confounders, circle endpoints indicating ambiguous directions). This offers rich information about causal possibilities.  
+  – Because the algorithm provides a clear ordering, it generally offers an intuitive explanation of “who causes whom.” This can be especially useful in linear frameworks where the coefficients can be interpreted semiquantitatively.  
+  – Some implementations also report confidence estimates or p-values for edges (often via bootstrapping).  
 
 • Limitations of the Output Format  
-  – PAGs can be less intuitive than DAGs or CPDAGs. Edges may remain unoriented or partially oriented, especially if data alone cannot resolve their direction.  
-  – Users often require additional domain knowledge to interpret or further refine certain ambiguous edges.  
+  – Under certain conditions (e.g., near-Gaussian distributions or violation of causal sufficiency), the orientation of edges might be ambiguous or sensitive to small data perturbations.  
+  – The adjacency matrix alone may not capture the uncertainty of orientation if the data only weakly determine the causal direction.  
 
 • Critique/Extension  
-  – Researchers recommend domain experts consult the PAG’s edge marks to hypothesize plausible latent variables or refine uncertain orientations.  
-  – Visualization libraries for FCI exist but require a solid grasp of the edge nomenclature.
+  – Domain knowledge is often helpful to confirm or refine the discovered order, especially in real-world applications where hidden confounding might exist.  
 
-────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────
 6. Assumptions
-────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────
 
 • Critical Assumptions  
-  – Markov and Faithfulness: The distribution of the data must align with the “true” causal graph’s conditional independencies, without pathological cancellations.  
-  – No Cycles: FCI assumes acyclicity among observed variables, even though it allows for the possibility of latent confounders.  
-  – Causal Sufficiency is relaxed compared to simpler algorithms (like PC), meaning FCI can account for possible hidden variables.  
+  – Linear Relations: All direct causal effects are assumed to be linear.  
+  – Non-Gaussianity: Error terms are non-Gaussian (with at most one Gaussian error allowed).  
+  – Causal Sufficiency: No unobserved confounders that affect multiple variables simultaneously.  
+  – Acyclicity: The causal structure is a Directed Acyclic Graph (DAG).  
 
 • Violation Impact  
-  – Violating faithfulness can produce incomplete or misleading PAGs (e.g., missing edges or unvalued circle endpoints).  
-  – When hidden confounding is extremely strong and the sample size is low, the discovered PAG can have many ambiguities.  
+  – If data contain multiple Gaussian components or strong non-linearities, DirectLiNGAM’s ability to recover correct directions can degrade significantly.  
+  – Hidden confounders or feedback loops can lead to erroneous causal claims, as the algorithm relies on the assumption of causal sufficiency and no cycles.  
 
 • Critique/Extension  
-  – FCI is often chosen because it explicitly relaxes causal sufficiency assumptions. Indeed, that is a main strength over simpler methods.  
-  – Partial violations of faithfulness can degrade accuracy but do not necessarily invalidate the overall skeleton of the PAG.
+  – Some researchers relax assumptions by incorporating latent variable modeling or generalizing the linear model. However, these are not part of the baseline DirectLiNGAM implementation and often require more advanced modifications.  
 
-────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────
 7. Real-World Benchmarks
-────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────
 
 • Performance on Real Datasets  
-  – File #2 indicates that FCI often performs at a middle or upper-middle rank across different metrics (e.g., adjacency precision, sensitivity to hidden variables).  
-  – Empirical studies (from external references) report that FCI often outperforms algorithms that assume no latent confounders when hidden variables or selection bias are indeed present.
+  – DirectLiNGAM has been applied in fields like economics, genomics, and neuroscience, showing notable success when the non-Gaussian assumption holds. It often outperforms classic methods (e.g., basic ICA-based or constraint-based approaches) in identifying true causal directions in such domains.  
+  – Benchmarks reported in File #2 indicate it performs near the middle or slightly lower end when significant measurement error or extensive missing data is present. Conversely, it ranks relatively better when data are of decent quality and conform to linear–non-Gaussian assumptions.  
 
 • Practical Tips  
-  – Adjust α based on sample size: Larger samples can justify smaller α for fewer false positives; smaller samples may require a higher α to avoid missing genuine edges.  
-  – Parallelizing the conditional independence tests or limiting depth can make FCI more tractable for large-dimensional datasets.  
-  – Domain knowledge plays a crucial role in resolving uncertain orientations in the PAG, ensuring the final model is more interpretable and actionable.  
+  – Incorporating domain knowledge (e.g., known cause-effect constraints) alongside DirectLiNGAM outputs can improve results and help confirm uncertain edges.  
+  – Users should carefully check the plausibility of linear and non-Gaussian assumptions in their data prior to applying DirectLiNGAM.  
+  – Some practitioners recommend using a kernel-based measure only if there is a strong reason to believe in non-linearities; the default “pwling” measure is often sufficient and more computationally efficient.  
 
-• Common Pitfalls  
-  – Using an independence test misaligned with the data’s underlying distribution (e.g., only using Fisher’s Z in the presence of non-linear or discrete variables) can lead to incorrect edges.  
-  – Overly restrictive significance levels with small sample sizes can cause many missed edges, while overly lenient significance levels can flood the output with spurious edges.
-
-────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────
 Summary
-────────────────────────────────────────────────────────────────────
-FCI (Fast Causal Inference) is a widely respected causal discovery algorithm that relaxes the assumption of no hidden confounders, making it especially valuable when latent variables or selection bias may be present. Its key hyperparameters—significance level (α), independence test choice, and depth constraint—all substantially affect how many edges are retained and how computationally heavy the procedure becomes. Although FCI can handle both continuous and discrete data (and even mixed types) via different independence tests, its runtime grows quickly with the number of variables and the complexity of the network.
+────────────────────────────────────────────────────────────────
+DirectLiNGAM is a specialized causal discovery algorithm well-suited to scenarios where linearity and non-Gaussianity of errors hold. Its minimal hyperparameter set eases tuning, though the choice of independence measure (especially “pwling” vs. “kernel”) can significantly affect performance and runtime. It is relatively robust to moderate noise but is more sensitive than some alternatives to missing data and measurement error. Its theoretical runtime complexity is on the higher side (O(n^4)), but in practice it remains efficient for moderate-scale problems, especially with fast variants or parallelization.
 
-Because FCI outputs a Partial Ancestral Graph (PAG), it can reveal potential latent confounding, but this representation may contain uncertain or bidirected edges requiring careful interpretation. This complexity can also make it challenging to tune parameters optimally without domain or statistical expertise. When properly configured, FCI has proven effective in real-world applications like genetics, climate science, and social networks—domains where hidden confounders often lurk. Overall, its flexibility and ability to account for unobserved variables are balanced by higher computational demands and some interpretability challenges relative to simpler methods.
+The algorithm’s outputs—a causal ordering and an adjacency matrix—are generally straightforward to interpret, but they rely on strong assumptions: linear effects, non-Gaussian noise, and no unobserved confounders. In real-world applications where these assumptions hold, DirectLiNGAM can accurately identify causal direction, often surpassing methods that assume Gaussian noise. Users should, however, exercise caution when facing hidden confounders, complex non-linearities, or severe data-quality issues.
 
 ────────────────────────────────────────────────────────
 Benchmarking Results
@@ -432,54 +416,39 @@ Benchmarking Results
 
 | Scenario | Rank (Mean) | Rank (Std Dev) | Performance (Level) | Efficiency (Level) | Composite (Level) |
 |----------|-----------|---------|-------------|------------|------------|
-| Scalability | 6.1 | 1.96 | 4.0 | 4.0 | 4.0 |
-| Heterogeneity | 5.0 | 0.71 | 4.0 | 4.0 | 5.0 |
-| Measurement Error | 6.5 | 0.50 | 4.0 | 4.0 | 4.0 |
-| Noise Type | 8.0 | 2.00 | 3.0 | 4.0 | 3.0 |
-| Missing Data | 7.5 | 4.39 | 4.0 | 2.0 | 3.0 |
-| Edge Probability | 6.3 | 2.05 | 4.0 | 4.0 | 4.0 |
-| Discrete Ratio | 7.0 | 0.82 | 4.0 | 4.0 | 4.0 |
+| Scalability | 11.6 | 4.69 | 1.0 | 5.0 | 2.0 |
+| Heterogeneity | 12.8 | 0.83 | 1.0 | 4.0 | 2.0 |
+| Measurement Error | 13.8 | 0.43 | 1.0 | 4.0 | 1.0 |
+| Noise Type | 7.5 | 6.50 | 3.0 | 4.0 | 4.0 |
+| Missing Data | 12.0 | 1.41 | 1.0 | 5.0 | 2.0 |
+| Edge Probability | 13.3 | 0.94 | 1.0 | 4.0 | 1.0 |
+| Discrete Ratio | 13.7 | 0.47 | 1.0 | 4.0 | 1.0 |
 
 • Analysis
 
-  – Overall mean ranking across 7 scenarios: 6.64
-  – Average standard deviation: 1.78
+  – Overall mean ranking across 7 scenarios: 12.09
+  – Average standard deviation: 2.18
 
 
 
 ## Supported hyperparameters: {
-    "algorithm_name": "FCI",
-    "alpha": {
-        "meaning": "Desired significance level in (0, 1)",
+    "algorithm_name": "DirectLiNGAM",
+    "measure": {
+        "meaning": "Measure to evaluate independence",
         "available_values": {
-            "default": 0.05,
-            "small_sample": 0.1,
-            "large_sample": 0.01
+            "default": "pwling",
+            "kernel": "kernel"
         },
-        "expert_suggestion": "Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
+        "expert_suggestion": "Use 'pwling' for pairwise likelihood-based measure, or 'kernel' for kernel-based measure."
     },
-    "indep_test": {
-        "meaning": "Independence test method",
+    "gpu": {
+        "meaning": "Whether to use GPU acceleration.",
         "available_values": {
-            "default": "fisherz",
-            "continuous": "fisherz",
-            "discrete": "chisq",
-            "robust_nonlinear": "kci",
-            "fast_robust_nonlinear": "fastkci",
-            "approximate_fast_nonlinear": "rcit"
+            "default": false,
+            "use_cpu": false,
+            "use_gpu": true
         },
-        "expert_suggestion": "Choose based on data type, 'fisherz' for linear continuous data; 'chisq' for discrete data (only applied for pure discrete data); 'kci' for nonlinear data (very slow, use only with variable size < 15 and sample size < 1500); 'fastkci' is faster than kci (use with < 20 variables and sample size < 3000); 'rcit' is the fastest approximation of kci (use with < 30 variables and sample size < 5000)."
-    },
-    "depth": {
-        "meaning": "Maximum depth for skeleton search",
-        "available_values": {
-            "default": -1,
-            "small_graph": 6,
-            "medium_graph": 4,
-            "large_graph": 2,
-            "extra_large_graph": 1
-        },
-        "expert_suggestion": "Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 1-3) can significantly speed up the algorithm at the cost of some accuracy. A graph with node number < 10, use depth 6; A graph with node number 10 - 25, use depth 4; A graph with node number 25-50, use depth 2; A graph with node number > 50, use depth 1."
+        "expert_suggestion": "If GPU is available, set gpu=True to use GPU acceleration. It is recommended to use GPU acceleration for large datasets."
     }
 }
 

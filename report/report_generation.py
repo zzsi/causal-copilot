@@ -3,6 +3,8 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from openai import OpenAI
 import re
+from pydantic import BaseModel
+from typing import List, Dict, Tuple, Optional
 import numpy as np 
 from plumbum.cmd import latexmk
 from plumbum import local
@@ -176,6 +178,11 @@ class Report_generation(object):
         section1 = fix_latex_itemize(section1)
         section1 = bold_conversion(section1)
 
+        class CausalRelation(BaseModel):
+            """Model for storing causal relations between variables."""
+            causes: List[str]
+            results: List[str]
+            explanations: List[str]
         col_names = '\t'.join(self.data.columns)
         prompt = f"""
 I want to conduct a causal discovery on a dataset and write a report. There is some background knowledge about this dataset.
@@ -187,37 +194,41 @@ Please extract all relationships in the second section ### 2. Possible Causal Re
 **Thinking Steps**
 1. Extract all pairwise relationships, for example A causes B because ....; C causes D because ....; Only include relationships between two variables!
 2. Check whether these variables are among {col_names}, please delete contents that include any other variables!
-3. Save the result in json, the key is the tuple of pairs, the value is the explanation. 
-4. Check whether the json result can be parsed directly, if not you should revise it
+3. Save the result pairs of nodes seperately in lists: causes and results, all left nodes are in causes list, all right nodes are in results list.
+4. Save the explanation in explanations as a list of strings.
 This is an example:
 You have A causes B because explanation1; C causes D because explanation2
-The JSON should be
-{{
-"(A, B)": explanation1,
-"(C, D)": explanation2
-}}
+The causes should be ["A", "C"]
+The results should be ["B", "D"]
+The explanations should be ["explanation1", "explanation2"]
 **You Must**
 1. Only pairwise relationships can be included
 2. All variables should be among {col_names}, please delete contents that include any other variables!
-3. Only return me a JSON can be parsed directly, DO NOT include anything else like ```!
 **Backgroud Knowledge**
 {self.knowledge_docs}
 """
-        response_background = self.client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        result = response_background.choices[0].message.content
-        result = result.strip("```json").strip("```")
-        result = json.loads(result)
+        response = LLM_parse_query(self.client, CausalRelation, "You are an expert in the causal discovery field and helpful assistant.", prompt)
+        causes, results, explanations = response.causes, response.results, response.explanations
         result_parsed = {}
-        for k, v in result.items():
-            # Remove parentheses and split by comma
-            key = tuple(x.strip() for x in k.strip('()').split(','))
-            result_parsed[key] = v
+        for cause, result, explanation in zip(causes, results, explanations):
+            tup = (cause, result)
+            result_parsed[tup] = explanation
+        
+        # response_background = self.client.chat.completions.create(
+        #     model="gpt-4o-mini",
+        #     messages=[
+        #         {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
+        #         {"role": "user", "content": prompt}
+        #     ]
+        # )
+        # result = response_background.choices[0].message.content
+        # result = result.strip("```json").strip("```")
+        # result = json.loads(result)
+        # result_parsed = {}
+        # for k, v in result.items():
+        #     # Remove parentheses and split by comma
+        #     key = tuple(x.strip() for x in k.strip('()').split(','))
+        #     result_parsed[key] = v
         #print(result_parsed)
         variables = self.data.columns
         if result_parsed != {}:
@@ -1118,7 +1129,7 @@ def parse_args():
 import pickle  
 if __name__ == '__main__':
     args = parse_args()
-    with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250331_115019/Federal Reserve Interest Rates/output_graph/CDNOD_global_state.pkl', 'rb') as file:
+    with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250402_230105/earthquakes/output_graph/PC_global_state.pkl', 'rb') as file:
         global_state = pickle.load(file)
     test(args, global_state)
     # save_path = 'demo_data/20250130_130622/house_price/output_report'
