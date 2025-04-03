@@ -486,7 +486,7 @@ def parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED
 
 def prepare_hyperparameter_text(global_state, chat_history):
     algorithm = global_state.algorithm.selected_algorithm
-    with open(f"/Users/wwy/Documents/Project/Causal-Copilot/algorithm/context/hyperparameters/{algorithm}.json", "r") as f:
+    with open(f"algorithm/context/hyperparameters/{algorithm}.json", "r") as f:
         param_hint = json.load(f)
     instruction = "Do you want to specify values for parameters instead of the selected one? If so, please specify your parameter following the template below: \n"
     for key in list(param_hint.keys())[1:]:
@@ -521,7 +521,7 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
             # Get current algorithm specs
             algorithm = global_state.algorithm.selected_algorithm
             # algorithm_specs = param_specs.get(algorithm, {})
-            with open(f"/Users/wwy/Documents/Project/Causal-Copilot/algorithm/context/hyperparameters/{algorithm}.json", "r") as f:
+            with open(f"algorithm/context/hyperparameters/{algorithm}.json", "r") as f:
                 algorithm_specs = json.load(f)
             prompt = f"""You are a parameter validation assistant. Please parse and validate the user's parameter inputs based on the provided context:
 
