@@ -91,7 +91,7 @@ FCI: {
     Distribution Shift: Homogenous,
     Scalability: Medium-to-large-scale,
     Efficiency: Fast (CPU),
-    Empirical Performance: Strong,
+    Empirical Performance: Robust,
     Output Format: PAG,
     Data Type: Tabular,
     Graph Density Stability: Moderate
@@ -103,7 +103,7 @@ CDNOD: {
     Method Type: Constraint-based,
     Functional Form: Flexible,
     Noise: Flexible,
-    Latent Variable Tolerance: Robust,
+    Latent Variable Tolerance: Moderate,
     Scalability: Medium-to-large-scale with default settings, can scale to large datasets (thousands of variables) with GPU acceleration,
     Efficiency: Fast with CPU, Extreme Fast with GPU acceleration,
     Empirical Performance: Strong,
@@ -190,7 +190,7 @@ IAMBnPC: {
     Distribution Shift: Homogenous,
     Scalability: Medium-to-large-scale,
     Efficiency: Fast,
-    Empirical Performance: Limited,
+    Empirical Performance: Robust,
     Output Format: CPDAG,
     Data Type: Tabular,
     Graph Density Stability: Moderate
@@ -239,7 +239,7 @@ FGES: {
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
     Scalability: Large-scale,
-    Efficiency: Fast (CPU),
+    Efficiency: Extreme Fast (CPU),
     Empirical Performance: Strong,
     Output Format: CPDAG,
     Data Type: Tabular,
@@ -250,7 +250,7 @@ XGES: {
     Full Name: "eXtremely Greedy Equivalence Search",
     Availability: Available,
     Method Type: Score-based,
-    Functional Form: Flexible,
+    Functional Form: Linear,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
@@ -259,7 +259,7 @@ XGES: {
     Empirical Performance: Robust,
     Output Format: CPDAG,
     Data Type: Tabular,
-    Graph Density Stability: High
+    Graph Density Stability: Moderate
 }
 
 GRaSP: {
@@ -272,10 +272,10 @@ GRaSP: {
     Distribution Shift: Homogenous,
     Scalability: Medium-scale,
     Efficiency: Moderate,
-    Empirical Performance: Strong,
+    Empirical Performance: Robust,
     Output Format: CPDAG,
     Data Type: Tabular,
-    Graph Density Stability: High
+    Graph Density Stability: Moderate
 }
 
 ### Continuous-optimization Methods
@@ -289,8 +289,8 @@ GOLEM: {
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
     Scalability: Medium-to-large-scale,
-    Efficiency: Moderate,
-    Empirical Performance: Strong,
+    Efficiency: Slow,
+    Empirical Performance: Robust,
     Output Format: DAG,
     Data Type: Tabular,
     Graph Density Stability: High
@@ -338,7 +338,7 @@ NOTEARSLinear: {
     Distribution Shift: Homogenous,
     Scalability: Medium-scale,
     Efficiency: Moderate,
-    Empirical Performance: Strong,
+    Empirical Performance: Robust,
     Output Format: DAG,
     Data Type: Tabular,
     Graph Density Stability: High
@@ -373,7 +373,7 @@ DYNOTEARS: {
     Empirical Performance: Strong,
     Output Format: DAG,
     Data Type: Time-series,
-    Graph Density Stability: High
+    Graph Density Stability: Moderate
 }
 
 NTSNOTEARS: {
@@ -389,7 +389,7 @@ NTSNOTEARS: {
     Empirical Performance: Strong,
     Output Format: DAG,
     Data Type: Time-series,
-    Graph Density Stability: High
+    Graph Density Stability: Moderate
 }
 
 ### Functional Model-based Methods (LiNGAM Family)
@@ -407,7 +407,8 @@ DirectLiNGAM: {
     Empirical Performance: Limited,
     Output Format: DAG,
     Data Type: Tabular,
-    Graph Density Stability: Moderate
+    Graph Density Stability: Moderate,
+    Note: "Excellent performance on non-Gaussian noise (10.0 score) but poor on Gaussian noise, explaining the overall Limited empirical performance"
 }
 
 ICALiNGAM: {
