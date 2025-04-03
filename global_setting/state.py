@@ -80,6 +80,7 @@ class Results:
     raw_edges: Optional[Dict] = None
     raw_info: Optional[Dict] = None
     converted_graph: Optional[str] = None
+    lagged_graph: Optional[object] = None
     metrics: Optional[Dict] = None
     revised_graph: Optional[np.ndarray] = None
     revised_edges: Optional[Dict] = None
