@@ -32,37 +32,37 @@ ALGORITHM_HYPERPARAMS=(
     # "PC:{\"indep_test\":\"fisherz_gpu\"}"
     # "PC:{\"indep_test\":\"cmiknn_gpu\"}"
     
-    # FCI algorithm - linear variant
-    "FCI:{\"indep_test\":\"fisherz\"}"
+    # # FCI algorithm - linear variant
+    # "FCI:{\"indep_test\":\"fisherz\"}"
     
-    # # CDNOD algorithm - linear variant
-    "CDNOD:{\"indep_test\":\"fisherz_gpu\"}"
-    "CDNOD:{\"indep_test\":\"cmiknn_gpu\"}"
-    "CDNOD:{\"indep_test\":\"fisherz_cpu\"}"
+    # # # CDNOD algorithm - linear variant
+    # "CDNOD:{\"indep_test\":\"fisherz_gpu\"}"
+    # "CDNOD:{\"indep_test\":\"cmiknn_gpu\"}"
+    # "CDNOD:{\"indep_test\":\"fisherz_cpu\"}"
     
-    # # FGES algorithm
-    "FGES:{\"sparsity\":10}"
-    "FGES:{\"sparsity\":5}"
-    "FGES:{\"sparsity\":2}"
-    "FGES:{\"sparsity\":1}"
+    # # # FGES algorithm
+    # "FGES:{\"sparsity\":10}"
+    # "FGES:{\"sparsity\":5}"
+    # "FGES:{\"sparsity\":2}"
+    # "FGES:{\"sparsity\":1}"
     
-    # # XGES algorithm
-    "XGES:{\"alpha\":0.5}"
-    "XGES:{\"alpha\":1}"
-    "XGES:{\"alpha\":2}"
-    "XGES:{\"alpha\":4}"
+    # # # XGES algorithm
+    # "XGES:{\"alpha\":0.5}"
+    # "XGES:{\"alpha\":1}"
+    # "XGES:{\"alpha\":2}"
+    # "XGES:{\"alpha\":4}"
 
     
-    # DirectLiNGAM algorithm - linear non-Gaussian method
-    "DirectLiNGAM:{\"measure\":\"pwling\",\"gpu\":false}"
-    "DirectLiNGAM:{\"measure\":\"pwling\",\"gpu\":true}"
+    # # DirectLiNGAM algorithm - linear non-Gaussian method
+    # "DirectLiNGAM:{\"measure\":\"pwling\",\"gpu\":false}"
+    # "DirectLiNGAM:{\"measure\":\"pwling\",\"gpu\":true}"
     
-    # NOTEARSLinear algorithm - gradient-based optimization
-    "NOTEARSLinear:{\"lambda1\":0.01,\"loss_type\":\"l2\"}"
+    # # NOTEARSLinear algorithm - gradient-based optimization
+    # "NOTEARSLinear:{\"lambda1\":0.01,\"loss_type\":\"l2\"}"
     
-    # Markov blanket algorithms - linear independence tests
-    "BAMB:{\"indep_test\":\"fisherz\"}"
-    "IAMBnPC:{\"indep_test\":\"fisherz\"}"
+    # # Markov blanket algorithms - linear independence tests
+    # "BAMB:{\"indep_test\":\"fisherz\"}"
+    # "IAMBnPC:{\"indep_test\":\"fisherz\"}"
     "MBOR:{\"indep_test\":\"fisherz\"}"
     "InterIAMB:{\"indep_test\":\"fisherz\"}"
     
