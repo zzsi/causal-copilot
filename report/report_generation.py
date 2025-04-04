@@ -204,6 +204,7 @@ The explanations should be ["explanation1", "explanation2"]
 **You Must**
 1. Only pairwise relationships can be included
 2. All variables should be among {col_names}, please delete contents that include any other variables!
+3. Carefully check the cause, result and explanation, make sure their orders are correct.
 **Backgroud Knowledge**
 {self.knowledge_docs}
 """
@@ -561,8 +562,8 @@ The explanations should be ["explanation1", "explanation2"]
             response += fr"""
             \begin{{figure}}[H]
             \centering
-            \includegraphics[height=0.3\textheight]{{{self.visual_dir}/{self.algo}_revised_graph.pdf}}
-            \caption{{Revised Graph}}
+            \includegraphics[width=0.5\textwidth]{{{self.visual_dir}/{self.algo}_revised_graph.pdf}}
+            \caption{{Revised Graph by LLM}}
             \end{{figure}}
             """
 

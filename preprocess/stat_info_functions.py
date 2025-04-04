@@ -183,7 +183,9 @@ def correlation_check(global_state):
             df[column] = df[column].cat.codes.replace(-1, np.nan)  # Keep NaN while converting
 
     correlation_matrix = df.corr()
+    print(correlation_matrix)
     drop_feature = []
+    correlated_groups = {}
 
     for i in range(m):
         for j in range(i + 1, m):
@@ -191,6 +193,10 @@ def correlation_check(global_state):
             if abs(corr_value) > 0.95:
                 var1 = df.columns[i]
                 var2 = df.columns[j]
+                if var1 not in correlated_groups.keys():
+                    correlated_groups[var1] = [var2]
+                else:
+                    correlated_groups[var1].append(var2)
 
                 if global_state.user_data.drop_important_var:
                     if var1 not in global_state.user_data.important_features and var1 not in drop_feature:
@@ -206,22 +212,24 @@ def correlation_check(global_state):
                         drop_feature.append(var2)
 
     # Update global state
-    # print('global_state.user_data.important_features', global_state.user_data.important_features)
-    # print('global_state.user_data.selected_features', global_state.user_data.selected_features)
     selected_set = set(global_state.user_data.selected_features) - set(drop_feature)
     selected_set.update(global_state.user_data.important_features)
     final_drop_feature = list(set(drop_feature) - set(global_state.user_data.important_features))
     global_state.user_data.high_corr_drop_features = final_drop_feature
-    
+
+    global_state.user_data.high_corr_feature_groups = correlated_groups
+    print('correlated_groups', correlated_groups)
+
     # print('selected_set', selected_set)
     # print('list_selected_set', list(selected_set))
-    if len(selected_set) > 20:
-        # Convert back to list
-        global_state.user_data.selected_features = list(selected_set)
-        global_state.user_data.processed_data = global_state.user_data.raw_data[global_state.user_data.selected_features]
-        drop = True
-    else:
-        drop = False
+    # if len(selected_set) > 20:
+    #     # Convert back to list
+    #     global_state.user_data.selected_features = list(selected_set)
+    #     global_state.user_data.processed_data = global_state.user_data.raw_data[global_state.user_data.selected_features]
+    #     drop = True
+    # else:
+    #     drop = False
+    drop = False
 
     return global_state, drop
 

@@ -1418,6 +1418,8 @@ class Analysis(object):
             elif len(confounders) <= 5:
                 if len(confounders) - len(cont_confounders) > len(cont_confounders):  # If more than half discrete confounders
                     method = "cem"
+                    if len(confounders)/(len(self.data.columns)-2)>0.5:
+                        method = "propensity_score"
                 else:
                     method = "propensity_score"
             else:

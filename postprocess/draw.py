@@ -106,16 +106,19 @@ def draw(
     else:
         dot = Digraph()
 
+    dot.graph_attr['dpi'] = '300'
+    dot.graph_attr['margin'] = '1'
     if pos is not None:
         dot.engine = 'neato'  
         dot.graph_attr['overlap'] = 'false'
         dot.graph_attr['splines'] = 'true'
         print('yes')
-        dot.graph_attr['K'] = '2'
-        dot.graph_attr['nodesep'] = '2.0'
-        dot.graph_attr['ranksep'] = '2.0'
-        dot.graph_attr['size'] = '10,10'
+        dot.graph_attr['K'] = '0.8'
+        dot.graph_attr['nodesep'] = '0.5'
+        dot.graph_attr['ranksep'] = '0.5'
+        dot.graph_attr['size'] = '12,12'
         dot.graph_attr['ratio'] = 'fill',
+        dot.graph_attr['overlap_scaling'] = '1'
 
 
     # set direction from left to right if that's preferred
@@ -144,17 +147,27 @@ def draw(
         bidirected_edges=bidirected_edges,
     )
     size = int(np.sqrt(len(G.nodes())))+1
-    dot.graph_attr['K'] = '2'
+    dot.graph_attr['K'] = '0.8'
     dot.graph_attr['nodesep'] = '0.5'
     dot.graph_attr['ranksep'] = '0.5'
     dot.graph_attr['size'] = str(size)+','+str(size)
     dot.graph_attr['ratio'] = 'fill'
+    dot.graph_attr['overlap_scaling'] = '1'
 
+    node_height = "1"  # Increased from 0.5 to 0.8
+    node_width = "1"   # Increased from 0.5 to 0.8
+    node_fontsize_base = "20"  # Base font size (was dynamically calculated)
+    edge_penwidth = "1.5"  # Increased line thickness for edges
     # add the nodes that in the G but not in the PAG
     for node in full_node_names:
         if node not in dot.body:
             if True:
-                dot.node(str(node), shape=shape, height="0.5", width="0.5", fillcolor=fill_color, style="filled", color=arrow_color, font_color = arrow_color, fixedsize="true", fontsize = str(24/len(str(node))))
+                dot.node(str(node), shape=shape, 
+                         height=node_height, width=node_width, penwidth=edge_penwidth,
+                         fillcolor=fill_color, style="filled", color=arrow_color, font_color = arrow_color, fixedsize="true", 
+                         fontsize = node_fontsize_base)
+                        #  fontsize = str(24/len(str(node))))
+
 
     # get the directed graph component and add any remaining nodes
     if hasattr(G, "get_graphs"):
@@ -170,9 +183,9 @@ def draw(
     for v in full_node_names:
         child = str(v)
         if pos and pos.get(v) is not None:
-            dot.node(child, shape=shape, height="0.5", width="0.5", pos=f"{pos[v][0]*10},{pos[v][1]*10}!", fillcolor=fill_color, style="filled", color=arrow_color, font_color = arrow_color, fixedsize="true", fontsize = str(24/len(child)))
+            dot.node(child, shape=shape, height=node_height, width=node_width, penwidth=edge_penwidth, pos=f"{pos[v][0]*10},{pos[v][1]*10}!", fillcolor=fill_color, style="filled", color=arrow_color, font_color = arrow_color, fixedsize="true", fontsize = node_fontsize_base)
         else:
-            dot.node(child, shape=shape, height="0.5", width="0.5", fillcolor=fill_color, style="filled", color=arrow_color, font_color = arrow_color, fixedsize="true",fontsize = str(24/len(child)))
+            dot.node(child, shape=shape, height=node_height, width=node_width, penwidth=edge_penwidth, fillcolor=fill_color, style="filled", color=arrow_color, font_color = arrow_color, fixedsize="true",fontsize = node_fontsize_base)
         
         try:
             for parent in directed_G.predecessors(v):
@@ -184,9 +197,9 @@ def draw(
                     continue
                 parent = str(parent)
                 if parent == v:
-                    dot.edge(parent, child, style="invis", **attrs)
+                    dot.edge(parent, child, style="invis", penwidth=edge_penwidth, **attrs)
                 else:
-                    dot.edge(parent, child, color="#000080", **attrs)
+                    dot.edge(parent, child, color="#000080", penwidth=edge_penwidth, **attrs)
         except nx.exception.NetworkXError as e:
             # the node is completely independent in the inferred graph
             pass

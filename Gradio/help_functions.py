@@ -495,9 +495,16 @@ def prepare_hyperparameter_text(global_state, chat_history):
     chat_history.append((None, instruction))
     hint = "Here are instructions for hyper-parameter tuning:\n"
     for key, value in list(param_hint.items())[1:]:
-        param_info = f"Parameter Meaning: {value['meaning']}, \n Parameter Selection Suggestion: {value['expert_suggestion']}"
+        param_info = f"Parameter Meaning: {value['meaning']}, \n Available Values: {value['available_values']} \n Parameter Selection Suggestion: {value['expert_suggestion']}"
         prompt = "You are an expert in causal discovery, I need to write a hint for the user to choose values for causal discovery algorithm hyper-parameters"\
-            "I will give you information about the parameter, please help me to write a hint with 1-2 sentences for the user to choose values for this parameter."
+            "I will give you information about the parameter, please help me to write a short paragraph with bullet points for the user to choose values for this parameter."\
+            "Example: \n"\
+    f"""
+    Brief Explanation for this parameter with 1 sentences
+    - **{value['available_values'][0]}**: in which case we recommend to use this value
+    - **{value['available_values'][1]}**: in which case we recommend to use this value
+    - ......
+    """
         param_info = LLM_parse_query(None, prompt, param_info)
         hint += f"- {key}: \n{param_info};\n "
     chat_history.append((None, hint))
@@ -515,21 +522,15 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
                 param_values: list[Union[str, int, float]]
                 valid_params: bool
                 error_messages: str
-            # with open("Gradio/parameter_range_context.json", "r") as f:
-            #     param_specs = json.load(f)
-
+                
             # Get current algorithm specs
             algorithm = global_state.algorithm.selected_algorithm
-            # algorithm_specs = param_specs.get(algorithm, {})
             with open(f"algorithm/context/hyperparameters/{algorithm}.json", "r") as f:
                 algorithm_specs = json.load(f)
             prompt = f"""You are a parameter validation assistant. Please parse and validate the user's parameter inputs based on the provided context:
-
             **Context**
             We asked the user: "Do you want to specify values for parameters instead of the selected ones? If so, please specify your parameters."
-
             The current algorithm selected is: {algorithm}
-
             Here are the valid parameter specifications for this algorithm:
             {algorithm_specs}
 
@@ -539,7 +540,9 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
             3. Check each parameter one by one:
             - Convert numeric values to the appropriate type (int or float) based on the parameter's expected type
             - Validate that string values match one of the allowed options for string parameters
-            - Verify numeric values fall within the acceptable range for the parameter
+            - Verify numeric values fall within the **acceptable range** for the parameter, int must be int, float must be float, and it's acceptable as long as the value is in the range.
+            For example, if the parameter is a float and the min is 0, max is 1.0, check if the value is a float between 0 and 1.0
+            if the parameter is an integer and the min is 1, max is 10, check if the value is an integer between 1 and 10
             - If arrays are expected (e.g., hidden_dims), parse them correctly
             4. If the parameter value is valid, set `valid_params` to True and leave `error_messages` as an empty string.
             4. If the parameter value is invalid, set `valid_params` to False and add an appropriate error message to `error_messages` explaining why the value is invalid, and instruct user what values they should input.

@@ -7,9 +7,10 @@ import os
 from pywhy_graphs import PAG
 # from pywhy_graphs.viz import draw
 import sys
-sys.path.append('causal-learn')
-from causallearn.search.FCMBased.lingam.utils import make_dot
-from .draw import draw
+# sys.path.append('causal-learn')
+# from causallearn.search.FCMBased.lingam.utils import make_dot
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from postprocess.draw import draw
 
 class Visualization(object):
     def __init__(self, global_state, threshold: float=0.95):
@@ -19,8 +20,11 @@ class Visualization(object):
         :param threshold: threshold for the bootstrap probability to accept an edge.
         """
         self.global_state = global_state
-        self.data = global_state.user_data.processed_data[global_state.user_data.visual_selected_features]
-        self.data_idx = [global_state.user_data.processed_data.columns.get_loc(var) for var in global_state.user_data.visual_selected_features]
+        
+        intersection_features = list(set(global_state.user_data.processed_data.columns).intersection(
+            set(global_state.user_data.visual_selected_features)))
+        self.data = global_state.user_data.processed_data[intersection_features]
+        self.data_idx = [global_state.user_data.processed_data.columns.get_loc(var) for var in intersection_features]
         self.bootstrap_prob = global_state.results.bootstrap_probability
         self.save_dir = global_state.user_data.output_graph_dir
         self.threshold = threshold
@@ -247,3 +251,16 @@ def test_fixed_pos():
 
 if __name__ == '__main__':
     test_fixed_pos()
+    # my_visual_initial = Visualization(global_state)
+    # if global_state.results.raw_pos is None:
+    #     data_idx = [global_state.user_data.processed_data.columns.get_loc(var) for var in global_state.user_data.visual_selected_features]
+    #     pos = my_visual_initial.get_pos(global_state.results.converted_graph[data_idx, :][:, data_idx])
+    #     global_state.results.raw_pos = pos
+    # if global_state.user_data.ground_truth is not None:
+    #     my_visual_initial.plot_pdag(global_state.user_data.ground_truth, f'{global_state.algorithm.selected_algorithm}_true_graph.jpg', global_state.results.raw_pos)
+    #     my_visual_initial.plot_pdag(global_state.user_data.ground_truth, f'{global_state.algorithm.selected_algorithm}_true_graph.pdf', global_state.results.raw_pos)
+    #     chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/{global_state.algorithm.selected_algorithm}_true_graph.jpg',)))
+    #     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+    # if global_state.results.converted_graph is not None:
+    #     my_visual_initial.plot_pdag(global_state.results.converted_graph, f'{global_state.algorithm.selected_algorithm}_initial_graph.jpg', global_state.results.raw_pos)
+    #     my_visual_initial.plot_pdag(global_state.results.converted_graph, f'{global_state.algorithm.selected_algorithm}_initial_graph.pdf', global_state.results.raw_pos)

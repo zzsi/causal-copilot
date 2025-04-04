@@ -106,32 +106,32 @@ DEMO_DATASETS = {
     "Abalone": {
         "name": "🐚 Real Dataset:Abalone",
         "path": "dataset/Abalone/Abalone.csv",
-        "query": "YES. Find causal relationships between physical measurements and age of abalone. The dataset contains numerical measurements of physical characteristics.",
+        "query": "Find causal relationships between physical measurements and age of abalone. The dataset contains numerical measurements of physical characteristics.",
     },
     "Sachs": {
         "name": "🧬 Real Dataset: Sachs",
         "path": "dataset/sachs/sachs.csv", 
-        "query": "YES. Discover causal relationships between protein signaling molecules. The data contains flow cytometry measurements of proteins and phospholipids."
+        "query": "Discover causal relationships between protein signaling molecules. The data contains flow cytometry measurements of proteins and phospholipids."
     },
     "CCS Data": {
         "name": "📊 Real Dataset: CCS Data",
         "path": "dataset/CCS_Data/CCS_Data.csv",
-        "query": "YES. Analyze causal relationships between variables in the CCS dataset. The data contains multiple continuous variables."
+        "query": "Analyze causal relationships between variables in the CCS dataset. The data contains multiple continuous variables."
     },
     "Ozone": {
         "name": "🌫️ Real Dataset: Ozone", 
         "path": "dataset/Ozone/Ozone.csv",
-        "query": "YES. This is a Time-Series dataset, investigate causal factors affecting ozone levels. The data contains atmospheric and weather measurements over time."
+        "query": "This is a Time-Series dataset, investigate causal factors affecting ozone levels. The data contains atmospheric and weather measurements over time."
     },
     "Linear_Gaussian": {
         "name": "🟦 Simulated Data: Linear Gaussian",
         "path": "dataset/Linear_Gaussian/Linear_Gaussian_data.csv",
-        "query": "NO. The data follows linear relationships with Gaussian noise. Please discover the causal structure."
+        "query": "The data follows linear relationships with Gaussian noise. Please discover the causal structure."
     },
     "Linear_Nongaussian": {
         "name": "🟩 Simulated Data: Linear Non-Gaussian",
         "path": "dataset/Linear_Nongaussian/Linear_Nongaussian_data.csv", 
-        "query": "NO. The data follows linear relationships with non-Gaussian noise. Please discover the causal structure."
+        "query": "The data follows linear relationships with non-Gaussian noise. Please discover the causal structure."
     }
 }
 
@@ -258,7 +258,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             f"""
 | Sample size | Meaningful Feature | Heterogeneity | Accept CPDAG | Missing Value | Highly Correlated Features |
 |:-----------:|:-------------------:|:-------------:|:------------:|:-------------:|:-------------:|
-|{'✅ Enough' if enough_sample else '⚠️ Not Enough'}|{'✅ Yes' if global_state.user_data.meaningful_feature else '🚫 Simulated Data'}|{global_state.statistics.domain_index if global_state.statistics.domain_index else '🚫 Non Heterogeneous'}|{'✅ Accept'}|{'✅ No Missingness' if not np_nan else '⚠️ Missingness'}|{'✅ No Highly Correlated Features' if not global_state.user_data.high_corr_drop_features else '⚠️ Highly Correlated Features'}|
+|{'✅ Enough' if enough_sample else '⚠️ Not Enough'}|{'✅ Yes' if global_state.user_data.meaningful_feature else '🚫 Simulated Data'}|{f'✅ {global_state.statistics.domain_index}' if global_state.statistics.domain_index else '🚫 No'}|{'✅ Accept'}|{'✅ No Missingness' if not np_nan else '⚠️ Missingness'}|{'✅ No Highly Correlated Features' if not global_state.user_data.high_corr_drop_features else '⚠️ Highly Correlated Features'}|
 """
             chat_history.append((None, tables))
             texts = ""
@@ -379,8 +379,6 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                     global_state.user_data.visual_selected_features = other_variables[:remaining_num+1]
                     global_state.user_data.visual_selected_features.extend(global_state.user_data.important_features)
                     CURRENT_STAGE = 'knowledge_generation'
-                    print('visual_dimension_check', global_state.user_data.processed_data.columns)
-                    print('visual_dimension_check', global_state.user_data.visual_selected_features)
                     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             else: 
                 global_state.user_data.visual_selected_features = global_state.user_data.selected_features
@@ -891,6 +889,14 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                                         "Reason: " + reason))
                     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                     return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                if key_node_list[0] not in global_state.user_data.processed_data:
+                    info = f"❌ We cannot find the result variable you specified, please input your causal analysis query again, or input 'no' to end this part."
+                    chat_history.append((None, info))
+                    CURRENT_STAGE = 'parse_task'
+                    global_state.inference.task_index = -1
+                    global_state.inference.task_info = {}
+                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                    return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 else:
                     chat_history.append(("📝 Proposal for my causal inference task...", None))
                     chat_history.append((None, reason))
@@ -915,7 +921,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             print('treatment: ', treatment)
             chat_history.append((None, f"""💡 In this simulation, we are applying a 'shift intervention' to study how changes in the {treatment} impact the {task_info['key_node'][0]}. 
                                  A shift intervention involves modifying the value of a variable by a fixed amount (the 'shift value') while keeping other variables unchanged.
-                                 For example, if we are studying the effect of increasing income on health outcomes, we might **apply ashift intervention where the income variable is increased by a fixed amount, such as $500**, for all individuals. Then your shift value is 500.
+                                 For example, if we are studying the effect of increasing income on health outcomes, we might **apply a shift intervention where the income variable is increased by a fixed amount, such as $500**, for all individuals. Then your shift value is 500.
                                  Please enter the shift value:"""))
             CURRENT_STAGE = "counterfactual_info_collection2"
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -941,6 +947,14 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             task_info = global_state.inference.task_info[global_state.inference.task_index]
             ### Check Treatment
             treatment = parse_treatment(task_info['desc'][0], global_state, args)
+            if treatment not in global_state.user_data.processed_data.columns:
+                info = f"❌ We cannot find the treatment variable you specified, please input your causal analysis query again, or input 'no' to end this part."
+                chat_history.append((None, info))
+                CURRENT_STAGE = 'parse_task'
+                global_state.inference.task_index = -1
+                global_state.inference.task_info = {}
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             is_binary, treat, control = check_binary(global_state.user_data.processed_data[treatment])
             if not is_binary:
                 treat = 1
