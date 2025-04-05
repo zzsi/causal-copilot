@@ -1,3 +1,7 @@
+User original query (TOP PRIORITY):
+[USER_QUERY]
+
+-----------------------------------------------
 Given a dataset with the following properties:
 
 1. Columns: [COLUMNS]

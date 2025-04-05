@@ -1,4 +1,3 @@
-
 # FCI (Fast Causal Inference) Algorithm Profile
 
 ## Executive Summary

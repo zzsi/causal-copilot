@@ -1,6 +1,6 @@
-Given the following user query:
+User original query (TOP PRIORITY):
 [USER_QUERY]
-
+-----------------------------------------------
 For the dataset [TABLE_NAME] that have the following variables:
 [COLUMNS]
 

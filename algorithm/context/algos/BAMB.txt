@@ -1,4 +1,3 @@
-
 # BAMB Algorithm
 
 ## Executive Summary

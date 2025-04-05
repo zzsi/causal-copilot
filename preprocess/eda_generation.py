@@ -3,67 +3,173 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder
 import numpy as np
 import os
+import pandas as pd
+from statsmodels.tsa.stattools import acf, pacf
+from statsmodels.tsa.api import VAR
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from scipy.stats import pearsonr
+from scipy.signal import find_peaks
+import math
+from types import SimpleNamespace
 
 class EDA(object):
     def __init__(self, global_state):
         """
         :param global_state: a dict containing global variables and information
         """
+        # Set consistent matplotlib parameters for all plots
+        # plt.rcParams['figure.figsize'] = (18, 14)
+        # plt.rcParams['figure.dpi'] = 300
+        # plt.rcParams["axes.grid"] = False 
+        plt.rcParams["font.family"] = "monospace"
+        # plt.rcParams['axes.edgecolor'] = 'black'
+        # plt.rcParams['figure.frameon'] = False
+        # plt.rcParams['axes.spines.left'] = True
+        # plt.rcParams['axes.spines.bottom'] = True
+        # plt.rcParams['axes.spines.top'] = False
+        # plt.rcParams['axes.spines.right'] = False
+        # plt.rcParams['axes.linewidth'] = 1.0
+        # plt.rcParams['axes.titlesize'] = 14
+        # plt.rcParams['axes.labelsize'] = 10
+        # plt.rcParams['xtick.labelsize'] = 9
+        # plt.rcParams['ytick.labelsize'] = 9
+        
         self.global_state = global_state
         
         intersection_features = list(set(global_state.user_data.processed_data.columns).intersection(
             set(global_state.user_data.visual_selected_features)))
         self.data = global_state.user_data.processed_data[intersection_features]
         self.save_dir = global_state.user_data.output_graph_dir
-        # limit the number of features contained
-        if self.data.shape[1] > 10:
-            df = self.data.copy()
-            # choose 10 columns randomly
-            random_columns = np.random.choice(df.columns, size=10, replace=False)
-            self.data = df[random_columns]
+        
+        # Store the original feature size for reference
+        self.original_feature_count = len(intersection_features)
+        
+        # Smart feature selection for visualization
+        self._select_visualization_features()
+        
         # Identify categorical features
         self.categorical_features = self.data.select_dtypes(include=['object', 'category']).columns
+        # Check if the data is time series
+        self.is_time_series = global_state.statistics.time_series if hasattr(global_state.statistics, 'time_series') else False
+    
+    def _select_visualization_features(self, max_features=10):
+        """
+        Intelligently select features for visualization.
+        For large feature sets, select a representative subset.
+        
+        :param max_features: Maximum number of features to include in visualizations
+        """
+        if self.data.shape[1] <= max_features:
+            return  # No need to limit features
+            
+        df = self.data.copy()
+        
+        # If important features are defined, prioritize them
+        important_features = []
+        if hasattr(self.global_state.user_data, 'important_features'):
+            important_features = [f for f in self.global_state.user_data.important_features 
+                                 if f in df.columns]
+        
+        # Calculate feature importance or variability
+        feature_scores = {}
+        for col in df.columns:
+            if pd.api.types.is_numeric_dtype(df[col]):
+                # For numeric: use coefficient of variation
+                if df[col].std() > 0:
+                    feature_scores[col] = abs(df[col].std() / df[col].mean()) if df[col].mean() != 0 else df[col].std()
+                else:
+                    feature_scores[col] = 0
+            else:
+                # For categorical: use normalized entropy
+                value_counts = df[col].value_counts(normalize=True)
+                if len(value_counts) > 1:
+                    entropy = -sum(p * np.log(p) for p in value_counts if p > 0)
+                    feature_scores[col] = entropy / np.log(len(value_counts))  # Normalized
+                else:
+                    feature_scores[col] = 0
+        
+        # Select features: important ones first, then highest scoring ones
+        remaining_slots = max_features - len(important_features)
+        if remaining_slots > 0:
+            # Sort by score (highest first) and select top remaining_slots
+            sorted_features = sorted([(k, v) for k, v in feature_scores.items() 
+                                     if k not in important_features],
+                                    key=lambda x: x[1], reverse=True)
+            selected_features = important_features + [f[0] for f in sorted_features[:remaining_slots]]
+        else:
+            # If we have more important features than max_features, prioritize them
+            selected_features = important_features[:max_features]
+        
+        # Update self.data with selected features
+        self.data = df[selected_features]
+    
+    def get_optimal_layout(self, n_plots, base_width=5, base_height=4, max_cols=5, min_col_width=3):
+        """
+        Calculate optimal figure layout based on number of plots
+        
+        :param n_plots: Number of plots to display
+        :param base_width: Base width per plot
+        :param base_height: Base height per plot
+        :param max_cols: Maximum number of columns
+        :param min_col_width: Minimum width per column in inches
+        :return: tuple (n_rows, n_cols, figsize)
+        """
+        # Calculate best layout
+        n_cols = min(max_cols, n_plots, max(1, int(plt.rcParams['figure.figsize'][0] / min_col_width)))
+        n_rows = int(np.ceil(n_plots / n_cols))
+        
+        # Calculate appropriate figure size
+        # Adjust width based on feature name lengths if we have column names
+        if hasattr(self, 'data') and self.data is not None:
+            # Estimate space needed for column names
+            max_name_len = max([len(str(col)) for col in self.data.columns[:n_plots]]) if n_plots > 0 else 10
+            width_factor = max(1, min(2, max_name_len / 10))  # Scale between 1-2x based on name length
+            fig_width = min(plt.rcParams['figure.figsize'][0], n_cols * base_width * width_factor)
+        else:
+            fig_width = min(plt.rcParams['figure.figsize'][0], n_cols * base_width)
+            
+        fig_height = min(plt.rcParams['figure.figsize'][1], n_rows * base_height)
+        
+        return n_rows, n_cols, (fig_width, fig_height)
 
     def plot_dist(self):
         df = self.data.copy()
-        # limit the number of features contained
-        if df.shape[1] > 10:
-            # choose 10 columns randomly
-            random_columns = np.random.choice(df.columns, size=10, replace=False)
-            df = df[random_columns]
-
-        # Number of features and set the number of plots per row
+        
+        # Number of features
         num_features = len(df.columns)
-        print(num_features)
-        plots_per_row = 5
-        num_rows = (num_features + plots_per_row - 1) // plots_per_row  # Calculate number of rows needed
-        print(num_rows)
+        
+        # Get optimal layout
+        num_rows, plots_per_row, figsize = self.get_optimal_layout(num_features, base_height=4)
+        
         # Create a grid of subplots
-        #plt.rcParams['font.family'] = 'Times New Roman'
-        fig, axes = plt.subplots(nrows=num_rows, ncols=plots_per_row, figsize=(plots_per_row * 5, num_rows * 4))
+        fig, axes = plt.subplots(nrows=num_rows, ncols=plots_per_row, figsize=figsize)
 
         # Flatten the axes array for easy indexing
-        axes = axes.flatten()
+        axes = axes.flatten() if hasattr(axes, 'flatten') else [axes]
 
         # Plot histogram for each feature
         for i, feature in enumerate(df.columns):
-            #plt.rcParams['font.family'] = 'Times New Roman'
-            sns.set(style="whitegrid")
-            sns.histplot(df[feature], ax=axes[i], bins=10, color=sns.color_palette("muted")[0], kde=True)
-            # Calculate mean and median
-            if feature not in self.categorical_features:
-                mean = df[feature].mean()
-                median = df[feature].median()
-                # Add vertical lines for mean and median
-                axes[i].axvline(mean, color='chocolate', linestyle='--', label='Mean')
-                axes[i].axvline(median, color='midnightblue', linestyle='-', label='Median')
+            if i < len(axes):  # Safety check
+                sns.set(style="whitegrid")
+                sns.histplot(df[feature], ax=axes[i], bins=10, color=sns.color_palette("muted")[0], kde=True)
+                # Calculate mean and median
+                if feature not in self.categorical_features:
+                    mean = df[feature].mean()
+                    median = df[feature].median()
+                    # Add vertical lines for mean and median
+                    axes[i].axvline(mean, color='chocolate', linestyle='--', label='Mean')
+                    axes[i].axvline(median, color='midnightblue', linestyle='-', label='Median')
 
-            axes[i].set_title(feature, fontsize=16, fontweight='bold')
-            axes[i].set_xlabel('Value', fontsize=14, fontweight='bold')
-            axes[i].set_ylabel('Frequency', fontsize=14, fontweight='bold')
+                axes[i].set_title(feature, fontsize=14, fontweight='bold')
+                axes[i].set_xlabel('Value', fontsize=12)
+                axes[i].set_ylabel('Frequency', fontsize=12)
+                
+                # Handle tick label rotation if needed
+                if isinstance(feature, str) and len(feature) > 10:
+                    axes[i].tick_params(axis='x', rotation=45)
 
         # Hide any unused subplots
-        for j in range(i + 1, len(axes)):
+        for j in range(num_features, len(axes)):
             axes[j].set_visible(False)
 
         # Adjust layout
@@ -74,6 +180,7 @@ class EDA(object):
             os.makedirs(self.save_dir)
         save_path_dist = os.path.join(self.save_dir, 'eda_dist.jpg')
         plt.savefig(fname=save_path_dist, dpi=1000)
+        plt.close(fig)
 
         return save_path_dist
 
@@ -154,7 +261,7 @@ class EDA(object):
         # plt.rcParams["grid.color"] = '#b6b6d3' #orange_black[0]
         # plt.rcParams["grid.alpha"] = 0.5
         # plt.rcParams["grid.linestyle"] = '--'
-        plt.rcParams["font.family"] = "monospace"
+        # plt.rcParams["font.family"] = "monospace"
         plt.rcParams['axes.edgecolor'] = 'black'
         plt.rcParams['figure.frameon'] = False
         plt.rcParams['axes.spines.left'] = True
@@ -233,22 +340,782 @@ class EDA(object):
 
         return save_path_additional
     
+    def multivariate_time_series_plot(self):
+        """
+        Create a visualization of multivariate time series data with each variable in its own subplot.
+        
+        :return: Path to the saved plot
+        """
+        if not self.is_time_series:
+            return None
+            
+        df = self.data.copy()
+        
+        # Get number of series
+        n_series = df.shape[1]
+        
+        # Get optimal layout
+        n_rows, n_cols, figsize = self.get_optimal_layout(n_series, base_height=3, base_width=4)
+        
+        # Create figure
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, sharex=True)
+        
+        # Ensure axes is always a 2D array for consistent indexing
+        if n_series == 1:
+            axes = np.array([[axes]])
+        elif n_rows == 1:
+            axes = axes.reshape(1, -1)
+        elif not hasattr(axes, 'shape'):  # For single subplot case
+            axes = np.array([[axes]])
+        
+        # Create color palette with enough colors
+        palette = sns.color_palette("viridis", n_series)
+        
+        # Create pseudo time index if not available
+        time_index = np.arange(df.shape[0])
+        
+        # Plot each series in its own subplot
+        # Sort the columns alphabetically for consistent visualization
+        sorted_columns = sorted(df.columns)
+        df = df[sorted_columns]
+        for i, col in enumerate(df.columns):
+            row_idx = i // n_cols
+            col_idx = i % n_cols
+            ax = axes[row_idx, col_idx]
+            
+            # Extract series
+            series = df[col]
+            
+            # Plot the series
+            ax.plot(time_index, series, color=palette[i], linewidth=1.5, alpha=0.8)
+            
+            # Add rolling mean if series length is sufficient
+            if len(series) > 10:
+                window_size = max(5, len(series) // 20)  # Adaptive window size
+                rolling_mean = series.rolling(window=window_size).mean()
+                ax.plot(time_index, rolling_mean, color='red', linewidth=1, alpha=0.7, 
+                       linestyle='--', label='Rolling Mean')
+            
+            # Style enhancements
+            ax.set_title(col, fontsize=11, pad=5)
+            ax.grid(color='#E0E0E0', linestyle=':', linewidth=0.5)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            
+            # Only add x-label for bottom row
+            if row_idx == n_rows - 1:
+                ax.set_xlabel('Time', labelpad=5)
+            
+            # Add y-label for leftmost column
+            if col_idx == 0:
+                ax.set_ylabel('Value', labelpad=5)
+        
+        # Hide unused subplots
+        for i in range(n_series, n_rows * n_cols):
+            row_idx = i // n_cols
+            col_idx = i % n_cols
+            fig.delaxes(axes[row_idx, col_idx])
+        
+        # Add legend for rolling mean at the bottom of the figure
+        handles, labels = [], []
+        handles.append(plt.Line2D([0], [0], color='red', linewidth=1, linestyle='--'))
+        labels.append('Rolling Mean')
+        fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.0), 
+                  ncol=1, frameon=True, fontsize=10)
+    
+        # Add main title
+        fig.suptitle("Multivariate Time Series Analysis", fontweight='bold', fontsize=16, y=1.0)
+        
+        # Add subtle background color
+        fig.patch.set_facecolor('#F8F9FA')
+        
+        # Adjust layout
+        plt.tight_layout()
+        
+        # Save the plot
+        save_path = os.path.join(self.save_dir, 'eda_multivariate_ts.jpg')
+        plt.savefig(save_path, dpi=1000)
+        plt.close(fig)
+        
+        return save_path
+    
+    def lag_correlation_heatmap(self, max_lag=5):
+        """
+        Create a heatmap visualization of cross-correlations at different lags.
+        
+        :param max_lag: Maximum lag to compute cross-correlations for
+        :return: Path to the saved plot
+        """
+        if not self.is_time_series:
+            return None
+            
+        df = self.data.copy()
+        
+        # Get variable names and count
+        variables = df.columns
+        n_vars = len(variables)
+        
+        # Prepare result container
+        lag_corr_matrix = np.zeros((n_vars, n_vars * (max_lag + 1)))
+        
+        # Calculate cross-correlation at each lag
+        for lag in range(max_lag + 1):
+            for i, var1 in enumerate(variables):
+                for j, var2 in enumerate(variables):
+                    # Calculate position in the combined matrix
+                    col_idx = j + (lag * n_vars)
+                    
+                    if i == j and lag == 0:
+                        lag_corr_matrix[i, col_idx] = 1.0
+                    else:
+                        # Shift series for lag
+                        s1 = df[var1].iloc[:-lag].values if lag > 0 else df[var1].values
+                        s2 = df[var2].iloc[lag:].values if lag > 0 else df[var2].values
+                        
+                        # Compute correlation
+                        if len(s1) > 1 and len(s2) > 1:  # Ensure enough data points
+                            try:
+                                corr, _ = pearsonr(s1, s2)
+                                lag_corr_matrix[i, col_idx] = corr
+                            except Exception as e:
+                                print(f"Error in correlation calculation for {var1} and {var2} at lag {lag}: {e}")
+                                lag_corr_matrix[i, col_idx] = np.nan
+        
+        # Create figure with appropriate size
+        # Adjust figure size based on number of variables and lags
+        width = max(10, min(20, 2 * n_vars * (max_lag + 1)))
+        height = max(8, min(16, 1.5 * n_vars))
+        fig, ax = plt.subplots(figsize=(width, height))
+        cmap = sns.color_palette("PuBu", as_cmap=True)
+        
+        # Create column labels with lag information
+        col_labels = []
+        for lag in range(max_lag + 1):
+            for var in variables:
+                col_labels.append(f"{var} (Lag {lag})")
+        
+        # Adjust tick label size based on number of variables
+        tick_fontsize = max(6, min(10, 10 * (10 / max(10, n_vars))))
+        
+        # Make cells square by adjusting aspect ratio
+        aspect = width / height  # Current aspect ratio
+        cell_aspect = (n_vars * (max_lag + 1)) / n_vars  # Ideal cell aspect for square cells
+        aspect_ratio = aspect / cell_aspect
+        
+        # Create heatmap with square cells
+        sns.heatmap(lag_corr_matrix, ax=ax, cmap=cmap, vmin=-1, vmax=1, center=0,
+                  linewidths=.5, cbar_kws={"shrink": .8}, square=True,
+                  xticklabels=col_labels, yticklabels=variables)
+        
+        # Adjust tick labels - increase right margin to prevent truncation
+        plt.xticks(rotation=45, ha='right', fontsize=tick_fontsize)
+        plt.yticks(rotation=0, fontsize=tick_fontsize)
+        
+        # Add vertical lines to separate lag groups
+        for lag in range(1, max_lag + 1):
+            ax.axvline(x=lag * n_vars, color='black', linestyle='-', linewidth=1)
+        
+        # Add main title with extra padding to prevent truncation
+        plt.title("Cross-Correlation at Different Lags", fontweight='bold', fontsize=16, pad=20)
+        
+        # Add subtle background color to distinguish lag groups
+        for lag in range(max_lag + 1):
+            if lag % 2 == 0:  # Alternate background colors
+                ax.axvspan(lag * n_vars, (lag + 1) * n_vars, alpha=0.1, color='lightblue')
+        
+        # Adjust figure size to ensure square cells
+        fig.set_size_inches(width, width / cell_aspect)
+        
+        # Adjust layout for readability with square cells and prevent truncation
+        plt.tight_layout(rect=[0, 0, 0.98, 0.95])  # Leave more space for title and labels
+        
+        # Add extra space at the bottom for x-labels
+        plt.subplots_adjust(bottom=0.15)
+        
+        # Save the plot
+        save_path = os.path.join(self.save_dir, 'eda_lag_correlation.jpg')
+        plt.savefig(save_path, dpi=1000, bbox_inches='tight')  # Use bbox_inches to prevent truncation
+        plt.close(fig)
+        
+        return save_path
+    
+    def time_series_diagnostics(self, max_vars=4, max_lags=5):
+        """
+        Create detailed time series diagnostic plots including ACF, PACF, and stationarity information.
+        
+        :param max_vars: Maximum number of variables to analyze
+        :param max_lags: Maximum lags for ACF/PACF
+        :return: Path to the saved plot
+        """
+        if not self.is_time_series:
+            return None
+            
+        # Import stationarity test
+        from statsmodels.tsa.stattools import adfuller
+        
+        df = self.data.copy()
+        
+        # Select series to analyze - limit if too many
+        if df.shape[1] > max_vars:
+            # Try to include important features first
+            if hasattr(self.global_state.user_data, 'important_features'):
+                important_features = [f for f in self.global_state.user_data.important_features 
+                                    if f in df.columns][:max_vars]
+                remaining = max_vars - len(important_features)
+                if remaining > 0:
+                    other_features = [f for f in df.columns if f not in important_features][:remaining]
+                    columns = important_features + other_features
+                else:
+                    columns = important_features
+            else:
+                columns = df.columns[:max_vars]
+        else:
+            columns = df.columns
+            max_vars = len(columns)
+        
+        # Reduce number of displayed lags to reduce clutter
+        display_lags = min(15, max_lags)
+        
+        # Create pseudo time index if not available
+        time_index = np.arange(df.shape[0])
+        
+        # Create color palette for the time series
+        palette = sns.color_palette("viridis", max_vars)
+        
+        # Set up the figure - one page per variable for better spacing
+        for idx, col in enumerate(columns):
+            series = df[col].dropna()
+            
+            # Create a new figure for each variable - horizontal layout
+            plt.figure(figsize=(12, 8))
+            
+            # Create a 2x3 grid layout
+            gs = plt.GridSpec(2, 3, height_ratios=[1, 1.2], width_ratios=[3, 1, 1],
+                            wspace=0.25, hspace=0.4)
+            
+            # === TOP ROW ===
+            # Plot 1: Time Series
+            ax_series = plt.subplot(gs[0, :2])
+            ax_series.plot(time_index, series, color=palette[idx], linewidth=1.8, label=col)
+            
+            # Add moving average for trend visualization
+            if len(series) > 10:
+                window_size = max(5, len(series) // 20)
+                rolling_mean = series.rolling(window=window_size).mean()
+                ax_series.plot(time_index, rolling_mean, color='red', linestyle='--', 
+                             linewidth=1.5, alpha=0.7, label='Moving Avg')
+            
+            # ax_series.set_title(f"Time Series: {col}", fontweight='bold', fontsize=14)
+            ax_series.grid(True, color='#E0E0E0', linestyle=':', linewidth=0.5, alpha=0.5)
+            ax_series.spines['top'].set_visible(False)
+            ax_series.spines['right'].set_visible(False)
+            ax_series.set_xlabel("Time", fontsize=10)
+            ax_series.set_ylabel("Value", fontsize=10)
+            ax_series.legend(loc='best', fontsize=9)
+            
+            # Reduce number of x-ticks
+            ax_series.xaxis.set_major_locator(plt.MaxNLocator(6))
+            
+            # Plot 2: Statistics
+            ax_stats = plt.subplot(gs[0, 2])
+            ax_stats.axis('off')
+            
+            # Calculate basic statistics
+            stats_text = f"Statistics\n\n"
+            stats_text += f"Mean: {series.mean():.2f}\n"
+            stats_text += f"Std: {series.std():.2f}\n"
+            stats_text += f"Min: {series.min():.2f}\n"
+            stats_text += f"Max: {series.max():.2f}\n"
+            
+            # Add text with a subtle background
+            ax_stats.text(0.05, 0.95, stats_text, transform=ax_stats.transAxes,
+                        verticalalignment='top', fontsize=10,
+                        bbox=dict(boxstyle="round,pad=0.5", facecolor='#F8F8F8', 
+                                alpha=0.6, edgecolor='#CCCCCC'))
+            
+            # === BOTTOM ROW ===
+            # Plot 3: Stationarity test
+            ax_stationarity = plt.subplot(gs[1, 0])
+            
+            try:
+                # Perform ADF test
+                adf_result = adfuller(series, autolag='AIC')
+                adf_stat, p_value, _, _, critical_values, _ = adf_result
+                
+                # Determine if the series is stationary
+                is_stationary = p_value < 0.05
+                status_color = 'green' if is_stationary else 'red'
+                status_text = "STATIONARY" if is_stationary else "NON-STATIONARY"
+                
+                # Plot differenced series if non-stationary to show improvement
+                if not is_stationary:
+                    # Calculate first difference
+                    diff_series = series.diff().dropna()
+                    # Plot original vs differenced
+                    ax_stationarity.plot(time_index[1:], diff_series, color='green', alpha=0.7, 
+                                     label='First Difference')
+                    ax_stationarity.plot(time_index, series, color='gray', alpha=0.3, label='Original')
+                    ax_stationarity.legend(loc='best', fontsize=8)
+                    ax_stationarity.set_title("First Difference Transform", fontsize=12)
+                else:
+                    # Just plot the stationary series
+                    ax_stationarity.plot(time_index, series, color='green', alpha=0.7)
+                    ax_stationarity.set_title("Original Series (Stationary)", fontsize=12)
+                
+                # Style the plot
+                ax_stationarity.grid(True, color='#E0E0E0', linestyle=':', linewidth=0.5, alpha=0.5)
+                ax_stationarity.spines['top'].set_visible(False)
+                ax_stationarity.spines['right'].set_visible(False)
+                ax_stationarity.set_xlabel("Time", fontsize=10)
+                ax_stationarity.set_ylabel("Value", fontsize=10)
+                ax_stationarity.xaxis.set_major_locator(plt.MaxNLocator(6))
+                
+                # Add stationarity text in the plot
+                stat_text = f"ADF Test:\n{status_text}\np-value: {p_value:.4f}"
+                text_box = dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8, 
+                              edgecolor=status_color, linewidth=2)
+                ax_stationarity.text(0.05, 0.95, stat_text, transform=ax_stationarity.transAxes,
+                                  fontsize=9, verticalalignment='top', bbox=text_box)
+                
+            except:
+                ax_stationarity.text(0.5, 0.5, "Cannot compute stationarity test", 
+                                 ha='center', va='center', fontsize=10)
+                ax_stationarity.axis('off')
+            
+            # Plot 4: ACF
+            ax_acf = plt.subplot(gs[1, 1])
+            try:
+                plot_acf(series, ax=ax_acf, lags=display_lags, alpha=0.05, zero=False,
+                      markersize=4, use_vlines=True, lw=1.5)
+                ax_acf.set_title("ACF", fontsize=12)
+                ax_acf.grid(True, alpha=0.3)
+                ax_acf.spines['top'].set_visible(False)
+                ax_acf.spines['right'].set_visible(False)
+                ax_acf.xaxis.set_major_locator(plt.MaxNLocator(5))
+            except:
+                ax_acf.text(0.5, 0.5, "Cannot compute ACF", ha='center', va='center')
+                ax_acf.axis('off')
+            
+            # Plot 5: PACF
+            ax_pacf = plt.subplot(gs[1, 2])
+            try:
+                plot_pacf(series, ax=ax_pacf, lags=display_lags, alpha=0.05, zero=False,
+                       markersize=4, use_vlines=True, lw=1.5)
+                ax_pacf.set_title("PACF", fontsize=12)
+                ax_pacf.grid(True, alpha=0.3)
+                ax_pacf.spines['top'].set_visible(False)
+                ax_pacf.spines['right'].set_visible(False)
+                ax_pacf.xaxis.set_major_locator(plt.MaxNLocator(5))
+            except:
+                ax_pacf.text(0.5, 0.5, "Cannot compute PACF", ha='center', va='center')
+                ax_pacf.axis('off')
+            
+            # Add main title for this variable's page
+            plt.suptitle(f"Time Series Diagnostics: {col}", fontweight='bold', fontsize=16, y=0.98)
+            
+            # Adjust layout
+            plt.tight_layout(rect=[0, 0, 1, 0.96])
+            
+            # Save the plot for this variable
+            var_save_path = os.path.join(self.save_dir, f'eda_ts_diagnostics_{idx+1}_{col}.jpg')
+            plt.savefig(var_save_path, dpi=1000, bbox_inches='tight')
+            plt.close()
+        
+        # Create an index page with thumbnails of all the variables
+        n_cols = min(2, max_vars)
+        n_rows = (max_vars + n_cols - 1) // n_cols  # Ceiling division
+        
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(12, 4 * n_rows))
+        axes = axes.flatten() if n_rows > 1 or n_cols > 1 else [axes]
+        
+        fig.suptitle("Time Series Diagnostics Overview", fontweight='bold', fontsize=16, y=0.98)
+        
+        # Create thumbnails for the index page
+        for i, col in enumerate(columns):
+            if i < len(axes):
+                # Plot a simplified series for the thumbnail
+                axes[i].plot(time_index, df[col], color=palette[i], linewidth=1.5)
+                axes[i].set_title(col, fontsize=12)
+                axes[i].grid(False)
+                axes[i].set_xticklabels([])
+                axes[i].set_yticklabels([])
+                
+                # Perform ADF test for stationarity badge
+                try:
+                    adf_result = adfuller(df[col].dropna(), autolag='AIC')
+                    p_value = adf_result[1]
+                    is_stationary = p_value < 0.05
+                    status_color = 'green' if is_stationary else 'red'
+                    status_text = "STATIONARY" if is_stationary else "NON-STATIONARY"
+                    
+                    # Add a small badge with stationarity status
+                    axes[i].text(0.5, 0.1, status_text, transform=axes[i].transAxes,
+                              ha='center', fontsize=8, weight='bold', color='white',
+                              bbox=dict(boxstyle="round,pad=0.2", facecolor=status_color, alpha=0.8))
+                except:
+                    pass
+        
+        # Hide unused subplots
+        for i in range(len(columns), len(axes)):
+            axes[i].axis('off')
+        
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        
+        # Save the index plot
+        index_save_path = os.path.join(self.save_dir, 'eda_ts_diagnostics.jpg')
+        plt.savefig(index_save_path, dpi=1000, bbox_inches='tight')
+        plt.close()
+        
+        return index_save_path
+        
+    def analyze_var_model(self, max_lag=3):
+        """
+        Analyze the time series using a VAR model.
+        
+        :param max_lag: Maximum lag to use in the VAR model (if None, will use the one from global state)
+        :return: Path to the saved plot and VAR model summary
+        """
+        if not self.is_time_series:
+            return None, None
+            
+        df = self.data.copy()
+        
+        # Use max_lag from global state if not provided
+        if max_lag is None and hasattr(self.global_state.statistics, 'time_lag'):
+            max_lag = self.global_state.statistics.time_lag
+        elif max_lag is None:
+            max_lag = min(5, df.shape[0] // 5)  # Default: 5 or 20% of data points
+        
+        try:
+            # Check if we already have a VAR analysis from stat_info_functions.py
+            var_plot_path = os.path.join(self.global_state.user_data.output_graph_dir, 'var_analysis.jpg')
+            
+            # If the VAR plot already exists from stat_info_functions.py, use it
+            # if os.path.exists(var_plot_path):
+            #     # Copy the existing plot to our EDA directory
+            #     eda_var_path = os.path.join(self.save_dir, 'eda_var_analysis.jpg')
+            #     import shutil
+            #     shutil.copy(var_plot_path, eda_var_path)
+                
+            #     # Create a basic summary since we don't have the model results
+            #     var_summary = {
+            #         'lag_order': max_lag,
+            #         'note': 'Using pre-computed VAR analysis from statistical information collection'
+            #     }
+                
+            #     return eda_var_path, var_summary
+            
+            # If no existing plot, perform the VAR analysis
+            # Fit VAR model
+            model = VAR(df)
+            results = model.fit(maxlags=max_lag)
+            
+            # Get fitted values and residuals
+            fitted = results.fittedvalues
+            residuals = results.resid
+            
+            # Get number of variables
+            n_vars = df.shape[1]
+            
+            # Calculate optimal layout with more space between plots
+            # Use fewer columns to allow more horizontal space
+            n_cols = min(2, n_vars) if n_vars <= 4 else min(3, n_vars)
+            n_rows = math.ceil(n_vars / n_cols)
+            
+            # Calculate figure size with more space per subplot
+            fig_width = n_cols * 4 + 2  # More width per subplot + extra padding
+            fig_height = n_rows * 3 + 1  # More height per subplot + extra padding
+            
+            # Create figure
+            fig = plt.figure(figsize=(fig_width, fig_height))
+            
+            # Create GridSpec with increased spacing between subplots
+            gs = fig.add_gridspec(n_rows, n_cols, wspace=0.4, hspace=0.8)
+            
+            for i, col in enumerate(df.columns):
+                if i < n_rows * n_cols:
+                    row_idx = i // n_cols
+                    col_idx = i % n_cols
+                    
+                    # Create subplot
+                    ax = fig.add_subplot(gs[row_idx, col_idx])
+                    
+                    # Plot with improved visibility
+                    ax.scatter(fitted.iloc[:, i], residuals.iloc[:, i], 
+                              alpha=0.6, s=45, color='#1f77b4', edgecolor='none')
+                    ax.axhline(0, color='red', linestyle='--', linewidth=1.5)
+                    
+                    # Use lighter grid for better readability
+                    ax.grid(True, linestyle=':', alpha=0.3, color='#cccccc')
+                    
+                    # Set clear titles and labels with adequate padding
+                    ax.set_title(f"{col}", fontsize=12, fontweight='bold', pad=10)
+                    ax.set_xlabel("Fitted Values", fontsize=10, labelpad=8)
+                    ax.set_ylabel("Residuals", fontsize=10, labelpad=8)
+                    
+                    # Add "Residuals vs Fitted" as subtitle with smaller font
+                    ax.text(0.5, 0.02, "Residuals vs Fitted", 
+                           transform=ax.transAxes, ha='center', fontsize=8, 
+                           style='italic', color='#666666')
+                    
+                    # Clean up appearance
+                    ax.spines['top'].set_visible(False)
+                    ax.spines['right'].set_visible(False)
+                    
+                    # Ensure adequate padding around plot area
+                    x_range = fitted.iloc[:, i].max() - fitted.iloc[:, i].min()
+                    y_range = residuals.iloc[:, i].max() - residuals.iloc[:, i].min()
+                    ax.set_xlim(fitted.iloc[:, i].min() - 0.1 * x_range, 
+                              fitted.iloc[:, i].max() + 0.1 * x_range)
+                    ax.set_ylim(residuals.iloc[:, i].min() - 0.1 * y_range, 
+                              residuals.iloc[:, i].max() + 0.1 * y_range)
+                    
+                    # Use fewer tick marks for cleaner look
+                    ax.xaxis.set_major_locator(plt.MaxNLocator(4))
+                    ax.yaxis.set_major_locator(plt.MaxNLocator(4))
+                    
+                    # Adjust tick parameters for better spacing
+                    ax.tick_params(axis='both', which='major', labelsize=9, pad=5)
+            
+            # Add main title with better positioning
+            fig.suptitle(f"VAR Model Analysis (Lag={max_lag})", 
+                        fontweight='bold', fontsize=16, y=0.98)
+            
+            # Ensure proper layout with more space
+            plt.tight_layout(rect=[0, 0, 1, 0.95])  # Leave space for the title
+            
+            # Save the plot
+            save_path = os.path.join(self.save_dir, 'eda_var_analysis.jpg')
+            plt.savefig(save_path, dpi=1000, bbox_inches='tight')
+            plt.close(fig)
+            
+            # Get model summary
+            var_summary = {
+                'lag_order': results.k_ar,
+                'num_observations': results.nobs,
+                'aic': results.aic,
+                'bic': results.bic,
+                'fpe': results.fpe,
+                'hqic': results.hqic
+            }
+            
+            return save_path, var_summary
+            
+        except Exception as e:
+            print(f"Error in VAR analysis: {str(e)}")
+            return None, None
+        
     def generate_eda(self):
-        plot_path_dist = self.plot_dist()
-        corr_mat, plot_path_corr = self.plot_corr()
-
-        numerical_analysis, categorical_analysis = self.desc_dist()
-        corr_analysis = self.desc_corr(corr_mat)
-        plot_path_additional = self.additional_analysis()
-
-        eda_result = {'plot_path_dist': plot_path_dist,
-                      'plot_path_corr': plot_path_corr,
-                      'dist_analysis_num': numerical_analysis,
-                      'dist_analysis_cat': categorical_analysis,
-                      'corr_analysis': corr_analysis,
-                      'plot_path_additional': plot_path_additional}
-
+        import joblib
+        from joblib import Parallel, delayed
+        
+        eda_result = {}
+        
+        if self.is_time_series:
+            # Time series specific EDA
+            # Run time series analyses in parallel
+            results = Parallel(n_jobs=-1)(
+                delayed(func)() for func in [
+                    # self.plot_dist,
+                    # self.plot_corr,
+                    # self.desc_dist,
+                    # self.multivariate_time_series_plot,
+                    lambda: self.lag_correlation_heatmap(
+                        max_lag=min(getattr(self.global_state.statistics, 'time_lag', 5), 10)
+                    ),
+                    self.time_series_diagnostics,
+                    # self.analyze_var_model
+                ]
+            )
+            
+            # Unpack results
+            # plot_path_dist = results[0]
+            # corr_mat, plot_path_corr = results[1]
+            # numerical_analysis, categorical_analysis = results[2]
+            # plot_path_multivariate = results[3]
+            plot_path_lag_corr = results[0]
+            plot_path_diagnostics = results[1]
+            # plot_path_var, var_summary = results[6]
+            
+            # Process correlation analysis separately as it depends on corr_mat
+            # corr_analysis = self.desc_corr(corr_mat)
+            # plot_path_additional = self.additional_analysis()
+            
+            # Build time series EDA result dictionary
+            eda_result = {
+                # 'plot_path_dist': plot_path_dist,
+                # 'plot_path_corr': plot_path_corr,
+                # 'dist_analysis_num': numerical_analysis,
+                # 'dist_analysis_cat': categorical_analysis,
+                # 'corr_analysis': corr_analysis,
+                # 'plot_path_additional': plot_path_additional
+            }
+            
+            # Add time series specific results
+            # if plot_path_multivariate:
+            #     eda_result['plot_path_multivariate'] = plot_path_multivariate
+            if plot_path_lag_corr:
+                eda_result['plot_path_lag_corr'] = plot_path_lag_corr
+            if plot_path_diagnostics:
+                eda_result['plot_path_diagnostics'] = plot_path_diagnostics
+            # if plot_path_var:
+            #     eda_result['plot_path_var'] = plot_path_var
+            #     eda_result['var_analysis'] = var_summary
+                
+        else:
+            # Regular tabular data EDA
+            # Run standard analyses in parallel
+            results = Parallel(n_jobs=-1)(
+                delayed(func)() for func in [
+                    self.plot_dist,
+                    self.plot_corr,
+                    self.desc_dist,
+                    self.additional_analysis
+                ]
+            )
+            
+            # Unpack results
+            plot_path_dist = results[0]
+            corr_mat, plot_path_corr = results[1]
+            numerical_analysis, categorical_analysis = results[2]
+            plot_path_additional = results[3]
+            
+            # Process correlation analysis separately as it depends on corr_mat
+            corr_analysis = self.desc_corr(corr_mat)
+            
+            # Build tabular EDA result dictionary
+            eda_result = {
+                'plot_path_dist': plot_path_dist,
+                'plot_path_corr': plot_path_corr,
+                'dist_analysis_num': numerical_analysis,
+                'dist_analysis_cat': categorical_analysis,
+                'corr_analysis': corr_analysis,
+                'plot_path_additional': plot_path_additional
+            }
+        
+        # Add feature information
+        eda_result['feature_info'] = {
+            'total_features': self.original_feature_count,
+            'displayed_features': self.data.shape[1]
+        }
+        
         self.global_state.results.eda = eda_result
+
+def test_timeseries_eda():
+    """
+    Test function to demonstrate time series EDA functionality.
+    Creates dummy time series data and runs the EDA analysis.
+    """
+    import numpy as np
+    import pandas as pd
+    import os
+    from types import SimpleNamespace
+    
+    print("Running Time Series EDA Test")
+    
+    # Create a temporary directory for output
+    output_dir = "ts_eda_test_output"
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Create dummy time series data (3 variables, 100 time points)
+    np.random.seed(42)  # For reproducibility
+    n_samples = 100
+    
+    # Create base signals with different patterns
+    t = np.linspace(0, 4*np.pi, n_samples)
+    
+    # Variable 1: Sine wave
+    x1 = np.sin(t) + np.random.normal(0, 0.2, n_samples)
+    
+    # Variable 2: Cosine wave (related to x1 with lag)
+    x2 = np.cos(t) + 0.5 * np.roll(x1, 5) + np.random.normal(0, 0.2, n_samples)
+    
+    # Variable 3: Square wave
+    x3 = np.where(np.sin(t/2) > 0, 1, -1) + np.random.normal(0, 0.15, n_samples)
+    
+    # Variable 4: Exponential growth
+    x4 = np.exp(t/10) / 10 + np.random.normal(0, 0.3, n_samples)
+    
+    # Variable 5: Logarithmic pattern
+    x5 = np.log(t + 1) + 0.2 * np.roll(x2, 7) + np.random.normal(0, 0.25, n_samples)
+    
+    # Variable 6: Sawtooth wave
+    x6 = (t % (np.pi/2)) / (np.pi/2) + np.random.normal(0, 0.2, n_samples)
+    
+    # Variable 7: Damped oscillation
+    x7 = np.exp(-t/10) * np.sin(t) + 0.3 * np.roll(x1, 10) + np.random.normal(0, 0.15, n_samples)
+    
+    # Variable 8: Combined sine waves (different frequencies)
+    x8 = 0.5 * np.sin(t) + 0.3 * np.sin(2*t) + 0.2 * np.sin(3*t) + np.random.normal(0, 0.2, n_samples)
+    
+    # Variable 9: Step function with noise
+    x9 = np.where(t > np.median(t), 2, 1) + 0.4 * np.roll(x3, 6) + np.random.normal(0, 0.2, n_samples)
+    
+    # Variable 10: Polynomial trend
+    x10 = 0.01 * t**2 - 0.1 * t + 0.5 * np.roll(x5, 3) + np.random.normal(0, 0.25, n_samples)
+    
+    # Variable 3: Trend + seasonality
+    trend = 0.05 * t
+    seasonality = 0.5 * np.sin(t/2)
+    x3 = trend + seasonality + 0.3 * np.roll(x2, 3) + np.random.normal(0, 0.15, n_samples)
+    
+    # Combine into DataFrame
+    df = pd.DataFrame({
+        f"Signal_{i+1}": x for i, x in enumerate([x1, x2, x3, x4, x5, x6, x7, x8, x9, x10])
+    })
+    
+    # Create minimal global state with required attributes
+    global_state = SimpleNamespace()
+    global_state.user_data = SimpleNamespace()
+    global_state.user_data.processed_data = df
+    global_state.user_data.visual_selected_features = df.columns.tolist()
+    global_state.user_data.output_graph_dir = output_dir
+    
+    global_state.statistics = SimpleNamespace()
+    global_state.statistics.time_series = True
+    global_state.statistics.time_lag = 5
+    
+    global_state.results = SimpleNamespace()
+    
+    # Create EDA instance
+    eda = EDA(global_state)
+    
+    # Test individual functions
+    print("\nTesting multivariate_time_series_plot:")
+    mv_path = eda.multivariate_time_series_plot()
+    print(f"Plot saved to: {mv_path}")
+    
+    print("\nTesting lag_correlation_heatmap:")
+    lag_path = eda.lag_correlation_heatmap(max_lag=5)
+    print(f"Plot saved to: {lag_path}")
+    
+    print("\nTesting time_series_diagnostics:")
+    diag_path = eda.time_series_diagnostics(max_vars=3, max_lags=15)
+    print(f"Plot saved to: {diag_path}")
+    
+    print("\nTesting analyze_var_model:")
+    var_path, var_summary = eda.analyze_var_model(max_lag=3)
+    print(f"Plot saved to: {var_path}")
+    print(f"VAR summary: {var_summary}")
+    
+    print("\nTesting complete generate_eda method:")
+    eda.generate_eda()
+    print("All time series EDA results saved to global state")
+    
+    # Print locations of all generated plots
+    eda_result = global_state.results.eda
+    print("\nGenerated plots:")
+    for key, value in eda_result.items():
+        if key.startswith('plot_path'):
+            print(f"- {key}: {value}")
+    
+    print(f"\nAll test outputs saved to: {output_dir}")
+    print("Time Series EDA Test Completed")
+    
+    return global_state.results.eda
+
+if __name__ == "__main__":
+    test_timeseries_eda()
 
 
 

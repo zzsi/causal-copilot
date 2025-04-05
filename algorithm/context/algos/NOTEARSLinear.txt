@@ -1,4 +1,3 @@
-
 # NOTEARSLinear Algorithm
 
 ## Executive Summary

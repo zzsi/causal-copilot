@@ -1,4 +1,3 @@
-
 # InterIAMB Algorithm Profile
 
 ## Executive Summary

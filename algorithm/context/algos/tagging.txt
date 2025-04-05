@@ -1,11 +1,11 @@
 # Causal Discovery Algorithm Tagging
 
-## Performance Categories
-- **Robust**: Consistently strong performance (score ≥ 5.5) across multiple scenarios with low variability (std < 0.8)
-- **Strong**: Good performance (score 4.5-5.5) with moderate variability (std 0.8-1.2) across scenarios  
-- **Moderate**: Generally reliable performance (score 3.5-4.5) with moderate to high variability (std 1.2-1.6)
-- **Limited**: Weaker performance (score 2.0-3.5) with significant variability (std 1.6-2.0)
-- **Poor**: Unreliable performance (score < 2.0) or high variability (std > 2.0) across most scenarios
+## Performance Categories (Consistent Across All Tags)
+- **Robust**: Consistently strong performance (≥80% accuracy) across multiple scenarios with low variability
+- **Strong**: Good performance (60-80% accuracy) with moderate variability across scenarios  
+- **Moderate**: Generally reliable performance (40-60% accuracy) with moderate to high variability
+- **Limited**: Weaker performance (<40% accuracy) with significant variability
+- **Poor**: Unreliable performance or high variability across most scenarios
 
 ## Algorithm Tag Categories
 
@@ -14,22 +14,22 @@
 2. **Method Type**: Constraint-based, Score-based, Functional Model-based, Hybrid, MB-based, Continuous-optimization
 
 3. **Functional Form**: 
-   - Linear: Optimized for linear relationships (linear/non-linear difference > +0.5)
-   - Nonlinear: Optimized for non-linear relationships (linear/non-linear difference < -0.5)
-   - Flexible: Handles both linear and non-linear relationships effectively (linear/non-linear difference between -0.5 and +0.5)
+   - Linear: Optimized for linear relationships
+   - Nonlinear: Optimized for non-linear relationships
+   - Flexible: Handles both linear and non-linear relationships effectively
 
 4. **Noise**: 
-   - Gaussian: Performance drops >20% with non-Gaussian noise
-   - NonGaussian: Performance improves >20% with non-Gaussian noise
-   - Flexible: Performance change <20% between Gaussian and non-Gaussian noise
+   - Gaussian: Performance drops with non-Gaussian noise
+   - NonGaussian: Performance improves with non-Gaussian noise
+   - Flexible: Similar performance between Gaussian and non-Gaussian noise
 
 5. **Latent Variable Tolerance**: 
-   - Robust: Maintains >80% performance with latent variables
-   - Moderate: Maintains 50-80% performance with latent variables
+   - Robust: Maintains high performance with latent variables
+   - Moderate: Maintains moderate performance with latent variables
 
 6. **Distribution Shift**: 
-   - Heterogenous: Maintains >80% performance under heterogeneity (score ≥ 7.0 in heterogeneity benchmarks)
-   - Homogenous: Performance drops >20% under heterogeneity (score < 7.0 in heterogeneity benchmarks)
+   - Heterogenous: Maintains high performance under heterogeneity
+   - Homogenous: Performance drops under heterogeneity
 
 7. **Scalability**: 
    - Large-scale: Handles >100 variables efficiently
@@ -39,27 +39,28 @@
    - Small-scale: Limited to <10 variables
 
 8. **Efficiency**: 
-   - Extreme Fast (GPU): Runtime <0.5 seconds per 1000 samples with 50 variables
-   - Fast (GPU): Runtime 0.5-2 seconds per 1000 samples with 50 variables
-   - Fast (CPU): Runtime 2-10 seconds per 1000 samples with 50 variables
-   - Moderate: Runtime 10-60 seconds per 1000 samples with 50 variables
-   - Slow: Runtime 1-10 minutes per 1000 samples with 50 variables
-   - Extreme Slow: Runtime >10 minutes per 1000 samples with 50 variables
+   - Extreme Fast (GPU): Very short runtime (<1 min) per 1000 samples with 50 variables
+   - Fast (GPU): Short runtime (1-5 min) per 1000 samples with 50 variables
+   - Fast (CPU): Reasonable runtime (5-15 min) per 1000 samples with 50 variables
+   - Moderate: Medium runtime (15-60 min) per 1000 samples with 50 variables
+   - Slow: Long runtime (1-4 hours) per 1000 samples with 50 variables
+   - Extreme Slow: Very long runtime (>4 hours) per 1000 samples with 50 variables
 
 9. **Empirical Performance**: Based on overall benchmark score
-   - Robust: Overall score ≥ 6.0
-   - Strong: Overall score 4.5-6.0
-   - Moderate: Overall score 3.0-4.5
-   - Limited: Overall score 1.5-3.0
-   - Poor: Overall score < 1.5
+   - Robust: High overall score
+   - Strong: Good overall score
+   - Moderate: Average overall score
+   - Limited: Below average overall score
+   - Poor: Low overall score
 
 10. **Output Format**: DAG, CPDAG, PAG
 
 11. **Data Type**: Tabular, Time-series, Both
 
-12. **Graph Density Stability**:
-   - High: Algorithm maintains consistent accuracy regardless of graph density; performs equally well on very sparse networks and densely connected variables (>30% of possible edges)
-   - Moderate: Algorithm performs best on sparse to medium-density graphs (up to 30% of possible edges), with declining performance on denser networks
+12. **Graph Density Preference**:
+   - Sparse-Preferring: Algorithm performs significantly better on sparse graphs
+   - Dense-Preferring: Algorithm performs significantly better on dense graphs
+   - Density-Robust: Algorithm maintains consistent performance across different graph densities
 
 ## Algorithm Listings (key are the algorithm names)
 
@@ -78,7 +79,7 @@ PC: {
     Empirical Performance: Strong,
     Output Format: CPDAG,
     Data Type: Tabular,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Sparse-Preferring
 }
 
 FCI: {
@@ -94,7 +95,7 @@ FCI: {
     Empirical Performance: Robust,
     Output Format: PAG,
     Data Type: Tabular,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Sparse-Preferring
 }
 
 CDNOD: {
@@ -109,7 +110,7 @@ CDNOD: {
     Empirical Performance: Strong,
     Output Format: CPDAG,
     Data Type: Tabular,
-    Graph Density Stability: Moderate,
+    Graph Density Preference: Sparse-Preferring,
     Note: "Requires heterogeneity in data with explicit domain_index column indicating different environments/domains",
     Distribution Shift: Heterogeneous
 }
@@ -127,7 +128,7 @@ PCMCI: {
     Empirical Performance: Strong,
     Output Format: DAG,
     Data Type: Time-series,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Sparse-Preferring
 }
 
 ### MB-based Methods
@@ -145,7 +146,7 @@ InterIAMB: {
     Empirical Performance: Limited,
     Output Format: CPDAG,
     Data Type: Tabular,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Sparse-Preferring
 }
 
 BAMB: {
@@ -161,7 +162,7 @@ BAMB: {
     Empirical Performance: Limited,
     Output Format: CPDAG,
     Data Type: Tabular,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Sparse-Preferring
 }
 
 HITONMB: {
@@ -177,7 +178,7 @@ HITONMB: {
     Empirical Performance: Limited,
     Output Format: CPDAG,
     Data Type: Tabular,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Sparse-Preferring
 }
 
 IAMBnPC: {
@@ -193,7 +194,7 @@ IAMBnPC: {
     Empirical Performance: Robust,
     Output Format: CPDAG,
     Data Type: Tabular,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Sparse-Preferring
 }
 
 MBOR: {
@@ -209,7 +210,7 @@ MBOR: {
     Empirical Performance: Limited,
     Output Format: CPDAG,
     Data Type: Tabular,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Sparse-Preferring
 }
 
 ### Score-based Methods
@@ -227,7 +228,7 @@ GES: {
     Empirical Performance: Strong,
     Output Format: CPDAG,
     Data Type: Tabular,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Sparse-Preferring
 }
 
 FGES: {
@@ -243,7 +244,7 @@ FGES: {
     Empirical Performance: Strong,
     Output Format: CPDAG,
     Data Type: Tabular,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Sparse-Preferring
 }
 
 XGES: {
@@ -259,7 +260,7 @@ XGES: {
     Empirical Performance: Robust,
     Output Format: CPDAG,
     Data Type: Tabular,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Sparse-Preferring
 }
 
 GRaSP: {
@@ -275,7 +276,7 @@ GRaSP: {
     Empirical Performance: Robust,
     Output Format: CPDAG,
     Data Type: Tabular,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Sparse-Preferring
 }
 
 ### Continuous-optimization Methods
@@ -293,7 +294,7 @@ GOLEM: {
     Empirical Performance: Robust,
     Output Format: DAG,
     Data Type: Tabular,
-    Graph Density Stability: High
+    Graph Density Preference: Density-Robust
 }
 
 CALM: {
@@ -309,7 +310,7 @@ CALM: {
     Empirical Performance: Moderate,
     Output Format: DAG,
     Data Type: Tabular,
-    Graph Density Stability: High
+    Graph Density Preference: Density-Robust
 }
 
 CORL: {
@@ -325,7 +326,7 @@ CORL: {
     Empirical Performance: Moderate,
     Output Format: DAG,
     Data Type: Tabular,
-    Graph Density Stability: High
+    Graph Density Preference: Density-Robust
 }
 
 NOTEARSLinear: {
@@ -341,7 +342,7 @@ NOTEARSLinear: {
     Empirical Performance: Robust,
     Output Format: DAG,
     Data Type: Tabular,
-    Graph Density Stability: High
+    Graph Density Preference: Density-Robust
 }
 
 NOTEARSNonlinear: {
@@ -357,7 +358,7 @@ NOTEARSNonlinear: {
     Empirical Performance: Moderate,
     Output Format: DAG,
     Data Type: Tabular,
-    Graph Density Stability: High
+    Graph Density Preference: Density-Robust
 }
 
 DYNOTEARS: {
@@ -373,7 +374,7 @@ DYNOTEARS: {
     Empirical Performance: Strong,
     Output Format: DAG,
     Data Type: Time-series,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Sparse-Preferring
 }
 
 NTSNOTEARS: {
@@ -389,7 +390,7 @@ NTSNOTEARS: {
     Empirical Performance: Strong,
     Output Format: DAG,
     Data Type: Time-series,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Sparse-Preferring
 }
 
 ### Functional Model-based Methods (LiNGAM Family)
@@ -407,8 +408,8 @@ DirectLiNGAM: {
     Empirical Performance: Limited,
     Output Format: DAG,
     Data Type: Tabular,
-    Graph Density Stability: Moderate,
-    Note: "Excellent performance on non-Gaussian noise (10.0 score) but poor on Gaussian noise, explaining the overall Limited empirical performance"
+    Graph Density Preference: Dense-Preferring,
+    Note: "A MUST try on linear non-Gaussian data but poor on Gaussian noise, explaining the overall Limited empirical performance"
 }
 
 ICALiNGAM: {
@@ -424,7 +425,7 @@ ICALiNGAM: {
     Empirical Performance: Limited,
     Output Format: DAG,
     Data Type: Tabular,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Dense-Preferring
 }
 
 VARLiNGAM: {
@@ -440,7 +441,7 @@ VARLiNGAM: {
     Empirical Performance: Strong,
     Output Format: DAG,
     Data Type: Time-series,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Dense-Preferring
 }
 
 ### Hybrid Methods
@@ -458,7 +459,7 @@ GrangerCausality: {
     Empirical Performance: Moderate,
     Output Format: DAG,
     Data Type: Time-series,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Sparse-Preferring
 }
 
 Hybrid: {
@@ -474,5 +475,5 @@ Hybrid: {
     Empirical Performance: Moderate,
     Output Format: DAG,
     Data Type: Tabular,
-    Graph Density Stability: Moderate
+    Graph Density Preference: Sparse-Preferring
 }

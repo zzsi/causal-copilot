@@ -1,4 +1,3 @@
-
 # GRaSP Algorithm Profile
 
 ## Executive Summary

@@ -6,11 +6,9 @@ import os
 import random
 import json
 from sklearn.impute import SimpleImputer
-from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.preprocessing import StandardScaler
 from scipy.stats import pearsonr
-from sklearn.feature_selection import mutual_info_regression
 from itertools import combinations
 import statsmodels.api as sm
 from statsmodels.stats.diagnostic import linear_reset
@@ -537,7 +535,7 @@ def linearity_check (df_raw: pd.DataFrame, global_state):
     return global_state
 
 
-def linearity_check_ts(df_raw: pd.DataFrame, global_state, save_plot=False):
+def linearity_check_ts(df_raw: pd.DataFrame, global_state, save_plot=True):
     '''
     :param df: imputed data in Pandas DataFrame format.
     :param global_state
@@ -571,7 +569,7 @@ def linearity_check_ts(df_raw: pd.DataFrame, global_state, save_plot=False):
             bds_pvals[columns[i]] = None
     
     if save_plot:
-        num_vars = df.shape[1]
+        num_vars = df_raw.shape[1]
         ncols = 2
         nrows = int(np.ceil(num_vars / ncols))
         
@@ -581,7 +579,7 @@ def linearity_check_ts(df_raw: pd.DataFrame, global_state, save_plot=False):
         for i in range(num_vars):
             axs[i].scatter(fitted.iloc[:, i], residuals.iloc[:, i], alpha=0.6)
             axs[i].axhline(0, color='r', linestyle='--')
-            axs[i].set_title(f'{df.columns[i]}: Residuals vs Fitted')
+            axs[i].set_title(f'{df_raw.columns[i]}: Residuals vs Fitted')
             axs[i].set_xlabel('Fitted Values')
             axs[i].set_ylabel('Residuals')
 
@@ -864,7 +862,7 @@ def convert_stat_info_to_text(statistics):
         
     return text
 
-def sparsity_check(df: pd.DataFrame, nan_indicator):
+def missing_ratio_check(df: pd.DataFrame, nan_indicator):
     missing_vals = [np.nan, nan_indicator]
     missing_mask = df.isin(missing_vals)
 
@@ -873,8 +871,8 @@ def sparsity_check(df: pd.DataFrame, nan_indicator):
         ratio_record[column] = missing_mask[column].mean()
 
     # LLM determine dropped features
-    sparsity_dict = {'high': [k for k, v in ratio_record.items() if v >= 0.5], # ratio > 0.5
+    missing_ratio_dict = {'high': [k for k, v in ratio_record.items() if v >= 0.5], # ratio > 0.5
                     'moderate': [k for k, v in ratio_record.items() if 0.5 > v >= 0.3], # 0.5 > ratio >= 0.3
                     'low': [k for k, v in ratio_record.items() if 0 < v < 0.3] # ratio < 0.3
                     }
-    return sparsity_dict
+    return missing_ratio_dict

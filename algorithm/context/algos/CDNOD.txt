@@ -1,4 +1,3 @@
-
 # CDNOD: Constraint-based Causal Discovery from Nonstationary/Heterogeneous Data
 
 ## Executive Summary

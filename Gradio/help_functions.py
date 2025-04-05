@@ -431,7 +431,7 @@ def first_stage_sparsity_check(message, chat_history, download_btn, args, global
 
 def drop_spare_features(chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
     global_state = missing_ratio_table(global_state) # Update missingness indicator in global state and generate missingness ratio table
-    global_state.statistics.sparsity_dict = sparsity_check(global_state.user_data.processed_data, global_state.user_data.nan_indicator)
+    global_state.statistics.sparsity_dict = missing_ratio_check(global_state.user_data.processed_data, global_state.user_data.nan_indicator)
     info = "Missing Ratio Summary: \n"\
             f"1️⃣ High Missing Ratio Variables (>0.5): {', '.join(global_state.statistics.sparsity_dict['high']) if global_state.statistics.sparsity_dict['high']!=[] else 'None'} \n"\
             f"2️⃣ Moderate Missing Ratio Variables: {', '.join(global_state.statistics.sparsity_dict['moderate']) if global_state.statistics.sparsity_dict['moderate']!=[] else 'None'} \n"\

@@ -1,4 +1,3 @@
-
 # Greedy Equivalence Search (GES) Algorithm Profile
 
 ## Executive Summary

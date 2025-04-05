@@ -1,4 +1,3 @@
-
 # GOLEM Algorithm
 
 ## Executive Summary

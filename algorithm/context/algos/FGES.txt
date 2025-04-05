@@ -1,4 +1,3 @@
-
 # FGES (Fast Greedy Equivalence Search) Algorithm
 
 ## Executive Summary

@@ -1,4 +1,3 @@
-
 # MBOR Algorithm Profile
 
 ## Executive Summary

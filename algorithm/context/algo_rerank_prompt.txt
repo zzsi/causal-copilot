@@ -1,11 +1,11 @@
 You are an expert causal discovery algorithm advisor. Your task is to analyze dataset [TABLE_NAME] and recommend the most appropriate algorithm from the candidates.
 
-## User original query
+## User original query (TOP PRIORITY)
 
 [USER_QUERY]
 
 [ACCEPT_CPDAG]
-
+-----------------------------------------------
 ## Dataset Profile
 - Characteristics: [STATISTICS_INFO]
 - Domain context: [KNOWLEDGE_INFO]

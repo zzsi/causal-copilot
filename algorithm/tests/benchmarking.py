@@ -148,7 +148,6 @@ class BenchmarkRunner:
         ))
             
         return dataset_index
-
     def _load_dataset(self, dataset_dir: str) -> Tuple[pd.DataFrame, np.ndarray, Dict]:
         """Load data, true graph, and config from a dataset directory"""
         data_file = [file for file in os.listdir(dataset_dir) if 'data.csv' in file][0]
@@ -166,7 +165,7 @@ class BenchmarkRunner:
         start_time = time.time()
         
         # Set a timeout limit (10 minutes)
-        timeout_seconds = 600
+        timeout_seconds = 1200  # 10 minutes
         
         try:
             # fill the missing value if it is existed
@@ -178,23 +177,47 @@ class BenchmarkRunner:
             if 'domain_index' not in data.columns and "CDNOD" in algo_instance.name:
                 data["domain_index"] = np.ones(data.shape[0])
 
-            # Use signal-based timeout for Unix systems
-            import signal
+            # Use multiprocessing with timeout instead of signal-based timeout
+            # Signal-based timeouts don't work well with complex algorithms or multithreaded code
+            import multiprocessing as mp
             
-            def timeout_handler(signum, frame):
+            def run_algorithm(data, result_queue):
+                try:
+                    adj_matrix, info, _ = algo_instance.fit(data)
+                    result_queue.put((adj_matrix, info))
+                except Exception as e:
+                    result_queue.put(e)
+            
+            # Create a queue for the result
+            result_queue = mp.Queue()
+            
+            # Start the process with environment variables properly copied
+            process = mp.Process(target=run_algorithm, args=(data, result_queue))
+            # Ensure process inherits the parent's environment variables
+            process.daemon = True
+            process.start()
+            
+            # Wait for the process to complete or timeout
+            process.join(timeout_seconds)
+            
+            # Check if the process is still running after timeout
+            if process.is_alive():
+                # Terminate the process if it's still running
+                process.terminate()
+                process.join()
                 raise TimeoutError(f"Execution timed out after {timeout_seconds} seconds")
             
-            # Set the timeout handler
-            original_handler = signal.getsignal(signal.SIGALRM)
-            signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(timeout_seconds)
+            # Get the result from the queue
+            if result_queue.empty():
+                raise Exception("Process completed but no result was returned")
             
-            # Run the algorithm
-            adj_matrix, info, _ = algo_instance.fit(data)
+            result = result_queue.get()
             
-            # Disable the alarm
-            signal.alarm(0)
-            signal.signal(signal.SIGALRM, original_handler)
+            # Check if the result is an exception
+            if isinstance(result, Exception):
+                raise result
+            
+            adj_matrix, info = result
             
             runtime = time.time() - start_time
             metrics = self.evaluator.compute_metrics(true_graph, adj_matrix)
@@ -219,12 +242,6 @@ class BenchmarkRunner:
                 "error": str(e),
                 "data_config": config
             }
-            # Ensure we disable the alarm in case of other exceptions
-            try:
-                signal.alarm(0)
-                signal.signal(signal.SIGALRM, original_handler)
-            except:
-                pass
             
         return result
     
@@ -247,75 +264,120 @@ class BenchmarkRunner:
         """Run all benchmark experiments"""
         all_results = {}
         
-        # Track current node size and configuration to implement early stopping
-        current_node_size = -1
-        timeout_config = {}  # Store configurations where timeout occurred
-        
-        # Run experiments for all datasets
-        for dataset_name, dataset_dir, config in tqdm(self.dataset_index, desc=f"Running {len(self.dataset_index)} experiments"):
-            # Extract key configuration parameters
+        # Group datasets by node size and sample size for smarter timeout handling
+        node_size_groups = {}
+        for dataset_name, dataset_dir, config in self.dataset_index:
             node_size = config['n_nodes']
+            sample_size = config['n_samples']
+            
+            if node_size not in node_size_groups:
+                node_size_groups[node_size] = {}
+            
+            if sample_size not in node_size_groups[node_size]:
+                node_size_groups[node_size][sample_size] = []
+                
+            # Create a config signature for tracking timeouts
             function_type = config.get('function_type', 'unknown')
             edge_probability = config.get('edge_probability', 0)
-            
-            # Create a config signature to track timeouts more precisely
             config_signature = f"nodes{node_size}_func{function_type}_edgeprob{edge_probability}"
             
-            # If we're moving to a new node size, update tracking
-            if node_size > current_node_size:
-                current_node_size = node_size
+            node_size_groups[node_size][sample_size].append((dataset_name, dataset_dir, config, config_signature))
+        
+        # Sort node sizes and sample sizes
+        sorted_node_sizes = sorted(node_size_groups.keys())
+        
+        # Track timeouts
+        timeout_config = {}  # Store configurations where timeout occurred
+        
+        # Process experiments by node size and sample size
+        for node_size in sorted_node_sizes:
+            sorted_sample_sizes = sorted(node_size_groups[node_size].keys())
+            min_sample_size = sorted_sample_sizes[0]
             
-            # Skip if we've already had a timeout for this specific configuration
-            if config_signature in timeout_config:
-                print(f"Skipping {dataset_name} as timeout occurred for similar configuration: {config_signature}")
-                
-                # Create a skipped result entry
-                skip_result = {
-                    "success": False,
-                    "error": f"Skipped due to previous timeout with similar configuration: {config_signature}",
-                    "data_config": config,
-                    "algorithm": next(iter(self.algorithms.keys())),  # Get first algorithm name
-                    "hyperparams": self.hyperparams,
-                    "algorithm_id": self.algo_id,
-                    "dataset": dataset_name
-                }
-                if self.algo_id not in all_results:
-                    all_results[self.algo_id] = []
-                all_results[self.algo_id].append(skip_result)
-                self._save_result(self.algo_id, skip_result)
-                continue
+            # Flag to track if we should skip to next node size
+            skip_to_next_node_size = False
             
-            data, true_graph, _ = self._load_dataset(dataset_dir)
+            for sample_size in sorted_sample_sizes:
+                if skip_to_next_node_size:
+                    print(f"Skipping node size {node_size} with sample size {sample_size} due to timeout at larger sample size")
+                    continue
+                
+                # Process all datasets with this node size and sample size
+                for dataset_name, dataset_dir, config, config_signature in node_size_groups[node_size][sample_size]:
+                    # Skip if we've already had a timeout for this specific configuration
+                    if config_signature in timeout_config:
+                        print(f"Skipping {dataset_name} as timeout occurred for similar configuration: {config_signature}")
+                        
+                        # Create a skipped result entry
+                        skip_result = {
+                            "success": False,
+                            "error": f"Skipped due to previous timeout with similar configuration: {config_signature}",
+                            "data_config": config,
+                            "algorithm": next(iter(self.algorithms.keys())),  # Get first algorithm name
+                            "hyperparams": self.hyperparams,
+                            "algorithm_id": self.algo_id,
+                            "dataset": dataset_name
+                        }
+                        if self.algo_id not in all_results:
+                            all_results[self.algo_id] = []
+                        all_results[self.algo_id].append(skip_result)
+                        self._save_result(self.algo_id, skip_result)
+                        continue
+                    
+                    try:
+                        data, true_graph, _ = self._load_dataset(dataset_dir)
+                        
+                        for algo_name, algo_class in self.algorithms.items():
+                            # Initialize algorithm with hyperparameters
+                            algo_instance = algo_class(self.hyperparams)
+                            print(f"Running {self.algo_id} on {dataset_name}")
+                            result = self._run_single_experiment(algo_instance, data, true_graph, config)
+                            result['algorithm'] = algo_name
+                            result['hyperparams'] = self.hyperparams
+                            result['algorithm_id'] = self.algo_id
+                            result['dataset'] = dataset_name
+                            
+                            if self.algo_id not in all_results:
+                                all_results[self.algo_id] = []
+                            all_results[self.algo_id].append(result)
+                            self._save_result(self.algo_id, result)
+                            
+                            # Check if timeout occurred
+                            if not result['success'] and 'timed out' in str(result.get('error', '')).lower():
+                                timeout_config[config_signature] = True
+                                
+                                # If timeout occurred at the smallest sample size for this node size,
+                                # terminate the benchmark
+                                if sample_size == min_sample_size:
+                                    print(f"Timeout occurred at smallest sample size {sample_size} for node size {node_size}. Ending benchmark.")
+                                    print(f"Benchmark results saved to: {self.output_dir}")
+                                    return
+                                else:
+                                    # Skip to the next node size
+                                    print(f"Timeout occurred at sample size {sample_size} for node size {node_size}. Skipping to next node size.")
+                                    skip_to_next_node_size = True
+                                    break
+                        
+                        if skip_to_next_node_size:
+                            break
+                            
+                    except Exception as e:
+                        print(f"Error processing {dataset_name}: {str(e)}")
+                        continue
+                    
+                    if self.debug_mode:
+                        break  # Only test the first dataset in debug mode
             
-            for algo_name, algo_class in self.algorithms.items():
-                # Initialize algorithm with hyperparameters
-                algo_instance = algo_class(self.hyperparams)
-                print(f"Running {self.algo_id} on {dataset_name}")
-                result = self._run_single_experiment(algo_instance, data, true_graph, config)
-                result['algorithm'] = algo_name
-                result['hyperparams'] = self.hyperparams
-                result['algorithm_id'] = self.algo_id
-                result['dataset'] = dataset_name
-                if self.algo_id not in all_results:
-                    all_results[self.algo_id] = []
-                all_results[self.algo_id].append(result)
-                self._save_result(self.algo_id, result)
-                
-                # Check if timeout occurred and mark this configuration
-                if not result['success'] and 'timeout' in str(result.get('error', '')).lower():
-                    timeout_config[config_signature] = True
-                    print(f"Timeout occurred for configuration {config_signature}. Ending benchmark.")
-                    print(f"Benchmark results saved to: {self.output_dir}")
-                    return  # End the program when the first timeout occurs
-                
             if self.debug_mode:
-                break  # Only test the first dataset in debug mode
+                break  # Only test the first node size in debug mode
                 
         print(f"Benchmark results saved to: {self.output_dir}")
-
+        
 def test_timeout_mechanism():
     """Test case to verify the timeout kill mechanism works properly"""
     import signal
+    import time
+    import multiprocessing
     
     # Define a function that will run for longer than the timeout
     def long_running_function():
@@ -324,35 +386,61 @@ def test_timeout_mechanism():
         print("This should not be printed!")
         return "Completed"
     
-    # Set timeout to 2 seconds
-    timeout_seconds = 2
-    
-    # Set up the timeout handler
-    def timeout_handler(signum, frame):
-        raise TimeoutError(f"Execution timed out after {timeout_seconds} seconds")
-    
-    # Set the timeout handler
-    original_handler = signal.getsignal(signal.SIGALRM)
-    signal.signal(signal.SIGALRM, timeout_handler)
-    
-    try:
-        print(f"Setting timeout to {timeout_seconds} seconds...")
-        signal.alarm(timeout_seconds)
+    # Function to test timeout in a separate process
+    def test_in_process():
+        # Set timeout to 2 seconds
+        timeout_seconds = 2
         
-        # Run the function that should be killed
-        result = long_running_function()
+        # Set up the timeout handler
+        def timeout_handler(signum, frame):
+            raise TimeoutError(f"Execution timed out after {timeout_seconds} seconds")
         
-        # If we get here, the timeout didn't work
-        print("ERROR: Timeout mechanism failed!")
-        return False
+        # Set the timeout handler
+        original_handler = signal.getsignal(signal.SIGALRM)
+        signal.signal(signal.SIGALRM, timeout_handler)
         
-    except TimeoutError as e:
-        print(f"SUCCESS: Timeout mechanism worked correctly: {e}")
-        return True
-    finally:
-        # Disable the alarm and restore original handler
-        signal.alarm(0)
-        signal.signal(signal.SIGALRM, original_handler)
+        try:
+            print(f"Setting timeout to {timeout_seconds} seconds...")
+            signal.alarm(timeout_seconds)
+            
+            # Run the function that should be killed
+            result = long_running_function()
+            
+            # If we get here, the timeout didn't work
+            print("ERROR: Timeout mechanism failed!")
+            return False
+            
+        except TimeoutError as e:
+            print(f"SUCCESS: Timeout mechanism worked correctly: {e}")
+            return True
+        finally:
+            # Disable the alarm and restore original handler
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, original_handler)
+    
+    # Test in single process first
+    print("Testing timeout in single process mode...")
+    single_process_result = test_in_process()
+    
+    # Now test in multiprocessing environment
+    print("\nTesting timeout in multiprocessing environment...")
+    process = multiprocessing.Process(target=test_in_process)
+    process.start()
+    
+    # Wait for the process to complete with a timeout
+    process.join(timeout=5)
+    
+    # Check if the process is still alive (it shouldn't be)
+    if process.is_alive():
+        print("ERROR: Multiprocessing timeout test failed - process still running")
+        process.terminate()
+        process.join()
+        multiprocessing_result = False
+    else:
+        print("SUCCESS: Multiprocessing timeout test completed")
+        multiprocessing_result = True
+    
+    return single_process_result and multiprocessing_result
 
 def main():
     from argparse import ArgumentParser

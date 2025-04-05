@@ -57,6 +57,7 @@ class HyperparameterSelector:
         table_columns = '\t'.join(global_state.user_data.processed_data.columns._data)
         knowledge_info = '\n'.join(global_state.user_data.knowledge_docs)
         
+        hp_prompt = hp_prompt.replace("[USER_QUERY]", global_state.user_data.initial_query)
         hp_prompt = hp_prompt.replace("[COLUMNS]", table_columns)
         hp_prompt = hp_prompt.replace("[KNOWLEDGE_INFO]", knowledge_info)
         hp_prompt = hp_prompt.replace("[STATISTICS INFO]", global_state.statistics.description)

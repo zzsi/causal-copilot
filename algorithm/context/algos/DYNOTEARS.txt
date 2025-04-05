@@ -1,4 +1,3 @@
-
 # DYNOTEARS
 
 ## Real-World Applications

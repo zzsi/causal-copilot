@@ -183,10 +183,10 @@ class PC(CausalDiscoveryAlgorithm):
         def degree2prob(degree, node_size):
             return degree / (node_size-1)
         
-        node_sizes = [10000] # [5, 10, 15, 20, 25]
-        sample_sizes = [5000] # [500, 1000, 1500, 2000]
+        node_sizes = [5] # [5, 10, 15, 20, 25]
+        sample_sizes = [1000] # [500, 1000, 1500, 2000]
         num_runs = 1  # Number of runs to average results
-        edge_probability = degree2prob(4, node_sizes[0])
+        edge_probability = degree2prob(2, node_sizes[0])
         
         # Define different parameter configurations to compare
         # configurations = [
@@ -196,7 +196,7 @@ class PC(CausalDiscoveryAlgorithm):
         #     {"name": "Fixed Depth 4", "alpha": 0.05, "depth": 4}
         # ]
         configurations = [
-            {"name": "Fixed Alpha 0.05", "alpha": 0.01, "depth": 10, 'indep_test': 'fisherz_gpu'},
+            {"name": "Fixed Alpha 0.05", "alpha": 0.01, "depth": 10, 'indep_test': 'fastkci_cpu'},
         ]
         
         results = {}
