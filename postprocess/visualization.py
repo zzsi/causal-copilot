@@ -12,6 +12,54 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from postprocess.draw import draw
 
+
+def get_layout(g):
+    """Generate layout positions for a graph using a two-stage approach.
+    
+    First applies ForceAtlas2 for global structure, then refines with Fruchterman-Reingold.
+    Falls back to spring_layout if fa2 is not available.
+    
+    Args:
+        g: A networkx graph object
+        
+    Returns:
+        dict: Node positions mapping
+    """
+    try:
+        # First stage: ForceAtlas2 layout for initial global structure
+        import fa2
+        forceatlas2 = fa2.ForceAtlas2(
+            # Behavior alternatives
+            outboundAttractionDistribution=True,  # Dissuade hubs
+            linLogMode=False,  # NOT Lin-log mode
+            adjustSizes=False,  # Prevent overlap
+            edgeWeightInfluence=1.0,
+            
+            # Performance
+            jitterTolerance=1.0,  # Tolerance
+            barnesHutOptimize=True,
+            barnesHutTheta=1.2,
+            
+            # Tuning
+            scalingRatio=2.0,
+            strongGravityMode=False,
+            gravity=1.0,
+            
+            # Log
+            verbose=False
+        )
+        
+        # Initial positions with ForceAtlas2
+        initial_pos = forceatlas2.forceatlas2_networkx_layout(g, pos=None, iterations=500)
+        
+        # Second stage: Fruchterman-Reingold for fine-tuning
+        pos = nx.fruchterman_reingold_layout(g, pos=initial_pos, iterations=50, seed=42)
+    except ImportError:
+        # Fallback if fa2 is not available
+        pos = nx.spring_layout(g, seed=42)
+        print("Warning: fa2 package not found. Using spring_layout instead.")
+    return pos
+
 class Visualization(object):
     def __init__(self, global_state, threshold: float=0.95):
         """
@@ -30,12 +78,15 @@ class Visualization(object):
         self.threshold = threshold
 
     def get_pos(self, mat):
+        """Get node positions for graph visualization."""
         adj_matrix = (mat != 0).astype(int).T
         g = nx.from_numpy_array(adj_matrix, create_using=nx.DiGraph)
         # Relabel nodes with variable names from data columns
         mapping = {i: self.data.columns[i] for i in range(len(self.data.columns))}
         g = nx.relabel_nodes(g, mapping)
-        pos = nx.spring_layout(g)
+        
+        # Get layout positions
+        pos = get_layout(g)
         return pos
 
     def plot_pdag(self, mat, save_path, pos=None, relation=False):
@@ -215,38 +266,40 @@ def convert_to_edges(algo, variables, mat):
     }
     return edges_dict
    
-
 def test_fixed_pos():
-    # Create a fully connected graph
-    n_nodes = 5
-    fully_connected = np.ones((n_nodes, n_nodes))
-    np.fill_diagonal(fully_connected, 0)
-
-    # Create a 50% connected graph by randomly setting half the edges to 0
-    fifty_percent = fully_connected.copy()
-    n_edges = (n_nodes * (n_nodes-1)) // 2  # Number of edges in upper triangle
-    edges_to_remove = n_edges // 2  # Remove half the edges
+    # Create a DAG (Directed Acyclic Graph)
+    n_nodes = 50
+    # Initialize with zeros
+    dag = np.zeros((n_nodes, n_nodes))
     
-    # Get indices of upper triangle (excluding diagonal)
-    upper_indices = np.triu_indices(n_nodes, k=1)
+    # Create a simple chain structure: 0->1->2->3->4
+    for i in range(n_nodes-1):
+        dag[i, i+1] = 1
     
-    # Randomly select edges to remove
-    remove_idx = np.random.choice(n_edges, edges_to_remove, replace=False)
-    for idx in remove_idx:
-        i, j = upper_indices[0][idx], upper_indices[1][idx]
-        fifty_percent[i,j] = fifty_percent[j,i] = 0
+    # Add some additional edges to make it more complex
+    # But ensure it remains acyclic (only connect from lower to higher indices)
+    dag[0, 2] = 1  # 0->2
+    dag[1, 3] = 1  # 1->3
+    dag[0, 4] = 1  # 0->4
+    
+    # Create a sparser version of the DAG by removing some edges
+    sparse_dag = dag.copy()
+    # Remove edge 0->2
+    sparse_dag[0, 2] = 0
+    # Remove edge 1->3
+    sparse_dag[1, 3] = 0
 
     # Use spring layout to get positions
     import networkx as nx
-    G_full = nx.from_numpy_array(fully_connected, create_using=nx.DiGraph)
-    G_half = nx.from_numpy_array(fifty_percent, create_using=nx.DiGraph)
+    G_full = nx.from_numpy_array(dag, create_using=nx.DiGraph)
+    G_sparse = nx.from_numpy_array(sparse_dag, create_using=nx.DiGraph)
     
-    pos_full = nx.spring_layout(G_full, seed=42)
-
+    pos_full = get_layout(G_full)
+    pos_sparse = get_layout(G_sparse)
 
     # Plot using the visualization functions
     draw(G_full, pos=pos_full, full_node_names=list(pos_full.keys()), shape='circle').render(outfile='fully_connected.pdf', cleanup=True)
-    draw(G_half, pos=pos_full, full_node_names=list(pos_full.keys()), shape='circle').render(outfile='fifty_percent.pdf', cleanup=True)
+    draw(G_sparse, pos=pos_sparse, full_node_names=list(pos_sparse.keys()), shape='circle').render(outfile='sparse_dag.pdf', cleanup=True)
     
 
 if __name__ == '__main__':
