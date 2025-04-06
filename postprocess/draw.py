@@ -7,6 +7,7 @@ def _draw_pag_edges(
     circle_edges: List[Tuple] = None,
     undirected_edges: List[Tuple] = None,
     bidirected_edges: List[Tuple] = None,
+    associated_edges: List[Tuple] = None,
     **attrs,
 ):
     """Draw the PAG edges.
@@ -55,6 +56,11 @@ def _draw_pag_edges(
         for sib1, sib2 in bidirected_edges:
             sib1, sib2 = str(sib1), str(sib2)
             dot.edge(sib1, sib2, dir="both", color="red", **attrs)
+            
+    if associated_edges is not None:
+        for assoc1, assoc2 in associated_edges:
+            assoc1, assoc2 = str(assoc1), str(assoc2)
+            dot.edge(assoc1, assoc2, dir="none", color="blue", style="dashed", **attrs)
 
     return dot, found_circle_sibs
 
@@ -128,6 +134,7 @@ def draw(
     directed_edges = None
     undirected_edges = None
     bidirected_edges = None
+    associated_edges = None
     if hasattr(G, "circle_edges"):
         circle_edges = G.circle_edges
     if hasattr(G, "directed_edges"):
@@ -136,6 +143,8 @@ def draw(
         undirected_edges = G.undirected_edges
     if hasattr(G, "bidirected_edges"):
         bidirected_edges = G.bidirected_edges
+    if hasattr(G, "associated_edges"):
+        associated_edges = G.associated_edges
 
     # draw PAG edges and keep track of the circular endpoints found
     dot, found_circle_sibs = _draw_pag_edges(
@@ -144,6 +153,7 @@ def draw(
         circle_edges=circle_edges,
         undirected_edges=undirected_edges,
         bidirected_edges=bidirected_edges,
+        associated_edges=associated_edges,
     )
     size = int(np.sqrt(len(G.nodes())))+1
     dot.graph_attr['K'] = '0.8'

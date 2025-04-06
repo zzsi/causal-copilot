@@ -429,8 +429,8 @@ def add_correlated_nodes_to_graph(graph: np.ndarray, correlated_nodes_map: Dict[
                         expanded_graph[corr_idx, k] = graph[node_idx, k]
                         expanded_graph[k, corr_idx] = graph[k, node_idx]
             
-            # Add undirected edge between source node and its correlated node
-            expanded_graph[node_idx, corr_idx] = 2
+            # Add associated edge between source node and its correlated node
+            expanded_graph[node_idx, corr_idx] = 7
             expanded_graph[corr_idx, node_idx] = 0  # Following the convention where only one side is marked
     
     return expanded_graph

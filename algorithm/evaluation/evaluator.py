@@ -14,6 +14,7 @@ class GraphEvaluator:
         'partial_directed': 4,  # o→
         'partial_undirected': 5,  # o-
         'partial_unknown': 6,  # o-o
+        'associated': 7,  # --
     }
 
     def __init__(self, has_hidden_confounders: bool = False, n_samples: int = 10000, sample: bool = False, seed: int = 42):

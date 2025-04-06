@@ -27,9 +27,15 @@ Statistical Properties:
 
 
 3. Background Knowledge:
-I currently do not have access to external files or datasets, including the specific "dataset/sim_ts/data.csv" you mentioned. Therefore, I cannot retrieve or analyze the contents of the dataset to provide meaningful information about variable names or their relationships.
+To assist you with your causal discovery task, I would need to check the contents of the dataset located at 'dataset/sim_ts/data.csv'. However, since I cannot access external files or datasets, I can only provide guidance based on the information you give me.
 
-If you can provide the specific names of the columns or any contextual information regarding the dataset, I'd be more than happy to help you analyze and describe the variables, potential causal relationships, and relevant domain knowledge for causal discovery. Please share the variable names or any additional details you have.
+Since you mentioned that the dataset contains columns labeled as "0, 1, 2", it suggests that the variable names are likely symbols or integers instead of meaningful names.
+
+In the absence of meaningful variable names or context, I would return:
+
+**No Knowledge** 
+
+If you can provide more information on the columns or any other relevant details, I'd be happy to assist you further!
 
 We have selected the following algorithm for causal discovery:
 

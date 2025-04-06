@@ -121,6 +121,9 @@ class Visualization(object):
         for edge in edges_dict['none_edges']:
             pag.add_edge(edge[0], edge[1], pag.circle_edge_name)
             pag.add_edge(edge[1], edge[0], pag.circle_edge_name)
+        for edge in edges_dict['associated_edges']:
+            pag.add_edge(edge[0], edge[1], pag.associated_edge_name)
+            pag.add_edge(edge[1], edge[0], pag.associated_edge_name)
 
         if pos is not None:
             dot_graph = draw(pag, full_node_names=list(pos.keys()), pos=pos, shape='circle')  
@@ -343,7 +346,7 @@ def convert_to_edges(algo, variables, mat):
     half_certain_edges = []  # o->
     half_uncertain_edges = []  # o-
     none_edges = []  # o-o
-
+    associated_edges = []  # --
     for ind_i in range(mat.shape[0]):
         for ind_j in range(mat.shape[0]):
             if ind_i == ind_j: continue
@@ -359,10 +362,12 @@ def convert_to_edges(algo, variables, mat):
                 half_uncertain_edges.append((ind_j, ind_i))
             elif mat[ind_i, ind_j] == 6: 
                 none_edges.append((ind_j, ind_i))
+            elif mat[ind_i, ind_j] == 7:
+                associated_edges.append((ind_j, ind_i))
 
     uncertain_edges = list({tuple(sorted(t)) for t in uncertain_edges})
     none_edges = list({tuple(sorted(t)) for t in none_edges})
-    all_edges = certain_edges.copy() + uncertain_edges.copy() + bi_edges.copy() + half_certain_edges.copy() + half_uncertain_edges.copy() + none_edges.copy()
+    all_edges = certain_edges.copy() + uncertain_edges.copy() + bi_edges.copy() + half_certain_edges.copy() + half_uncertain_edges.copy() + none_edges.copy() + associated_edges.copy()
 
     all_edges_names = [(labels[edge[0]], labels[edge[1]]) for edge in all_edges]
     certain_edges_names = [(labels[edge[0]], labels[edge[1]]) for edge in certain_edges]
@@ -371,6 +376,7 @@ def convert_to_edges(algo, variables, mat):
     half_certain_edges_names = [(labels[edge[0]], labels[edge[1]]) for edge in half_certain_edges]
     half_uncertain_edges_names = [(labels[edge[0]], labels[edge[1]]) for edge in half_uncertain_edges]
     none_edges_names = [(labels[edge[0]], labels[edge[1]]) for edge in none_edges]
+    associated_edges_names = [(labels[edge[0]], labels[edge[1]]) for edge in associated_edges]
     edges_dict = {
         'all_edges': all_edges_names,
         'certain_edges': certain_edges_names,
@@ -378,7 +384,8 @@ def convert_to_edges(algo, variables, mat):
         'bi_edges': bi_edges_names,
         'half_certain_edges': half_certain_edges_names,
         'half_uncertain_edges': half_uncertain_edges_names,
-        'none_edges': none_edges_names
+        'none_edges': none_edges_names,
+        'associated_edges': associated_edges_names
     }
     return edges_dict
    
