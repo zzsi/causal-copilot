@@ -22,7 +22,7 @@ class PCMCI(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
         self._params = {
-            'cond_ind_test': 'parcorr',
+            'indep_test': 'parcorr',
             'tau_min': 0,
             'tau_max': 1,
             'pc_alpha': 0.05,
@@ -79,7 +79,10 @@ class PCMCI(CausalDiscoveryAlgorithm):
 
         
         pcmci = PCMCI_model(dataframe=data_t, cond_ind_test=cond_ind_test)
-        results = pcmci.run_pcmci(**self.get_primary_params(), **self.get_secondary_params())
+        params = {**self.get_primary_params(), **self.get_secondary_params()}
+        # pop indep_test from params since it's already used to initialize cond_ind_test
+        params.pop('indep_test')
+        results = pcmci.run_pcmci(**params)
         if self._params['fdr_method'] !='none':
             q_matrix = pcmci.get_corrected_pvalues(p_matrix=results['p_matrix'], 
                                                 fdr_method=self._params['fdr_method'],

@@ -18,6 +18,7 @@ class UserData:
     output_graph_dir: Optional[str] = None
     selected_features: Optional[object] = None
     important_features: Optional[object] = None
+    high_corr_feature_groups: Optional[object] = None
     visual_selected_features: Optional[object] = None
     user_drop_features: Optional[object] = None
     llm_drop_features: Optional[object] = None

@@ -5,6 +5,7 @@ import pandas as pd
 import os
 import random
 import json
+from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import SimpleImputer
 from sklearn.impute import IterativeImputer
 from sklearn.preprocessing import StandardScaler

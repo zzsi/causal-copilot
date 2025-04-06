@@ -1,0 +1,101 @@
+User original query (TOP PRIORITY):
+Do causal discovery on this dataset
+
+-----------------------------------------------
+Given a dataset with the following properties:
+
+1. Columns: 0	1	2
+2. Statistics:
+The dataset has the following characteristics:
+
+Data Type: The overall data type is Time-series.
+
+The sample size is 2000 with 3 features. 
+
+This dataset is time-series data. 
+
+Data Quality: There are no missing values in the dataset.
+
+Statistical Properties:
+- Linearity: The relationships between variables are predominantly linear.
+- Gaussian Errors: The errors in the data do follow a Gaussian distribution.
+- Time lag: 50 
+
+- Stationarity: The dataset is stationary. 
+
+
+
+
+3. Background Knowledge:
+I currently do not have access to external files or datasets, including the specific "dataset/sim_ts/data.csv" you mentioned. Therefore, I cannot retrieve or analyze the contents of the dataset to provide meaningful information about variable names or their relationships.
+
+If you can provide the specific names of the columns or any contextual information regarding the dataset, I'd be more than happy to help you analyze and describe the variables, potential causal relationships, and relevant domain knowledge for causal discovery. Please share the variable names or any additional details you have.
+
+We have selected the following algorithm for causal discovery:
+
+Algorithm: PCMCI
+Description: [ALGORITHM_DESCRIPTION]
+
+Now, we need to determine the optimal hyperparameters for this algorithm. I'll guide you through a systematic approach to select values that prioritize accuracy while maintaining computational efficiency for moderate graph sizes.
+
+Primary hyperparameters to configure: indep_test, tau_min, tau_max, pc_alpha, alpha_level
+
+For each hyperparameter, please follow this structured approach:
+
+Step 1: Understand the dataset characteristics
+   - Consider the number of variables (graph size)
+   - Analyze sample size and data distribution
+   - Note if data is linear/nonlinear, continuous/discrete/mixed
+   - For time-series data, prioritize the statistically estimated lag order
+
+Step 2: Assess computational resources
+   - Consider the hardware constraints and GPU availability:
+   
+Current machine doesn't support CUDA, do not choose any GPU-powered algorithms.
+
+   - Prioritize to GPU implemented hyperparameter when dealing with large graph (variable size > 100) to achieve more efficient speedup
+
+Step 3: Evaluate each hyperparameter's impact on accuracy vs. efficiency
+   - Critical parameters affecting accuracy (e.g., significance levels, independence tests)
+   - Parameters affecting computational complexity (e.g., search depth, maximum conditions)
+   - Parameters controlling sparsity (e.g., regularization, thresholds)
+
+Step 4: Analyze algorithm-specific recommendations
+   - Review expert suggestions for each parameter:
+   "**Parameter:** indep_test\n- **Meaning:** Independence tests\n- **Available Values:**\n  - parcorr\n  - robustparcorr\n  - gpdc\n  - gsq\n  - regression\n  - cmi\n- **Expert Suggestion:** Use parcorr as default. parcorr, gpdc for non-linear causal relations, cmi for better accuracy but slow runtime, gsq for categorical, regression for mixed data\n\n**Parameter:** tau_min\n- **Meaning:** Minimum time lag to consider\n- **Available Values:**\n  - 0\n  - 1\n- **Expert Suggestion:** Use 0 as default. Adjust if results are required for a specific time window\n\n**Parameter:** tau_max\n- **Meaning:** Maximum time lag\n- **Available Values:**\n  - 1\n  - 5\n  - 10\n- **Expert Suggestion:** Use 1 as default. Usually adjusted based on pre-processing results\n\n**Parameter:** pc_alpha\n- **Meaning:** Significance level of PC algorithm.\n- **Available Values:**\n  - 0.05\n  - 0.1\n  - 0.01\n- **Expert Suggestion:** Use 0.05 as default. Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\n\n**Parameter:** alpha_level\n- **Meaning:** Significance level at which the p_matrix is thresholded to get graph.\n- **Available Values:**\n  - 0.05\n  - 0.1\n  - 0.01\n- **Expert Suggestion:** Use 0.05 as default. Adjust based on estimated time lag, number of nodes and sample size. Larger and denser graph means low alpha value.\n\n**Parameter:** fdr_method\n- **Meaning:** Correction method, currently implemented is Benjamini-Hochberg False Discovery Rate method. \n- **Available Values:**\n  - none\n  - fdr_bh\n- **Expert Suggestion:** Use none as default. Implement a false discovery rate correction over the PCMCI result, can be required for larger and denser graphs\n\n**Parameter:** link_assumptions\n- **Meaning:** Background knowledge links added as a dict\n- **Available Values:**\n  - None\n- **Expert Suggestion:** Use null as default. Add some links as dictionary of form {j:{(i, -tau): link_type, ...}, ...} specifying assumptions about links. This initializes the graph with entries graph[i,j,tau] = link_type. For example, graph[i,j,0] = '-->' implies that a directed link from i to j at lag 0 must exist. Valid link types are 'o-o', '-->', '<--'.\n\n**Parameter:** max_conds_dim\n- **Meaning:** Maximum number of conditions to test.\n- **Available Values:**\n  - None\n- **Expert Suggestion:** Use null as default. Default none value means unrestricted testing, can be assigned a value for large datasets with sparse graphs to speed up the discovery\n\n**Parameter:** max_combinations\n- **Meaning:** Maximum number of combinations of conditions of current cardinality to test in PC1 step.\n- **Available Values:**\n  - 1\n- **Expert Suggestion:** Use 1 as default. Adjust to increase accuracy by trading off processing speed\n\n**Parameter:** max_conds_py\n- **Meaning:** Restricts the number of parent nodes to consider in the MCI step\n- **Available Values:**\n  - None\n- **Expert Suggestion:** Use null as default. Adjust to increase accuracy by trading off processing speed, none value means unrestricted\n\n**Parameter:** max_conds_px\n- **Meaning:** Maximum number of variables to condition on\n- **Available Values:**\n  - None\n- **Expert Suggestion:** Use null as default. Adjust to increase accuracy by trading off processing speed, none value means unrestricted\n\n"
+
+Step 5: Make final decisions based on:
+   - For moderate graph sizes (<50 variables), prioritize accuracy over speed
+   - For large graphs (>50 variables), balance accuracy with feasibility and EFFICIENCY
+   - For time-series data, carefully consider temporal parameters
+
+Please provide your suggestions in a structured JSON format, with detailed reasoning for each hyperparameter. Your response should look like this:
+
+{
+  "algorithm": "PCMCI",
+  "hyperparameters": {
+    "[HYPERPARAMETER_1_NAME]": {
+      "full_name": "[HYPERPARAMETER_1_FULL_NAME]",
+      "reasoning": "[YOUR_STEP_BY_STEP_REASONING_PROCESS]",
+      "value": [SUGGESTED_VALUE],
+      "explanation": "[BRIEF_EXPLANATION_OF_TRADEOFFS]"
+    },
+    "[HYPERPARAMETER_2_NAME]": {
+      "full_name": "[HYPERPARAMETER_2_FULL_NAME]",
+      "reasoning": "[YOUR_STEP_BY_STEP_REASONING_PROCESS]",
+      "value": [SUGGESTED_VALUE],
+      "explanation": "[BRIEF_EXPLANATION_OF_TRADEOFFS]"
+    },
+    ...
+  }
+}
+
+Important guidelines:
+1. Only select values from the "available_values" list for each hyperparameter
+2. For moderate graph sizes (10-50 variables), prioritize accuracy over speed
+3. For time-series data, give special attention to lag parameters based on statistical estimates
+4. Consider independence test selection carefully based on data type and computational resources
+5. For regularization parameters, consider the expected graph density
+6. For search depth parameters, consider the complexity of potential causal relationships
+
+Please provide your hyperparameter suggestions following this JSON structure, with clear reasoning that demonstrates you've considered the dataset characteristics, algorithm requirements, and computational constraints.

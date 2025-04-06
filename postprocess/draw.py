@@ -112,7 +112,6 @@ def draw(
         dot.engine = 'neato'  
         dot.graph_attr['overlap'] = 'false'
         dot.graph_attr['splines'] = 'true'
-        print('yes')
         dot.graph_attr['K'] = '0.8'
         dot.graph_attr['nodesep'] = '0.5'
         dot.graph_attr['ranksep'] = '0.5'
