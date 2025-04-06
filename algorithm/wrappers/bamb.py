@@ -15,7 +15,7 @@ sys.path.append(root_dir)
 
 from CBD.MBs.BAMB import BAMB as Bamb
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
-from algorithm.wrappers.utils.conversion import MB2CPDAG
+from algorithm.wrappers.utils.tab_utils import MB2CPDAG
 from algorithm.evaluation.evaluator import GraphEvaluator
 
 class BAMB(CausalDiscoveryAlgorithm):

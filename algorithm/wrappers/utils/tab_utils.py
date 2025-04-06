@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from typing import Set, Tuple, List, Callable, Dict
+from typing import Set, Tuple, List, Callable, Dict, Optional
 import networkx as nx
 import matplotlib.pyplot as plt
 
@@ -227,3 +227,93 @@ def MB2CPDAG(data: pd.DataFrame, mb_dict: Dict[int, List[int]], indep_test: str 
 #             node_size=1500, font_size=12, font_weight='bold')
 #     plt.title('Discovered Network Structure')
 #     plt.show()
+
+
+
+def add_correlated_nodes_to_graph(graph: np.ndarray, correlated_nodes_map: Dict[int, List[int]], node_names: Optional[List[str]] = None) -> np.ndarray:
+    """
+    Add highly correlated nodes back to the graph after causal discovery.
+    
+    This function takes a graph adjacency matrix and a mapping of nodes to their highly correlated nodes,
+    then adds the correlated nodes back to the graph with the same relationships as their corresponding nodes.
+    
+    Parameters
+    ----------
+    graph : np.ndarray
+        The adjacency matrix of shape (N, N) representing the causal graph.
+        Edge types follow the convention in GraphEvaluator.EDGE_TYPES:
+        - 0: no_edge
+        - 1: directed (j->i)
+        - 2: undirected
+        - 3: bidirected
+        - 4: partial_directed
+        - 5: partial_undirected
+        - 6: partial_unknown
+    
+    correlated_nodes_map : Dict[int, List[int]]
+        A dictionary mapping node indices to lists of indices of their highly correlated nodes
+        that were removed before causal discovery.
+        Example: {0: [5, 8]} means nodes 5 and 8 were highly correlated with node 0 and were removed.
+    
+    node_names : List[str], optional
+        List of node names for logging purposes. If None, indices will be used.
+    
+    Returns
+    -------
+    np.ndarray
+        The expanded adjacency matrix including the correlated nodes with the same relationships.
+    
+    Examples
+    --------
+    >>> graph = np.array([[0, 1, 0], [0, 0, 1], [0, 0, 0]])  # X0->X1->X2
+    >>> correlated_map = {0: [3, 4], 2: [5]}  # X3,X4 correlated with X0; X5 with X2
+    >>> expanded_graph = add_correlated_nodes_to_graph(graph, correlated_map)
+    """
+    if not correlated_nodes_map:
+        return graph
+    
+    # Find the maximum node index in the correlated nodes map
+    all_correlated_nodes = [node for sublist in correlated_nodes_map.values() for node in sublist]
+    if not all_correlated_nodes:
+        return graph
+    
+    max_node_idx = max(max(all_correlated_nodes), graph.shape[0] - 1)
+    
+    # Create expanded graph with space for correlated nodes
+    expanded_size = max_node_idx + 1
+    expanded_graph = np.zeros((expanded_size, expanded_size), dtype=graph.dtype)
+    
+    # Copy original graph to expanded graph
+    n = graph.shape[0]
+    expanded_graph[:n, :n] = graph
+    
+    # Add correlated nodes with the same relationships
+    for node_idx, correlated_indices in correlated_nodes_map.items():
+        if node_idx >= n:
+            continue  # Skip if the reference node is outside the original graph
+            
+        node_name = node_names[node_idx] if node_names else f"X{node_idx}"
+        
+        for corr_idx in correlated_indices:
+            corr_name = node_names[corr_idx] if node_names else f"X{corr_idx}"
+            
+            # Copy incoming edges (parents)
+            for i in range(n):
+                if graph[i, node_idx] != 0:  # If i has an edge to node_idx
+                    expanded_graph[i, corr_idx] = graph[i, node_idx]
+                    
+            # Copy outgoing edges (children)
+            for j in range(n):
+                if graph[node_idx, j] != 0:  # If node_idx has an edge to j
+                    expanded_graph[corr_idx, j] = graph[node_idx, j]
+            
+            # If there are bidirectional or undirected edges, copy those too
+            for k in range(n):
+                if k != node_idx:
+                    # Check for bidirectional edges (both i->j and j->i exist)
+                    if graph[node_idx, k] != 0 and graph[k, node_idx] != 0:
+                        expanded_graph[corr_idx, k] = graph[node_idx, k]
+                        expanded_graph[k, corr_idx] = graph[k, node_idx]
+    
+    return expanded_graph
+

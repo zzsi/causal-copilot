@@ -3,6 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
+import pandas as pd
+from tigramite.plotting import plot_time_series_graph
+
+from types import SimpleNamespace
 
 from pywhy_graphs import PAG
 # from pywhy_graphs.viz import draw
@@ -11,6 +15,7 @@ import sys
 # from causallearn.search.FCMBased.lingam.utils import make_dot
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from postprocess.draw import draw
+
 
 
 def get_layout(g):
@@ -126,6 +131,54 @@ class Visualization(object):
         dot_graph.render(outfile=path, cleanup=True)
         
         return pos_G
+    
+    def plot_lagged_causal_graph(lag_matrix, var_names=None, save_path=None):
+        """
+        Standalone function to visualize a lagged causal graph.
+        
+        Args:
+            lag_matrix: A lagged causal adjacency matrix of shape (L, N, N) where L is the number of lags,
+                    and N is the number of nodes. lag_matrix[l, i, j] != 0 means j causes i with lag l.
+            save_path: Path to save the plot.
+            var_names: Optional list of variable names. If None, default names X0, X1, etc. will be used.
+                        
+        Returns:
+            tigramite_mat: A tigramite-compatible graph array of shape (N, N, L)
+        """
+        # Convert matrix to tigramite format
+        tigramite_mat = convert_lagged_mat_to_tigramite(lag_matrix)
+        
+        # Handle the case where the input is a 2D matrix (single lag)
+        if len(lag_matrix.shape) == 2:
+            L = 1
+            N = lag_matrix.shape[0]
+        else:
+            L, N, _ = lag_matrix.shape
+        
+        # Create default variable names if not provided
+        if var_names is None:
+            var_names = [f"X{i}" for i in range(N)]
+            
+        
+        # Call tigramite's plot function
+        fig, ax = plot_time_series_graph(
+            graph=tigramite_mat,
+            # val_matrix=val_matrix,
+            var_names=var_names,
+            # link_colorbar_label="Effect strength" if val_matrix is not None else None,
+            # figsize=(10, 6),
+            save_name=save_path,
+            # fig_ax=(fig, ax),
+            # arrow_linewidth=4,
+            # node_size=0.1,
+            # arrowhead_size=20,
+            # curved_radius=0.2,
+            # label_fontsize=10,
+        )
+        plt.close(fig)
+            
+        
+        return tigramite_mat
        
     def boot_heatmap_plot(self):
         
@@ -218,6 +271,69 @@ class Visualization(object):
 
         return save_path
 
+    def plot_lag_pdag(self, mat, val_matrix=None, save_path=None, **kwargs):
+        """
+        Plot lagged causal graph and return a tigramite-compatible graph array.
+        
+        Args:
+            mat: A lagged causal adjacency matrix of shape (L, N, N) where L is the number of lags,
+                 and N is the number of nodes. mat[l, i, j] != 0 means j causes i with lag l.
+            save_path: Path to save the plot.
+            val_matrix: Optional value matrix for edge colors in tigramite's plot.
+                        Should be of shape (N, N, L) matching tigramite_mat structure.
+            
+        Returns:
+            tigramite_mat: A tigramite-compatible graph array of shape (N, N, L)
+        """
+        # Convert matrix to tigramite format
+        tigramite_mat = convert_lagged_mat_to_tigramite(mat)
+        
+        # Handle the case where the input is a 2D matrix (single lag)
+        if len(mat.shape) == 2:
+            L = 1
+            N = mat.shape[0]
+        else:
+            L, N, _ = mat.shape
+        
+        # Create graph representation
+        algo = self.global_state.algorithm.selected_algorithm
+        path = os.path.join(self.save_dir, save_path)
+        data_idx = [self.global_state.user_data.processed_data.columns.get_loc(var) for var in self.global_state.user_data.visual_selected_features]
+        
+        # Use a subset of the matrix if data_idx is a subset
+        if len(data_idx) < N:
+            tigramite_mat = tigramite_mat[data_idx, :][:, data_idx]
+            if val_matrix is not None:
+                val_matrix = val_matrix[data_idx, :][:, data_idx]
+            N = len(data_idx)
+        
+        # Prepare variable names
+        var_names = [self.data.columns[i] for i in range(N)]
+        
+        
+        # Create figure
+        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        # Call tigramite's plot function
+        plot_time_series_graph(
+            graph=tigramite_mat,
+            # val_matrix=val_matrix,
+            # var_names=var_names,
+            # link_colorbar_label="Effect strength" if val_matrix is not None else None,
+            # figsize=(10, 6),
+            save_name=save_path,
+            # fig_ax=(fig, ax),
+            # arrow_linewidth=4,
+            # node_size=0.1,
+            # arrowhead_size=20,
+            # curved_radius=0.2,
+            # label_fontsize=10,
+            **kwargs
+        )
+            
+        return tigramite_mat
+
+
 def convert_to_edges(algo, variables, mat):
     labels = {i: variables[i] for i in range(len(variables))}
 
@@ -266,6 +382,80 @@ def convert_to_edges(algo, variables, mat):
     }
     return edges_dict
    
+def convert_lagged_mat_to_tigramite(mat):
+    """
+    Convert a lagged causal matrix from format (L, N, N) to tigramite format (N, N, L).
+    
+    In the input format, mat[l, i, j] != 0 means j causes i with lag l.
+    In tigramite format, mat[i, j, l] = "string" represents the edge type from i to j with lag l.
+    
+    Args:
+        mat: A lagged causal adjacency matrix of shape (L, N, N)
+            
+    Returns:
+        tigramite_mat: A matrix of shape (N, N, L) with string edge representations
+    """
+    # Handle the case where the input is a 2D matrix (single lag)
+    if len(mat.shape) == 2:
+        mat = mat.reshape(1, *mat.shape)
+    
+    L, N, _ = mat.shape
+    tigramite_mat = np.zeros((N, N, L), dtype=object)
+    
+    # Initialize tigramite_mat with empty strings
+    for i in range(N):
+        for j in range(N):
+            for l in range(L):
+                tigramite_mat[i, j, l] = ""
+    
+    # Edge type mapping from numerical to tigramite string representation
+    edge_type_map = {
+        1: "-->",  # Directed causal link
+        2: "o-o",  # Undirected contemporaneous link
+        3: "<->",  # Bidirected edge
+        4: "o?>",  # Partial directed edge (directed non-ancestor)
+        5: "o?o",  # Partial undirected edge (undirected non-ancestor)
+        6: "<?>"   # No d-separation edge
+    }
+    
+    # Convert numerical matrix to tigramite's string edge representation
+    for l in range(L):
+        for i in range(N):
+            for j in range(N):
+                if i == j:
+                    continue
+                    
+                # Get value from original matrix (where j causes i)
+                val = mat[l, i, j]
+                
+                if val != 0:
+                    # Map numerical value to string edge type
+                    if val in edge_type_map:
+                        edge_str = edge_type_map[val]
+                    else:
+                        # Default to directed edge if value is not in mapping
+                        edge_str = "-->"
+                        
+                    # In tigramite, edge representation is from i to j (opposite of input)
+                    # So we're reversing the direction here
+                    tigramite_mat[j, i, l] = edge_str
+                    
+                    # Handle contemporaneous links (lag=0) specially
+                    if l == 0:
+                        # For bidirectional contemporaneous links
+                        if mat[l, j, i] != 0:
+                            # If both i→j and j→i exist at lag 0
+                            # Represents them as an undirected link
+                            if val == 1 and mat[l, j, i] == 1:
+                                tigramite_mat[i, j, l] = "o-o"
+                                tigramite_mat[j, i, l] = "o-o"
+                            # If they have conflicting edge types
+                            else:
+                                tigramite_mat[i, j, l] = "x-x"
+                                tigramite_mat[j, i, l] = "x-x"
+                                
+    return tigramite_mat
+
 def test_fixed_pos():
     # Create a DAG (Directed Acyclic Graph)
     n_nodes = 50
@@ -290,7 +480,6 @@ def test_fixed_pos():
     sparse_dag[1, 3] = 0
 
     # Use spring layout to get positions
-    import networkx as nx
     G_full = nx.from_numpy_array(dag, create_using=nx.DiGraph)
     G_sparse = nx.from_numpy_array(sparse_dag, create_using=nx.DiGraph)
     
@@ -300,20 +489,95 @@ def test_fixed_pos():
     # Plot using the visualization functions
     draw(G_full, pos=pos_full, full_node_names=list(pos_full.keys()), shape='circle').render(outfile='fully_connected.pdf', cleanup=True)
     draw(G_sparse, pos=pos_sparse, full_node_names=list(pos_sparse.keys()), shape='circle').render(outfile='sparse_dag.pdf', cleanup=True)
+
+
+def test_lagged_visualization():
+    """
+    Test function for the lagged causal graph visualization.
+    Creates a simple lagged causal graph and visualizes it.
+    """
+    # Create a simple lagged causal graph
+    # 3 variables, 2 lags
+    n_vars = 3
+    n_lags = 2
     
+    # Initialize with zeros
+    lag_matrix = np.zeros((n_lags, n_vars, n_vars))
+    
+    # Add some causal relationships
+    # Lag 1: X0 -> X1, X1 -> X2
+    lag_matrix[0, 1, 0] = 1  # X0 causes X1 with lag 1
+    lag_matrix[0, 2, 1] = 1  # X1 causes X2 with lag 1
+    
+    # Lag 2: X0 -> X2
+    lag_matrix[1, 2, 0] = 1  # X0 causes X2 with lag 2
+    
+    # Define variable names
+    var_names = ["Temperature", "Humidity", "Pressure"]
+
+    # Create a simple global state for testing plot_lag_pdag using SimpleNamespace
+    from types import SimpleNamespace
+    
+    # Create nested namespaces for the global state structure
+    user_data = SimpleNamespace(
+        processed_data=pd.DataFrame({
+            'Temperature': np.random.randn(100),
+            'Humidity': np.random.randn(100),
+            'Pressure': np.random.randn(100)
+        }),
+        visual_selected_features=['Temperature', 'Humidity', 'Pressure'],
+        output_graph_dir='./'
+    )
+    
+    algorithm = SimpleNamespace(
+        selected_algorithm='TestAlgorithm'
+    )
+    
+    results = SimpleNamespace(
+        bootstrap_probability=None
+    )
+    
+    # Combine into the main global state
+    fake_global_state = SimpleNamespace(
+        user_data=user_data,
+        algorithm=algorithm,
+        results=results
+    )
+        
+    # Create a visualization instance with the fake global state
+    test_visualizer = Visualization(fake_global_state, threshold=0.5)
+
+    test_visualizer.plot_lag_pdag(lag_matrix, val_matrix=None, save_path="temp_lagged_graph.pdf", )
+    
+    print("Lagged causal graph visualization test completed at temp_lagged_graph.pdf")
 
 if __name__ == '__main__':
-    test_fixed_pos()
-    # my_visual_initial = Visualization(global_state)
-    # if global_state.results.raw_pos is None:
-    #     data_idx = [global_state.user_data.processed_data.columns.get_loc(var) for var in global_state.user_data.visual_selected_features]
-    #     pos = my_visual_initial.get_pos(global_state.results.converted_graph[data_idx, :][:, data_idx])
-    #     global_state.results.raw_pos = pos
-    # if global_state.user_data.ground_truth is not None:
-    #     my_visual_initial.plot_pdag(global_state.user_data.ground_truth, f'{global_state.algorithm.selected_algorithm}_true_graph.jpg', global_state.results.raw_pos)
-    #     my_visual_initial.plot_pdag(global_state.user_data.ground_truth, f'{global_state.algorithm.selected_algorithm}_true_graph.pdf', global_state.results.raw_pos)
-    #     chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/{global_state.algorithm.selected_algorithm}_true_graph.jpg',)))
-    #     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-    # if global_state.results.converted_graph is not None:
-    #     my_visual_initial.plot_pdag(global_state.results.converted_graph, f'{global_state.algorithm.selected_algorithm}_initial_graph.jpg', global_state.results.raw_pos)
-    #     my_visual_initial.plot_pdag(global_state.results.converted_graph, f'{global_state.algorithm.selected_algorithm}_initial_graph.pdf', global_state.results.raw_pos)
+    # test_fixed_pos()
+    # # my_visual_initial = Visualization(global_state)
+    # # if global_state.results.raw_pos is None:
+    # #     data_idx = [global_state.user_data.processed_data.columns.
+    # get_loc(var) for var in global_state.user_data.
+    # visual_selected_features]
+    # #     pos = my_visual_initial.get_pos(global_state.results.
+    # converted_graph[data_idx, :][:, data_idx])
+    # #     global_state.results.raw_pos = pos
+    # # if global_state.user_data.ground_truth is not None:
+    # #     my_visual_initial.plot_pdag(global_state.user_data.
+    # ground_truth, f'{global_state.algorithm.selected_algorithm}
+    # _true_graph.jpg', global_state.results.raw_pos)
+    # #     my_visual_initial.plot_pdag(global_state.user_data.
+    # ground_truth, f'{global_state.algorithm.selected_algorithm}
+    # _true_graph.pdf', global_state.results.raw_pos)
+    # #     chat_history.append((None, (f'{global_state.user_data.
+    # output_graph_dir}/{global_state.algorithm.selected_algorithm}
+    # _true_graph.jpg',)))
+    # #     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, 
+    # chat_history, download_btn
+    # # if global_state.results.converted_graph is not None:
+    # #     my_visual_initial.plot_pdag(global_state.results.
+    # converted_graph, f'{global_state.algorithm.selected_algorithm}
+    # _initial_graph.jpg', global_state.results.raw_pos)
+    # #     my_visual_initial.plot_pdag(global_state.results.
+    # converted_graph, f'{global_state.algorithm.selected_algorithm}
+    # _initial_graph.pdf', global_state.results.raw_pos)
+    test_lagged_visualization()

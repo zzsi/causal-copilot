@@ -1,6 +1,6 @@
 {
     "algorithm_name": "PCMCI",
-    "cond_ind_test": {
+    "indep_test": {
         "meaning": "Independence tests",
         "available_values": ["parcorr", "robustparcorr", "gpdc", "gsq", "regression", "cmi"],
         "expert_suggestion": "Use parcorr as default. parcorr, gpdc for non-linear causal relations, cmi for better accuracy but slow runtime, gsq for categorical, regression for mixed data"

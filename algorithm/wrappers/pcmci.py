@@ -44,7 +44,7 @@ class PCMCI(CausalDiscoveryAlgorithm):
         return self._params
 
     def get_primary_params(self):
-        self._primary_param_keys = ['tau_min', 'tau_max', 'pc_alpha', 'alpha_level']
+        self._primary_param_keys = ['indep_test', 'tau_min', 'tau_max', 'pc_alpha', 'alpha_level']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def get_secondary_params(self):
@@ -60,20 +60,20 @@ class PCMCI(CausalDiscoveryAlgorithm):
         node_names = list(data.columns)
         data_t = pp.DataFrame(data.values, var_names=node_names)
         
-        if self._params['cond_ind_test'] == 'parcorr':
+        if self._params['indep_test'] == 'parcorr':
             cond_ind_test = ParCorr()
-        elif self._params['cond_ind_test'] == 'robustparcorr':
+        elif self._params['indep_test'] == 'robustparcorr':
             cond_ind_test = RobustParCorr()
-        elif self._params['cond_ind_test'] == 'gpdc':
+        elif self._params['indep_test'] == 'gpdc':
             from tigramite.independence_tests.gpdc import GPDC
             cond_ind_test = GPDC(significance='analytic', gp_params=None)
-        elif self._params['cond_ind_test'] == 'gsq':
+        elif self._params['indep_test'] == 'gsq':
             from tigramite.independence_tests.gsquared import Gsquared
             cond_ind_test = Gsquared(significance='analytic')
-        elif self._params['cond_ind_test'] == 'regression':
+        elif self._params['indep_test'] == 'regression':
             from tigramite.independence_tests.regressionCI import RegressionCI
             cond_ind_test = RegressionCI(significance='analytic')
-        elif self._params['cond_ind_test'] == 'cmi':
+        elif self._params['indep_test'] == 'cmi':
             from tigramite.independence_tests.cmiknn import CMIknn
             cond_ind_test = CMIknn(significance='shuffle_test', knn=0.1, shuffle_neighbors=5, transform='ranks', sig_samples=5)
 
@@ -86,7 +86,7 @@ class PCMCI(CausalDiscoveryAlgorithm):
                                                 exclude_contemporaneous=False)
         else:
             q_matrix = results['p_matrix']
-        
+
         matrices = (q_matrix <= self._params['alpha_level']).astype(int)
         lag_matrix = np.array([matrices[:, :, lag].T for lag in range(matrices.shape[2])])
         

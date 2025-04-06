@@ -16,7 +16,7 @@ sys.path.append(root_dir)
 from CBD.MBs.HITON.HITON_MB import HITON_MB
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
-from algorithm.wrappers.utils.conversion import MB2CPDAG
+from algorithm.wrappers.utils.tab_utils import MB2CPDAG
 
 class HITONMB(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
