@@ -184,38 +184,38 @@ def correlation_check(global_state):
 
     correlation_matrix = df.corr()
     print(correlation_matrix)
-    drop_feature = []
     correlated_groups = {}
+    existed_vars = set()
 
+    m = df.shape[1]
     for i in range(m):
+        var1 = df.columns[i]
+        if var1 in existed_vars:
+            continue
+        existed_vars.add(var1)
+        # Check the correlation of var1 with all other variables
         for j in range(i + 1, m):
             corr_value = correlation_matrix.iloc[i, j]
             if abs(corr_value) > 0.95:
-                var1 = df.columns[i]
                 var2 = df.columns[j]
+                if var2 in existed_vars:
+                    continue
+                existed_vars.add(var2)
                 if var1 not in correlated_groups.keys():
                     correlated_groups[var1] = [var2]
                 else:
                     correlated_groups[var1].append(var2)
 
-                if global_state.user_data.drop_important_var:
-                    if var1 not in global_state.user_data.important_features and var1 not in drop_feature:
-                        drop_feature.append(var1)
-                    elif var2 not in global_state.user_data.important_features and var2 not in drop_feature:
-                        drop_feature.append(var2)
-                    else:
-                        continue
-                else:
-                    if var1 not in drop_feature:
-                        drop_feature.append(var1)
-                    elif var2 not in drop_feature:
-                        drop_feature.append(var2)
-
+    highly_correlated_vars = set(list(correlated_groups.keys())+list(*correlated_groups.values()))
+    remaining_vars = set(df.columns) - highly_correlated_vars
+    for var in remaining_vars:
+        correlated_groups[var] = []
+    
     # Update global state
-    selected_set = set(global_state.user_data.selected_features) - set(drop_feature)
-    selected_set.update(global_state.user_data.important_features)
-    final_drop_feature = list(set(drop_feature) - set(global_state.user_data.important_features))
-    global_state.user_data.high_corr_drop_features = final_drop_feature
+    # selected_set = set(global_state.user_data.selected_features) - set(drop_feature)
+    # selected_set.update(global_state.user_data.important_features)
+    # final_drop_feature = list(set(drop_feature) - set(global_state.user_data.important_features))
+    global_state.user_data.high_corr_drop_features = highly_correlated_vars
 
     global_state.user_data.high_corr_feature_groups = correlated_groups
     print('correlated_groups', correlated_groups)
