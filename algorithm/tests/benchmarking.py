@@ -164,8 +164,8 @@ class BenchmarkRunner:
         """Run a single experiment with given algorithm and configuration"""
         start_time = time.time()
         
-        # Set a timeout limit (10 minutes)
-        timeout_seconds = 1200  # 10 minutes
+        # Set a timeout limit (20 minutes)
+        timeout_seconds = 1200  # 20 minutes
         
         try:
             # fill the missing value if it is existed
@@ -177,34 +177,34 @@ class BenchmarkRunner:
             if 'domain_index' not in data.columns and "CDNOD" in algo_instance.name:
                 data["domain_index"] = np.ones(data.shape[0])
 
-            # Use multiprocessing with timeout instead of signal-based timeout
-            # Signal-based timeouts don't work well with complex algorithms or multithreaded code
-            import multiprocessing as mp
+            # Use threading with a timeout instead of multiprocessing
+            # This avoids issues with GPU processes not working properly with mp.Process
+            import threading
+            import queue
             
-            def run_algorithm(data, result_queue):
+            result_queue = queue.Queue()
+            
+            def run_algorithm():
                 try:
                     adj_matrix, info, _ = algo_instance.fit(data)
+                    print(f"adj_matrix: {adj_matrix}")
+                    print(f"info: {info}")
                     result_queue.put((adj_matrix, info))
                 except Exception as e:
                     result_queue.put(e)
             
-            # Create a queue for the result
-            result_queue = mp.Queue()
+            # Start the algorithm in a thread
+            thread = threading.Thread(target=run_algorithm)
+            thread.daemon = True
+            thread.start()
             
-            # Start the process with environment variables properly copied
-            process = mp.Process(target=run_algorithm, args=(data, result_queue))
-            # Ensure process inherits the parent's environment variables
-            process.daemon = True
-            process.start()
+            # Wait for the thread to complete or timeout
+            thread.join(timeout_seconds)
             
-            # Wait for the process to complete or timeout
-            process.join(timeout_seconds)
-            
-            # Check if the process is still running after timeout
-            if process.is_alive():
-                # Terminate the process if it's still running
-                process.terminate()
-                process.join()
+            # Check if the thread is still running after timeout
+            if thread.is_alive():
+                # We can't forcefully terminate a thread in Python,
+                # but we can indicate a timeout occurred
                 raise TimeoutError(f"Execution timed out after {timeout_seconds} seconds")
             
             # Get the result from the queue

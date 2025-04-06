@@ -196,7 +196,7 @@ class PC(CausalDiscoveryAlgorithm):
         #     {"name": "Fixed Depth 4", "alpha": 0.05, "depth": 4}
         # ]
         configurations = [
-            {"name": "Fixed Alpha 0.05", "alpha": 0.01, "depth": 10, 'indep_test': 'fastkci_cpu'},
+            {"name": "Fixed Alpha 0.05", "alpha": 0.01, "depth": 10, 'indep_test': 'cmiknn_gpu'},
         ]
         
         results = {}
