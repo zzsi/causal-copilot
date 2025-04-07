@@ -440,11 +440,12 @@ class EDA(object):
         
         return save_path
     
-    def lag_correlation_heatmap(self, max_lag=5):
+    def lag_correlation_heatmap(self, max_lag=5, interval=1):
         """
         Create a heatmap visualization of cross-correlations at different lags.
         
         :param max_lag: Maximum lag to compute cross-correlations for
+        :param interval: Interval between lags to compute (e.g., interval=2 will compute lags 0, 2, 4, ...)
         :return: Path to the saved plot
         """
         if not self.is_time_series:
@@ -456,15 +457,20 @@ class EDA(object):
         variables = df.columns
         n_vars = len(variables)
         
+        # Calculate which lags to use based on interval
+        lags_to_use = list(range(0, max_lag + 1, interval))
+        if not lags_to_use:  # Ensure at least lag 0 is included
+            lags_to_use = [0]
+        
         # Prepare result container
-        lag_corr_matrix = np.zeros((n_vars, n_vars * (max_lag + 1)))
+        lag_corr_matrix = np.zeros((n_vars, n_vars * len(lags_to_use)))
         
         # Calculate cross-correlation at each lag
-        for lag in range(max_lag + 1):
+        for lag_idx, lag in enumerate(lags_to_use):
             for i, var1 in enumerate(variables):
                 for j, var2 in enumerate(variables):
                     # Calculate position in the combined matrix
-                    col_idx = j + (lag * n_vars)
+                    col_idx = j + (lag_idx * n_vars)
                     
                     if i == j and lag == 0:
                         lag_corr_matrix[i, col_idx] = 1.0
@@ -485,14 +491,14 @@ class EDA(object):
         summary = self.generate_lag_correlation_summary(lag_corr_matrix, variables, max_lag)
         # Create figure with appropriate size
         # Adjust figure size based on number of variables and lags
-        width = max(10, min(20, 2 * n_vars * (max_lag + 1)))
+        width = max(10, min(20, 2 * n_vars * len(lags_to_use)))
         height = max(8, min(16, 1.5 * n_vars))
         fig, ax = plt.subplots(figsize=(width, height))
         cmap = sns.color_palette("PuBu", as_cmap=True)
         
         # Create column labels with lag information
         col_labels = []
-        for lag in range(max_lag + 1):
+        for lag in lags_to_use:
             for var in variables:
                 col_labels.append(f"{var} (Lag {lag})")
         
@@ -501,7 +507,7 @@ class EDA(object):
         
         # Make cells square by adjusting aspect ratio
         aspect = width / height  # Current aspect ratio
-        cell_aspect = (n_vars * (max_lag + 1)) / n_vars  # Ideal cell aspect for square cells
+        cell_aspect = (n_vars * len(lags_to_use)) / n_vars  # Ideal cell aspect for square cells
         aspect_ratio = aspect / cell_aspect
         
         # Create heatmap with square cells
@@ -514,16 +520,19 @@ class EDA(object):
         plt.yticks(rotation=0, fontsize=tick_fontsize)
         
         # Add vertical lines to separate lag groups
-        for lag in range(1, max_lag + 1):
-            ax.axvline(x=lag * n_vars, color='black', linestyle='-', linewidth=1)
+        for lag_idx in range(1, len(lags_to_use)):
+            ax.axvline(x=lag_idx * n_vars, color='black', linestyle='-', linewidth=1)
         
         # Add main title with extra padding to prevent truncation
-        plt.title("Cross-Correlation at Different Lags", fontweight='bold', fontsize=16, pad=20)
+        if interval > 1:
+            plt.title(f"Cross-Correlation at Lags (0 to {max_lag}, interval={interval})", fontweight='bold', fontsize=16, pad=20)
+        else:
+            plt.title("Cross-Correlation at Different Lags", fontweight='bold', fontsize=16, pad=20)
         
         # Add subtle background color to distinguish lag groups
-        for lag in range(max_lag + 1):
-            if lag % 2 == 0:  # Alternate background colors
-                ax.axvspan(lag * n_vars, (lag + 1) * n_vars, alpha=0.1, color='lightblue')
+        for lag_idx in range(len(lags_to_use)):
+            if lag_idx % 2 == 0:  # Alternate background colors
+                ax.axvspan(lag_idx * n_vars, (lag_idx + 1) * n_vars, alpha=0.1, color='lightblue')
         
         # Adjust figure size to ensure square cells
         fig.set_size_inches(width, width / cell_aspect)
@@ -620,6 +629,7 @@ class EDA(object):
         
         :param max_vars: Maximum number of variables to analyze
         :param max_lags: Maximum lags for ACF/PACF
+        :param interval: Interval between lags to compute (e.g., interval=2 will compute lags 0, 2, 4, ...)
         :return: Path to the saved plot
         """
         if not self.is_time_series:
@@ -764,13 +774,35 @@ class EDA(object):
             # Plot 4: ACF
             ax_acf = plt.subplot(gs[1, 1])
             try:
-                plot_acf(series, ax=ax_acf, lags=display_lags, alpha=0.05, zero=False,
-                      markersize=4, use_vlines=True, lw=1.5)
-                ax_acf.set_title("ACF", fontsize=12)
+                # Calculate lags to use based on interval
+                lags_to_use = list(range(0, display_lags + 1, interval))
+                if not lags_to_use:  # Ensure at least lag 0 is included
+                    lags_to_use = [0]
+                
+                # Compute ACF for specified lags
+                acf_values = acf(series, nlags=display_lags)
+                
+                # Plot only the lags we want
+                lags_array = np.array(lags_to_use)
+                acf_values_filtered = acf_values[lags_array]
+                
+                # Manual plotting to show only selected lags
+                ax_acf.vlines(lags_array, [0], acf_values_filtered, color='#1f77b4', lw=1.5)
+                ax_acf.scatter(lags_array, acf_values_filtered, marker='o', color='#1f77b4', s=25)
+                
+                # Add confidence intervals (approximately 95%)
+                conf_level = 1.96 / np.sqrt(len(series))
+                ax_acf.axhspan(-conf_level, conf_level, alpha=0.2, color='gray')
+                
+                # Style the plot
+                ax_acf.set_title("ACF" + (f" (interval={interval})" if interval > 1 else ""), fontsize=12)
                 ax_acf.grid(True, alpha=0.3)
                 ax_acf.spines['top'].set_visible(False)
                 ax_acf.spines['right'].set_visible(False)
-                ax_acf.xaxis.set_major_locator(plt.MaxNLocator(5))
+                ax_acf.set_xlim(-0.5, max(lags_to_use) + 0.5)
+                ax_acf.set_ylim(-1.1, 1.1)
+                ax_acf.set_xlabel("Lag")
+                ax_acf.set_ylabel("Correlation")
             except:
                 ax_acf.text(0.5, 0.5, "Cannot compute ACF", ha='center', va='center')
                 ax_acf.axis('off')
@@ -778,13 +810,35 @@ class EDA(object):
             # Plot 5: PACF
             ax_pacf = plt.subplot(gs[1, 2])
             try:
-                plot_pacf(series, ax=ax_pacf, lags=display_lags, alpha=0.05, zero=False,
-                       markersize=4, use_vlines=True, lw=1.5)
-                ax_pacf.set_title("PACF", fontsize=12)
+                # Calculate lags to use based on interval
+                lags_to_use = list(range(0, display_lags + 1, interval))
+                if not lags_to_use:  # Ensure at least lag 0 is included
+                    lags_to_use = [0]
+                
+                # Compute PACF for specified lags
+                pacf_values = pacf(series, nlags=display_lags)
+                
+                # Plot only the lags we want
+                lags_array = np.array(lags_to_use)
+                pacf_values_filtered = pacf_values[lags_array]
+                
+                # Manual plotting to show only selected lags
+                ax_pacf.vlines(lags_array, [0], pacf_values_filtered, color='#1f77b4', lw=1.5)
+                ax_pacf.scatter(lags_array, pacf_values_filtered, marker='o', color='#1f77b4', s=25)
+                
+                # Add confidence intervals (approximately 95%)
+                conf_level = 1.96 / np.sqrt(len(series))
+                ax_pacf.axhspan(-conf_level, conf_level, alpha=0.2, color='gray')
+                
+                # Style the plot
+                ax_pacf.set_title("PACF" + (f" (interval={interval})" if interval > 1 else ""), fontsize=12)
                 ax_pacf.grid(True, alpha=0.3)
                 ax_pacf.spines['top'].set_visible(False)
                 ax_pacf.spines['right'].set_visible(False)
-                ax_pacf.xaxis.set_major_locator(plt.MaxNLocator(5))
+                ax_pacf.set_xlim(-0.5, max(lags_to_use) + 0.5)
+                ax_pacf.set_ylim(-1.1, 1.1)
+                ax_pacf.set_xlabel("Lag")
+                ax_pacf.set_ylabel("Partial Correlation")
             except:
                 ax_pacf.text(0.5, 0.5, "Cannot compute PACF", ha='center', va='center')
                 ax_pacf.axis('off')
@@ -1010,7 +1064,11 @@ class EDA(object):
                     lambda: self.lag_correlation_heatmap(
                         max_lag=min(getattr(self.global_state.statistics, 'time_lag', 5), 5)
                     ),
-                    self.time_series_diagnostics,
+                    lambda: self.time_series_diagnostics(
+                        max_vars=4,
+                        max_lags=min(getattr(self.global_state.statistics, 'time_lag', 5), 10),
+                        interval=getattr(self.global_state.statistics, 'time_lag_interval', 2)
+                    ),
                     # self.analyze_var_model
                 ]
             )
