@@ -8,13 +8,13 @@ from tigramite.plotting import plot_time_series_graph
 
 from types import SimpleNamespace
 
-from pywhy_graphs import PAG
-# from pywhy_graphs.viz import draw
+# from pywhy_graphs import PAG
 import sys
 # sys.path.append('causal-learn')
 # from causallearn.search.FCMBased.lingam.utils import make_dot
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from postprocess.draw import draw
+from postprocess.pag import PAG_custom
 
 
 
@@ -87,7 +87,7 @@ class Visualization(object):
         adj_matrix = (mat != 0).astype(int).T
         g = nx.from_numpy_array(adj_matrix, create_using=nx.DiGraph)
         # Relabel nodes with variable names from data columns
-        mapping = {i: self.data.columns[i] for i in range(len(self.data.columns))}
+        mapping = {i: self.data.columns[i].replace('_', ' ') for i in range(len(self.data.columns))}
         g = nx.relabel_nodes(g, mapping)
         
         # Get layout positions
@@ -99,9 +99,11 @@ class Visualization(object):
         algo = self.global_state.algorithm.selected_algorithm
         path = os.path.join(self.save_dir, save_path)
         data_idx = [self.global_state.user_data.processed_data.columns.get_loc(var) for var in self.global_state.user_data.visual_selected_features]
+        data_labels = [self.global_state.user_data.processed_data.columns[i].replace('_', ' ') for i in data_idx]
         mat = mat[data_idx, :][:, data_idx]
-        edges_dict = convert_to_edges(algo, self.data.columns, mat)
-        pag = PAG()
+        edges_dict = convert_to_edges(algo, data_labels, mat)
+        print(edges_dict)
+        pag = PAG_custom()
         for edge in edges_dict['certain_edges']:
             try:
                 pag.add_edge(edge[0], edge[1], pag.directed_edge_name)
@@ -324,7 +326,7 @@ class Visualization(object):
             # var_names=var_names,
             # link_colorbar_label="Effect strength" if val_matrix is not None else None,
             # figsize=(10, 6),
-            save_name=save_path,
+            save_name=path,
             # fig_ax=(fig, ax),
             # arrow_linewidth=4,
             # node_size=0.1,
@@ -364,7 +366,7 @@ def convert_to_edges(algo, variables, mat):
                 none_edges.append((ind_j, ind_i))
             elif mat[ind_i, ind_j] == 7:
                 associated_edges.append((ind_j, ind_i))
-
+                
     uncertain_edges = list({tuple(sorted(t)) for t in uncertain_edges})
     none_edges = list({tuple(sorted(t)) for t in none_edges})
     all_edges = certain_edges.copy() + uncertain_edges.copy() + bi_edges.copy() + half_certain_edges.copy() + half_uncertain_edges.copy() + none_edges.copy() + associated_edges.copy()

@@ -135,15 +135,15 @@ class EDA(object):
     def plot_dist(self):
         df = self.data.copy()
         
-        # Number of features
+        # Number of features and set the number of plots per row
         num_features = len(df.columns)
-        
-        # Get optimal layout
-        num_rows, plots_per_row, figsize = self.get_optimal_layout(num_features, base_height=4)
-        
+        print(num_features)
+        plots_per_row = 5
+        num_rows = (num_features + plots_per_row - 1) // plots_per_row  # Calculate number of rows needed
+        print(num_rows)
         # Create a grid of subplots
-        fig, axes = plt.subplots(nrows=num_rows, ncols=plots_per_row, figsize=figsize)
-
+        #plt.rcParams['font.family'] = 'Times New Roman'
+        fig, axes = plt.subplots(nrows=num_rows, ncols=plots_per_row, figsize=(plots_per_row * 5, num_rows * 4))
         # Flatten the axes array for easy indexing
         axes = axes.flatten() if hasattr(axes, 'flatten') else [axes]
 
@@ -160,9 +160,10 @@ class EDA(object):
                     axes[i].axvline(mean, color='chocolate', linestyle='--', label='Mean')
                     axes[i].axvline(median, color='midnightblue', linestyle='-', label='Median')
 
-                axes[i].set_title(feature, fontsize=14, fontweight='bold')
+                axes[i].set_title(feature, fontsize=12, fontweight='bold')
                 axes[i].set_xlabel('Value', fontsize=12)
-                axes[i].set_ylabel('Frequency', fontsize=12)
+                if (i+1)%plots_per_row != 0:
+                    axes[i].set_ylabel('Frequency', fontsize=10)
                 
                 # Handle tick label rotation if needed
                 if isinstance(feature, str) and len(feature) > 10:
@@ -480,7 +481,8 @@ class EDA(object):
                             except Exception as e:
                                 print(f"Error in correlation calculation for {var1} and {var2} at lag {lag}: {e}")
                                 lag_corr_matrix[i, col_idx] = np.nan
-        
+
+        summary = self.generate_lag_correlation_summary(lag_corr_matrix, variables, max_lag)
         # Create figure with appropriate size
         # Adjust figure size based on number of variables and lags
         width = max(10, min(20, 2 * n_vars * (max_lag + 1)))
@@ -537,9 +539,82 @@ class EDA(object):
         plt.savefig(save_path, dpi=1000, bbox_inches='tight')  # Use bbox_inches to prevent truncation
         plt.close(fig)
         
-        return save_path
+        return save_path, summary
     
-    def time_series_diagnostics(self, max_vars=4, max_lags=5):
+    def generate_lag_correlation_summary(self, lag_corr_matrix, variables, max_lag):
+        """
+        Generate summary statistics from the lag correlation matrix.
+        :return: Dictionary with summary statistics
+        """
+        n_vars = len(variables)
+        summary = {
+            'strongest_autocorrelations': [],
+            'potential_granger_causality': [],
+            'correlation_by_lag': {lag: [] for lag in range(1, max_lag+1)}
+        }
+        
+        # Create a more structured representation of the correlation matrix
+        structured_corr = []
+        
+        for i, var1 in enumerate(variables):
+            for j, var2 in enumerate(variables):
+                for lag in range(max_lag + 1):
+                    if i == j and lag == 0:
+                        continue  # Skip self-correlation at lag 0 (always 1.0)
+                    
+                    col_idx = j + (lag * n_vars)
+                    corr_value = lag_corr_matrix[i, col_idx]
+                    
+                    structured_corr.append({
+                        'var1': var1,
+                        'var2': var2,
+                        'lag': lag,
+                        'correlation': corr_value
+                    })
+        
+        # Analyze autocorrelations (same variable, different lags)
+        autocorrelations = [x for x in structured_corr if x['var1'] == x['var2'] and x['lag'] > 0]
+        strongest_autocorr = sorted(autocorrelations, key=lambda x: abs(x['correlation']), reverse=True)[:10]
+        summary['strongest_autocorrelations'] = strongest_autocorr
+        
+        # Group correlations by lag for overall lag analysis
+        for item in structured_corr:
+            if item['lag'] > 0:  # Only interested in actual lags
+                summary['correlation_by_lag'][item['lag']].append(abs(item['correlation']))
+        
+        # Calculate average absolute correlation by lag
+        summary['avg_abs_correlation_by_lag'] = {
+            lag: np.mean(corrs) if corrs else 0 
+            for lag, corrs in summary['correlation_by_lag'].items()
+        }
+        
+        # Find potential Granger causality relationships
+        # (where X at lag > 0 has strong correlation with Y)
+        cross_correlations = [x for x in structured_corr if x['var1'] != x['var2'] and x['lag'] > 0]
+        
+        # Group by variable pairs to find maximum correlation at any lag
+        var_pairs = {}
+        for item in cross_correlations:
+            pair_key = (item['var1'], item['var2'])
+            if pair_key not in var_pairs or abs(item['correlation']) > abs(var_pairs[pair_key]['correlation']):
+                var_pairs[pair_key] = item
+        # Sort by absolute correlation and take top relationships
+        potential_granger = sorted(var_pairs.values(), key=lambda x: abs(x['correlation']), reverse=True)[:10]
+        # Reformat for easier reading
+        summary['potential_granger_causality'] = [
+            {
+                'cause': item['var1'], 
+                'effect': item['var2'], 
+                'lag': item['lag'], 
+                'correlation': item['correlation']
+            }
+            for item in potential_granger
+        ]
+        print(summary['potential_granger_causality'])
+        return summary
+    
+    
+    def time_series_diagnostics(self, max_vars=3, max_lags=5):
         """
         Create detailed time series diagnostic plots including ACF, PACF, and stationarity information.
         
@@ -573,6 +648,10 @@ class EDA(object):
             columns = df.columns
             max_vars = len(columns)
         
+        summary = {
+        "stationary_variables": [],
+        "non_stationary_variables": []
+    }
         # Reduce number of displayed lags to reduce clutter
         display_lags = min(15, max_lags)
         
@@ -752,8 +831,16 @@ class EDA(object):
                     axes[i].text(0.5, 0.1, status_text, transform=axes[i].transAxes,
                               ha='center', fontsize=8, weight='bold', color='white',
                               bbox=dict(boxstyle="round,pad=0.2", facecolor=status_color, alpha=0.8))
+                    # Store result in appropriate list
+                    if is_stationary:
+                        summary["stationary_variables"].append(col)
+                    else:
+                        summary["non_stationary_variables"].append(col)
                 except:
                     pass
+        summary["total_variables_analyzed"] = len(columns)
+        summary["total_stationary"] = len(summary["stationary_variables"])
+        summary["total_non_stationary"] = len(summary["non_stationary_variables"])
         
         # Hide unused subplots
         for i in range(len(columns), len(axes)):
@@ -766,7 +853,7 @@ class EDA(object):
         plt.savefig(index_save_path, dpi=1000, bbox_inches='tight')
         plt.close()
         
-        return index_save_path
+        return index_save_path, summary
         
     def analyze_var_model(self, max_lag=3):
         """
@@ -921,7 +1008,7 @@ class EDA(object):
                     # self.desc_dist,
                     # self.multivariate_time_series_plot,
                     lambda: self.lag_correlation_heatmap(
-                        max_lag=min(getattr(self.global_state.statistics, 'time_lag', 5), 10)
+                        max_lag=min(getattr(self.global_state.statistics, 'time_lag', 5), 5)
                     ),
                     self.time_series_diagnostics,
                     # self.analyze_var_model
@@ -933,8 +1020,10 @@ class EDA(object):
             # corr_mat, plot_path_corr = results[1]
             # numerical_analysis, categorical_analysis = results[2]
             # plot_path_multivariate = results[3]
-            plot_path_lag_corr = results[0]
-            plot_path_diagnostics = results[1]
+            plot_path_lag_corr = results[0][0]
+            lag_corr_summary = results[0][1]
+            plot_path_diagnostics = results[1][0]
+            diagnostics_summary = results[1][1]
             # plot_path_var, var_summary = results[6]
             
             # Process correlation analysis separately as it depends on corr_mat
@@ -956,8 +1045,12 @@ class EDA(object):
             #     eda_result['plot_path_multivariate'] = plot_path_multivariate
             if plot_path_lag_corr:
                 eda_result['plot_path_lag_corr'] = plot_path_lag_corr
+            if lag_corr_summary:
+                eda_result['lag_corr_summary'] = lag_corr_summary
             if plot_path_diagnostics:
                 eda_result['plot_path_diagnostics'] = plot_path_diagnostics
+            if diagnostics_summary:
+                eda_result['diagnostics_summary'] = diagnostics_summary
             # if plot_path_var:
             #     eda_result['plot_path_var'] = plot_path_var
             #     eda_result['var_analysis'] = var_summary
@@ -1086,11 +1179,11 @@ def test_timeseries_eda():
     print(f"Plot saved to: {mv_path}")
     
     print("\nTesting lag_correlation_heatmap:")
-    lag_path = eda.lag_correlation_heatmap(max_lag=5)
+    lag_path, summary = eda.lag_correlation_heatmap(max_lag=5)
     print(f"Plot saved to: {lag_path}")
     
     print("\nTesting time_series_diagnostics:")
-    diag_path = eda.time_series_diagnostics(max_vars=3, max_lags=15)
+    diag_path, summary = eda.time_series_diagnostics(max_vars=3, max_lags=15)
     print(f"Plot saved to: {diag_path}")
     
     print("\nTesting analyze_var_model:")

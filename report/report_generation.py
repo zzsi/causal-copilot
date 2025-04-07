@@ -13,6 +13,7 @@ from postprocess.visualization import Visualization, convert_to_edges
 from postprocess.judge_functions import edges_to_relationship
 from report.help_functions import *
 from report.inference_report_generation import Inference_Report_generation
+import glob
 import ast
 import json 
 
@@ -70,17 +71,29 @@ class Report_generation(object):
         :param args: arguments for the report generation
         """
         ######## Load the chosen global state and record all global states history ########
+        print('index',global_state.results.report_selected_index)
         if global_state.results.report_selected_index is not None:
             self.global_state_list = []
             for algo in global_state.logging.global_state_logging:
                 with open(f'{global_state.user_data.output_graph_dir}/{algo}_global_state.pkl', 'rb') as f:
                     self.global_state_list.append(pickle.load(f))
             global_state = self.global_state_list[global_state.results.report_selected_index]
-            inference_global_state = self.global_state_list[-1]
         else:
             self.global_state_list = [global_state]
             global_state.logging.global_state_logging = [global_state.algorithm.selected_algorithm]
-            inference_global_state = global_state 
+        ###
+        self.global_state_list = []
+        for algo in ['PC', 'FCI']:
+            with open(f'{global_state.user_data.output_graph_dir}/{algo}_global_state.pkl', 'rb') as f:
+                self.global_state_list.append(pickle.load(f))
+        global_state = self.global_state_list[0]
+        global_state.logging.global_state_logging
+        ###
+        try:
+            with open(f"{global_state.user_data.output_graph_dir}/inference_global_state.pkl", 'rb') as f:
+                inference_global_state = pickle.load(f)
+        except:
+            inference_global_state = None
 
         self.client = OpenAI()
         if global_state.user_data.meaningful_feature:
@@ -101,6 +114,7 @@ class Report_generation(object):
         self.eda_result = global_state.results.eda
         # Result graph matrix
         self.raw_graph = global_state.results.raw_result
+        self.lag_graph = global_state.results.lagged_graph
         self.graph = global_state.results.converted_graph
         self.revised_graph = global_state.results.revised_graph
         self.bootstrap_probability = global_state.results.bootstrap_probability
@@ -177,12 +191,16 @@ class Report_generation(object):
         section1 = list_conversion(section1)
         section1 = fix_latex_itemize(section1)
         section1 = bold_conversion(section1)
+        section1 = section1.replace("_", " ")
+
+        class Relationship(BaseModel):
+            cause: str
+            result: str
+            explanation: str
 
         class CausalRelation(BaseModel):
             """Model for storing causal relations between variables."""
-            causes: List[str]
-            results: List[str]
-            explanations: List[str]
+            relationships: List[Relationship]
         col_names = '\t'.join(self.data.columns)
         prompt = f"""
 I want to conduct a causal discovery on a dataset and write a report. There is some background knowledge about this dataset.
@@ -190,54 +208,52 @@ There are three sections:
 ### 1. Detailed Explanation about the Variables
 ### 2. Possible Causal Relations among These Variables (Do not too much, only include important ones)
 ### 3. Other Background Domain Knowledge that may be Helpful for Experts
-Please extract all relationships in the second section ### 2. Possible Causal Relations among These Variables, and return in a JSON format
+Please extract all relationships in the second section ### 2. Possible Causal Relations among These Variables, and return as the specified format
+
 **Thinking Steps**
 1. Extract all pairwise relationships, for example A causes B because ....; C causes D because ....; Only include relationships between two variables!
 2. Check whether these variables are among {col_names}, please delete contents that include any other variables!
-3. Save the result pairs of nodes seperately in lists: causes and results, all left nodes are in causes list, all right nodes are in results list.
-4. Save the explanation in explanations as a list of strings.
-This is an example:
-You have A causes B because explanation1; C causes D because explanation2
-The causes should be ["A", "C"]
-The results should be ["B", "D"]
-The explanations should be ["explanation1", "explanation2"]
+3. For each relationship, create an object with "cause", "result", and "explanation" fields.
+
+**Example Format**
+If you have: "A causes B because explanation1; C causes D because explanation2"
+The output should be:
+[
+  {{
+    "cause": "A",
+    "result": "B",
+    "explanation": "explanation1"
+  }},
+  {{
+    "cause": "C",
+    "result": "D",
+    "explanation": "explanation2"
+  }}
+]
+
 **You Must**
 1. Only pairwise relationships can be included
 2. All variables should be among {col_names}, please delete contents that include any other variables!
-3. Carefully check the cause, result and explanation, make sure their orders are correct.
-**Backgroud Knowledge**
+3. Make sure each cause-result pair is properly linked with its explanation in a single object.
+
+**Background Knowledge**
 {self.knowledge_docs}
 """
-        response = LLM_parse_query(self.client, CausalRelation, "You are an expert in the causal discovery field and helpful assistant.", prompt)
-        causes, results, explanations = response.causes, response.results, response.explanations
         result_parsed = {}
-        for cause, result, explanation in zip(causes, results, explanations):
-            tup = (cause, result)
-            result_parsed[tup] = explanation
+        response = LLM_parse_query(self.client, CausalRelation, "You are an expert in the causal discovery field and helpful assistant.", prompt)
+        for rel in response.relationships:
+            tup = (rel.cause, rel.result)
+            result_parsed[tup] = rel.explanation
         
-        # response_background = self.client.chat.completions.create(
-        #     model="gpt-4o-mini",
-        #     messages=[
-        #         {"role": "system", "content": "You are an expert in the causal discovery field and helpful assistant."},
-        #         {"role": "user", "content": prompt}
-        #     ]
-        # )
-        # result = response_background.choices[0].message.content
-        # result = result.strip("```json").strip("```")
-        # result = json.loads(result)
-        # result_parsed = {}
-        # for k, v in result.items():
-        #     # Remove parentheses and split by comma
-        #     key = tuple(x.strip() for x in k.strip('()').split(','))
-        #     result_parsed[key] = v
-        #print(result_parsed)
         variables = self.data.columns
+        print("variables: ", variables)
         if result_parsed != {}:
             section2 = """
             \\begin{itemize}
             """
             # Potential Relationship Visualization
             zero_matrix = np.zeros((len(variables), len(variables)))
+            valid_pairs = 0
             for pair in result_parsed.keys():
                 explanation = result_parsed[pair]
                 #pair = ast.literal_eval(pair)
@@ -245,10 +261,17 @@ The explanations should be ["explanation1", "explanation2"]
                     ind1 = variables.str.lower().get_loc(pair[0].lower())
                     ind2 = variables.str.lower().get_loc(pair[1].lower())
                     zero_matrix[ind2, ind1] = 1
-                    section2 += f"\item \\textbf{{{pair[0].replace('_', ' ')} $\\rightarrow$ {pair[1].replace('_', ' ')}}}: {explanation} \n"
+                    section2 += f"\item \\textbf{{{pair[0].replace('_', ' ')} $\\rightarrow$ {pair[1].replace('_', ' ')}}}: {explanation.replace('_', ' ')} \n"
+                    valid_pairs += 1
             section2 += "\end{itemize}"
+            if valid_pairs == 0:
+                section2 = """
+                The LLM doesn't find any causal relationship among variables.
+                """
         else:
-            section2 = ""
+            section2 = """
+                The LLM doesn't find any causal relationship among variables.
+                """
 
         my_visual = Visualization(self.global_state)
         g = nx.from_numpy_array(zero_matrix, create_using=nx.DiGraph)
@@ -256,7 +279,7 @@ The explanations should be ["explanation1", "explanation2"]
         mapping = {i: self.data.columns[i] for i in range(len(self.data.columns))}
         g = nx.relabel_nodes(g, mapping)
         pos = nx.spring_layout(g)
-        _ = my_visual.plot_pdag(zero_matrix, 'potential_relation.pdf', pos=pos, relation=True)
+        _ = my_visual.plot_pdag(zero_matrix, 'potential_relation.pdf', pos=self.global_state.results.raw_pos, relation=True)
         relation_path = f'{self.visual_dir}/potential_relation.pdf'
             
         if sum(zero_matrix.flatten())!=0:
@@ -265,7 +288,7 @@ The explanations should be ["explanation1", "explanation2"]
             \\begin{{figure}}[H]
             \centering
             \includegraphics[width=0.5\linewidth]{{{relation_path}}}
-            \caption{{\label{{fig:relation}}Possible Causal Relation Graph Suggested by LLM}}
+            \caption{{\label{{fig:relation}}A Causal Graph Suggested by LLM.}}
             \end{{figure}}
             """
         else:
@@ -320,61 +343,86 @@ The explanations should be ["explanation1", "explanation2"]
             preprocess_plot = ""
         return preprocess_plot
 
-    def eda_prompt(self):
-        dist_input_num = self.eda_result['dist_analysis_num']
-        dist_input_cat = self.eda_result['dist_analysis_cat']
-        corr_input = self.eda_result['corr_analysis']
+    def ts_eda_prompt(self):
+        ts_eda_corr_summary = self.eda_result['lag_corr_summary']
+        corr_summary_graph = self.eda_result['plot_path_lag_corr']
+        corr_summary_text = granger_causality_to_latex(ts_eda_corr_summary['potential_granger_causality'])
         
-        # Description of distribution
-        response_dist_doc = ""
-        if dist_input_num != {}:
-            response_dist_doc += "Numerical Variables \n \\begin{itemize} \n"
-            left_skew_list = []
-            right_skew_list = []
-            symmetric_list = []
-            for feature in dist_input_num.keys():
-                if dist_input_num[feature]['mean']<dist_input_num[feature]['median']:
-                    left_skew_list.append(feature.replace('_', ' '))
-                elif dist_input_num[feature]['mean']>dist_input_num[feature]['median']:
-                    right_skew_list.append(feature.replace('_', ' '))
-                else:
-                    symmetric_list.append(feature.replace('_', ' '))
-            response_dist_doc += f"\item Slight left skew distributed variables: {', '.join(left_skew_list) if left_skew_list != [] else 'None'} \n"
-            response_dist_doc += f"\item Slight right skew distributed variables: {', '.join(right_skew_list) if right_skew_list != [] else 'None'} \n"
-            response_dist_doc += f"\item Symmetric distributed variables: {', '.join(symmetric_list) if symmetric_list != [] else 'None'} \n"
-            response_dist_doc += "\end{itemize} \n"
-        if dist_input_cat != {}:
-            response_dist_doc += "Categorical Variables \n"
-            response_dist_doc += "\\begin{itemize} \n"
-            for feature in dist_input_cat.keys():
-                response_dist_doc += f"\item {feature}: {dist_input_cat[feature]} \n"
-            response_dist_doc += "\end{itemize} \n"
-        #print('response_dist_doc: ', response_dist_doc)
-        # Description of Correlation
-        response_corr_doc = "\\begin{itemize} \n"
-        high_corr_list = [f"{key[0]}".replace('_', ' ') + " and " + f"{key[1]}".replace('_', ' ') for key, value in corr_input.items() if abs(value) > 0.8]
-        if len(high_corr_list)>10:
-            response_corr_doc += f"\item Strong Correlated Variables ($\geq 0.9$): {', '.join(high_corr_list)}"
-            response_corr_doc += ", etc. \n"
-        else:
-            response_corr_doc += f"\item Strong Correlated Variables ($\geq 0.9$): {', '.join(high_corr_list) if high_corr_list != [] else 'None'} \n"
-        med_corr_list = [f"{key[0]}".replace('_', ' ') + " and " + f"{key[1]}".replace('_', ' ') for key, value in corr_input.items() if (abs(value) <= 0.8 and abs(value) > 0.5)]
-        if len(med_corr_list)>10:
-            response_corr_doc += f"\item Moderate Correlated Variables ($0.1-0.9$): {', '.join(med_corr_list)}"
-            response_corr_doc += ", etc. \n"
-        else:
-            response_corr_doc += f"\item Moderate Correlated Variables ($0.1-0.9$): {', '.join(med_corr_list) if med_corr_list != [] else 'None'} \n"
-        low_corr_list = [f"{key[0]}".replace('_', ' ') + " and " + f"{key[1]}".replace('_', ' ') for key, value in corr_input.items() if abs(value) <= 0.5]
-        if len(low_corr_list)>10:
-            response_corr_doc += f"\item Weak Correlated Variables ($\leq 0.1$): {', '.join(low_corr_list)}"
-            response_corr_doc += ", etc. \n"
-        else:
-            response_corr_doc += f"\item Weak Correlated Variables ($\leq 0.1$): {', '.join(low_corr_list) if low_corr_list != [] else 'None'} \n"
-        response_corr_doc += "\end{itemize} \n"
-        #print('response_corr_doc: ',response_corr_doc)
-        return response_dist_doc, response_corr_doc
-             
+        response = f"""
+\subsection{{Correlation Analysis}}
 
+\\begin{{figure}}[H]
+        \centering
+        \includegraphics[width=\linewidth]{{{self.visual_dir}/eda_lag_correlation.jpg}}
+        \caption{{\label{{fig:corr}}Heatmap of Time-Lagged Correlations Among Variables}}
+\end{{figure}}
+
+{corr_summary_text}
+        """
+
+        diagnostics_summary_graph = glob.glob(f"{self.visual_dir}/eda_ts_diagnostics_*")[:2]
+        diagnostics_summary = self.eda_result['diagnostics_summary']
+        diagnostics_summary_text = stationarity_summary_to_latex(diagnostics_summary)
+        
+        response += rf"""
+\subsection{{Time Series Stationarity Analysis}}
+
+\begin{{figure}}[H]
+\centering
+    """
+        graph_width = str(1/len(diagnostics_summary_graph)-0.02)
+        for idx, path in enumerate(diagnostics_summary_graph):
+            response += rf"""
+    \begin{{subfigure}}{{{graph_width}\textwidth}}
+        \includegraphics[width=\textwidth]{{{path}}}
+    \end{{subfigure}}
+    """
+            if idx != len(diagnostics_summary_graph) - 1:
+                response += "\hfill"
+
+            else:
+                response += rf"""
+            \caption{{Time Series Diagnostics for two selected variables. Each plot shows the variable with moving average, first difference transform, and ACF/PACF plots.}}
+        \end{{figure}} 
+        """
+        # response += diagnostics_summary_text
+        
+        return response
+    
+    def eda_prompt(self):
+        dist_doc, corr_doc = eda_summary_to_latex(self.eda_result)
+        plot_path_dist = self.eda_result['plot_path_dist'][0].strip("'") or "",
+        plot_path_corr = self.eda_result['plot_path_corr'][0].strip("'") or "", 
+        response = rf"""
+        \subsection{{Distribution Analysis}}
+The following figure presents distributions of various variables. The orange dashed line indicates the mean, while the black solid line denotes the median. Variables are categorized into three types based on their distributional characteristics.
+
+\begin{{figure}}[H]
+\centering
+\includegraphics[width=\linewidth]{{{self.visual_dir}/eda_dist.jpg}}
+\caption{{Distribution Plots of Variables}}
+\end{{figure}}
+
+{dist_doc}
+
+\subsection{{Correlation Analysis}}
+
+\begin{{minipage}}[t]{{0.5\linewidth}}
+    {corr_doc}
+\vfill
+\end{{minipage}}
+\hfill
+\begin{{minipage}}[t]{{0.5\linewidth}}
+    \begin{{figure}}[H]
+        \centering
+        \vspace{{-1.5cm}}
+        \includegraphics[width=\linewidth]{{{self.visual_dir}/eda_corr.jpg}}
+        \caption{{Correlation Heatmap of Variables}}
+    \end{{figure}}
+\end{{minipage}}
+        """
+        return response
+             
     def algo_selection_prompt(self):
         algo_candidates = self.algo_can
         response = """
@@ -428,10 +476,10 @@ The explanations should be ["explanation1", "explanation2"]
         We also provide the chosen algorithms and hyperparameters, along with the justifications for these selections.
         \subsection{{Data Preprocessing}}
         In this initial step, we preprocessed the data and examined its statistical characteristics. 
-        This involved cleaning the data, handling missing values, and performing exploratory data analysis to understand distributions and relationships between variables.
+        This process involved data cleaning, handling missing values, and performing exploratory data analysis to examine variable distributions and inter-variable relationships.
                 
         \subsection{{Algorithm Recommendation assisted with LLM}}
-        Following data preprocessing, we employed a large language model (LLM) to assist in 
+        Following preprocessing, we employed a large language model (LLM) to assist in 
         selecting appropriate algorithms for causal discovery based on the statistical characteristics of the dataset and relevant background knowledge. 
         The top three chosen algorithms, listed in order of suitability, are as follows:   
         {algo_list}
@@ -443,21 +491,65 @@ The explanations should be ["explanation1", "explanation2"]
         """
 
         if self.data_mode == 'real':
-            response += f"""
+            response += rf"""
             \subsection{{Graph Tuning with Bootstrap and LLM Suggestion}}
             In the final step, we performed graph tuning with suggestions provided by the Bootstrap and LLM.
             
-            Firstly, we use the Bootstrap technique to get how much confidence we have on each edge in the initial graph.
-            If the confidence probability of a certain edge is greater than 90\% and it is not in the initial graph, we force it.
-            Otherwise, if the confidence probability is smaller than 10\% and it exists in the initial graph, we forbid it.
-            For those existing edges and moderate confidence edges, we utilize LLM to double check their existence and direction according to its knowledge repository.
-            
-            In this step LLM can use background knowledge to add some edges that are neglected by Statistical Methods, delete and redirect some unreasonable relationships.
-            Voting techniques are used to enhance the robustness of results given by LLM, and the results given by LLM should not change results given by Bootstrap.
-            Finally, we use Kernel-based Independence Test to remove redundant edges added by LLM hallucination.
+            We first applied the Bootstrap method to estimate the confidence level associated with each edge in the initial graph. Specifically:
+            \begin{{itemize}}
+                \item If an edge not present in the initial graph exhibited a Bootstrap confidence greater than 90\%, we added it to the graph.
+                \item Conversely, if an existing edge had a confidence lower than 10\%, we removed it.
+                \item For edges with moderate confidence (between 10\% and 90\%), we consulted the LLM to assess their validity and directionality, drawing on its extensive background knowledge.
+            \end{{itemize}}
+            The LLM contributed by:
+            \begin{{itemize}}
+                \item Reintroducing plausible edges that may have been overlooked by statistical methods;
+                \item Removing or redirecting edges that appeared statistically valid but were conceptually implausible.
+            \end{{itemize}}
+    
+            To improve the robustness of LLM-generated suggestions, we employed a voting mechanism. Importantly, LLM recommendations were not allowed to override high-confidence decisions made by the Bootstrap procedure.
             By integrating insights from both of Bootsratp and LLM to refine the causal graph, we can achieve improvements in graph's accuracy and robustness.
             """
         return response
+    
+    def graph_generate_prompts(self):
+        if self.global_state.statistics.time_series:
+            graph_response = rf"""
+    \section{{Causal Graph Summary}}
+
+    \subsection{{Causal Graph Discovered by the Algorithm}}
+
+    \begin{{figure}}[H]
+        \centering
+        \includegraphics[width=0.5\textwidth]{{{self.visual_dir}/{self.algo}_timelag_graph.pdf}}
+        \caption{{Time Lag Graph Discovered by the Algorithm}}
+    \end{{figure}}
+
+    The above is the time-lag causal graph produced by our algorithm.
+
+    \begin{{figure}}[H]
+        \centering
+        \includegraphics[width=0.5\textwidth]{{{self.visual_dir}/{self.algo}_initial_graph.pdf}}
+        \caption{{Summary Graph Discovered by the Algorithm}}
+    \end{{figure}}
+
+    The above is the summary causal graph produced by our algorithm.
+            """
+        else:
+            graph_response = rf"""
+    \section{{Causal Graph Summary}}
+
+    \subsection{{Causal Graph Discovered by the Algorithm}}
+
+    \begin{{figure}}[H]
+        \centering
+        \includegraphics[width=0.5\textwidth]{{{self.visual_dir}/{self.algo}_initial_graph.pdf}}
+        \caption{{Causal Graph Discovered by the Algorithm}}
+    \end{{figure}}
+
+    The above is the original causal graph produced by our algorithm.
+            """
+        return graph_response
     
     def graph_effect_prompts(self):
         """
@@ -500,7 +592,7 @@ The explanations should be ["explanation1", "explanation2"]
         return response_doc
 
     def graph_revise_prompts(self):
-        if self.bootstrap_probability is not None:
+        if self.bootstrap_probability is not None and self.revised_graph is not None:
             response = f"""
             By using the method mentioned in the Section 4.4, we provide a revise graph pruned with Bootstrap and LLM suggestion.
             Pruning results are as follows.
@@ -527,7 +619,7 @@ The explanations should be ["explanation1", "explanation2"]
                 """
                 for item in forbid_record.values():
                     response += f"""
-                    \item \\textbf{{{item[0][0]} $\\rightarrow$ {item[0][1]}}}: {item[1]}
+                    \item \\textbf{{{item[0][0].replace('_', ' ')} $\\rightarrow$ {item[0][1].replace('_', ' ')}}}: {item[1]}
                     """
                 response += f"""
                 \end{{itemize}}
@@ -545,7 +637,7 @@ The explanations should be ["explanation1", "explanation2"]
                     """
                 for item in llm_direction_reason.values():
                     response += f"""
-                    \item \\textbf{{{item[0][0]} $\\rightarrow$ {item[0][1]}}}: {item[1]}
+                    \item \\textbf{{{item[0][0].replace('_', ' ')} $\\rightarrow$ {item[0][1].replace('_', ' ')}}}: {item[1]}
                     """
                 response += f"""
                 \end{{itemize}}
@@ -588,35 +680,38 @@ The explanations should be ["explanation1", "explanation2"]
         if self.bootstrap_probability is not None:
             bootstrap_dict = {k: v for k, v in self.bootstrap_probability.items() if v is not None and sum(v.flatten())>0}
             zero_graphs = [k for k, v in self.bootstrap_probability.items() if  v is not None and sum(v.flatten())==0]
-            length = round(1/len(bootstrap_dict), 2)-0.01
-            for key in bootstrap_dict.keys():
-                graph_path = f'{self.visual_dir}/{key}_confidence_heatmap.jpg'
-                caption = f'{name_map[key]}'
-                graph_text += f"""
-                \\begin{{subfigure}}{{{length}\\textwidth}}
-                        \centering
-                        \includegraphics[width=\linewidth]{{{graph_path}}}
-                        \\vfill
-                        \caption{{{caption}}}
-                    \end{{subfigure}}"""
-            
-            graph_text += """
-            \caption{Confidence Heatmap of Different Edges}
-            \end{figure}    
-            """
-            ### Generate text illustration
-            text_map = {'certain_edges': 'directed edge ($->$)', #(->)
-                        'uncertain_edges': 'undirected edge ($-$)', #(-)
-                        'bi_edges': 'edge with hidden confounders ($<->$)', #(<->)
-                        'half_certain_edges': 'edge of non-ancestor ($o->$)', #(o->)
-                        'half_uncertain_edges': 'edge of non-ancestor ($o-$)', #(o-)
-                        'none_edges': 'egde of no D-Seperation set', #(o-o)
-                        'none_existence':'No Edge'}
-            graph_text += "The above heatmaps show the confidence probability we have on different kinds of edges, including "
-            for k in bootstrap_dict.keys():
-                graph_text += f"{text_map[k]}, "
-            zero_graphs = [k.replace("_", "-") for k in zero_graphs]
-            graph_text += "The heatmap of " + ', '.join(zero_graphs) + " is not shown because probabilities of all edges are 0. "
+            if len(zero_graphs) < len(bootstrap_dict):
+                length = round(1/len(bootstrap_dict), 2)-0.01
+                for key in bootstrap_dict.keys():
+                    graph_path = f'{self.visual_dir}/{key}_confidence_heatmap.jpg'
+                    caption = f'{name_map[key]}'
+                    graph_text += f"""
+                    \\begin{{subfigure}}{{{length}\\textwidth}}
+                            \centering
+                            \includegraphics[width=\linewidth]{{{graph_path}}}
+                            \\vfill
+                            \caption{{{caption}}}
+                        \end{{subfigure}}"""
+                
+                graph_text += """
+                \caption{Confidence Heatmap of Different Edges}
+                \end{figure}    
+                """
+                ### Generate text illustration
+                text_map = {'certain_edges': 'directed edge ($->$)', #(->)
+                            'uncertain_edges': 'undirected edge ($-$)', #(-)
+                            'bi_edges': 'edge with hidden confounders ($<->$)', #(<->)
+                            'half_certain_edges': 'edge of non-ancestor ($o->$)', #(o->)
+                            'half_uncertain_edges': 'edge of non-ancestor ($o-$)', #(o-)
+                            'none_edges': 'egde of no D-Seperation set', #(o-o)
+                            'none_existence':'No Edge'}
+                graph_text += "The above heatmaps show the confidence probability we have on different kinds of edges, including "
+                for k in bootstrap_dict.keys():
+                    graph_text += f"{text_map[k]}, "
+                zero_graphs = [k.replace("_", "-") for k in zero_graphs]
+                graph_text += "The heatmap of " + ', '.join(zero_graphs) + " is not shown because probabilities of all edges are 0. "
+            else:
+                return ""
         else:
             graph_text = 'You have skipped the Pruning and Reliability Analysis.'
         return graph_text
@@ -678,7 +773,7 @@ The explanations should be ["explanation1", "explanation2"]
             text = f"""
                     \\begin{{figure}}[H]
                         \centering
-                        \includegraphics[width=0.7\\textwidth]{{{self.global_state.user_data.output_graph_dir}/refutation_graph.jpg}}
+                        \includegraphics[width=0.7\\textwidth]{{{self.visual_dir}/refutation_graph.jpg}}
                         \caption{{Refutation Graph}}
                     \end{{figure}} \n
                     """
@@ -882,12 +977,12 @@ Help me to write a comparison of the following causal discovery results of diffe
                 df = df[random_columns]
             # df.columns = [var.replace('_', ' ') for var in df.columns]
             data_preview = df.head().to_latex(index=False)
-            if len(self.data.columns) >= 9:
-                data_preview = f"""
-                \\resizebox{{\\textwidth}}{{!}}{{
-                {data_preview}
-                }}
-                """
+            # if len(self.data.columns) >= 9:
+            data_preview = f"""
+            \\resizebox{{\\textwidth}}{{!}}{{
+            {data_preview}
+            }}
+            """
             data_prop_table = self.data_prop_prompt()
             # Intro info
             self.title, dataset = self.get_title()
@@ -898,10 +993,14 @@ Help me to write a comparison of the following causal discovery results of diffe
             else:
                 self.background_info1, self.background_info2 = '', ''
             # EDA info
-            dist_info, corr_info = self.eda_prompt()
+            if self.global_state.statistics.time_series:
+                self.eda_info = self.ts_eda_prompt()
+            else:
+                self.eda_info = self.eda_prompt()
             # Procedure info
             self.discover_process = self.procedure_prompt()
             self.preprocess_plot = self.preprocess_plot_prompt()
+            self.graph_block = self.graph_generate_prompts()
             # Graph effect info
             self.graph_prompt = bold_conversion(self.global_state.logging.graph_conversion['initial_graph_analysis'])
             self.graph_prompt = list_conversion(self.graph_prompt)
@@ -918,6 +1017,7 @@ Help me to write a comparison of the following causal discovery results of diffe
             self.result_comparison_graph_text, self.result_comparison = self.comparision_prompt()
             
             # Causal Inference info
+            print(self.inference_global_state.inference.task_index)
             if self.inference_global_state.inference.task_index != -1:
                 inf_report_generator = Inference_Report_generation(self.inference_global_state, self.args)
                 self.inf_report = inf_report_generator.generation()
@@ -929,15 +1029,9 @@ Help me to write a comparison of the following causal discovery results of diffe
             
 
             if self.data_mode == 'simulated':
-                if self.global_state.user_data.ground_truth is not None:
-                    prompt_template = load_context("report/context/template_simulated.tex")
-                else:
-                    prompt_template = load_context("report/context/template_simulated_notruth.tex")
+                prompt_template = load_context("report/context/template_simulated_notruth.tex")
             else:
-                if self.global_state.user_data.ground_truth is not None:
-                    prompt_template = load_context("report/context/template_real.tex")
-                else:
-                    prompt_template = load_context("report/context/template_real_notruth.tex")
+                prompt_template = load_context("report/context/template_real_notruth.tex")
 
             replacement1 = {
                 "[ABSTRACT]": self.abstract.replace("&", r"\&") or "",
@@ -946,8 +1040,8 @@ Help me to write a comparison of the following causal discovery results of diffe
                 "[BACKGROUND_INFO2]": self.background_info2.replace("&", r"\&") or "",
                 "[DATA_PREVIEW]": data_preview or "",
                 "[DATA_PROP_TABLE]": data_prop_table or "",
-                "[DIST_INFO]": dist_info or "",
-                "[CORR_INFO]": corr_info or "",
+                "[EDA_INFO]": self.eda_info or "",
+                "[CAUSAL_GRAPH]": self.graph_block.replace("&", r"\&") or "",
                 "[RESULT_ANALYSIS]": self.graph_prompt.replace("&", r"\&") or "",
                 "[DISCOVER_PROCESS]": self.discover_process.replace("&", r"\&") or "",
                 "[PREPROCESS_GRAPH]": self.preprocess_plot or "",
@@ -963,11 +1057,8 @@ Help me to write a comparison of the following causal discovery results of diffe
                 "[TITLE]": self.title or "",
                 "[DATASET]": dataset or "",
                 "[POTENTIAL_GRAPH]": f'{self.visual_dir}/potential_relation.pdf',
-                "[DIST_GRAPH]": self.eda_result['plot_path_dist'] or "",
-                "[CORR_GRAPH]": self.eda_result['plot_path_corr'] or "", 
                 "[ALGO]": self.algo or "",
                 "[RESULT_GRAPH0]": f'{self.visual_dir}/true_graph.pdf',
-                "[RESULT_GRAPH1]": f'{self.visual_dir}/{self.algo}_initial_graph.pdf',
                 "[RESULT_GRAPH3]": f'{self.visual_dir}/metrics.jpg',
                 "[RESULT_GRAPH_COMPARISION]": self.result_comparison_graph_text
             }
@@ -1130,7 +1221,7 @@ def parse_args():
 import pickle  
 if __name__ == '__main__':
     args = parse_args()
-    with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250402_230105/earthquakes/output_graph/PC_global_state.pkl', 'rb') as file:
+    with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250407_010855/Cleaned_Students_Performance/output_graph/PC_global_state.pkl', 'rb') as file:
         global_state = pickle.load(file)
     test(args, global_state)
     # save_path = 'demo_data/20250130_130622/house_price/output_report'

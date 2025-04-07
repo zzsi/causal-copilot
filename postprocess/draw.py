@@ -123,7 +123,7 @@ def draw(
         dot.graph_attr['ranksep'] = '0.5'
         dot.graph_attr['size'] = '12,12'
         dot.graph_attr['ratio'] = 'fill',
-        dot.graph_attr['overlap_scaling'] = '1'
+        dot.graph_attr['overlap_scaling'] = '0.5'
 
 
     # set direction from left to right if that's preferred
@@ -161,7 +161,8 @@ def draw(
     dot.graph_attr['ranksep'] = '0.5'
     dot.graph_attr['size'] = str(size)+','+str(size)
     dot.graph_attr['ratio'] = 'fill'
-    dot.graph_attr['overlap_scaling'] = '1'
+    dot.graph_attr['size'] = '12,12'
+    dot.graph_attr['overlap_scaling'] = '0.5'
 
     node_height = "1"  # Increased from 0.5 to 0.8
     node_width = "1"   # Increased from 0.5 to 0.8

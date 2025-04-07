@@ -45,6 +45,8 @@ class Inference_Report_generation(object):
         proposal = bold_conversion(proposal)
         proposal = list_conversion(proposal)
         proposal = fix_latex_itemize(proposal)
+        proposal = fix_latex_itemize_LLM(self.client, proposal)
+        proposal = proposal.replace('_', ' ')
         return proposal
     
     def generate_treatment_effect(self):
@@ -64,8 +66,10 @@ class Inference_Report_generation(object):
             r = bold_conversion(r)
             r = list_conversion(r)
             r = fix_latex_itemize(r)
+            r = fix_latex_itemize_LLM(self.client, r)
             #r = remove_redundant_point(r)
             r = remove_redundant_title(r)
+            r = r.replace('_', ' ')
             response[idx] = r
 
         if method in ['cem', 'propensity_score']:
@@ -124,7 +128,7 @@ class Inference_Report_generation(object):
                        '[CONFOUNDER_VAR]': (','.join(confounder)).replace('_', ' '), 
                        '[HTE_VAR]': (','.join(hte_var)).replace('_', ' '),
                        '[METHOD]': method.replace('_', ' '),
-                       '[METHOD_REASON]': method_reason,
+                       '[METHOD_REASON]': method_reason.replace('_', ' '),
                        '[ANALYSIS]': analysis}
         for placeholder, value in replacement.items():
             te_template = te_template.replace(placeholder, value)
@@ -147,8 +151,10 @@ class Inference_Report_generation(object):
         response = bold_conversion(response)
         response = list_conversion(response)
         response = fix_latex_itemize(response)
+        response = fix_latex_itemize_LLM(self.client, response)
         #response = remove_redundant_point(response)
         response = remove_redundant_title(response)
+        response = response.replace('_', ' ')
 
         fi_template = load_context("report/context/inference/feature_importance.tex")
         replacement = {'[MODEL]': model, 
@@ -175,6 +181,7 @@ class Inference_Report_generation(object):
         response = bold_conversion(response)
         response = list_conversion(response)
         response = fix_latex_itemize(response)
+        response = fix_latex_itemize_LLM(self.client, response)
         #response = remove_redundant_point(response)
         response = remove_redundant_title(response)
 
@@ -202,6 +209,7 @@ class Inference_Report_generation(object):
         response = bold_conversion(response)
         response = list_conversion(response)
         response = fix_latex_itemize(response)
+        response = fix_latex_itemize_LLM(self.client, response)
         #response = remove_redundant_point(response)
         response = remove_redundant_title(response)
         print('2nd response', response)
@@ -237,6 +245,8 @@ class Inference_Report_generation(object):
             discussion = bold_conversion(discussion)
             discussion = list_conversion(discussion)
             discussion = fix_latex_itemize(discussion)
+            discussion = fix_latex_itemize_LLM(self.client, discussion)
+            discussion = discussion.replace('_', ' ')
         else:
             discussion = 'You did not conduct any discussion with causal copilot.'
         
@@ -261,6 +271,8 @@ class Inference_Report_generation(object):
         next_step = bold_conversion(next_step)
         next_step = list_conversion(next_step)
         next_step = fix_latex_itemize(next_step)
+        next_step = fix_latex_itemize_LLM(self.client, next_step)
+        next_step = next_step.replace('_', ' ')
         return next_step
     
     def generation(self):

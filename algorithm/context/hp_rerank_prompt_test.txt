@@ -1,50 +1,94 @@
 User original query (TOP PRIORITY):
-Do causal discovery on this dataset
+
 
 -----------------------------------------------
 Given a dataset with the following properties:
 
-1. Columns: 0	1	2
+1. Columns: gender	race_ethnicity	parental_level_of_education	lunch	test_preparation_course	math_score	reading_score	writing_score	total_score	average_score
 2. Statistics:
 The dataset has the following characteristics:
 
-Data Type: The overall data type is Time-series.
+Data Type: The overall data type is Mixture.
 
-The sample size is 2000 with 3 features. 
+The sample size is 1000 with 10 features. 
 
-This dataset is time-series data. 
+This dataset is not time-series data. 
 
 Data Quality: There are no missing values in the dataset.
 
 Statistical Properties:
-- Linearity: The relationships between variables are predominantly linear.
-- Gaussian Errors: The errors in the data do follow a Gaussian distribution.
-- Time lag: 50 
-
-- Stationarity: The dataset is stationary. 
+- Linearity: The relationships between variables are not predominantly linear.
+- Gaussian Errors: The errors in the data do not follow a Gaussian distribution.
+- Heterogeneity: The dataset is not heterogeneous. 
 
 
 
 
 3. Background Knowledge:
-To assist you with your causal discovery task, I would need to check the contents of the dataset located at 'dataset/sim_ts/data.csv'. However, since I cannot access external files or datasets, I can only provide guidance based on the information you give me.
+Based on the provided variable names in the dataset, here is a detailed overview along with the requested information:
 
-Since you mentioned that the dataset contains columns labeled as "0, 1, 2", it suggests that the variable names are likely symbols or integers instead of meaningful names.
+### 1. Detailed Explanation about the Variables
 
-In the absence of meaningful variable names or context, I would return:
+- **gender**: This categorical variable indicates the sex of the student, often categorized as male or female. It can influence academic performance due to sociocultural factors and expectations.
 
-**No Knowledge** 
+- **race_ethnicity**: This variable categorizes students based on their racial or ethnic background. Different racial and ethnic groups may experience varying degrees of access to educational resources, which can affect performance.
 
-If you can provide more information on the columns or any other relevant details, I'd be happy to assist you further!
+- **parental_level_of_education**: This categorical variable reflects the highest level of education attained by the student's parents. It is generally understood that parental education level can significantly impact a student's motivation, expectations, and academic outcomes.
+
+- **lunch**: This variable indicates the type of lunch the student receives: standard lunch or free/reduced lunch. It is often a proxy for socioeconomic status, which can affect a student's educational resources and nutrition.
+
+- **test_preparation_course**: This binary variable indicates whether a student has completed a test preparation course or not. Such courses can be critical for improving test scores by providing strategies and content review.
+
+- **math_score**: This continuous variable represents the student's score in mathematics, typically assessed on a standardized scale. It is a direct measure of mathematical proficiency.
+
+- **reading_score**: This continuous variable reflects the student's score in reading, also assessed on a standardized scale. It indicates the student's reading comprehension and fluency.
+
+- **writing_score**: Similar to the previous scores, this continuous variable reflects the student's writing ability and is scored on a standardized scale.
+
+- **total_score**: This variable represents the cumulative score across different subjects, providing an overall assessment of the student's academic performance.
+
+- **average_score**: This continuous variable indicates the average score across subjects (math, reading, and writing), giving a summary measure of overall academic performance.
+
+### 2. Possible Causal Relations among these Variables
+
+In a causal discovery context, the following relationships could be hypothesized:
+
+- **Parental Level of Education → Student Performance**: Higher parental education levels may lead to better student performance due to increased encouragement, resources, and educational support.
+
+- **Socioeconomic Status (Lunch Type) → Student Performance**: Students who receive free/reduced lunch may have barriers that negatively affect their academic performance compared to their peers with standard lunch, often due to financial and nutritional influences.
+
+- **Race/Ethnicity → Student Performance**: There may be disparities in educational resources, support, and expectations based on race and ethnicity that influence overall academic performance.
+
+- **Gender → Student Performance**: There may be differences in performance in specific subjects (e.g., boys traditionally scoring higher in math and girls in reading/writing), often influenced by societal norms and educational practices.
+
+- **Test Preparation Course → Student Performance**: Participation in a test preparation course may lead to improved scores in math, reading, and writing by providing targeted skills and strategies.
+
+- **Parental Level of Education → Socioeconomic Factors (Lunch Type)**: Parents with higher education levels may be more likely to secure stable employment, leading to better economic conditions.
+
+- **Test Preparation Course and Individual Subject Scores**: There may also be direct causal relations from taking a test preparation course to improved subject scores (math, reading, writing).
+
+### 3. Other Background Domain Knowledge
+
+- **Socioeconomic Factors**: Awareness that students from lower socioeconomic backgrounds often face additional challenges that can influence their academic performance.
+
+- **Educational Policy Impact**: Understanding how educational policies, such as those aimed at reducing achievement gaps, can affect the relationships between these variables.
+
+- **Cultural Influences**: Insight into how different cultural expectations and values regarding education can shape student attitudes and performance.
+
+- **Psychological Factors**: Consideration of student motivation, self-efficacy, and other psychological factors that can significantly impact academic outcomes.
+
+- **Peer Influences**: Recognizing that peer relationships can also play a role in student performance, particularly in collaborative learning environments.
+
+These insights could be vital for designing robust causal discovery algorithms that account for the complexities of educational data and the myriad factors that influence student performance.
 
 We have selected the following algorithm for causal discovery:
 
-Algorithm: PCMCI
+Algorithm: FCI
 Description: [ALGORITHM_DESCRIPTION]
 
 Now, we need to determine the optimal hyperparameters for this algorithm. I'll guide you through a systematic approach to select values that prioritize accuracy while maintaining computational efficiency for moderate graph sizes.
 
-Primary hyperparameters to configure: indep_test, tau_min, tau_max, pc_alpha, alpha_level
+Primary hyperparameters to configure: alpha, indep_test, depth
 
 For each hyperparameter, please follow this structured approach:
 
@@ -68,7 +112,7 @@ Step 3: Evaluate each hyperparameter's impact on accuracy vs. efficiency
 
 Step 4: Analyze algorithm-specific recommendations
    - Review expert suggestions for each parameter:
-   "**Parameter:** indep_test\n- **Meaning:** Independence tests\n- **Available Values:**\n  - parcorr\n  - robustparcorr\n  - gpdc\n  - gsq\n  - regression\n  - cmi\n- **Expert Suggestion:** Use parcorr as default. parcorr, gpdc for non-linear causal relations, cmi for better accuracy but slow runtime, gsq for categorical, regression for mixed data\n\n**Parameter:** tau_min\n- **Meaning:** Minimum time lag to consider\n- **Available Values:**\n  - 0\n  - 1\n- **Expert Suggestion:** Use 0 as default. Adjust if results are required for a specific time window\n\n**Parameter:** tau_max\n- **Meaning:** Maximum time lag\n- **Available Values:**\n  - 1\n  - 5\n  - 10\n- **Expert Suggestion:** Use 1 as default. Usually adjusted based on pre-processing results\n\n**Parameter:** pc_alpha\n- **Meaning:** Significance level of PC algorithm.\n- **Available Values:**\n  - 0.05\n  - 0.1\n  - 0.01\n- **Expert Suggestion:** Use 0.05 as default. Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\n\n**Parameter:** alpha_level\n- **Meaning:** Significance level at which the p_matrix is thresholded to get graph.\n- **Available Values:**\n  - 0.05\n  - 0.1\n  - 0.01\n- **Expert Suggestion:** Use 0.05 as default. Adjust based on estimated time lag, number of nodes and sample size. Larger and denser graph means low alpha value.\n\n**Parameter:** fdr_method\n- **Meaning:** Correction method, currently implemented is Benjamini-Hochberg False Discovery Rate method. \n- **Available Values:**\n  - none\n  - fdr_bh\n- **Expert Suggestion:** Use none as default. Implement a false discovery rate correction over the PCMCI result, can be required for larger and denser graphs\n\n**Parameter:** link_assumptions\n- **Meaning:** Background knowledge links added as a dict\n- **Available Values:**\n  - None\n- **Expert Suggestion:** Use null as default. Add some links as dictionary of form {j:{(i, -tau): link_type, ...}, ...} specifying assumptions about links. This initializes the graph with entries graph[i,j,tau] = link_type. For example, graph[i,j,0] = '-->' implies that a directed link from i to j at lag 0 must exist. Valid link types are 'o-o', '-->', '<--'.\n\n**Parameter:** max_conds_dim\n- **Meaning:** Maximum number of conditions to test.\n- **Available Values:**\n  - None\n- **Expert Suggestion:** Use null as default. Default none value means unrestricted testing, can be assigned a value for large datasets with sparse graphs to speed up the discovery\n\n**Parameter:** max_combinations\n- **Meaning:** Maximum number of combinations of conditions of current cardinality to test in PC1 step.\n- **Available Values:**\n  - 1\n- **Expert Suggestion:** Use 1 as default. Adjust to increase accuracy by trading off processing speed\n\n**Parameter:** max_conds_py\n- **Meaning:** Restricts the number of parent nodes to consider in the MCI step\n- **Available Values:**\n  - None\n- **Expert Suggestion:** Use null as default. Adjust to increase accuracy by trading off processing speed, none value means unrestricted\n\n**Parameter:** max_conds_px\n- **Meaning:** Maximum number of variables to condition on\n- **Available Values:**\n  - None\n- **Expert Suggestion:** Use null as default. Adjust to increase accuracy by trading off processing speed, none value means unrestricted\n\n"
+   "**Parameter:** alpha\n- **Meaning:** Desired significance level in (0, 1)\n- **Available Values:**\n  - 0.05\n  - 0.1\n  - 0.01\n- **Expert Suggestion:** Use 0.05 as default. Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\n\n**Parameter:** indep_test\n- **Meaning:** Independence test method\n- **Available Values:**\n  - fisherz\n  - chisq\n  - kci\n  - fastkci\n  - rcit\n- **Expert Suggestion:** Use fisherz as default (for linear data). Choose based on data type, DON'T use nonlinear/nonparametric tests for linear/discrete data. 'Fisherz' for linear data; 'chisq' for discrete data (only applied for pure discrete data); 'kci' for nonlinear data (very slow, use only when both condition fulfilled: variable size < 10 and sample size < 1500); 'fastkci' is for non-linear data and a divide-and-conquer version of kci, faster than kci in large sample size scenarios but less accurate (use only when both condition fulfilled: < 20 variables and sample size < 3000); 'rcit' is for non-linear data and the fastest approximation of kci (use only when both condition fulfilled: < 30 variables and sample size < 5000).\n\n**Parameter:** depth\n- **Meaning:** Maximum depth for skeleton search\n- **Available Values:**\n  - -1\n  - 6\n  - 4\n  - 2\n  - 1\n- **Expert Suggestion:** Use -1 as default. Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 1-3) can significantly speed up the algorithm at the cost of some accuracy. A graph with node number < 10, use depth 6; A graph with node number 10 - 25, use depth 4; A graph with node number 25-50, use depth 2; A graph with node number > 50, use depth 1.\n\n"
 
 Step 5: Make final decisions based on:
    - For moderate graph sizes (<50 variables), prioritize accuracy over speed
@@ -78,7 +122,7 @@ Step 5: Make final decisions based on:
 Please provide your suggestions in a structured JSON format, with detailed reasoning for each hyperparameter. Your response should look like this:
 
 {
-  "algorithm": "PCMCI",
+  "algorithm": "FCI",
   "hyperparameters": {
     "[HYPERPARAMETER_1_NAME]": {
       "full_name": "[HYPERPARAMETER_1_FULL_NAME]",
