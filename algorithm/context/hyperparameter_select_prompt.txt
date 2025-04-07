@@ -1,6 +1,13 @@
 User original query (TOP PRIORITY):
 [USER_QUERY]
 
+## ⚠️ ESSENTIAL QUERY PRIORITY ⚠️
+- User query SUPERSEDES all standard hyperparameter guidelines
+- Extract specific needs, constraints, domain insights from user query FIRST
+- Parameters MUST be adjusted to meet user's explicit requirements 
+- ALL recommendations MUST directly align with the user's stated objectives
+- User domain knowledge overrides general optimization guidelines
+
 -----------------------------------------------
 Given a dataset with the following properties:
 
@@ -63,8 +70,7 @@ Please provide your suggestions in a structured JSON format, with detailed reaso
       "reasoning": "[YOUR_STEP_BY_STEP_REASONING_PROCESS]",
       "value": [SUGGESTED_VALUE],
       "explanation": "[BRIEF_EXPLANATION_OF_TRADEOFFS]"
-    },
-    ...
+    }
   }
 }
 

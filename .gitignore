@@ -166,5 +166,7 @@ benchmark.ipynb
 ts_eda.py
 data/simulation/benchmark.py
 data/simulation/evaluation.py
+data/simulation/ts_benchmark.py
 algorithm/context/algos/consolidated_benchmarking_results.txt
 # algorithm/context/benchmarking/algorithm_performance_analysis.json
+figures/
