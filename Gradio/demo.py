@@ -48,11 +48,12 @@ def install_packages():
     subprocess.run("pip install lingam=='1.9.1'", shell=True, check=True)
     subprocess.run("pip install CEM_LinearInf", shell=True, check=True)
     subprocess.run("pip install dotenv", shell=True, check=True)
+    subprocess.run("pip install dcor", shell=True, check=True)
 #Run initialization before importing plumbum
-# init_latex()
-# init_graphviz()
-# init_causallearn()
-# install_packages()
+init_latex()
+init_graphviz()
+init_causallearn()
+install_packages()
 
 import gradio as gr
 import pandas as pd
@@ -67,6 +68,7 @@ import time
 import traceback
 import pickle
 import torch
+import glob
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Gradio.demo_config import get_demo_config
@@ -292,17 +294,10 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                                 """
     meaningful_feature: Set to `True` if your dataset contains real, meaningful features. Set to `False` if it's simulated data.
     accept_CPDAG: Set to `True` to proceed with causal discovery using the CPDAG method.
-    heterogeneity: Set to `True` if your data comes from different domains (e.g. time periods, hospitals, experiments).
+    heterogeneity: Set to `True` if your data comes from different domains (e.g. locations, experiments). 
     domain_index: Specify the name of the column that indicates the domain (e.g. `hospital_id`, `time_group`). Only set this if `heterogeneity` is `True`.
     missing_value: If your dataset uses a special value (like 0, -1, or missing) to represent missing data, specify it here. Otherwise, use `False`.
                                 """
-                                # """
-                                # meaningful_feature: True/False
-                                # heterogeneity: True/False
-                                # accept_CPDAG: True/False
-                                # domin_index: The column name of domin_index (Can only be set when heterogeneity is True)
-                                # missing_value: special NA value/False
-                                # """
                 chat_history.append((None, modify_prompt))
                 CURRENT_STAGE = 'preliminary_feedback'
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -409,8 +404,8 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             if args.data_mode == 'real':
                 chat_history.append(("🌍 Generate background knowledge based on the dataset you provided...", None))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                #global_state = knowledge_info(args, global_state)
-                global_state.user_data.knowledge_docs = "This is fake domain knowledge for debugging purposes."
+                global_state = knowledge_info(args, global_state)
+                # global_state.user_data.knowledge_docs = "This is fake domain knowledge for debugging purposes."
                 knowledge_clean = str(global_state.user_data.knowledge_docs).replace("[", "").replace("]", "").replace('"',"").replace("\\n\\n", "\n\n").replace("\\n", "\n").replace("'", "")
                 chat_history.append((None, knowledge_clean))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -445,7 +440,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                                            "3️⃣ Leave the time_lag as None if it is not a Time-Series dataset.\n"
                                            """
     is_time_series: True/False
-    time_lag: [an integer] / continue / None
+    time_lag: [an integer] / default / None
                                            """))
             CURRENT_STAGE = 'ts_check'
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -485,15 +480,23 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             chat_history.append((None, global_state.statistics.description))
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             if REQUIRED_INFO["interactive_mode"]:
-                chat_history.append(('Here we just finished statistical Analysis for the dataset! Please enter anything you want to correct! Or type NO to skip this step.\n'
-                                    "Template:\n"
-                                    """
-                                    linearity: True/False
-                                    gaussian_error: True/False
-                                    heterogeneous: True/False
-                                    domain_index: variable name of your domain index
-                                    """,
-                        None))
+                info = 'Here we just finished statistical Analysis for the dataset! Please enter anything you want to correct! Or type NO to skip this step.\n'
+                if global_state.statistics.time_series:
+                    info += """
+                    Template:
+                    linearity: True/False
+                    gaussian_error: True/False
+                    """
+                else:
+                    info += """
+                    Template:
+                    linearity: True/False
+                    gaussian_error: True/False
+                    heterogeneous: True/False
+                    domain_index: variable name of your domain index
+                    """
+                chat_history.append((info, None))
+                
                 CURRENT_STAGE = 'check_user_feedback'
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -547,9 +550,16 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             print('eda_generation', global_state.user_data.selected_features)
             my_eda = EDA(global_state)
             my_eda.generate_eda()
-            chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_corr.jpg',)))
-            chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_additional.jpg',)))
-            chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_dist.jpg',)))
+            if global_state.statistics.time_series:
+                chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_lag_correlation.jpg',)))
+                # chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_ts_diagnostics.jpg',)))
+                matching_ts_diagnostics_files = glob.glob(f"{global_state.user_data.output_graph_dir}/eda_ts_diagnostics_*")
+                for file in matching_ts_diagnostics_files:
+                    chat_history.append((None, (file,)))
+            else:
+                chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_corr.jpg',)))
+                chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_additional.jpg',)))
+                chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_dist.jpg',)))
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             CURRENT_STAGE = 'algo_selection'
 
@@ -574,22 +584,14 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
 
                 if REQUIRED_INFO["interactive_mode"]:
                     CURRENT_STAGE = 'user_algo_selection'
-                    if torch.cuda.is_available():
-                        chat_history.append((None, "Do you want to use another algorithms instead of the selected one? If so, please choose one from the following: \n"
-                                                "- **Constraint-based Methods**: PC, PCParallel, AcceleratedPC, FCI, CDNOD, AcceleratedCDNOD;\n"
-                                                "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
-                                                "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
-                                                "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;\n"
-                                                "Otherwise please reply NO."))
+                    from Gradio.algo_context import TABULAR_CUDA, TABULAR_CPU, TS
+                    if global_state.statistics.time_series: 
+                        chat_history.append((None, TS))
                     else:
-                        chat_history.append((None, "Do you want to use another algorithms instead of the selected one? If so, please choose one from the following: \n"
-                                                "- **Constraint-based Methods**: PC, PCParallel, FCI, CDNOD;\n"
-                                                "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
-                                                "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
-                                                "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, ICALiNGAM;\n"
-                                                "Otherwise please reply NO."))
+                        if torch.cuda.is_available():
+                            chat_history.append((None, TABULAR_CUDA))
+                        else:
+                            chat_history.append((None, TABULAR_CPU))
                     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                     return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 else:           
@@ -601,19 +603,22 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 CURRENT_STAGE = 'hyperparameter_selection'  
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
-        if CURRENT_STAGE == 'user_algo_selection':  
-            if torch.cuda.is_available():
-                permitted_algo_list= ['PC', 'PCParallel', 'AcceleratedPC', 'FCI', 'CDNOD', 'AcceleratedCDNOD',
-                                'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
-                                'GES', 'FGES', 'XGES', 'GRaSP',
-                                'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
-                                'DirectLiNGAM', 'AcceleratedLiNGAM', 'ICALiNGAM']
+        if CURRENT_STAGE == 'user_algo_selection': 
+            if global_state.statistics.time_series:
+                permitted_algo_list = ['PCMCI', 'DYNOTEARS', 'NTSNOTEARS', 'VARLiNGAM'] 
             else:
-                permitted_algo_list= ['PC', 'PCParallel', 'FCI', 'CDNOD',
-                                'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
-                                'GES', 'FGES', 'XGES', 'GRaSP',
-                                'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
-                                'DirectLiNGAM', 'ICALiNGAM']
+                if torch.cuda.is_available():
+                    permitted_algo_list= ['PC', 'PCParallel', 'AcceleratedPC', 'FCI', 'CDNOD', 'AcceleratedCDNOD',
+                                    'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
+                                    'GES', 'FGES', 'XGES', 'GRaSP',
+                                    'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
+                                    'DirectLiNGAM', 'AcceleratedLiNGAM', 'ICALiNGAM']
+                else:
+                    permitted_algo_list= ['PC', 'PCParallel', 'FCI', 'CDNOD',
+                                    'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
+                                    'GES', 'FGES', 'XGES', 'GRaSP',
+                                    'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
+                                    'DirectLiNGAM', 'ICALiNGAM']
                 
             if REQUIRED_INFO["interactive_mode"]:
                 chat_history.append((message, None))
@@ -682,11 +687,20 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 data_idx = [global_state.user_data.processed_data.columns.get_loc(var) for var in global_state.user_data.visual_selected_features]
                 pos = my_visual_initial.get_pos(global_state.results.converted_graph[data_idx, :][:, data_idx])
                 global_state.results.raw_pos = pos
-            if global_state.user_data.ground_truth is not None:
-                my_visual_initial.plot_pdag(global_state.user_data.ground_truth, f'{global_state.algorithm.selected_algorithm}_true_graph.jpg', global_state.results.raw_pos)
-                my_visual_initial.plot_pdag(global_state.user_data.ground_truth, f'{global_state.algorithm.selected_algorithm}_true_graph.pdf', global_state.results.raw_pos)
-                chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/{global_state.algorithm.selected_algorithm}_true_graph.jpg',)))
-                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            # if global_state.user_data.ground_truth is not None:
+            #     my_visual_initial.plot_pdag(global_state.user_data.ground_truth, f'{global_state.algorithm.selected_algorithm}_true_graph.jpg', global_state.results.raw_pos)
+            #     my_visual_initial.plot_pdag(global_state.user_data.ground_truth, f'{global_state.algorithm.selected_algorithm}_true_graph.pdf', global_state.results.raw_pos)
+            #     chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/{global_state.algorithm.selected_algorithm}_true_graph.jpg',)))
+            #     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn 
+            if global_state.statistics.time_series:
+                if global_state.results.lagged_graph is not None:
+                    print('lagged graph', global_state.results.lagged_graph)
+                    my_visual_initial.plot_lag_pdag(global_state.results.lagged_graph, val_matrix=None, save_path=f'{global_state.algorithm.selected_algorithm}_timelag_graph.jpg')
+                    my_visual_initial.plot_lag_pdag(global_state.results.lagged_graph, val_matrix=None, save_path=f'{global_state.algorithm.selected_algorithm}_timelag_graph.pdf')
+                    chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/{global_state.algorithm.selected_algorithm}_timelag_graph.jpg',)))
+                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                else:
+                    print('lagged graph is None')
             if global_state.results.converted_graph is not None:
                 my_visual_initial.plot_pdag(global_state.results.converted_graph, f'{global_state.algorithm.selected_algorithm}_initial_graph.jpg', global_state.results.raw_pos)
                 my_visual_initial.plot_pdag(global_state.results.converted_graph, f'{global_state.algorithm.selected_algorithm}_initial_graph.pdf', global_state.results.raw_pos)
@@ -740,7 +754,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             # Plot Bootstrap Heatmap
             paths = my_visual_revise.boot_heatmap_plot()
             chat_history.append(
-                (None, f"The following heatmaps show the confidence probability we have on different kinds of edges in the initial graph"))
+                (None, f"The following heatmaps show the confidence probability we have on different kinds of edges in the original graph produced by {global_state.algorithm.selected_algorithm} algorithm."))
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             for path in paths:
                 chat_history.append((None, (path,)))
@@ -782,22 +796,14 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 with open(f'{global_state.user_data.output_graph_dir}/{global_state.algorithm.selected_algorithm}_global_state.pkl', 'wb') as f:
                     pickle.dump(global_state, f)
                 #global_state.logging.global_state_logging.append(global_state.algorithm.selected_algorithm)
-                if torch.cuda.is_available():
-                    chat_history.append((None, "Do you want to retry another algorithm? If so, please choose one from the following: \n"
-                                                "- **Constraint-based Methods**: PC, PCParallel, AcceleratedPC, FCI, CDNOD, AcceleratedCDNOD;\n"
-                                                "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
-                                                "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
-                                                "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;\n"
-                                                "Otherwise please reply NO."))
+                from Gradio.algo_context import TABULAR_CUDA, TABULAR_CPU, TS
+                if global_state.statistics.time_series: 
+                    chat_history.append((None, TS))
                 else:
-                    chat_history.append((None, "Do you want to retry another algorithm? If so, please choose one from the following: \n"
-                                                "- **Constraint-based Methods**: PC, PCParallel, FCI, CDNOD;\n"
-                                                "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
-                                                "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
-                                                "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, ICALiNGAM;\n"
-                                                "Otherwise please reply NO."))
+                    if torch.cuda.is_available():
+                        chat_history.append((None, TABULAR_CUDA))
+                    else:
+                        chat_history.append((None, TABULAR_CPU))
                 CURRENT_STAGE = 'retry_algo'
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn                
@@ -834,22 +840,14 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 with open(f'{global_state.user_data.output_graph_dir}/{global_state.algorithm.selected_algorithm}_global_state.pkl', 'wb') as f:
                     pickle.dump(global_state, f)
                 #global_state.logging.global_state_logging.append(global_state.algorithm.selected_algorithm)
-                if torch.cuda.is_available():
-                    chat_history.append((None, "Do you want to retry other algorithms? If so, please choose one from the following: \n"
-                                                "- **Constraint-based Methods**: PC, PCParallel, AcceleratedPC, FCI, CDNOD, AcceleratedCDNOD;\n"
-                                                "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
-                                                "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
-                                                "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
-                                                "Otherwise please reply NO."))
+                from Gradio.algo_context import TABULAR_CUDA, TABULAR_CPU, TS
+                if global_state.statistics.time_series: 
+                    chat_history.append((None, TS))
                 else:
-                    chat_history.append((None, "Do you want to retry other algorithms? If so, please choose one from the following: \n"
-                                                "- **Constraint-based Methods**: PC, PCParallel, AcceleratedPC, FCI, CDNOD, AcceleratedCDNOD;\n"
-                                                "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
-                                                "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
-                                                "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
-                                                "Otherwise please reply NO."))
+                    if torch.cuda.is_available():
+                        chat_history.append((None, TABULAR_CUDA))
+                    else:
+                        chat_history.append((None, TABULAR_CPU))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
@@ -1125,16 +1123,19 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             if CURRENT_STAGE != 'report_generation_check':
                 print(CURRENT_STAGE)
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            else:
+                with open(f'{global_state.user_data.output_graph_dir}/inference_global_state.pkl', 'wb') as f:
+                    pickle.dump(global_state, f)
 
         # Report Generation
         if CURRENT_STAGE == 'report_generation_check': # empty query or postprocess query parsed successfully
-            import glob
             global_state_files = glob.glob(f"{global_state.user_data.output_graph_dir}/*_global_state.pkl")
             global_state.logging.global_state_logging = []
             for file in global_state_files:
-                with open(file, 'rb') as f:
-                    temp_global_state = pickle.load(f)
-                    global_state.logging.global_state_logging.append(temp_global_state.algorithm.selected_algorithm)
+                if file != f'{global_state.user_data.output_graph_dir}/inference_global_state.pkl':
+                    with open(file, 'rb') as f:
+                        temp_global_state = pickle.load(f)
+                        global_state.logging.global_state_logging.append(temp_global_state.algorithm.selected_algorithm)
             if len(global_state.logging.global_state_logging) > 1:
                 algos = global_state.logging.global_state_logging
                 chat_history.append((None, "Detailed analysis of which algorithm do you want to be included in the report?\n"

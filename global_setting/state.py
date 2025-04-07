@@ -50,6 +50,7 @@ class Statistics:
     description: Optional[str] = None
     time_series: Optional[bool] = False # indicator of time-series data
     time_lag: int = 50
+    time_index: Optional[str] = None
 
 @dataclass
 class Logging:

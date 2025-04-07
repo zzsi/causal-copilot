@@ -15,16 +15,6 @@
       "available_values": [true, false],
       "expert_suggestion": "Use true as default. If the dataset is noisy or high-dimensional, set prune=True to prevent overfitting, reduce false positives, improving interpretability."
     },
-    "ar_coefs": {
-      "meaning": "Coefficients of AR model. Estimating AR model is skipped if specified.",
-      "available_values": [null],
-      "expert_suggestion": "Use null as default. If previous knowledge about autoregressive relationships exists, set ar_coefs manually to enforce constraints."
-    },
-    "lingam_model": {
-      "meaning": "LiNGAM model for causal discovery. If None, DirectLiNGAM algorithm is selected.",
-      "available_values": [null],
-      "expert_suggestion": "Use null as default. DirectLiNGAM - Standard setting, assumes purely linear causal effects. Alternatively ICA-LiNGAM can be used under strong ICA assumptions on data"
-    },
     "gpu": {
       "meaning": "Whether to use GPU acceleration.",
       "available_values": [false, true],

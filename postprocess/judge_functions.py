@@ -613,12 +613,20 @@ def edges_to_relationship(data, edges_dict, boot_edges_prob=None):
             'half_uncertain_edges': 'These variable pairs have non-descendant undirected relationship between them: \n',
             'none_edges': 'These variable pairs have no D-seperation between them: \n'
         }
+    
     for edge_type in relation_dict.keys():
         edges_list = edges_dict[edge_type]
         for edges in edges_list:
             if boot_edges_prob is not None:
-                idx_j = data.columns.str.lower().get_loc(edges[0].lower())
-                idx_i = data.columns.str.lower().get_loc(edges[1].lower())
+                try:
+                    idx_j = data.columns.str.lower().get_loc(edges[0].lower())
+                    idx_i = data.columns.str.lower().get_loc(edges[1].lower())
+                except:
+                    try:
+                        idx_j = data.columns.str.lower().get_loc(edges[0].lower().replace('_', ' '))
+                        idx_i = data.columns.str.lower().get_loc(edges[1].lower().replace('_', ' '))
+                    except:
+                        continue  
                 prob = boot_edges_prob[edge_type][idx_i, idx_j]
                 result_dict[edge_type].append(f'{edges[0]} {relation_dict[edge_type]} {edges[1]} with bootstrap probability {prob}')
             else:

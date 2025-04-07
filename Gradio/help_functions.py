@@ -353,10 +353,24 @@ def parse_ts_query(message, chat_history, download_btn, global_state, REQUIRED_I
     parsed_response = LLM_parse_query(TimeSeriesInput, prompt, message)
     is_time_series, time_lag = parsed_response.is_time_series, parsed_response.time_lag
     
+    class TimeIndex(BaseModel):
+        time_index: str
+    prompt = f"""
+    You are a helpful assistant, I have a time-series data, please help me to extract the time index from these column names.
+    These are columns in the dataset: {global_state.user_data.processed_data.columns}
+    The time index can be 'Date', 'Time', 'Datetime' or something like that. **It must be among these columns**.
+    Just return the column name of time index, do not include any other information.
+    """
+    
     if is_time_series:
         global_state.statistics.time_series = True
-        if time_lag is not None and time_lag != 'continue':
+        global_state.statistics.data_type = "Time-series"
+        global_state.user_data.heterogeneous = False
+        if time_lag is not None and time_lag != 'default':
             global_state.statistics.time_lag = time_lag
+        parsed_response = LLM_parse_query(TimeIndex, prompt, message)
+        time_index = parsed_response.time_index
+        global_state.statistics.time_index = time_index
     else:
         global_state.statistics.time_series = False
     CURRENT_STAGE = 'ts_check_done'
@@ -454,28 +468,27 @@ def drop_spare_features(chat_history, download_btn, global_state, REQUIRED_INFO,
                        
 
 def parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
-    if torch.cuda.is_available():
-        permitted_algo_list = ['PC', 'PCParallel', 'AcceleratedPC', 'FCI', 'CDNOD', 'AcceleratedCDNOD',
-                        'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
-                        'GES', 'FGES', 'XGES', 'GRaSP',
-                        'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
-                        'DirectLiNGAM', 'AcceleratedLiNGAM', 'ICALiNGAM']
+    if global_state.statistics.time_series:
+        permitted_algo_list = ['PCMCI', 'DYNOTEARS', 'NTSNOTEARS', 'VARLiNGAM'] 
     else:
-        permitted_algo_list = ['PC', 'PCParallel', 'FCI', 'CDNOD',
-                        'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
-                        'GES', 'FGES', 'XGES', 'GRaSP',
-                        'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
-                        'DirectLiNGAM', 'ICALiNGAM']
+        if torch.cuda.is_available():
+            permitted_algo_list= ['PC', 'PCParallel', 'AcceleratedPC', 'FCI', 'CDNOD', 'AcceleratedCDNOD',
+                            'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
+                            'GES', 'FGES', 'XGES', 'GRaSP',
+                            'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
+                            'DirectLiNGAM', 'AcceleratedLiNGAM', 'ICALiNGAM']
+        else:
+            permitted_algo_list= ['PC', 'PCParallel', 'FCI', 'CDNOD',
+                            'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
+                            'GES', 'FGES', 'XGES', 'GRaSP',
+                            'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
+                            'DirectLiNGAM', 'ICALiNGAM']
     if message == '' or message.lower()=='no':
         chat_history.append((message, "💬 No algorithm is specified, will go to the next step..."))
         CURRENT_STAGE = 'inference_analysis_check'     
     elif message not in permitted_algo_list:
-        if torch.cuda.is_available():
-            chat_history.append((message, "❌ The specified algorithm is not correct, please choose from the following: \n"
-                                       f"{', '.join(permitted_algo_list)}\n"))   
-        else:    
-            chat_history.append((message, "❌ The specified algorithm is not correct, please choose from the following: \n"
-                                        f"{', '.join(permitted_algo_list)}\n"))   
+        chat_history.append((message, "❌ The specified algorithm is not correct, please choose from the following: \n"
+                                    f"{', '.join(permitted_algo_list)}\n"))   
     else:  
         global_state.algorithm.selected_algorithm = message
         chat_history.append((message, f"✅ We will rerun the Causal Discovery Procedure with the Selected algorithm: {global_state.algorithm.selected_algorithm}\n"
@@ -497,14 +510,15 @@ def prepare_hyperparameter_text(global_state, chat_history):
     for key, value in list(param_hint.items())[1:]:
         param_info = f"Parameter Meaning: {value['meaning']}, \n Available Values: {value['available_values']} \n Parameter Selection Suggestion: {value['expert_suggestion']}"
         prompt = "You are an expert in causal discovery, I need to write a hint for the user to choose values for causal discovery algorithm hyper-parameters"\
-            "I will give you information about the parameter, please help me to write a short paragraph with bullet points for the user to choose values for this parameter."\
-            "Example: \n"\
-    f"""
-    Brief Explanation for this parameter with 1 sentences
-    - **{value['available_values'][0]}**: in which case we recommend to use this value
-    - **{value['available_values'][1]}**: in which case we recommend to use this value
-    - ......
-    """
+            "I will give you information about the parameter, please help me to write a short paragraph with bullet points for the user to choose values for this parameter."
+        if len(value['available_values']) > 1:
+            prompt += f"""
+            Example: 
+            Brief Explanation for this parameter with 1 sentences
+            - **{value['available_values'][0]}**: in which case we recommend to use this value
+            - **{value['available_values'][1]}**: in which case we recommend to use this value
+            - ......
+            """
         param_info = LLM_parse_query(None, prompt, param_info)
         hint += f"- {key}: \n{param_info};\n "
     chat_history.append((None, hint))

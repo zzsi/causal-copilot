@@ -24,35 +24,5 @@
         "meaning": "Significance level at which the p_matrix is thresholded to get graph.",
         "available_values": [0.05, 0.1, 0.01],
         "expert_suggestion": "Use 0.05 as default. Adjust based on estimated time lag, number of nodes and sample size. Larger and denser graph means low alpha value."
-    },
-    "fdr_method": {
-        "meaning": "Correction method, currently implemented is Benjamini-Hochberg False Discovery Rate method. ",
-        "available_values": ["none", "fdr_bh"],
-        "expert_suggestion": "Use none as default. Implement a false discovery rate correction over the PCMCI result, can be required for larger and denser graphs"
-    },
-    "link_assumptions": {
-        "meaning": "Background knowledge links added as a dict",
-        "available_values": [null],
-        "expert_suggestion": "Use null as default. Add some links as dictionary of form {j:{(i, -tau): link_type, ...}, ...} specifying assumptions about links. This initializes the graph with entries graph[i,j,tau] = link_type. For example, graph[i,j,0] = '-->' implies that a directed link from i to j at lag 0 must exist. Valid link types are 'o-o', '-->', '<--'."
-    },   
-    "max_conds_dim": {
-        "meaning": "Maximum number of conditions to test.",
-        "available_values": [null],
-        "expert_suggestion": "Use null as default. Default none value means unrestricted testing, can be assigned a value for large datasets with sparse graphs to speed up the discovery"
-    },
-    "max_combinations": {
-        "meaning": "Maximum number of combinations of conditions of current cardinality to test in PC1 step.",
-        "available_values": [1],
-        "expert_suggestion": "Use 1 as default. Adjust to increase accuracy by trading off processing speed"
-    },
-    "max_conds_py": {
-        "meaning": "Restricts the number of parent nodes to consider in the MCI step",
-        "available_values": [null],
-        "expert_suggestion": "Use null as default. Adjust to increase accuracy by trading off processing speed, none value means unrestricted"
-    },
-    "max_conds_px": {
-        "meaning": "Maximum number of variables to condition on",
-        "available_values": [null],
-        "expert_suggestion": "Use null as default. Adjust to increase accuracy by trading off processing speed, none value means unrestricted"
     }
 }       

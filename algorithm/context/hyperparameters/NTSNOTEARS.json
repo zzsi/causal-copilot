@@ -1,10 +1,5 @@
 {
     "algorithm_name": "NTSNOTEARS",
-    "p": {
-        "meaning": "Lookback window length for the time-lagged causal relations",
-        "suggested_values": [2, 10],
-        "reasoning": "Use 2 as default. Chosen value can be dtermined by preprocessing steps"
-    },
     "lambda1": {
       "meaning": "lambdas for convolutional parameters in each time step. In the order of ..., lag2, lag1, instantaneous. E.g. [0.02, 0.01]",
       "suggested_values": [1e-3, 1e-4, 1e-2],
@@ -14,16 +9,6 @@
       "meaning": "smoothness over time for causal relations",
       "suggested_values": [1e-3, 1e-2, 1e-5],
       "reasoning": "Use 1e-3 as default. A higher value results in more stable causal graphs over time, while a lower value allows more dynamic changes in causal relationships."
-    },
-    "max_iter": {
-      "meaning": "Maximum number of dual ascent steps during optimization",
-      "suggested_values": [100, 50, 150],
-      "reasoning": "Use 100 as default. Increase for more complex graphs or if convergence is slow."
-    },
-    "h_tol": {
-      "meaning": "Exit tolerance for h(W) during optimization",
-      "suggested_values": [1e-8, 1e-10, 1e-6],
-      "reasoning": "Use 1e-8 as default. Lower values enforce stricter acyclicity. Use lower values for more accurate results."
     },
     "w_threshold": {
       "meaning": "list of w_thresholds for convolutional parameters in each time step",

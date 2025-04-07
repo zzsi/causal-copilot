@@ -151,7 +151,7 @@ def generate_analysis_feature_importance(args, key_node, parent_nodes, mean_shap
 def generate_analysis_anormaly(args, df, key_node, parent_nodes, desc):
     prompt = f"""
     I'm doing the Anormaly Attribution analysis and please help me to write a brief analysis.
-    You can use some bullet points to summarize the result, but not too much.
+    Don't use bullet point.
     Here are some informations:
     **Abnormal Variable we care about**: {key_node}
     **Parent Nodes of the Abnormal Variable**: {parent_nodes}
@@ -170,7 +170,7 @@ def generate_analysis_anormaly_dist(args, df, key_node, desc):
     # Generate a response using the LLM
     prompt = f"""
     I'm doing the Distributional Change Attribution analysis and please help me to write a brief analysis.
-    You can use some bullet points to summarize the result, but not too much.
+    Don't use bullet point.
     Here are some informations:
     **Target Variable we care about**: {key_node}
     **Attribution Scores**: 
@@ -187,7 +187,7 @@ def generate_conterfactual_estimation(args, global_state, shift_intervention_val
     original_df = global_state.user_data.processed_data
     prompt = f"""
     I'm doing the Counterfactual Estimation analysis and please help me to write a brief analysis.
-    You can use some bullet points to summarize the result, but not too much.
+    Don't use bullet point.
     Here are some informations:
     **Target Variable we care about**: {key_node}
     **Treatment Variable**: {treatment}

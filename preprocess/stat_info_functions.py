@@ -205,7 +205,7 @@ def correlation_check(global_state):
                 else:
                     correlated_groups[var1].append(var2)
 
-    highly_correlated_vars = set(list(correlated_groups.keys())+list(*correlated_groups.values()))
+    highly_correlated_vars = set(list(correlated_groups.keys()) + [item for sublist in correlated_groups.values() for item in sublist])
     remaining_vars = set(df.columns) - highly_correlated_vars
     for var in remaining_vars:
         correlated_groups[var] = []
@@ -543,6 +543,7 @@ def linearity_check_ts(df_raw: pd.DataFrame, global_state, save_plot=True):
     :return: indicator of linearity, fitting a VAR model and checking the residuals
     '''
     maxlags = global_state.statistics.time_lag
+    print("maxlags", maxlags)
     path = global_state.user_data.output_graph_dir
     alpha = global_state.statistics.alpha
     model = VAR(df_raw)
@@ -767,7 +768,13 @@ def stat_info_collection(global_state):
             global_state.user_data.selected_features = global_state.user_data.selected_features.drop(domain_index)
     else:
         col_domain_index = None
-    data = global_state.user_data.raw_data[global_state.user_data.selected_features]
+    if global_state.statistics.time_series:
+        global_state.user_data.selected_features = [feature for feature in global_state.user_data.selected_features if feature != global_state.statistics.time_index]
+        data = global_state.user_data.raw_data.set_index(global_state.statistics.time_index)
+        data = data.reset_index(drop=True) 
+        data = data[global_state.user_data.selected_features]
+    else:
+        data = global_state.user_data.raw_data[global_state.user_data.selected_features]
 
     if col_domain_index is not None and domain_index in data.columns:
         data = data.drop(columns=[domain_index])
@@ -794,7 +801,8 @@ def stat_info_collection(global_state):
     # drop domain index from visual selected features
     if global_state.statistics.heterogeneous and global_state.statistics.domain_index in global_state.user_data.visual_selected_features:
         global_state.user_data.visual_selected_features = [feature for feature in global_state.user_data.visual_selected_features if feature != global_state.statistics.domain_index]
-
+    if global_state.statistics.time_series:
+        global_state.user_data.visual_selected_features = [feature for feature in global_state.user_data.visual_selected_features if feature != global_state.statistics.time_index]
     # Check assumption for continuous data
     if global_state.statistics.data_type == "Continuous":
         if global_state.statistics.linearity is None:
