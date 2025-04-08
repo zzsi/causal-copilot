@@ -78,22 +78,26 @@ class Report_generation(object):
                 with open(f'{global_state.user_data.output_graph_dir}/{algo}_global_state.pkl', 'rb') as f:
                     self.global_state_list.append(pickle.load(f))
             global_state = self.global_state_list[global_state.results.report_selected_index]
+            inference_global_state = None
+            for state in self.global_state_list:
+                if state.inference.task_index > -1:
+                    inference_global_state = state
+                    break
         else:
             self.global_state_list = [global_state]
             global_state.logging.global_state_logging = [global_state.algorithm.selected_algorithm]
-        ###
-        self.global_state_list = []
-        for algo in ['PC', 'FCI']:
-            with open(f'{global_state.user_data.output_graph_dir}/{algo}_global_state.pkl', 'rb') as f:
-                self.global_state_list.append(pickle.load(f))
-        global_state = self.global_state_list[0]
-        global_state.logging.global_state_logging
-        ###
-        try:
-            with open(f"{global_state.user_data.output_graph_dir}/inference_global_state.pkl", 'rb') as f:
-                inference_global_state = pickle.load(f)
-        except:
-            inference_global_state = None
+        # ###
+        # self.global_state_list = []
+        # for algo in ['GES','FCI']:
+        #     with open(f'{global_state.user_data.output_graph_dir}/{algo}_global_state.pkl', 'rb') as f:
+        #         self.global_state_list.append(pickle.load(f))
+        # global_state = self.global_state_list[0]
+        # global_state.logging.global_state_logging
+        # inference_global_state = None
+        # for state in self.global_state_list:
+        #     if state.inference.task_index > -1:
+        #         inference_global_state = state
+        #         break
 
         self.client = OpenAI()
         if global_state.user_data.meaningful_feature:
@@ -515,29 +519,32 @@ The following figure presents distributions of various variables. The orange das
     def graph_generate_prompts(self):
         if self.global_state.statistics.time_series:
             graph_response = rf"""
-    \section{{Causal Graph Summary}}
+    \section{{Causal Graph Estimation Summary}}
 
     \subsection{{Causal Graph Discovered by the Algorithm}}
 
     \begin{{figure}}[H]
+    \centering
+    \begin{{subfigure}}[b]{{0.48\textwidth}}
         \centering
-        \includegraphics[width=0.5\textwidth]{{{self.visual_dir}/{self.algo}_timelag_graph.pdf}}
+        \includegraphics[width=\textwidth]{{{self.visual_dir}/{self.algo}_timelag_graph.pdf}}
         \caption{{Time Lag Graph Discovered by the Algorithm}}
-    \end{{figure}}
-
-    The above is the time-lag causal graph produced by our algorithm.
-
-    \begin{{figure}}[H]
+        \label{{fig:timelag}}
+    \end{{subfigure}}
+    \hfill
+    \begin{{subfigure}}[b]{{0.48\textwidth}}
         \centering
-        \includegraphics[width=0.5\textwidth]{{{self.visual_dir}/{self.algo}_initial_graph.pdf}}
-        \caption{{Summary Graph Discovered by the Algorithm}}
-    \end{{figure}}
-
-    The above is the summary causal graph produced by our algorithm.
+        \includegraphics[width=\textwidth]{{{self.visual_dir}/{self.algo}_initial_graph.pdf}}
+        \caption{{Summary Graph Discovered by the Algorithm. Solid lines represent causal edges identified by the algorithm, while dashed lines indicate strong correlations without inferred causality.}}
+        \label{{fig:summary}}
+    \end{{subfigure}}
+    \caption{{Graphs Discovered by the Algorithm. Solid lines represent causal edges identified by the algorithm, while dashed lines indicate strong correlations without inferred causality.}}
+    \label{{fig:both_graphs}}
+\end{{figure}}
             """
         else:
             graph_response = rf"""
-    \section{{Causal Graph Summary}}
+    \section{{Causal Graph Estimation Summary}}
 
     \subsection{{Causal Graph Discovered by the Algorithm}}
 
@@ -740,8 +747,7 @@ The following figure presents distributions of various variables. The orange das
             Do Not include Numerical Numbers in your text!
             
             **Template**
-            To evaluate how much confidence we have on each edge, we conducted bootstrapping to calculate the probability of existence for each edge.
-            From the Statistics perspective, we can categorize the edges' probability of existence into three types:
+            To evaluate the confidence associated with each edge in the causal graph, we employed a bootstrapping procedure to estimate the probability of existence for each edge. From a statistical perspective, we categorize these probabilities into three levels:
             \\begin{{itemize}}
             \item \\textbf{{High Confidence Edges}}: ...
             \item \\textbf{{Moderate Confidence Edges}}: ...
@@ -762,7 +768,7 @@ The following figure presents distributions of various variables. The orange das
             )
             response_doc = response.choices[0].message.content
             response_doc = response_doc.replace('%', '\%')
-            response_doc = response_doc.replace('_', '\_')
+            response_doc = response_doc.replace('_', ' ')
             #print('reliability analysis:',response_doc)
         else:
             response_doc = ''
@@ -1017,8 +1023,7 @@ Help me to write a comparison of the following causal discovery results of diffe
             self.result_comparison_graph_text, self.result_comparison = self.comparision_prompt()
             
             # Causal Inference info
-            print(self.inference_global_state.inference.task_index)
-            if self.inference_global_state.inference.task_index != -1:
+            if self.inference_global_state is not None:
                 inf_report_generator = Inference_Report_generation(self.inference_global_state, self.args)
                 self.inf_report = inf_report_generator.generation()
             else:
@@ -1221,7 +1226,7 @@ def parse_args():
 import pickle  
 if __name__ == '__main__':
     args = parse_args()
-    with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250407_010855/Cleaned_Students_Performance/output_graph/PC_global_state.pkl', 'rb') as file:
+    with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250407_100342/heart disease/output_graph/GES_global_state.pkl', 'rb') as file:
         global_state = pickle.load(file)
     test(args, global_state)
     # save_path = 'demo_data/20250130_130622/house_price/output_report'

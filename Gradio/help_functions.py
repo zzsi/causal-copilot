@@ -485,7 +485,10 @@ def parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED
                             'DirectLiNGAM', 'ICALiNGAM']
     if message == '' or message.lower()=='no':
         chat_history.append((message, "💬 No algorithm is specified, will go to the next step..."))
-        CURRENT_STAGE = 'inference_analysis_check'     
+        if global_state.user_data.meaningful_feature and not global_state.statistics.time_series:
+            CURRENT_STAGE = 'inference_analysis_check'     
+        else:
+            CURRENT_STAGE = 'report_generation_check'
     elif message not in permitted_algo_list:
         chat_history.append((message, "❌ The specified algorithm is not correct, please choose from the following: \n"
                                     f"{', '.join(permitted_algo_list)}\n"))   

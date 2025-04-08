@@ -40,16 +40,16 @@ from pathlib import Path
 # def init_causallearn():
 #     subprocess.run("git submodule update --recursive", shell=True, check=True)
 
-# def install_packages():
-#     subprocess.run("pip install xges=='0.1.6'", shell=True, check=True)
-#     subprocess.run("pip install numba=='0.59.1'", shell=True, check=True)
-#     subprocess.run("pip install gcastle", shell=True, check=True)
-#     subprocess.run("pip install tigramite", shell=True, check=True)
-#     subprocess.run("pip install lingam=='1.9.1'", shell=True, check=True)
-#     subprocess.run("pip install CEM_LinearInf", shell=True, check=True)
-#     subprocess.run("pip install dotenv", shell=True, check=True)
-#     subprocess.run("pip install dcor", shell=True, check=True)
-# #Run initialization before importing plumbum
+def install_packages():
+    subprocess.run("pip install xges=='0.1.6'", shell=True, check=True)
+    subprocess.run("pip install numba=='0.59.1'", shell=True, check=True)
+    subprocess.run("pip install gcastle", shell=True, check=True)
+    subprocess.run("pip install tigramite", shell=True, check=True)
+    subprocess.run("pip install lingam=='1.9.1'", shell=True, check=True)
+    subprocess.run("pip install CEM_LinearInf", shell=True, check=True)
+    subprocess.run("pip install dotenv", shell=True, check=True)
+    subprocess.run("pip install dcor", shell=True, check=True)
+#Run initialization before importing plumbum
 # init_latex()
 # init_graphviz()
 # init_causallearn()
@@ -685,6 +685,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             my_visual_initial = Visualization(global_state)
             if global_state.results.raw_pos is None:
                 data_idx = [global_state.user_data.processed_data.columns.get_loc(var) for var in global_state.user_data.visual_selected_features]
+                print(global_state.results.converted_graph)
                 pos = my_visual_initial.get_pos(global_state.results.converted_graph[data_idx, :][:, data_idx])
                 global_state.results.raw_pos = pos
             # if global_state.user_data.ground_truth is not None:
@@ -715,10 +716,14 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
                 if REQUIRED_INFO["interactive_mode"]:
-                    chat_history.append((None, "Do you want to further prune the initial graph with LLM and analyze the graph reliability?"))
-                    CURRENT_STAGE = 'LLM_prune'
-                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                    return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                    if global_state.user_data.meaningful_feature:
+                        chat_history.append((None, "Do you want to further prune the initial graph with LLM and analyze the graph reliability?"))
+                        CURRENT_STAGE = 'LLM_prune'
+                        yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                        return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                    else:
+                        CURRENT_STAGE = 'retry_algo'
+                        yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 else:
                     CURRENT_STAGE = 'revise_graph'
 
@@ -744,11 +749,11 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             try:
                 judge = Judge(global_state, args)
-                global_state = judge.forward(global_state, 'cot_all_relation', 3)
+                global_state = judge.forward(global_state, 'cot_all_relation', 1)
             except Exception as e:
                 print('error during judging:', e)
                 judge = Judge(global_state, args)
-                global_state = judge.forward(global_state, 'cot_all_relation', 3) 
+                global_state = judge.forward(global_state, 'cot_all_relation', 1) 
             my_visual_revise = Visualization(global_state)
             global_state.results.revised_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.processed_data.columns, global_state.results.revised_graph)
             # Plot Bootstrap Heatmap
@@ -1118,14 +1123,14 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn         
     
         if CURRENT_STAGE == 'analysis_discussion':
-            chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE =  parse_inf_discuss_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE)
+            chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_inf_discuss_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             if CURRENT_STAGE != 'report_generation_check':
                 print(CURRENT_STAGE)
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-            else:
-                with open(f'{global_state.user_data.output_graph_dir}/inference_global_state.pkl', 'wb') as f:
-                    pickle.dump(global_state, f)
+            # else:
+            #     with open(f'{global_state.user_data.output_graph_dir}/inference_global_state.pkl', 'wb') as f:
+            #         pickle.dump(global_state, f)
 
         # Report Generation
         if CURRENT_STAGE == 'report_generation_check': # empty query or postprocess query parsed successfully
