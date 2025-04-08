@@ -79,7 +79,7 @@ class Inference_Report_generation(object):
 \\begin{{figure}}[H]
     \centering
     \includegraphics[width=0.7\\textwidth]{{{figs[0]}}}
-    \caption{{Distribution of Confounders before and after matching}}
+    \caption{{Distribution of Confounders before and after matching.}}
 \end{{figure}}
 
 {response[0]}
@@ -93,7 +93,7 @@ class Inference_Report_generation(object):
 \\begin{{figure}}[H]
     \centering
     \includegraphics[width=0.8\\textwidth]{{{figs[1]}}}
-    \caption{{CATE Bar Plots grouped by different confounders}}
+    \caption{{CATE Bar Plots grouped by different confounders.}}
 \end{{figure}}
 
 {response[2]}
@@ -109,13 +109,13 @@ class Inference_Report_generation(object):
 \\begin{{figure}}[H]
     \centering
     \includegraphics[height=0.3\\textheight]{{{figs[0]}}}
-    \caption{{Distribution of HTE}}
+    \caption{{Distribution of HTE.}}
 \end{{figure}}
 
 \\begin{{figure}}[H]
     \centering
     \includegraphics[width=0.8\\textwidth]{{{figs[1]}}}
-    \caption{{Violin plot of HTE by Heterogeneous Variables}}
+    \caption{{Violin plot of HTE by Heterogeneous Variables.}}
 \end{{figure}}
 
 {response[1]}

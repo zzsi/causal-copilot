@@ -177,7 +177,7 @@ class Visualization(object):
             # arrow_linewidth=4,
             # node_size=0.1,
             # arrowhead_size=20,
-            # curved_radius=0.2,
+            curved_radius=0.1,
             # label_fontsize=10,
         )
         plt.close(fig)
@@ -323,12 +323,13 @@ class Visualization(object):
         plot_time_series_graph(
             graph=tigramite_mat,
             # val_matrix=val_matrix,
-            # var_names=var_names,
+            var_names=var_names,
             # link_colorbar_label="Effect strength" if val_matrix is not None else None,
             # figsize=(10, 6),
             save_name=path,
+            # link_width=link_width,
             # fig_ax=(fig, ax),
-            # arrow_linewidth=4,
+            arrow_linewidth=1,
             # node_size=0.1,
             # arrowhead_size=20,
             # curved_radius=0.2,

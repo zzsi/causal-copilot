@@ -167,6 +167,18 @@ def drop_greater_miss_between_30_50_feature(global_state):
     return global_state
 
 
+def remove_constant(global_state):
+    data = global_state.user_data.raw_data
+    col_types, _ = data_preprocess(data)
+    for col in data.columns:
+        if col_types[col] == "Category":
+            unique_num = data[col].nunique()
+            if unique_num == 1:
+                data = data.drop(columns=[col])
+                global_state.user_data.selected_features = [feature for feature in global_state.user_data.selected_features if feature != col]
+    print("remove_constant", global_state.user_data.selected_features)
+    return global_state
+
 # Correlation checking #################################################################################################
 def correlation_check(global_state):
     df = global_state.user_data.raw_data[global_state.user_data.selected_features]

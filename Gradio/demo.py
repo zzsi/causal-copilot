@@ -120,10 +120,15 @@ DEMO_DATASETS = {
         "path": "dataset/CCS_Data/CCS_Data.csv",
         "query": "Analyze causal relationships between variables in the CCS dataset. The data contains multiple continuous variables."
     },
-    "Ozone": {
-        "name": "🌫️ Real Dataset: Ozone", 
-        "path": "dataset/Ozone/Ozone.csv",
-        "query": "This is a Time-Series dataset, investigate causal factors affecting ozone levels. The data contains atmospheric and weather measurements over time."
+    "Earth Quakes": {
+        "name": "🏚️ Real Dataset: Earth Quakes (Time-Series)", 
+        "path": "dataset/earthquakes/earthquakes.csv",
+        "query": "This is a Time-Series dataset, investigate causal factors affecting number of deaths. The data contains multiple continuous variables."
+    },
+    "Online Shop": {
+        "name": "🛍️ Real Dataset: Online Shop (Time-Series)",
+        "path": "dataset/onlineshop/2021online_shop.csv",
+        "query": "This is a Time-Series dataset, Please discover the causal structure of different factors and profits."
     },
     "Linear_Gaussian": {
         "name": "🟦 Simulated Data: Linear Gaussian",
@@ -253,7 +258,9 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             # Preprocessing - Step 5: Missing Value Checking
             np_nan = np_nan_detect(global_state)
-            # Preprocessing - Step 6: Correlation Checking
+            # Preprocessing - Step 6: Remove Constant Features
+            global_state = remove_constant(global_state)
+            # Preprocessing - Step 7: Correlation Checking
             global_state, drop = correlation_check(global_state)
 
             tables = "We conduct the following preliminary checks on your dataset: \n"\
@@ -404,8 +411,8 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             if args.data_mode == 'real':
                 chat_history.append(("🌍 Generate background knowledge based on the dataset you provided...", None))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                global_state = knowledge_info(args, global_state)
-                # global_state.user_data.knowledge_docs = "This is fake domain knowledge for debugging purposes."
+                # global_state = knowledge_info(args, global_state)
+                global_state.user_data.knowledge_docs = "This is fake domain knowledge for debugging purposes."
                 knowledge_clean = str(global_state.user_data.knowledge_docs).replace("[", "").replace("]", "").replace('"',"").replace("\\n\\n", "\n\n").replace("\\n", "\n").replace("'", "")
                 chat_history.append((None, knowledge_clean))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -741,6 +748,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             else: 
                 global_state.results.revised_graph = global_state.results.converted_graph
                 global_state.results.llm_errors = {'direct_record':None, 'forbid_record': None}
+                global_state.results.bootstrap_probability = None
                 CURRENT_STAGE = 'user_prune'
 
         # Evaluation for Initial Graph

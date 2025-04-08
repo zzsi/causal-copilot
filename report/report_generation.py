@@ -71,24 +71,19 @@ class Report_generation(object):
         :param args: arguments for the report generation
         """
         ######## Load the chosen global state and record all global states history ########
-        print('index',global_state.results.report_selected_index)
+        inference_global_state = global_state
         if global_state.results.report_selected_index is not None:
             self.global_state_list = []
             for algo in global_state.logging.global_state_logging:
                 with open(f'{global_state.user_data.output_graph_dir}/{algo}_global_state.pkl', 'rb') as f:
                     self.global_state_list.append(pickle.load(f))
             global_state = self.global_state_list[global_state.results.report_selected_index]
-            inference_global_state = None
-            for state in self.global_state_list:
-                if state.inference.task_index > -1:
-                    inference_global_state = state
-                    break
         else:
             self.global_state_list = [global_state]
             global_state.logging.global_state_logging = [global_state.algorithm.selected_algorithm]
         # ###
         # self.global_state_list = []
-        # for algo in ['GES','FCI']:
+        # for algo in ['PCMCI', 'VARLiNGAM']:
         #     with open(f'{global_state.user_data.output_graph_dir}/{algo}_global_state.pkl', 'rb') as f:
         #         self.global_state_list.append(pickle.load(f))
         # global_state = self.global_state_list[0]
@@ -251,12 +246,12 @@ The output should be:
         
         variables = self.data.columns
         print("variables: ", variables)
+        zero_matrix = np.zeros((len(variables), len(variables)))
         if result_parsed != {}:
             section2 = """
             \\begin{itemize}
             """
             # Potential Relationship Visualization
-            zero_matrix = np.zeros((len(variables), len(variables)))
             valid_pairs = 0
             for pair in result_parsed.keys():
                 explanation = result_parsed[pair]
@@ -332,15 +327,15 @@ The output should be:
                     \centering
                     \includegraphics[width=\linewidth]{{{self.visual_dir}/residuals_plot.jpg}}
                     \\vfill
-                    \caption{{Residual Plot}}
+                    \caption{{Residual Plot.}}
                 \end{{subfigure}}
                 \\begin{{subfigure}}{{0.45\\textwidth}}
                     \centering
                     \includegraphics[width=\linewidth]{{{self.visual_dir}/qq_plot.jpg}}
                     \\vfill
-                    \caption{{Q-Q Plot}}
+                    \caption{{Q-Q Plot.}}
                 \end{{subfigure}}
-            \caption{{Plots for Data Properties Checking}}
+            \caption{{Plots for Data Properties Checking.}}
             \end{{figure}}   
             """
         else:
@@ -358,7 +353,7 @@ The output should be:
 \\begin{{figure}}[H]
         \centering
         \includegraphics[width=\linewidth]{{{self.visual_dir}/eda_lag_correlation.jpg}}
-        \caption{{\label{{fig:corr}}Heatmap of Time-Lagged Correlations Among Variables}}
+        \caption{{\label{{fig:corr}}Heatmap of Time-Lagged Correlations Among Variables.}}
 \end{{figure}}
 
 {corr_summary_text}
@@ -404,7 +399,7 @@ The following figure presents distributions of various variables. The orange das
 \begin{{figure}}[H]
 \centering
 \includegraphics[width=\linewidth]{{{self.visual_dir}/eda_dist.jpg}}
-\caption{{Distribution Plots of Variables}}
+\caption{{Distribution Plots of Variables.}}
 \end{{figure}}
 
 {dist_doc}
@@ -421,7 +416,7 @@ The following figure presents distributions of various variables. The orange das
         \centering
         \vspace{{-1.5cm}}
         \includegraphics[width=\linewidth]{{{self.visual_dir}/eda_corr.jpg}}
-        \caption{{Correlation Heatmap of Variables}}
+        \caption{{Correlation Heatmap of Variables.}}
     \end{{figure}}
 \end{{minipage}}
         """
@@ -528,7 +523,7 @@ The following figure presents distributions of various variables. The orange das
     \begin{{subfigure}}[b]{{0.48\textwidth}}
         \centering
         \includegraphics[width=\textwidth]{{{self.visual_dir}/{self.algo}_timelag_graph.pdf}}
-        \caption{{Time Lag Graph Discovered by the Algorithm}}
+        \caption{{Time Lag Graph Discovered by the Algorithm.}}
         \label{{fig:timelag}}
     \end{{subfigure}}
     \hfill
@@ -538,7 +533,7 @@ The following figure presents distributions of various variables. The orange das
         \caption{{Summary Graph Discovered by the Algorithm. Solid lines represent causal edges identified by the algorithm, while dashed lines indicate strong correlations without inferred causality.}}
         \label{{fig:summary}}
     \end{{subfigure}}
-    \caption{{Graphs Discovered by the Algorithm. Solid lines represent causal edges identified by the algorithm, while dashed lines indicate strong correlations without inferred causality.}}
+    \caption{{Graphs Discovered by the Algorithm.}}
     \label{{fig:both_graphs}}
 \end{{figure}}
             """
@@ -551,7 +546,7 @@ The following figure presents distributions of various variables. The orange das
     \begin{{figure}}[H]
         \centering
         \includegraphics[width=0.5\textwidth]{{{self.visual_dir}/{self.algo}_initial_graph.pdf}}
-        \caption{{Causal Graph Discovered by the Algorithm}}
+        \caption{{Causal Graph Discovered by the Algorithm. Solid lines represent causal edges identified by the algorithm, while dashed lines indicate strong correlations without inferred causality.}}
     \end{{figure}}
 
     The above is the original causal graph produced by our algorithm.
@@ -599,7 +594,8 @@ The following figure presents distributions of various variables. The orange das
         return response_doc
 
     def graph_revise_prompts(self):
-        if self.bootstrap_probability is not None and self.revised_graph is not None:
+        file_path = f'{self.visual_dir}/{self.algo}_revised_graph.pdf'
+        if self.bootstrap_probability is not None and os.path.exists(file_path):
             response = f"""
             By using the method mentioned in the Section 4.4, we provide a revise graph pruned with Bootstrap and LLM suggestion.
             Pruning results are as follows.
@@ -636,12 +632,18 @@ The following figure presents distributions of various variables. The orange das
                 LLM doesn't forbid any edges.
                 """
                 
-            llm_direction_reason = direct_record  
-            if llm_direction_reason!={} and llm_direction_reason is not None:
-                response += f"""
-                    The following are directions confirmed by the LLM:
+            llm_direction_reason = dict(list(direct_record.items())[:10])
+            if llm_direction_reason!=[] and llm_direction_reason is not None:
+                if len(llm_direction_reason) > 10:
+                    response += f"""
+                    The following are directions added by the LLM (We only include a part of edges):
                     \\begin{{itemize}}
                     """
+                else:
+                    response += f"""
+                        The following are directions added by the LLM:
+                        \\begin{{itemize}}
+                        """
                 for item in llm_direction_reason.values():
                     response += f"""
                     \item \\textbf{{{item[0][0].replace('_', ' ')} $\\rightarrow$ {item[0][1].replace('_', ' ')}}}: {item[1]}
@@ -662,7 +664,7 @@ The following figure presents distributions of various variables. The orange das
             \begin{{figure}}[H]
             \centering
             \includegraphics[width=0.5\textwidth]{{{self.visual_dir}/{self.algo}_revised_graph.pdf}}
-            \caption{{Revised Graph by LLM}}
+            \caption{{Revised Graph by LLM.}}
             \end{{figure}}
             """
 
@@ -676,8 +678,8 @@ The following figure presents distributions of various variables. The orange das
         name_map = {'certain_edges': 'Directed Edge', #(->)
                     'uncertain_edges': 'Undirected Edge', #(-)
                     'bi_edges': 'Bi-Directed Edge', #(<->)
-                    'half_certain_edges': 'Non-Ancestor Edge', #(o->)
-                    'half_uncertain_edges': 'edge of non-ancestor ($o-$)', #(o-)
+                    'half_certain_edges': 'Undirected Directed Non-Ancestor Edge', #(o->)
+                    'half_uncertain_edges': 'Non-Ancestor Edge', #(o-)
                     'none_edges': 'No D-Seperation Edge', #(o-o)
                     'none_existence':'No Edge'}
         graph_text = """
@@ -688,29 +690,36 @@ The following figure presents distributions of various variables. The orange das
             bootstrap_dict = {k: v for k, v in self.bootstrap_probability.items() if v is not None and sum(v.flatten())>0}
             zero_graphs = [k for k, v in self.bootstrap_probability.items() if  v is not None and sum(v.flatten())==0]
             if len(zero_graphs) < len(bootstrap_dict):
-                length = round(1/len(bootstrap_dict), 2)-0.01
+                width = 0.3  # Approximately 1/3 of textwidth with some spacing
+                # Counter to track position in the row
+                counter = 0
                 for key in bootstrap_dict.keys():
                     graph_path = f'{self.visual_dir}/{key}_confidence_heatmap.jpg'
                     caption = f'{name_map[key]}'
+                    # Add subfigure
                     graph_text += f"""
-                    \\begin{{subfigure}}{{{length}\\textwidth}}
+                    \\begin{{subfigure}}{{{width}\\textwidth}}
                             \centering
                             \includegraphics[width=\linewidth]{{{graph_path}}}
                             \\vfill
                             \caption{{{caption}}}
-                        \end{{subfigure}}"""
-                
+                    \end{{subfigure}}"""
+                    # Increment counter
+                    counter += 1
+                    # Start a new row after every 3 plots or at the end
+                    if counter % 3 == 0 and counter < len(bootstrap_dict):
+                        graph_text += "\n        \\\\[10pt]"  # Line break and some vertical space
                 graph_text += """
-                \caption{Confidence Heatmap of Different Edges}
+                \caption{Confidence Heatmap of Different Edges.}
                 \end{figure}    
                 """
                 ### Generate text illustration
-                text_map = {'certain_edges': 'directed edge ($->$)', #(->)
+                text_map = {'certain_edges': rf'directed edge ($\rightarrow$)', #(->)
                             'uncertain_edges': 'undirected edge ($-$)', #(-)
-                            'bi_edges': 'edge with hidden confounders ($<->$)', #(<->)
-                            'half_certain_edges': 'edge of non-ancestor ($o->$)', #(o->)
-                            'half_uncertain_edges': 'edge of non-ancestor ($o-$)', #(o-)
-                            'none_edges': 'egde of no D-Seperation set', #(o-o)
+                            'bi_edges': 'edge with hidden confounders ($\leftrightarrow$)', #(<->)
+                            'half_certain_edges': rf'edge of non-ancestor (o$\rightarrow$)', #(o->)
+                            'half_uncertain_edges': 'edge of non-ancestor (o$-$)', #(o-)
+                            'none_edges': 'egde of no D-Seperation set (o$-$o)', #(o-o)
                             'none_existence':'No Edge'}
                 graph_text += "The above heatmaps show the confidence probability we have on different kinds of edges, including "
                 for k in bootstrap_dict.keys():
@@ -780,7 +789,7 @@ The following figure presents distributions of various variables. The orange das
                     \\begin{{figure}}[H]
                         \centering
                         \includegraphics[width=0.7\\textwidth]{{{self.visual_dir}/refutation_graph.jpg}}
-                        \caption{{Refutation Graph}}
+                        \caption{{Refutation Graph.}}
                     \end{{figure}} \n
                     """
             text += self.global_state.results.refutation_analysis.replace('_', '\_')
@@ -811,7 +820,7 @@ The following figure presents distributions of various variables. The orange das
                         \caption{{{caption}}}
                     \end{{subfigure}}"""            
             graph_text += """
-            \caption{Result Graph Comparision of Different Algorithms}
+            \caption{Result Graph Comparision of Different Algorithms.}
             \end{figure}    
             """
 
@@ -983,12 +992,12 @@ Help me to write a comparison of the following causal discovery results of diffe
                 df = df[random_columns]
             # df.columns = [var.replace('_', ' ') for var in df.columns]
             data_preview = df.head().to_latex(index=False)
-            # if len(self.data.columns) >= 9:
-            data_preview = f"""
-            \\resizebox{{\\textwidth}}{{!}}{{
-            {data_preview}
-            }}
-            """
+            if len(self.data.columns) >= 8:
+                data_preview = f"""
+                \\resizebox{{\\textwidth}}{{!}}{{
+                {data_preview}
+                }}
+                """
             data_prop_table = self.data_prop_prompt()
             # Intro info
             self.title, dataset = self.get_title()
@@ -1023,7 +1032,7 @@ Help me to write a comparison of the following causal discovery results of diffe
             self.result_comparison_graph_text, self.result_comparison = self.comparision_prompt()
             
             # Causal Inference info
-            if self.inference_global_state is not None:
+            if self.inference_global_state.inference.task_index != -1:
                 inf_report_generator = Inference_Report_generation(self.inference_global_state, self.args)
                 self.inf_report = inf_report_generator.generation()
             else:
@@ -1225,11 +1234,11 @@ def parse_args():
 
 import pickle  
 if __name__ == '__main__':
-    args = parse_args()
-    with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250407_100342/heart disease/output_graph/GES_global_state.pkl', 'rb') as file:
-        global_state = pickle.load(file)
-    test(args, global_state)
-    # save_path = 'demo_data/20250130_130622/house_price/output_report'
-    # compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
+    # args = parse_args()
+    # with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250408_105532/DailyDelhiClimate/output_graph/PCMCI_global_state.pkl', 'rb') as file:
+    #     global_state = pickle.load(file)
+    # test(args, global_state)
+    save_path = '/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250407_010855/Cleaned_Students_Performance/output_report'
+    compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
     
 
