@@ -114,6 +114,7 @@ def draw(
 
     dot.graph_attr['dpi'] = '300'
     dot.graph_attr['margin'] = '1'
+    dot.graph_attr['pad'] = '0.5'
     if pos is not None:
         dot.engine = 'neato'  
         dot.graph_attr['overlap'] = 'false'
@@ -121,7 +122,7 @@ def draw(
         dot.graph_attr['K'] = '0.8'
         dot.graph_attr['nodesep'] = '0.5'
         dot.graph_attr['ranksep'] = '0.5'
-        dot.graph_attr['size'] = '12,12'
+        dot.graph_attr['size'] = '15,15'
         dot.graph_attr['ratio'] = 'fill',
         dot.graph_attr['overlap_scaling'] = '0.5'
 
@@ -161,8 +162,9 @@ def draw(
     dot.graph_attr['ranksep'] = '0.5'
     dot.graph_attr['size'] = str(size)+','+str(size)
     dot.graph_attr['ratio'] = 'fill'
-    dot.graph_attr['size'] = '12,12'
+    dot.graph_attr['size'] = '15,15'
     dot.graph_attr['overlap_scaling'] = '0.5'
+    dot.graph_attr['pad'] = '0.5'
 
     node_height = "1"  # Increased from 0.5 to 0.8
     node_width = "1"   # Increased from 0.5 to 0.8

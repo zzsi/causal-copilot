@@ -222,6 +222,8 @@ class EDA(object):
         sns.heatmap(correlation_matrix, annot=True, cmap='PuBu', fmt=".2f", square=True, cbar_kws={"shrink": .8})
         plt.title('Correlation Heatmap', fontsize=16, fontweight='bold')
         # Save the plot
+        if not os.path.exists(self.save_dir):
+            os.makedirs(self.save_dir)
         save_path_corr = os.path.join(self.save_dir, 'eda_corr.jpg')
         plt.savefig(fname=save_path_corr, dpi=1000)
 
@@ -623,7 +625,7 @@ class EDA(object):
         return summary
     
     
-    def time_series_diagnostics(self, max_vars=3, max_lags=5):
+    def time_series_diagnostics(self, max_vars=3, max_lags=5, interval=2):
         """
         Create detailed time series diagnostic plots including ACF, PACF, and stationarity information.
         
@@ -679,7 +681,7 @@ class EDA(object):
             plt.figure(figsize=(12, 8))
             
             # Create a 2x3 grid layout
-            gs = plt.GridSpec(2, 3, height_ratios=[1, 1.2], width_ratios=[3, 1, 1],
+            gs = plt.GridSpec(2, 3, height_ratios=[1, 1.2], width_ratios=[3, 3, 1],
                             wspace=0.25, hspace=0.4)
             
             # === TOP ROW ===
@@ -716,63 +718,62 @@ class EDA(object):
             stats_text += f"Min: {series.min():.2f}\n"
             stats_text += f"Max: {series.max():.2f}\n"
             
+            # === BOTTOM ROW ===
+            # Plot 3: Stationarity test
+            #ax_stationarity = plt.subplot(gs[1, 0])
+            
+            # try:
+            # Perform ADF test
+            adf_result = adfuller(series, autolag='AIC')
+            adf_stat, p_value, _, _, critical_values, _ = adf_result
+            
+            # Determine if the series is stationary
+            is_stationary = p_value < 0.05
+            status_color = 'green' if is_stationary else 'red'
+            status_text = "STATIONARY" if is_stationary else "NON-STATIONARY"
+                
+                # # Plot differenced series if non-stationary to show improvement
+                # if not is_stationary:
+                #     # Calculate first difference
+                #     diff_series = series.diff().dropna()
+                #     # Plot original vs differenced
+                #     ax_stationarity.plot(time_index[1:], diff_series, color='green', alpha=0.7, 
+                #                      label='First Difference')
+                #     ax_stationarity.plot(time_index, series, color='gray', alpha=0.3, label='Original')
+                #     ax_stationarity.legend(loc='best', fontsize=8)
+                #     ax_stationarity.set_title("First Difference Transform", fontsize=12)
+                # else:
+                #     # Just plot the stationary series
+                #     ax_stationarity.plot(time_index, series, color='green', alpha=0.7)
+                #     ax_stationarity.set_title("Original Series (Stationary)", fontsize=12)
+                
+                # # Style the plot
+                # ax_stationarity.grid(True, color='#E0E0E0', linestyle=':', linewidth=0.5, alpha=0.5)
+                # ax_stationarity.spines['top'].set_visible(False)
+                # ax_stationarity.spines['right'].set_visible(False)
+                # ax_stationarity.set_xlabel("Time", fontsize=10)
+                # ax_stationarity.set_ylabel("Value", fontsize=10)
+                # ax_stationarity.xaxis.set_major_locator(plt.MaxNLocator(6))
+                
+                # Add stationarity text in the plot
+            stats_text += f"\n ADF Test:\n\n{status_text}\np-value: {p_value:.4f}"
+                # text_box = dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8, 
+                #               edgecolor=status_color, linewidth=2)
+                # ax_stationarity.text(0.05, 0.95, stat_text, transform=ax_stationarity.transAxes,
+                #                   fontsize=9, verticalalignment='top', bbox=text_box)
+                
+            # except:
+            #     print(f"Error in stationarity test for {col}")
+                # ax_stationarity.text(0.5, 0.5, "Cannot compute stationarity test", 
+                #                  ha='center', va='center', fontsize=10)
+                # ax_stationarity.axis('off')
             # Add text with a subtle background
             ax_stats.text(0.05, 0.95, stats_text, transform=ax_stats.transAxes,
                         verticalalignment='top', fontsize=10,
                         bbox=dict(boxstyle="round,pad=0.5", facecolor='#F8F8F8', 
                                 alpha=0.6, edgecolor='#CCCCCC'))
-            
-            # === BOTTOM ROW ===
-            # Plot 3: Stationarity test
-            ax_stationarity = plt.subplot(gs[1, 0])
-            
-            try:
-                # Perform ADF test
-                adf_result = adfuller(series, autolag='AIC')
-                adf_stat, p_value, _, _, critical_values, _ = adf_result
-                
-                # Determine if the series is stationary
-                is_stationary = p_value < 0.05
-                status_color = 'green' if is_stationary else 'red'
-                status_text = "STATIONARY" if is_stationary else "NON-STATIONARY"
-                
-                # Plot differenced series if non-stationary to show improvement
-                if not is_stationary:
-                    # Calculate first difference
-                    diff_series = series.diff().dropna()
-                    # Plot original vs differenced
-                    ax_stationarity.plot(time_index[1:], diff_series, color='green', alpha=0.7, 
-                                     label='First Difference')
-                    ax_stationarity.plot(time_index, series, color='gray', alpha=0.3, label='Original')
-                    ax_stationarity.legend(loc='best', fontsize=8)
-                    ax_stationarity.set_title("First Difference Transform", fontsize=12)
-                else:
-                    # Just plot the stationary series
-                    ax_stationarity.plot(time_index, series, color='green', alpha=0.7)
-                    ax_stationarity.set_title("Original Series (Stationary)", fontsize=12)
-                
-                # Style the plot
-                ax_stationarity.grid(True, color='#E0E0E0', linestyle=':', linewidth=0.5, alpha=0.5)
-                ax_stationarity.spines['top'].set_visible(False)
-                ax_stationarity.spines['right'].set_visible(False)
-                ax_stationarity.set_xlabel("Time", fontsize=10)
-                ax_stationarity.set_ylabel("Value", fontsize=10)
-                ax_stationarity.xaxis.set_major_locator(plt.MaxNLocator(6))
-                
-                # Add stationarity text in the plot
-                stat_text = f"ADF Test:\n{status_text}\np-value: {p_value:.4f}"
-                text_box = dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8, 
-                              edgecolor=status_color, linewidth=2)
-                ax_stationarity.text(0.05, 0.95, stat_text, transform=ax_stationarity.transAxes,
-                                  fontsize=9, verticalalignment='top', bbox=text_box)
-                
-            except:
-                ax_stationarity.text(0.5, 0.5, "Cannot compute stationarity test", 
-                                 ha='center', va='center', fontsize=10)
-                ax_stationarity.axis('off')
-            
             # Plot 4: ACF
-            ax_acf = plt.subplot(gs[1, 1])
+            ax_acf = plt.subplot(gs[1, 0])
             try:
                 # Calculate lags to use based on interval
                 lags_to_use = list(range(0, display_lags + 1, interval))
@@ -808,7 +809,7 @@ class EDA(object):
                 ax_acf.axis('off')
             
             # Plot 5: PACF
-            ax_pacf = plt.subplot(gs[1, 2])
+            ax_pacf = plt.subplot(gs[1, 1])
             try:
                 # Calculate lags to use based on interval
                 lags_to_use = list(range(0, display_lags + 1, interval))
@@ -854,6 +855,7 @@ class EDA(object):
             plt.savefig(var_save_path, dpi=1000, bbox_inches='tight')
             plt.close()
         
+        ################
         # Create an index page with thumbnails of all the variables
         n_cols = min(2, max_vars)
         n_rows = (max_vars + n_cols - 1) // n_cols  # Ceiling division

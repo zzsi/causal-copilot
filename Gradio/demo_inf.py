@@ -848,7 +848,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 return process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn)
         
         if CURRENT_STAGE == 'inference_analysis_check':
-            with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250331_115019/Federal Reserve Interest Rates/output_graph/CDNOD_global_state.pkl', 'rb') as file:
+            with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250407_100342/heart disease/output_graph/FCI_global_state.pkl', 'rb') as file:
                 global_state = pickle.load(file)
                 global_state.inference.task_index = -1
                 global_state.inference.task_info = {}
@@ -1097,6 +1097,14 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             if CURRENT_STAGE != 'report_generation_check':
                 print(CURRENT_STAGE)
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            # else:
+            #     try:
+            #         with open(f'{global_state.user_data.output_graph_dir}/inference_global_state.pkl', 'wb') as f:
+            #             pickle.dump(global_state, f)
+            #     except:
+            #         global_state.args = None
+            #         with open(f'{global_state.user_data.output_graph_dir}/inference_global_state.pkl', 'wb') as f:
+            #             pickle.dump(global_state, f)
 
         # Report Generation
         if CURRENT_STAGE == 'report_generation_check': # empty query or postprocess query parsed successfully
