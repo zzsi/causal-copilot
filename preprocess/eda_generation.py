@@ -702,7 +702,7 @@ class EDA(object):
             ax_series.spines['right'].set_visible(False)
             ax_series.set_xlabel("Time", fontsize=10)
             ax_series.set_ylabel("Value", fontsize=10)
-            ax_series.legend(loc='best', fontsize=9)
+            ax_series.legend(loc='upper right', fontsize=9)
             
             # Reduce number of x-ticks
             ax_series.xaxis.set_major_locator(plt.MaxNLocator(6))

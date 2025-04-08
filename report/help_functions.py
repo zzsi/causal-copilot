@@ -307,22 +307,22 @@ def eda_summary_to_latex(eda_result):
         response_corr_doc = "\\begin{itemize} \n"
         high_corr_list = [f"{key[0]}".replace('_', ' ') + " - " + f"{key[1]}".replace('_', ' ') for key, value in corr_input.items() if abs(value) > 0.8]
         if len(high_corr_list)>10:
-            response_corr_doc += f"\item Strongly Correlated Variables ($\geq 0.9$): {', '.join(high_corr_list)}"
+            response_corr_doc += f"\item \\textbf{{Strongly Correlated Variables}} ($\geq 0.9$): {', '.join(high_corr_list)}"
             response_corr_doc += ", etc. \n"
         else:
-            response_corr_doc += f"\item Strongly Correlated Variables ($\geq 0.9$): {', '.join(high_corr_list) if high_corr_list != [] else 'None'} \n"
+            response_corr_doc += f"\item \\textbf{{Strongly Correlated Variables}} ($\geq 0.9$): {', '.join(high_corr_list) if high_corr_list != [] else 'None'} \n"
         med_corr_list = [f"{key[0]}".replace('_', ' ') + " - " + f"{key[1]}".replace('_', ' ') for key, value in corr_input.items() if (abs(value) <= 0.8 and abs(value) > 0.5)]
         if len(med_corr_list)>10:
-            response_corr_doc += f"\item Moderately Correlated Variables ($0.1-0.9$): {', '.join(med_corr_list)}"
+            response_corr_doc += f"\item \\textbf{{Moderately Correlated Variables}} ($0.1-0.9$): {', '.join(med_corr_list)}"
             response_corr_doc += ", etc. \n"
         else:
-            response_corr_doc += f"\item Moderately Correlated Variables ($0.1-0.9$): {', '.join(med_corr_list) if med_corr_list != [] else 'None'} \n"
-        low_corr_list = [f"{key[0]}".replace('_', ' ') + " -" + f"{key[1]}".replace('_', ' ') for key, value in corr_input.items() if abs(value) <= 0.5]
+            response_corr_doc += f"\item \\textbf{{Moderately Correlated Variables}} ($0.1-0.9$): {', '.join(med_corr_list) if med_corr_list != [] else 'None'} \n"
+        low_corr_list = [f"{key[0]}".replace('_', ' ') + " - " + f"{key[1]}".replace('_', ' ') for key, value in corr_input.items() if abs(value) <= 0.5]
         if len(low_corr_list)>10:
-            response_corr_doc += f"\item Weakly Correlated Variables ($\leq 0.1$): {', '.join(low_corr_list)}"
+            response_corr_doc += f"\item \\textbf{{Weakly Correlated Variables}} ($\leq 0.1$): {', '.join(low_corr_list)}"
             response_corr_doc += ", etc. \n"
         else:
-            response_corr_doc += f"\item Weakly Correlated Variables ($\leq 0.1$): {', '.join(low_corr_list) if low_corr_list != [] else 'None'} \n"
+            response_corr_doc += f"\item \\textbf{{Weakly Correlated Variables}} ($\leq 0.1$): {', '.join(low_corr_list) if low_corr_list != [] else 'None'} \n"
         response_corr_doc += "\end{itemize} \n"
         #print('response_corr_doc: ',response_corr_doc)
         return response_dist_doc, response_corr_doc

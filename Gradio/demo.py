@@ -120,10 +120,15 @@ DEMO_DATASETS = {
         "path": "dataset/CCS_Data/CCS_Data.csv",
         "query": "Analyze causal relationships between variables in the CCS dataset. The data contains multiple continuous variables."
     },
-    "Ozone": {
-        "name": "🌫️ Real Dataset: Ozone", 
-        "path": "dataset/Ozone/Ozone.csv",
-        "query": "This is a Time-Series dataset, investigate causal factors affecting ozone levels. The data contains atmospheric and weather measurements over time."
+    "Earth Quakes": {
+        "name": "🏚️ Real Dataset: Earth Quakes (Time-Series)", 
+        "path": "dataset/earthquakes/earthquakes.csv",
+        "query": "This is a Time-Series dataset, investigate causal factors affecting number of deaths. The data contains multiple continuous variables."
+    },
+    "Online Shop": {
+        "name": "🛍️ Real Dataset: Online Shop (Time-Series)",
+        "path": "dataset/onlineshop/2021online_shop.csv",
+        "query": "This is a Time-Series dataset, Please discover the causal structure of different factors and profits."
     },
     "Linear_Gaussian": {
         "name": "🟦 Simulated Data: Linear Gaussian",
@@ -741,6 +746,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             else: 
                 global_state.results.revised_graph = global_state.results.converted_graph
                 global_state.results.llm_errors = {'direct_record':None, 'forbid_record': None}
+                global_state.results.bootstrap_probability = None
                 CURRENT_STAGE = 'user_prune'
 
         # Evaluation for Initial Graph

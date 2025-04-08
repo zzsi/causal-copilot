@@ -323,7 +323,7 @@ class Visualization(object):
         plot_time_series_graph(
             graph=tigramite_mat,
             # val_matrix=val_matrix,
-            # var_names=var_names,
+            var_names=var_names,
             # link_colorbar_label="Effect strength" if val_matrix is not None else None,
             # figsize=(10, 6),
             save_name=path,

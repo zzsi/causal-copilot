@@ -71,7 +71,7 @@ class Report_generation(object):
         :param args: arguments for the report generation
         """
         ######## Load the chosen global state and record all global states history ########
-        print('index',global_state.results.report_selected_index)
+        inference_global_state = global_state
         if global_state.results.report_selected_index is not None:
             self.global_state_list = []
             for algo in global_state.logging.global_state_logging:
@@ -88,7 +88,7 @@ class Report_generation(object):
             global_state.logging.global_state_logging = [global_state.algorithm.selected_algorithm]
         # ###
         # self.global_state_list = []
-        # for algo in ['GES','FCI']:
+        # for algo in ['PCMCI', 'VARLiNGAM']:
         #     with open(f'{global_state.user_data.output_graph_dir}/{algo}_global_state.pkl', 'rb') as f:
         #         self.global_state_list.append(pickle.load(f))
         # global_state = self.global_state_list[0]
@@ -538,7 +538,7 @@ The following figure presents distributions of various variables. The orange das
         \caption{{Summary Graph Discovered by the Algorithm. Solid lines represent causal edges identified by the algorithm, while dashed lines indicate strong correlations without inferred causality.}}
         \label{{fig:summary}}
     \end{{subfigure}}
-    \caption{{Graphs Discovered by the Algorithm. Solid lines represent causal edges identified by the algorithm, while dashed lines indicate strong correlations without inferred causality.}}
+    \caption{{Graphs Discovered by the Algorithm.}}
     \label{{fig:both_graphs}}
 \end{{figure}}
             """
@@ -551,7 +551,7 @@ The following figure presents distributions of various variables. The orange das
     \begin{{figure}}[H]
         \centering
         \includegraphics[width=0.5\textwidth]{{{self.visual_dir}/{self.algo}_initial_graph.pdf}}
-        \caption{{Causal Graph Discovered by the Algorithm}}
+        \caption{{Causal Graph Discovered by the Algorithm. Solid lines represent causal edges identified by the algorithm, while dashed lines indicate strong correlations without inferred causality.}}
     \end{{figure}}
 
     The above is the original causal graph produced by our algorithm.
@@ -599,7 +599,8 @@ The following figure presents distributions of various variables. The orange das
         return response_doc
 
     def graph_revise_prompts(self):
-        if self.bootstrap_probability is not None and self.revised_graph is not None:
+        file_path = f'{self.visual_dir}/{self.algo}_revised_graph.pdf'
+        if self.bootstrap_probability is not None and os.path.exists(file_path):
             response = f"""
             By using the method mentioned in the Section 4.4, we provide a revise graph pruned with Bootstrap and LLM suggestion.
             Pruning results are as follows.
@@ -636,12 +637,18 @@ The following figure presents distributions of various variables. The orange das
                 LLM doesn't forbid any edges.
                 """
                 
-            llm_direction_reason = direct_record  
-            if llm_direction_reason!={} and llm_direction_reason is not None:
-                response += f"""
-                    The following are directions confirmed by the LLM:
+            llm_direction_reason = dict(list(direct_record.items())[:10])
+            if llm_direction_reason!=[] and llm_direction_reason is not None:
+                if len(llm_direction_reason) > 10:
+                    response += f"""
+                    The following are directions added by the LLM (We only include a part of edges):
                     \\begin{{itemize}}
                     """
+                else:
+                    response += f"""
+                        The following are directions added by the LLM:
+                        \\begin{{itemize}}
+                        """
                 for item in llm_direction_reason.values():
                     response += f"""
                     \item \\textbf{{{item[0][0].replace('_', ' ')} $\\rightarrow$ {item[0][1].replace('_', ' ')}}}: {item[1]}
@@ -673,13 +680,13 @@ The following figure presents distributions of various variables. The orange das
     
     def confidence_graph_prompts(self):
         ### generate graph layout ###
-        name_map = {'certain_edges': 'Directed Edge', #(->)
-                    'uncertain_edges': 'Undirected Edge', #(-)
-                    'bi_edges': 'Bi-Directed Edge', #(<->)
-                    'half_certain_edges': 'Non-Ancestor Edge', #(o->)
-                    'half_uncertain_edges': 'edge of non-ancestor ($o-$)', #(o-)
-                    'none_edges': 'No D-Seperation Edge', #(o-o)
-                    'none_existence':'No Edge'}
+        name_map = {'certain_edges': 'Directed', #(->)
+                    'uncertain_edges': 'Undirected', #(-)
+                    'bi_edges': 'Bi-Directed', #(<->)
+                    'half_certain_edges': 'Non-Ancestor', #(o->)
+                    'half_uncertain_edges': 'Non-Ancestor', #(o-)
+                    'none_edges': 'No D-Seperation', #(o-o)
+                    'none_existence':'No'}
         graph_text = """
         \\begin{figure}[H]
             \centering
@@ -705,12 +712,12 @@ The following figure presents distributions of various variables. The orange das
                 \end{figure}    
                 """
                 ### Generate text illustration
-                text_map = {'certain_edges': 'directed edge ($->$)', #(->)
+                text_map = {'certain_edges': rf'directed edge ($\rightarrow$)', #(->)
                             'uncertain_edges': 'undirected edge ($-$)', #(-)
-                            'bi_edges': 'edge with hidden confounders ($<->$)', #(<->)
-                            'half_certain_edges': 'edge of non-ancestor ($o->$)', #(o->)
-                            'half_uncertain_edges': 'edge of non-ancestor ($o-$)', #(o-)
-                            'none_edges': 'egde of no D-Seperation set', #(o-o)
+                            'bi_edges': 'edge with hidden confounders ($\leftrightarrow$)', #(<->)
+                            'half_certain_edges': rf'edge of non-ancestor (o$\rightarrow$)', #(o->)
+                            'half_uncertain_edges': 'edge of non-ancestor (o$-$)', #(o-)
+                            'none_edges': 'egde of no D-Seperation set (o$-$o)', #(o-o)
                             'none_existence':'No Edge'}
                 graph_text += "The above heatmaps show the confidence probability we have on different kinds of edges, including "
                 for k in bootstrap_dict.keys():
@@ -983,12 +990,12 @@ Help me to write a comparison of the following causal discovery results of diffe
                 df = df[random_columns]
             # df.columns = [var.replace('_', ' ') for var in df.columns]
             data_preview = df.head().to_latex(index=False)
-            # if len(self.data.columns) >= 9:
-            data_preview = f"""
-            \\resizebox{{\\textwidth}}{{!}}{{
-            {data_preview}
-            }}
-            """
+            if len(self.data.columns) >= 8:
+                data_preview = f"""
+                \\resizebox{{\\textwidth}}{{!}}{{
+                {data_preview}
+                }}
+                """
             data_prop_table = self.data_prop_prompt()
             # Intro info
             self.title, dataset = self.get_title()
@@ -1023,7 +1030,7 @@ Help me to write a comparison of the following causal discovery results of diffe
             self.result_comparison_graph_text, self.result_comparison = self.comparision_prompt()
             
             # Causal Inference info
-            if self.inference_global_state is not None:
+            if self.inference_global_state.inference.task_index != -1:
                 inf_report_generator = Inference_Report_generation(self.inference_global_state, self.args)
                 self.inf_report = inf_report_generator.generation()
             else:
@@ -1225,11 +1232,11 @@ def parse_args():
 
 import pickle  
 if __name__ == '__main__':
-    args = parse_args()
-    with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250407_100342/heart disease/output_graph/GES_global_state.pkl', 'rb') as file:
-        global_state = pickle.load(file)
-    test(args, global_state)
-    # save_path = 'demo_data/20250130_130622/house_price/output_report'
-    # compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
+    # args = parse_args()
+    # with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250407_002440/2021online_shop/output_graph/PCMCI_global_state.pkl', 'rb') as file:
+    #     global_state = pickle.load(file)
+    # test(args, global_state)
+    save_path = '/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250407_002440/2021online_shop/output_report'
+    compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
     
 

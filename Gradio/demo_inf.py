@@ -848,7 +848,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 return process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn)
         
         if CURRENT_STAGE == 'inference_analysis_check':
-            with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250407_100342/heart disease/output_graph/FCI_global_state.pkl', 'rb') as file:
+            with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250407_133130/Abalone/output_graph/FGES_global_state.pkl', 'rb') as file:
                 global_state = pickle.load(file)
                 global_state.inference.task_index = -1
                 global_state.inference.task_info = {}
