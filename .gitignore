@@ -152,9 +152,9 @@ test_for_demo/
 report/test
 causal_analysis/test_data
 algorithm/context/algos/profiles/
-algorithm/evaluation/benchmarking_integrated_config.py
-algorithm/evaluation/benchmarking_integrated.py
-algorithm/evaluation/benchmarking_integrated.sh
+# algorithm/evaluation/benchmarking_integrated_config.py
+# algorithm/evaluation/benchmarking_integrated.py
+# algorithm/evaluation/benchmarking_integrated.sh
 test_output/
 externals/trustworthyAI/
 ts_eda_test_output/
@@ -167,7 +167,8 @@ benchmark.ipynb
 ts_eda.py
 data/simulation/benchmark.py
 data/simulation/evaluation.py
-data/simulation/ts_benchmark.py
+# data/simulation/ts_benchmark.py
 algorithm/context/algos/consolidated_benchmarking_results.txt
 # algorithm/context/benchmarking/algorithm_performance_analysis.json
 figures/
+improved_figures/

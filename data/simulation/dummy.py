@@ -827,24 +827,34 @@ class TimeSeriesSimulator:
         summary_adj, lagged_adj = self._dict_to_adjacency_matrix(graph_true, num_nodes, lag)
         
         # Store results
+        function_type, noise_type = noise_type.split('-')
+        if noise_type == 'gauss':
+            noise_type = 'gaussian'
+        elif noise_type == 'exp':
+            noise_type = 'exponential'
+        elif noise_type == 'gumbel':
+            noise_type = 'gumbel'
+            
         self.graph = graph_net
         self.data = df
+        self.ground_truth = {}
+        self.ground_truth['graph'] = graph_true
         self.ground_truth['summary_adjacency'] = summary_adj
         self.ground_truth['lagged_adjacency'] = lagged_adj
         self.ground_truth['config'] = {
-            "num_nodes": num_nodes,
+            "n_nodes": num_nodes,
             "lag": lag,
             "degree_inter": degree_inter,
             "degree_intra": degree_intra,
             "w_min_intra": w_min_intra,
             "w_max_intra": w_max_intra,
             "w_min_inter": w_min_inter,
-            "w_max_inter": w_min_inter,
+            "w_max_inter": w_max_inter,
             "noise_type": noise_type,
-            "sample_size": sample_size,
+            "function_type": function_type,
+            "n_samples": sample_size,
             "seed": seed
         }
-        
         return df
     
     def _get_graph(self, sm, data):
@@ -924,7 +934,7 @@ class TimeSeriesSimulator:
         self.data.to_csv(data_filename, index=False)
         
         # Save the summary adjacency matrix
-        summary_filename = os.path.join(output_dir, f"{prefix}_{timestamp}_summary.npy")
+        summary_filename = os.path.join(output_dir, f"{prefix}_{timestamp}_graph.npy")
         np.save(summary_filename, self.ground_truth['summary_adjacency'])
         
         # Save the lagged adjacency matrix

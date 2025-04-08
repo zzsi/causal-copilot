@@ -290,17 +290,77 @@ def convert_indices_to_names(data: pd.DataFrame, idx_mapping: Dict[int, List[int
     return name_mapping
 
 
-def remove_highly_correlated_features(data: pd.DataFrame, high_corr_feature_groups: Dict[str, List[str]]) -> Tuple[pd.DataFrame, Dict[int, List[int]], List[int]]:
+def find_correlated_components(data: pd.DataFrame, threshold: float = 0.95) -> List[List[int]]:
     """
-    Remove highly correlated features from the dataset based on the provided mapping.
+    Find connected components of highly correlated features using correlation matrix.
+    
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The input dataset.
+    threshold : float, default=0.95
+        Absolute correlation threshold to consider features as highly correlated.
+    
+    Returns
+    -------
+    List[List[int]]
+        List of connected components where each component is a list of column indices.
+    """
+    n_features = data.shape[1]
+    # Calculate correlation matrix
+    corr_matrix = data.corr().abs().values
+    
+    # Create a graph for connected components
+    G = nx.Graph()
+    G.add_nodes_from(range(n_features))
+    
+    # Add edges for highly correlated pairs
+    for i in range(n_features):
+        for j in range(i+1, n_features):
+            if corr_matrix[i, j] >= threshold:
+                G.add_edge(i, j)
+    
+    # Find connected components (groups of correlated features)
+    components = list(nx.connected_components(G))
+    return [sorted(list(comp)) for comp in components if len(comp) > 1]
+
+def select_representatives(components: List[List[int]]) -> Dict[int, List[int]]:
+    """
+    Select representative features for each connected component.
+    
+    Parameters
+    ----------
+    components : List[List[int]]
+        List of connected components.
+    
+    Returns
+    -------
+    Dict[int, List[int]]
+        Mapping from representative indices to lists of represented indices.
+    """
+    representatives = {}
+    
+    for component in components:
+        # Select the first node as representative
+        rep_idx = component[0]
+        represented = [idx for idx in component if idx != rep_idx]
+        representatives[rep_idx] = represented
+    
+    return representatives
+
+def remove_highly_correlated_features(data: pd.DataFrame, high_corr_feature_groups: Dict[str, List[str]] = None, threshold: float = 0.95) -> Tuple[pd.DataFrame, Dict[int, List[int]], List[int]]:
+    """
+    Remove highly correlated features from the dataset using connected components.
     
     Parameters
     ----------
     data : pd.DataFrame
         The input dataset with all features.
-    high_corr_feature_groups : Dict[str, List[str]]
+    high_corr_feature_groups : Dict[str, List[str]], optional
         A dictionary mapping column names to lists of their highly correlated column names.
-        Example: {'X0': ['X5', 'X8']} means columns 'X5' and 'X8' are highly correlated with 'X0'.
+        If provided, this will be used instead of computing correlations.
+    threshold : float, default=0.95
+        Correlation threshold to consider features as highly correlated.
     
     Returns
     -------
@@ -309,206 +369,193 @@ def remove_highly_correlated_features(data: pd.DataFrame, high_corr_feature_grou
         - The mapping with indices for the reduced dataset
         - List of original indices kept in the reduced dataset
     """
-    if not high_corr_feature_groups:
-        return data, {}, list(range(data.shape[1]))
-    
-    # Convert name-based mapping to index-based mapping
-    idx_mapping = convert_names_to_indices(data, high_corr_feature_groups)
-    
-    # Identify all nodes to be removed
-    nodes_to_remove = []
-    for source_node, correlated_nodes in idx_mapping.items():
-        nodes_to_remove.extend(correlated_nodes)
-    
-    # Create a list of nodes to keep
-    all_nodes = list(range(data.shape[1]))
-    nodes_to_keep = [node for node in all_nodes if node not in nodes_to_remove]
-    
-    # Create mapping from original indices to new indices in reduced dataset
-    orig_to_reduced = {orig_idx: reduced_idx for reduced_idx, orig_idx in enumerate(nodes_to_keep)}
-    
-    # Create adjusted mapping for the reduced dataset
-    adjusted_mapping = {}
-    for source_node, correlated_nodes in idx_mapping.items():
-        if source_node in nodes_to_keep:  # Only include if source node is kept
-            adjusted_mapping[orig_to_reduced[source_node]] = correlated_nodes
-    
-    # Remove correlated features from the dataset
-    reduced_data = data.iloc[:, nodes_to_keep]
-    
-    return reduced_data, adjusted_mapping, nodes_to_keep
+    if high_corr_feature_groups is not None:
+        # Convert name-based mapping to index-based mapping
+        idx_mapping = convert_names_to_indices(data, high_corr_feature_groups)
+        
+        # Identify all nodes to be removed
+        nodes_to_remove = []
+        for _, correlated_nodes in idx_mapping.items():
+            nodes_to_remove.extend(correlated_nodes)
+        
+        # Create a list of nodes to keep
+        all_nodes = list(range(data.shape[1]))
+        nodes_to_keep = [node for node in all_nodes if node not in nodes_to_remove]
+        
+        # Create mapping from original indices to new indices in reduced dataset
+        orig_to_reduced = {orig_idx: reduced_idx for reduced_idx, orig_idx in enumerate(nodes_to_keep)}
+        
+        # Create adjusted mapping for the reduced dataset
+        adjusted_mapping = {}
+        for source_node, correlated_nodes in idx_mapping.items():
+            if source_node in nodes_to_keep:  # Only include if source node is kept
+                adjusted_mapping[orig_to_reduced[source_node]] = correlated_nodes
+        
+        # Remove correlated features from the dataset
+        reduced_data = data.iloc[:, nodes_to_keep]
+        
+        return reduced_data, adjusted_mapping, nodes_to_keep
+    else:
+        # Find connected components based on correlation
+        components = find_correlated_components(data, threshold)
+        
+        # If no correlated components found, return original data
+        if not components:
+            return data, {}, list(range(data.shape[1]))
+        
+        # Select representatives for each component
+        rep_dict = select_representatives(components)
+        
+        # Identify all nodes to be removed
+        nodes_to_remove = []
+        for _, represented_idxs in rep_dict.items():
+            nodes_to_remove.extend(represented_idxs)
+        
+        # Create a list of nodes to keep
+        all_nodes = list(range(data.shape[1]))
+        nodes_to_keep = [node for node in all_nodes if node not in nodes_to_remove]
+        
+        # Create mapping from original indices to new indices in reduced dataset
+        orig_to_reduced = {orig_idx: reduced_idx for reduced_idx, orig_idx in enumerate(nodes_to_keep)}
+        
+        # Create adjusted mapping for the reduced dataset
+        adjusted_mapping = {}
+        for rep_idx, represented_idxs in rep_dict.items():
+            if rep_idx in nodes_to_keep:  # Only include if representative node is kept
+                adjusted_mapping[orig_to_reduced[rep_idx]] = represented_idxs
+        
+        # Remove correlated features from the dataset
+        reduced_data = data.iloc[:, nodes_to_keep]
+        
+        return reduced_data, adjusted_mapping, nodes_to_keep
 
-def add_correlated_nodes_to_graph(graph: np.ndarray, correlated_nodes_map: Dict[str, List[str]], data: pd.DataFrame) -> np.ndarray:
+def add_correlated_nodes_to_graph(graph: np.ndarray, original_indices: List[int], correlated_nodes_map: Dict[str, List[str]] = None, data: pd.DataFrame = None, threshold: float = 0.95) -> np.ndarray:
     """
     Add highly correlated nodes back to the graph after causal discovery.
-    
-    This function takes a graph adjacency matrix and a mapping of nodes to their highly correlated nodes,
-    then adds the correlated nodes back to the graph with the same relationships as their corresponding nodes.
-    Additionally, it adds undirected edges between each source node and its correlated nodes.
     
     Parameters
     ----------
     graph : np.ndarray
         The adjacency matrix representing the causal graph.
-        Can be either:
-        - Shape (N, N) for standard graphs
-        - Shape (L, N, N) for lagged graphs where L is the number of lags
-        
-        Edge types follow the convention in GraphEvaluator.EDGE_TYPES:
-        - 0: no_edge
-        - 1: directed (j->i)
-        - 2: undirected
-        - 3: bidirected
-        - 4: partial_directed
-        - 5: partial_undirected
-        - 6: partial_unknown
-        - 7: correlation (used for highly correlated features)
-    
-    correlated_nodes_map : Dict[str, List[str]]
-        A dictionary mapping column names to lists of their highly correlated column names
-        that were removed before causal discovery.
-        Example: {'X0': ['X5', 'X8']} means columns 'X5' and 'X8' were highly correlated with 'X0'.
-    
+        In this graph, a value of 1 at position [j, i] means that i causes j (i → j).
+    correlated_nodes_map : Dict[str, List[str]], optional
+        A dictionary mapping column names to lists of their highly correlated column names.
+        If provided, this will be used instead of computing correlations.
     data : pd.DataFrame
-        The original dataset with all features, used to map column names to indices.
+        The original dataset with all features.
+    threshold : float, default=0.95
+        Correlation threshold to consider features as highly correlated.
+    original_indices : List[int], optional
+        List of original indices that were kept in the reduced dataset. If provided,
+        this ensures the graph uses the correct original indices.
     
     Returns
     -------
     np.ndarray
-        The expanded adjacency matrix including the correlated nodes with the same relationships.
-        Will have the same dimensionality as the input graph (either 2D or 3D).
-    
-    Examples
-    --------
-    >>> graph = np.array([[0, 1, 0], [0, 0, 1], [0, 0, 0]])  # X0->X1->X2
-    >>> correlated_map = {'X0': ['X3', 'X4'], 'X2': ['X5']}  # X3,X4 correlated with X0; X5 with X2
-    >>> data = pd.DataFrame(np.random.randn(100, 6), columns=['X0', 'X1', 'X2', 'X3', 'X4', 'X5'])
-    >>> expanded_graph = add_correlated_nodes_to_graph(graph, correlated_map, data)
+        The expanded adjacency matrix including the correlated nodes.
     """
-    if not correlated_nodes_map:
+    if data is None:
         return graph
-    
-    # Always use full original dataset size rather than just the graph size
-    orig_size = len(data.columns)
     
     # Check if we're dealing with a lagged graph (3D) or standard graph (2D)
     is_lagged_graph = len(graph.shape) == 3
     
-    # Create mapping from column names to indices
-    col_to_idx = {col: idx for idx, col in enumerate(data.columns)}
+    # Original dataset size
+    orig_size = data.shape[1]
     
-    # Collect all node indices that need to be included in the expanded graph
-    all_nodes = set(range(graph.shape[-1]))  # Start with current graph nodes
-    for source_name, corr_names in correlated_nodes_map.items():
-        if source_name in col_to_idx:
-            all_nodes.add(col_to_idx[source_name])
-            for corr_name in corr_names:
-                if corr_name in col_to_idx:
-                    all_nodes.add(col_to_idx[corr_name])
+    # If using provided correlated nodes map, convert from names to indices
+    idx_mapping = {}
+    if correlated_nodes_map is not None:
+        idx_mapping = convert_names_to_indices(data, correlated_nodes_map)
+    else:
+        # Find connected components based on correlation
+        components = find_correlated_components(data, threshold)
+        # Select representatives
+        idx_mapping = select_representatives(components)
     
-    # Determine expanded graph size - use original dataset size to ensure all nodes are included
-    expanded_size = max(orig_size, max(all_nodes) + 1 if all_nodes else 0)
+    if not idx_mapping:
+        return graph
     
     if is_lagged_graph:
         # For lagged graphs (L, N, N)
         L, n, _ = graph.shape
         
         # Create expanded graph with space for all original nodes
-        expanded_graph = np.zeros((L, expanded_size, expanded_size), dtype=graph.dtype)
+        expanded_graph = np.zeros((L, orig_size, orig_size), dtype=graph.dtype)
         
-        # Copy original graph to expanded graph
-        expanded_graph[:, :n, :n] = graph
-        
-        # Add correlated nodes with the same relationships for each lag
-        for source_name, corr_names in correlated_nodes_map.items():
-            if source_name not in col_to_idx:
-                continue  # Skip if source node isn't in the dataset
-                
-            source_idx = col_to_idx[source_name]
-            if source_idx >= n:
-                continue  # Skip if source node is outside the original graph
-                
-            for corr_name in corr_names:
-                if corr_name not in col_to_idx:
-                    continue  # Skip if correlated node isn't in the dataset
-                    
-                corr_idx = col_to_idx[corr_name]
-                
-                # Process each lag layer
+        for i in range(n):
+            for j in range(n):
                 for lag in range(L):
-                    # Copy incoming edges (parents)
-                    for i in range(n):
-                        if graph[lag, i, source_idx] != 0:  # If i has an edge to source_idx
-                            expanded_graph[lag, i, corr_idx] = graph[lag, i, source_idx]
-                            
-                    # Copy outgoing edges (children)
-                    for j in range(n):
-                        if graph[lag, source_idx, j] != 0:  # If source_idx has an edge to j
-                            expanded_graph[lag, corr_idx, j] = graph[lag, source_idx, j]
-                    
-                    # If there are bidirectional or undirected edges, copy those too
-                    for k in range(n):
-                        if k != source_idx:
-                            # Check for bidirectional edges (both i->j and j->i exist)
-                            if graph[lag, source_idx, k] != 0 and graph[lag, k, source_idx] != 0:
-                                expanded_graph[lag, corr_idx, k] = graph[lag, source_idx, k]
-                                expanded_graph[lag, k, corr_idx] = graph[lag, k, source_idx]
+                    if graph[lag, i, j] != 0:
+                        expanded_graph[lag, original_indices[i], original_indices[j]] = graph[lag, i, j]
+       
+        # Add correlated nodes with the same relationships
+        for rep_idx, corr_idxs in idx_mapping.items():
+            # Skip if rep_idx is not in the graph (might happen with original_indices)
+            rep_reduced_idx = original_indices.index(rep_idx)
                 
-                # Add associated edge between source node and its correlated node
-                # Only add in the contemporaneous layer (lag 0)
-                expanded_graph[0, source_idx, corr_idx] = 7
-                expanded_graph[0, corr_idx, source_idx] = 0  # Following the convention where only one side is marked
+            for corr_idx in corr_idxs:
+                # For each lag layer
+                for lag in range(L):
+                    # Copy incoming edges (where rep_idx is the target/effect)
+                    # In graph[j,i]=1, i is the cause and j is the effect
+                    for i in range(n):
+                        i_orig = original_indices[i] if original_indices is not None else i
+                        if i_orig != rep_idx and graph[lag, rep_reduced_idx, i] != 0:
+                            # If i causes rep_idx, then i should also cause corr_idx
+                            expanded_graph[lag, corr_idx, i_orig] = graph[lag, rep_reduced_idx, i]
+                    
+                    # Copy outgoing edges (where rep_idx is the source/cause)
+                    for j in range(n):
+                        j_orig = original_indices[j] if original_indices is not None else j
+                        if j_orig != rep_idx and graph[lag, j, rep_reduced_idx] != 0:
+                            expanded_graph[lag, j_orig, corr_idx] = graph[lag, j, rep_reduced_idx]
+                
+                # Add correlation edge between rep and correlated node in lag 0 without symmetry
+                expanded_graph[0, rep_idx, corr_idx] = 7  # Undirected edge (--) for correlation
     else:
         # For standard graphs (N, N)
         n = graph.shape[0]
         
         # Create expanded graph with space for all original nodes
-        expanded_graph = np.zeros((expanded_size, expanded_size), dtype=graph.dtype)
+        expanded_graph = np.zeros((orig_size, orig_size), dtype=graph.dtype)
         
-        # Copy original graph to expanded graph
-        expanded_graph[:n, :n] = graph
+        # Map from reduced indices to original indices
+        for i in range(n):
+            for j in range(n):
+                if graph[i, j] != 0:
+                    expanded_graph[original_indices[i], original_indices[j]] = graph[i, j]
         
         # Add correlated nodes with the same relationships
-        for source_name, corr_names in correlated_nodes_map.items():
-            if source_name not in col_to_idx:
-                continue  # Skip if source node isn't in the dataset
+        for rep_idx, corr_idxs in idx_mapping.items():
+            # print(f"Rep idx: {rep_idx}, Corr idxs: {corr_idxs}")
+            # Skip if rep_idx is not in the graph (might happen with original_indices)
+            rep_reduced_idx = None
+            try:
+                rep_reduced_idx = original_indices.index(rep_idx)
+            except ValueError:
+                continue
                 
-            source_idx = col_to_idx[source_name]
-            if source_idx >= n:
-                continue  # Skip if source node is outside the original graph
-                
-            for corr_name in corr_names:
-                if corr_name not in col_to_idx:
-                    continue  # Skip if correlated node isn't in the dataset
-                    
-                corr_idx = col_to_idx[corr_name]
-                
-                # Copy incoming edges (parents)
+            for corr_idx in corr_idxs:
+                # Copy incoming edges (where rep_idx is the target/effect)
+                # In graph[j,i]=1, i is the cause and j is the effect
                 for i in range(n):
-                    if graph[i, source_idx] != 0:  # If i has an edge to source_idx
-                        expanded_graph[i, corr_idx] = graph[i, source_idx]
-                        
-                # Copy outgoing edges (children)
+                    i_orig = original_indices[i]
+                    if i_orig != rep_idx and graph[rep_reduced_idx, i] != 0:
+                        # If i causes rep_idx, then i should also cause corr_idx
+                        expanded_graph[corr_idx, i_orig] = graph[rep_reduced_idx, i]
+                
+                # Copy outgoing edges (where rep_idx is the source/cause)
                 for j in range(n):
-                    if graph[source_idx, j] != 0:  # If source_idx has an edge to j
-                        expanded_graph[corr_idx, j] = graph[source_idx, j]
+                    j_orig = original_indices[j]
+                    if j_orig != rep_idx and graph[j, rep_reduced_idx] != 0:
+                        # If rep_idx causes j, then corr_idx should also cause j
+                        expanded_graph[j_orig, corr_idx] = graph[j, rep_reduced_idx]
                 
-                # If there are bidirectional or undirected edges, copy those too
-                for k in range(n):
-                    if k != source_idx:
-                        # Check for bidirectional edges (both i->j and j->i exist)
-                        if graph[source_idx, k] != 0 and graph[k, source_idx] != 0:
-                            expanded_graph[corr_idx, k] = graph[source_idx, k]
-                            expanded_graph[k, corr_idx] = graph[k, source_idx]
-                
-                # Add associated edge between source node and its correlated node
-                expanded_graph[source_idx, corr_idx] = 7
-                expanded_graph[corr_idx, source_idx] = 0  # Following the convention where only one side is marked
+                # Add correlation edge between rep and correlated node without symmetry
+                expanded_graph[rep_idx, corr_idx] = 7  # Undirected edge (--) for correlation
     
     return expanded_graph
-
-
-
 
 def restore_original_node_indices(reduced_graph: np.ndarray, original_indices: List[int], correlated_nodes_map: Dict[int, List[int]]) -> Tuple[np.ndarray, Dict[int, List[int]]]:
     """
@@ -518,9 +565,6 @@ def restore_original_node_indices(reduced_graph: np.ndarray, original_indices: L
     ----------
     reduced_graph : np.ndarray
         The graph adjacency matrix with reduced indices.
-        Can be either:
-        - Shape (N, N) for standard graphs
-        - Shape (L, N, N) for lagged graphs where L is the number of lags
     original_indices : List[int]
         The list of original indices that were kept in the reduced dataset.
     correlated_nodes_map : Dict[int, List[int]]
@@ -547,130 +591,163 @@ def restore_original_node_indices(reduced_graph: np.ndarray, original_indices: L
     
     return reduced_graph, corrected_map
 
-def test_full_pipeline_with_names():
+def evaluate_graph_accuracy(predicted_graph: np.ndarray, true_graph: np.ndarray, skip_correlated_edges: bool = True) -> dict:
     """
-    Test the full pipeline with name-based mapping.
+    Calculate precision, recall, and F1 score between predicted and true graphs.
+    
+    Parameters
+    ----------
+    predicted_graph : np.ndarray
+        The predicted adjacency matrix.
+    true_graph : np.ndarray
+        The true adjacency matrix.
+    skip_correlated_edges : bool, default=True
+        Whether to skip correlation edges (type 2) in evaluation.
+    
+    Returns
+    -------
+    dict
+        Dictionary with precision, recall, and F1 score.
     """
-    print("\nTesting full pipeline with name-based mapping...")
+    # Count true positives, false positives, and false negatives
+    tp = 0  # Correctly predicted edges
+    fp = 0  # Predicted edges that don't exist in true graph
+    fn = 0  # True edges that weren't predicted
     
-    # Create a synthetic dataset with 6 features and custom column names
-    np.random.seed(42)
-    n_samples = 100
-    X = np.random.randn(n_samples, 6)
-    column_names = ['Income', 'Age', 'Education', 'Earnings', 'SchoolYears', 'Salary']
-    data = pd.DataFrame(X, columns=column_names)
+    for i in range(true_graph.shape[0]):
+        for j in range(true_graph.shape[1]):
+            if i == j:
+                continue  # Skip self-loops
+            
+            # Skip correlation edges if specified
+            if skip_correlated_edges and (true_graph[i, j] == 2 or predicted_graph[i, j] == 2):
+                continue
+                
+            # Count based on causal edges (value 1)
+            if predicted_graph[i, j] == 1 and true_graph[i, j] == 1:
+                tp += 1
+            elif predicted_graph[i, j] == 1 and true_graph[i, j] != 1:
+                fp += 1
+            elif predicted_graph[i, j] != 1 and true_graph[i, j] == 1:
+                fn += 1
     
-    # Make Earnings, Salary correlated with Income, and SchoolYears correlated with Education
-    data['Earnings'] = data['Income'] + 0.1 * np.random.randn(n_samples)
-    data['Salary'] = data['Income'] + 0.2 * np.random.randn(n_samples)
-    data['SchoolYears'] = data['Education'] + 0.1 * np.random.randn(n_samples)
+    # Calculate metrics
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
     
-    # Define high correlation mapping using column names
-    high_corr_feature_groups = {
-        'Income': ['Earnings', 'Salary'],      # Income is correlated with Earnings and Salary
-        'Education': ['SchoolYears']           # Education is correlated with SchoolYears
+    return {
+        'precision': precision,
+        'recall': recall,
+        'f1': f1,
+        'true_positives': tp,
+        'false_positives': fp,
+        'false_negatives': fn
     }
+def test_correlated_components_pipeline():
+    """
+    Test the connected components approach for handling correlated features.
+    """
+    print("\n=== TESTING CONNECTED COMPONENTS PIPELINE ===")
     
-    print(f"Original data columns: {data.columns.tolist()}")
-    print(f"High correlation mapping: {high_corr_feature_groups}")
+    # Create synthetic dataset with transitive correlations
+    np.random.seed(42)
+    n_samples = 200
     
-    # Step 1: Remove highly correlated features
-    reduced_data, adjusted_mapping, original_indices = remove_highly_correlated_features(data, high_corr_feature_groups)
+    # Independent variables
+    X1 = np.random.normal(0, 1, n_samples)
+    X3 = np.random.normal(0, 1, n_samples)
+    X6 = np.random.normal(0, 1, n_samples)
     
-    print(f"Reduced data columns: {reduced_data.columns.tolist()}")
+    # Create transitively correlated groups:
+    # Group 1: X1, X2, X7 (X1 correlates with X2, X2 correlates with X7)
+    X2 = 0.3 * X1 + np.random.normal(0, 1, n_samples)  # Correlated with X1
+    X7 = 0.9 * X2 + np.random.normal(0, 1, n_samples)  # Correlated with X2, and transitively with X1
     
-    # Step 2: Simulate running a causal discovery algorithm (create a simple graph)
-    reduced_graph = np.zeros((3, 3))
-    reduced_graph[0, 1] = 1  # Income -> Age
-    reduced_graph[1, 2] = 1  # Age -> Education
+    # Group 2: X3, X4, X5 
+    X4 = X3 * -0.4 + np.random.normal(0, 1, n_samples)  # Correlated with X3
+    X5 = X4 * -1.5 + np.random.normal(0, 1, n_samples)  # Correlated with X4, and transitively with X3
     
-    print("\nReduced graph (from causal discovery):")
-    print(reduced_graph)
+    # Create causal relationships
+    Y = 0.7 * X1 + 0.5 * X3 + 0.3 * X6 + 0.1 * np.random.normal(0, 1, n_samples)
     
-    # Step 3: Add back the highly correlated features
-    final_graph = add_correlated_nodes_to_graph(reduced_graph, high_corr_feature_groups, data)
+    # Create dataframe
+    data = pd.DataFrame({
+        'X1': X1, 'X2': X2, 'X3': X3, 'X4': X4, 'X5': X5, 'X6': X6, 'X7': X7, 'Y': Y
+    })
     
-    print("\nFinal graph with correlated features added back:")
-    print(final_graph)
+    # Define the true graph structure
+    true_graph = np.zeros((8, 8))
     
-    # Verify results
-    assert final_graph.shape == (6, 6), "Final graph should be 6x6"
-    
-    # Get indices for each column
-    col_to_idx = {col: idx for idx, col in enumerate(data.columns)}
-    
-    # Check parent-child relationships
-    Income_idx = col_to_idx['Income']
-    Age_idx = col_to_idx['Age']
-    Education_idx = col_to_idx['Education']
-    Earnings_idx = col_to_idx['Earnings']
-    Salary_idx = col_to_idx['Salary']
-    SchoolYears_idx = col_to_idx['SchoolYears']
-    
-    assert final_graph[Income_idx, Age_idx] == 1, "Income should have directed edge to Age"
-    assert final_graph[Age_idx, Education_idx] == 1, "Age should have directed edge to Education"
-    assert final_graph[Earnings_idx, Age_idx] == 1, "Earnings should have same edge as Income"
-    assert final_graph[Salary_idx, Age_idx] == 1, "Salary should have same edge as Income"
-    
-    # Check undirected edges between source and correlated nodes
-    assert final_graph[Income_idx, Earnings_idx] == 7, "Income and Earnings should have correlation edge"
-    assert final_graph[Income_idx, Salary_idx] == 7, "Income and Salary should have correlation edge"
-    assert final_graph[Education_idx, SchoolYears_idx] == 7, "Education and SchoolYears should have correlation edge"
-    
-    print("Full pipeline with name-based mapping test passed!")
-    
-    # Test with lagged graph
-    print("\nTesting with lagged graph...")
-    
-    # Create a simple lagged graph with 2 lags and 3 nodes
-    lagged_graph = np.zeros((2, 3, 3))
-    # Lag 0 (contemporaneous)
-    lagged_graph[0, 0, 1] = 1  # Income -> Age
-    lagged_graph[0, 1, 2] = 1  # Age -> Education
-    # Lag 1
-    lagged_graph[1, 0, 2] = 1  # Income(t-1) -> Education(t)
-    
-    print("\nReduced lagged graph (from causal discovery):")
-    for lag in range(lagged_graph.shape[0]):
-        print(f"Lag {lag}:")
-        print(lagged_graph[lag])
-    
-    # Add back the highly correlated features to the lagged graph
-    final_lagged_graph = add_correlated_nodes_to_graph(lagged_graph, high_corr_feature_groups, data)
-    
-    print("\nFinal lagged graph with correlated features added back:")
-    for lag in range(final_lagged_graph.shape[0]):
-        print(f"Lag {lag}:")
-        print(final_lagged_graph[lag])
-    
-    # Verify results for lagged graph
-    assert final_lagged_graph.shape == (2, 6, 6), "Final lagged graph should be (2, 6, 6)"
-    
-    # Check contemporaneous relationships (lag 0)
-    assert final_lagged_graph[0, Income_idx, Age_idx] == 1, "Income should have directed edge to Age at lag 0"
-    assert final_lagged_graph[0, Age_idx, Education_idx] == 1, "Age should have directed edge to Education at lag 0"
-    assert final_lagged_graph[0, Earnings_idx, Age_idx] == 1, "Earnings should have same edge as Income at lag 0"
-    assert final_lagged_graph[0, Salary_idx, Age_idx] == 1, "Salary should have same edge as Income at lag 0"
-    
-    # Check lagged relationships (lag 1)
-    assert final_lagged_graph[1, Income_idx, Education_idx] == 1, "Income should have directed edge to Education at lag 1"
-    assert final_lagged_graph[1, Earnings_idx, Education_idx] == 1, "Earnings should have same edge as Income at lag 1"
-    assert final_lagged_graph[1, Salary_idx, Education_idx] == 1, "Salary should have same edge as Income at lag 1"
-    
-    # Check correlation edges (only in lag 0)
-    assert final_lagged_graph[0, Income_idx, Earnings_idx] == 7, "Income and Earnings should have correlation edge at lag 0"
-    assert final_lagged_graph[0, Income_idx, Salary_idx] == 7, "Income and Salary should have correlation edge at lag 0"
-    assert final_lagged_graph[0, Education_idx, SchoolYears_idx] == 7, "Education and SchoolYears should have correlation edge at lag 0"
-    
-    print("Lagged graph test passed!")
-    return True
+    # Add true causal edges: X1->Y, X3->Y, X6->Y
+    col_idx = {name: i for i, name in enumerate(data.columns)}
+    true_graph[col_idx['X2'], col_idx['X1']] = 1
+    true_graph[col_idx['X7'], col_idx['X2']] = 1
+    true_graph[col_idx['X4'], col_idx['X3']] = 1
+    true_graph[col_idx['X5'], col_idx['X4']] = 1
+    true_graph[col_idx['Y'], col_idx['X1']] = 1
+    true_graph[col_idx['Y'], col_idx['X3']] = 1
+    true_graph[col_idx['Y'], col_idx['X6']] = 1
 
+    print(f"True graph: {true_graph}")
+    
+    # Step 1: Find connected components
+    threshold = 0.95
+    components = find_correlated_components(data, threshold)
+    print(f"\nConnected Components (threshold={threshold}):")
+    for i, comp in enumerate(components):
+        print(f"Component {i+1}: {[data.columns[idx] for idx in comp]}")
+    
+    # Step 2: Remove highly correlated features
+    reduced_data, adjusted_mapping, original_indices = remove_highly_correlated_features(data, threshold=threshold)
+    print("\nReduced Dataset Columns:")
+    print(reduced_data.columns.tolist())
+    
+    # Step 3: Run PC algorithm on the reduced dataset
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from pc import PC
+    from evaluation.evaluator import GraphEvaluator
+    
+    # Initialize PC algorithm with default parameters
+    pc_algo = PC({
+        'alpha': 0.05,
+        'indep_test': 'fisherz',
+        'depth': 4,
+        'stable': True,
+        'show_progress': False
+    })
+    
+    # Run PC algorithm on the reduced dataset
+    reduced_graph, info, _ = pc_algo.fit(reduced_data)
+    
+    print("\nPC Algorithm Results on Reduced Dataset:")
+    print(f"Graph shape: {reduced_graph.shape}")
+    print(f"Graph: {reduced_graph}")
+    
+    # Display the discovered edges
+    reduced_cols = reduced_data.columns.tolist()
+    print(f"Reduced cols: {reduced_cols}")
+    for i in range(reduced_graph.shape[0]):
+        for j in range(reduced_graph.shape[1]):
+            if reduced_graph[i, j] == 1:  # Directed edge
+                print(f"Discovered edge: {reduced_cols[j]} -> {reduced_cols[i]}")
+    
+    # Step 4: Add correlated nodes back to the graph
+    expanded_graph = add_correlated_nodes_to_graph(reduced_graph, original_indices=original_indices, data=data, threshold=threshold)
+
+    print(f"Expanded graph: {expanded_graph}")
+    
+    # Evaluate accuracy against the true graph
+    evaluator = GraphEvaluator()
+    metrics = evaluator.compute_metrics(true_graph, expanded_graph)
+    
+    print("\n=== Graph Accuracy Metrics (excluding correlation edges) ===")
+    print(f"Precision: {metrics['precision']:.4f}")
+    print(f"Recall: {metrics['recall']:.4f}")
+    print(f"F1 Score: {metrics['f1']:.4f}")
 
 if __name__ == "__main__":
-    """
-    Run all tests to verify the functionality of the highly correlated feature handling.
-    """
-    print("Running tests for highly correlated feature handling...")
-    test_full_pipeline_with_names()
-    print("\nAll tests passed!")
+    test_correlated_components_pipeline()
 

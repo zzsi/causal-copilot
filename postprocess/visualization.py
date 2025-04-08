@@ -424,7 +424,8 @@ def convert_lagged_mat_to_tigramite(mat):
         3: "<->",  # Bidirected edge
         4: "o?>",  # Partial directed edge (directed non-ancestor)
         5: "o?o",  # Partial undirected edge (undirected non-ancestor)
-        6: "<?>"   # No d-separation edge
+        6: "<?>",   # No d-separation edge
+        7: "o-o"   # Associated edge, temporarily use undirected edge to represent
     }
     
     # Convert numerical matrix to tigramite's string edge representation

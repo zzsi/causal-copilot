@@ -1,5 +1,5 @@
 {
-    "algorithm_name": "MVGC",
+    "algorithm_name": "GrangerCausality",
     "p": {
         "meaning": "Lookback window length for the time-lagged causal relations",
         "suggested_values": [2, 10],
