@@ -177,7 +177,7 @@ class Visualization(object):
             # arrow_linewidth=4,
             # node_size=0.1,
             # arrowhead_size=20,
-            # curved_radius=0.2,
+            curved_radius=0.1,
             # label_fontsize=10,
         )
         plt.close(fig)
@@ -327,8 +327,9 @@ class Visualization(object):
             # link_colorbar_label="Effect strength" if val_matrix is not None else None,
             # figsize=(10, 6),
             save_name=path,
+            # link_width=link_width,
             # fig_ax=(fig, ax),
-            # arrow_linewidth=4,
+            arrow_linewidth=1,
             # node_size=0.1,
             # arrowhead_size=20,
             # curved_radius=0.2,
@@ -424,7 +425,8 @@ def convert_lagged_mat_to_tigramite(mat):
         3: "<->",  # Bidirected edge
         4: "o?>",  # Partial directed edge (directed non-ancestor)
         5: "o?o",  # Partial undirected edge (undirected non-ancestor)
-        6: "<?>"   # No d-separation edge
+        6: "<?>",  # No d-separation edge
+        7: "o-o"
     }
     
     # Convert numerical matrix to tigramite's string edge representation

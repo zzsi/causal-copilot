@@ -78,11 +78,6 @@ class Report_generation(object):
                 with open(f'{global_state.user_data.output_graph_dir}/{algo}_global_state.pkl', 'rb') as f:
                     self.global_state_list.append(pickle.load(f))
             global_state = self.global_state_list[global_state.results.report_selected_index]
-            inference_global_state = None
-            for state in self.global_state_list:
-                if state.inference.task_index > -1:
-                    inference_global_state = state
-                    break
         else:
             self.global_state_list = [global_state]
             global_state.logging.global_state_logging = [global_state.algorithm.selected_algorithm]
@@ -251,12 +246,12 @@ The output should be:
         
         variables = self.data.columns
         print("variables: ", variables)
+        zero_matrix = np.zeros((len(variables), len(variables)))
         if result_parsed != {}:
             section2 = """
             \\begin{itemize}
             """
             # Potential Relationship Visualization
-            zero_matrix = np.zeros((len(variables), len(variables)))
             valid_pairs = 0
             for pair in result_parsed.keys():
                 explanation = result_parsed[pair]
@@ -332,15 +327,15 @@ The output should be:
                     \centering
                     \includegraphics[width=\linewidth]{{{self.visual_dir}/residuals_plot.jpg}}
                     \\vfill
-                    \caption{{Residual Plot}}
+                    \caption{{Residual Plot.}}
                 \end{{subfigure}}
                 \\begin{{subfigure}}{{0.45\\textwidth}}
                     \centering
                     \includegraphics[width=\linewidth]{{{self.visual_dir}/qq_plot.jpg}}
                     \\vfill
-                    \caption{{Q-Q Plot}}
+                    \caption{{Q-Q Plot.}}
                 \end{{subfigure}}
-            \caption{{Plots for Data Properties Checking}}
+            \caption{{Plots for Data Properties Checking.}}
             \end{{figure}}   
             """
         else:
@@ -358,7 +353,7 @@ The output should be:
 \\begin{{figure}}[H]
         \centering
         \includegraphics[width=\linewidth]{{{self.visual_dir}/eda_lag_correlation.jpg}}
-        \caption{{\label{{fig:corr}}Heatmap of Time-Lagged Correlations Among Variables}}
+        \caption{{\label{{fig:corr}}Heatmap of Time-Lagged Correlations Among Variables.}}
 \end{{figure}}
 
 {corr_summary_text}
@@ -404,7 +399,7 @@ The following figure presents distributions of various variables. The orange das
 \begin{{figure}}[H]
 \centering
 \includegraphics[width=\linewidth]{{{self.visual_dir}/eda_dist.jpg}}
-\caption{{Distribution Plots of Variables}}
+\caption{{Distribution Plots of Variables.}}
 \end{{figure}}
 
 {dist_doc}
@@ -421,7 +416,7 @@ The following figure presents distributions of various variables. The orange das
         \centering
         \vspace{{-1.5cm}}
         \includegraphics[width=\linewidth]{{{self.visual_dir}/eda_corr.jpg}}
-        \caption{{Correlation Heatmap of Variables}}
+        \caption{{Correlation Heatmap of Variables.}}
     \end{{figure}}
 \end{{minipage}}
         """
@@ -528,7 +523,7 @@ The following figure presents distributions of various variables. The orange das
     \begin{{subfigure}}[b]{{0.48\textwidth}}
         \centering
         \includegraphics[width=\textwidth]{{{self.visual_dir}/{self.algo}_timelag_graph.pdf}}
-        \caption{{Time Lag Graph Discovered by the Algorithm}}
+        \caption{{Time Lag Graph Discovered by the Algorithm.}}
         \label{{fig:timelag}}
     \end{{subfigure}}
     \hfill
@@ -669,7 +664,7 @@ The following figure presents distributions of various variables. The orange das
             \begin{{figure}}[H]
             \centering
             \includegraphics[width=0.5\textwidth]{{{self.visual_dir}/{self.algo}_revised_graph.pdf}}
-            \caption{{Revised Graph by LLM}}
+            \caption{{Revised Graph by LLM.}}
             \end{{figure}}
             """
 
@@ -680,13 +675,13 @@ The following figure presents distributions of various variables. The orange das
     
     def confidence_graph_prompts(self):
         ### generate graph layout ###
-        name_map = {'certain_edges': 'Directed', #(->)
-                    'uncertain_edges': 'Undirected', #(-)
-                    'bi_edges': 'Bi-Directed', #(<->)
-                    'half_certain_edges': 'Non-Ancestor', #(o->)
-                    'half_uncertain_edges': 'Non-Ancestor', #(o-)
-                    'none_edges': 'No D-Seperation', #(o-o)
-                    'none_existence':'No'}
+        name_map = {'certain_edges': 'Directed Edge', #(->)
+                    'uncertain_edges': 'Undirected Edge', #(-)
+                    'bi_edges': 'Bi-Directed Edge', #(<->)
+                    'half_certain_edges': 'Undirected Directed Non-Ancestor Edge', #(o->)
+                    'half_uncertain_edges': 'Non-Ancestor Edge', #(o-)
+                    'none_edges': 'No D-Seperation Edge', #(o-o)
+                    'none_existence':'No Edge'}
         graph_text = """
         \\begin{figure}[H]
             \centering
@@ -695,20 +690,27 @@ The following figure presents distributions of various variables. The orange das
             bootstrap_dict = {k: v for k, v in self.bootstrap_probability.items() if v is not None and sum(v.flatten())>0}
             zero_graphs = [k for k, v in self.bootstrap_probability.items() if  v is not None and sum(v.flatten())==0]
             if len(zero_graphs) < len(bootstrap_dict):
-                length = round(1/len(bootstrap_dict), 2)-0.01
+                width = 0.3  # Approximately 1/3 of textwidth with some spacing
+                # Counter to track position in the row
+                counter = 0
                 for key in bootstrap_dict.keys():
                     graph_path = f'{self.visual_dir}/{key}_confidence_heatmap.jpg'
                     caption = f'{name_map[key]}'
+                    # Add subfigure
                     graph_text += f"""
-                    \\begin{{subfigure}}{{{length}\\textwidth}}
+                    \\begin{{subfigure}}{{{width}\\textwidth}}
                             \centering
                             \includegraphics[width=\linewidth]{{{graph_path}}}
                             \\vfill
                             \caption{{{caption}}}
-                        \end{{subfigure}}"""
-                
+                    \end{{subfigure}}"""
+                    # Increment counter
+                    counter += 1
+                    # Start a new row after every 3 plots or at the end
+                    if counter % 3 == 0 and counter < len(bootstrap_dict):
+                        graph_text += "\n        \\\\[10pt]"  # Line break and some vertical space
                 graph_text += """
-                \caption{Confidence Heatmap of Different Edges}
+                \caption{Confidence Heatmap of Different Edges.}
                 \end{figure}    
                 """
                 ### Generate text illustration
@@ -787,7 +789,7 @@ The following figure presents distributions of various variables. The orange das
                     \\begin{{figure}}[H]
                         \centering
                         \includegraphics[width=0.7\\textwidth]{{{self.visual_dir}/refutation_graph.jpg}}
-                        \caption{{Refutation Graph}}
+                        \caption{{Refutation Graph.}}
                     \end{{figure}} \n
                     """
             text += self.global_state.results.refutation_analysis.replace('_', '\_')
@@ -818,7 +820,7 @@ The following figure presents distributions of various variables. The orange das
                         \caption{{{caption}}}
                     \end{{subfigure}}"""            
             graph_text += """
-            \caption{Result Graph Comparision of Different Algorithms}
+            \caption{Result Graph Comparision of Different Algorithms.}
             \end{figure}    
             """
 
@@ -1233,10 +1235,10 @@ def parse_args():
 import pickle  
 if __name__ == '__main__':
     # args = parse_args()
-    # with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250407_002440/2021online_shop/output_graph/PCMCI_global_state.pkl', 'rb') as file:
+    # with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250408_105532/DailyDelhiClimate/output_graph/PCMCI_global_state.pkl', 'rb') as file:
     #     global_state = pickle.load(file)
     # test(args, global_state)
-    save_path = '/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250407_002440/2021online_shop/output_report'
+    save_path = '/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250407_010855/Cleaned_Students_Performance/output_report'
     compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
     
 

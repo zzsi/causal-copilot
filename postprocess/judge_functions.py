@@ -41,6 +41,7 @@ def bootstrap_iteration(data, ts, algorithm, hyperparameters):
         subsets = [data.iloc[block] for block in blocks]
 
         boot_sample = pd.concat(subsets, ignore_index=True).iloc[0:n]
+        boot_sample.index = pd.RangeIndex(start=0, stop=len(boot_sample))
 
     # Get the algorithm function from wrappers
     algo_func = getattr(wrappers, algorithm)

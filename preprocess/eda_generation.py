@@ -695,6 +695,10 @@ class EDA(object):
                 rolling_mean = series.rolling(window=window_size).mean()
                 ax_series.plot(time_index, rolling_mean, color='red', linestyle='--', 
                              linewidth=1.5, alpha=0.7, label='Moving Avg')
+            # Calculate and add first difference transform
+            first_diff = series.diff().fillna(0)  # First value will be 0
+            ax_series.plot(time_index, first_diff, color='darkblue', linestyle='-.', 
+                        linewidth=1.5, alpha=0.7, label='First Difference')
             
             # ax_series.set_title(f"Time Series: {col}", fontweight='bold', fontsize=14)
             ax_series.grid(True, color='#E0E0E0', linestyle=':', linewidth=0.5, alpha=0.5)

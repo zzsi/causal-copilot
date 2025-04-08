@@ -1,5 +1,5 @@
 User original query (TOP PRIORITY):
-
+This is a Time-Series dataset, Please discover the causal structure of different factors and profits.
 
 ## ⚠️ ESSENTIAL QUERY PRIORITY ⚠️
 - User query SUPERSEDES all standard hyperparameter guidelines
@@ -11,78 +11,92 @@ User original query (TOP PRIORITY):
 -----------------------------------------------
 Given a dataset with the following properties:
 
-1. Columns: meantemp	humidity	wind_speed	meanpressure
+1. Columns: Shopping_Event	Ad_Spend	Page_Views	Unit_Price	Sold_Units	Revenue	Operational_Cost	Profit
 2. Statistics:
 The dataset has the following characteristics:
 
 Data Type: The overall data type is Time-series.
 
-The sample size is 1462 with 4 features. 
+The sample size is 365 with 8 features. 
 
 This dataset is time-series data. 
 
 Data Quality: There are no missing values in the dataset.
 
 Statistical Properties:
-- Linearity: The relationships between variables are predominantly linear.
+- Linearity: The relationships between variables are not predominantly linear.
 - Gaussian Errors: The errors in the data do not follow a Gaussian distribution.
-- Time lag: 3 
+- Time lag: 50 
 
-- Stationarity: The dataset is not stationary. 
+- Stationarity: The dataset is stationary. 
 
 
 
 
 3. Background Knowledge:
-Based on the provided variable names in the dataset `DailyDelhiClimate.csv`, here's the information you requested:
-
-### 1. Detailed Explanation about the Variables:
-
-- **date**: This variable represents the date of the recorded climate data. It is essential for time-series analysis, indicating when each observation was made.
-
-- **meantemp**: This variable stands for the mean temperature (typically in degrees Celsius) measured during the day. It indicates the average temperature for that day and is a crucial factor in climate studies as it influences other weather-related phenomena.
-
-- **humidity**: This variable represents the level of moisture in the air, often expressed as a percentage. Humidity plays a significant role in weather patterns, affecting comfort levels, precipitation, and temperature perceptions.
-
-- **wind_speed**: This variable measures the speed of the wind, usually in kilometers per hour or meters per second. Wind speed influences various meteorological conditions and can affect temperature dispersion and humidity levels.
-
-- **meanpressure**: This variable indicates the mean atmospheric pressure (typically in hPa or mmHg) for a given day. Atmospheric pressure is an essential factor in weather forecasting; it affects wind patterns and precipitation.
-
-### 2. Possible Causal Relations among these Variables:
-
-1. **mean temperature → humidity**: Higher temperatures can lead to increased evaporation rates, which may increase humidity levels.
-   
-2. **humidity → wind speed**: Changes in humidity may affect local weather patterns, which could lead to variations in wind speed as air masses move.
-
-3. **mean temperature → mean pressure**: Variations in temperature can influence atmospheric pressure. Generally, warmer air is less dense and can lead to lower pressure.
-
-4. **mean pressure → wind speed**: Pressure differences in the atmosphere can drive wind; steeper pressure gradients generally result in higher wind speeds.
-
-5. **wind speed → mean temperature**: Wind can influence local temperature by redistributing heat in the atmosphere; for instance, winds can bring warmer or cooler air into a region.
-
-### 3. Other Background Domain Knowledge that may be helpful for experts to design causal discovery algorithms:
-
-- **Time Series Nature**: Since the data is date-based, it is crucial to account for temporal dependencies. Weather conditions on one day can influence conditions on subsequent days.
-
-- **Seasonal Variation**: Consider seasonal effects when analyzing relationships, as weather patterns can change dramatically with seasons. For instance, the relationship between temperature and humidity may have different dynamics in summer versus winter.
-
-- **External Influences**: Local geographical features (like proximity to water bodies and urbanization) and global phenomena (like El Niño) can affect climate data and should be considered when developing causal models.
-
-- **Confounding Factors**: Other variables not included in the dataset, such as solar radiation or precipitation amounts, could influence the observed variables. It's important to account for these in your causal discovery approach.
-
-- **Causality vs. Correlation**: Establishing true causal relationships requires careful consideration beyond correlation, potentially using domain knowledge or experimental designs, if possible.
-
-This insight should help inform your causal discovery work with the climate dataset.
+T
+h
+i
+s
+ 
+i
+s
+ 
+f
+a
+k
+e
+ 
+d
+o
+m
+a
+i
+n
+ 
+k
+n
+o
+w
+l
+e
+d
+g
+e
+ 
+f
+o
+r
+ 
+d
+e
+b
+u
+g
+g
+i
+n
+g
+ 
+p
+u
+r
+p
+o
+s
+e
+s
+.
 
 We have selected the following algorithm for causal discovery:
 
-Algorithm: VARLiNGAM
-Description: VARLiNGAM is a functional model-based algorithm that identifies causal structures in time-series data by leveraging linear relationships and non-Gaussian noise assumptions. It is efficient and provides a directed acyclic graph (DAG) as output.
-PCMCI is the best choice for this dataset due to its robustness to non-stationarity and ability to handle both linear and nonlinear relationships. It provides statistical significance metrics, which enhance interpretability. PCMCI's computational feasibility and flexibility in handling various noise types make it well-suited for the dataset's characteristics, ensuring reliable causal discovery.
+Algorithm: PCMCI
+Description: PCMCI (Peter and Clark algorithm with Momentary Conditional Independence) is a constraint-based causal discovery algorithm designed for time-series data. It is flexible in handling both linear and non-linear relationships and can accommodate non-Gaussian noise. PCMCI is efficient and performs well on small to medium-scale datasets, making it suitable for discovering causal structures in time-series data.
+PCMCI is the best choice for this dataset due to its ability to handle time-series data with non-linear relationships and non-Gaussian noise. It provides a CPDAG output, which is acceptable to the user, and is computationally feasible given the dataset's size and characteristics. PCMCI's robustness to violations of assumptions and its successful application in similar domains further support its selection.
 
 Now, we need to determine the optimal hyperparameters for this algorithm. I'll guide you through a systematic approach to select values that prioritize accuracy while maintaining computational efficiency for moderate graph sizes.
 
-Primary hyperparameters to configure: lags, criterion, prune, gpu
+Primary hyperparameters to configure: indep_test, tau_min, tau_max, pc_alpha, alpha_level
 
 For each hyperparameter, please follow this structured approach:
 
@@ -106,7 +120,7 @@ Step 3: Evaluate each hyperparameter's impact on accuracy vs. efficiency
 
 Step 4: Analyze algorithm-specific recommendations
    - Review expert suggestions for each parameter:
-   "**Parameter:** lags\n- **Meaning:** Number of lags.\n- **Available Values:**\n  - 1\n- **Expert Suggestion:** Use 1 as default. Number of past time lags to search\n\n**Parameter:** criterion\n- **Meaning:** Criterion to decide the best lags within lags. Searching the best lags is disabled if criterion is none.\n- **Available Values:**\n  - bic\n- **Expert Suggestion:** Use bic as default. aic - Prioritizes capturing all causal relationships, even at the risk of overfitting, fpe - Aims to fit data as closely as possible, but may overfit, hqic - Balances complexity and fit, bic - More conservative, avoids overfitting by penalizing model complexity.\n\n**Parameter:** prune\n- **Meaning:** Whether to prune the adjacency matrix of lags.\n- **Available Values:**\n  - True\n  - False\n- **Expert Suggestion:** Use true as default. If the dataset is noisy or high-dimensional, set prune=True to prevent overfitting, reduce false positives, improving interpretability.\n\n**Parameter:** gpu\n- **Meaning:** Whether to use GPU acceleration.\n- **Available Values:**\n  - False\n  - True\n- **Expert Suggestion:** Use false as default. If GPU is available, set gpu=True to use GPU acceleration. It is recommended to use GPU acceleration for large datasets.\n\n"
+   "**Parameter:** indep_test\n- **Meaning:** Independence tests\n- **Available Values:**\n  - parcorr\n  - robustparcorr\n  - gpdc\n  - gsq\n  - regression\n  - cmi\n- **Expert Suggestion:** Use parcorr as default. parcorr, gpdc for non-linear causal relations, cmi for better accuracy but slow runtime, gsq for categorical, regression for mixed data\n\n**Parameter:** tau_min\n- **Meaning:** Minimum time lag to consider\n- **Available Values:**\n  - 0\n  - 1\n- **Expert Suggestion:** Use 0 as default. Adjust if results are required for a specific time window\n\n**Parameter:** tau_max\n- **Meaning:** Maximum time lag\n- **Available Values:**\n  - 1\n  - 5\n  - 10\n- **Expert Suggestion:** Use 1 as default. Usually adjusted based on pre-processing results\n\n**Parameter:** pc_alpha\n- **Meaning:** Significance level of PC algorithm.\n- **Available Values:**\n  - 0.05\n  - 0.1\n  - 0.01\n- **Expert Suggestion:** Use 0.05 as default. Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\n\n**Parameter:** alpha_level\n- **Meaning:** Significance level at which the p_matrix is thresholded to get graph.\n- **Available Values:**\n  - 0.05\n  - 0.1\n  - 0.01\n- **Expert Suggestion:** Use 0.05 as default. Adjust based on estimated time lag, number of nodes and sample size. Larger and denser graph means low alpha value.\n\n"
 
 Step 5: Make final decisions based on:
    - For moderate graph sizes (<50 variables), prioritize accuracy over speed
@@ -116,7 +130,7 @@ Step 5: Make final decisions based on:
 Please provide your suggestions in a structured JSON format, with detailed reasoning for each hyperparameter. Your response should look like this:
 
 {
-  "algorithm": "VARLiNGAM",
+  "algorithm": "PCMCI",
   "hyperparameters": {
     "[HYPERPARAMETER_1_NAME]": {
       "full_name": "[HYPERPARAMETER_1_FULL_NAME]",
