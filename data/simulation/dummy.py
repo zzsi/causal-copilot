@@ -737,6 +737,271 @@ def test_mixed_data_generation():
     print("Test dataset generated with mixed data specifications")
     return graph, data
 
+
+class TimeSeriesSimulator:
+    """
+    A class for generating time series data with causal relationships.
+    Uses CausalNex's data generators to create stationary dynamic networks.
+    """
+    
+    def __init__(self):
+        """Initialize the TimeSeriesSimulator."""
+        self.graph = None
+        self.data = None
+        self.ground_truth = {
+            'summary_adjacency': None,
+            'lagged_adjacency': None,
+            'config': None
+        }
+        
+    def generate_time_series_data(self, 
+                                  num_nodes: int = 10, 
+                                  lag: int = 3, 
+                                  degree_inter: float = 3.0, 
+                                  degree_intra: float = 2.0,
+                                  sample_size: int = 2000, 
+                                  noise_type: str = 'linear-gauss',
+                                  seed: int = None) -> pd.DataFrame:
+        """
+        Generate time series data with causal relationships.
+        
+        Args:
+            num_nodes: Number of variables in the time series
+            lag: Maximum time lag for causal relationships
+            degree_inter: Average number of inter-time-slice edges per node
+            degree_intra: Average number of intra-time-slice edges per node
+            sample_size: Number of time points to generate
+            noise_type: Type of noise to use ('linear-gauss', 'linear-exp', 'linear-gumbel')
+            seed: Random seed for reproducibility
+            
+        Returns:
+            DataFrame containing the generated time series data
+        """
+        from causalnex.structure.data_generators import gen_stationary_dyn_net_and_df
+        
+        # Set random seed if provided
+        if seed is not None:
+            np.random.seed(seed)
+        
+        # Calculate weight parameters based on network size
+        if degree_inter == 0:
+            degree_inter = 1.0
+            
+        if degree_intra:
+            w_min_intra = round(1/degree_intra, 1)
+            w_max_intra = round(1/degree_intra, 1)
+        else:
+            w_min_intra = 0.4
+            w_max_intra = 0.4
+            
+        w_min_inter = min(round(1/degree_inter, 1), 
+                          round(1/np.sqrt(num_nodes), 1), 
+                          round(1/np.sqrt(num_nodes * lag), 2))
+        w_max_inter = min(round(1/degree_inter, 1), 
+                          round(1/np.sqrt(num_nodes), 1), 
+                          round(1/np.sqrt(num_nodes * lag), 2))
+        
+        # Generate the network and data
+        graph_net, df, intra_nodes, inter_nodes = gen_stationary_dyn_net_and_df(
+            num_nodes=num_nodes,
+            n_samples=sample_size,
+            p=lag,
+            degree_intra=degree_intra,
+            degree_inter=degree_inter,
+            w_min_intra=w_min_intra,
+            w_max_intra=w_max_intra,
+            w_min_inter=w_min_inter,
+            w_max_inter=w_max_inter,
+            w_decay=1.0,
+            sem_type=noise_type
+        )
+        
+        # Extract only the intra-time nodes (current time slice)
+        df = df[intra_nodes]
+        
+        # Simplify column names
+        df.columns = [el.split('_')[0] for el in df.columns]
+        
+        # Extract the ground truth graph
+        graph_true = self._get_graph(graph_net, intra_nodes)
+        summary_adj, lagged_adj = self._dict_to_adjacency_matrix(graph_true, num_nodes, lag)
+        
+        # Store results
+        self.graph = graph_net
+        self.data = df
+        self.ground_truth['summary_adjacency'] = summary_adj
+        self.ground_truth['lagged_adjacency'] = lagged_adj
+        self.ground_truth['config'] = {
+            "num_nodes": num_nodes,
+            "lag": lag,
+            "degree_inter": degree_inter,
+            "degree_intra": degree_intra,
+            "w_min_intra": w_min_intra,
+            "w_max_intra": w_max_intra,
+            "w_min_inter": w_min_inter,
+            "w_max_inter": w_min_inter,
+            "noise_type": noise_type,
+            "sample_size": sample_size,
+            "seed": seed
+        }
+        
+        return df
+    
+    def _get_graph(self, sm, data):
+        """
+        Extract the graph structure from the structural model.
+        
+        Args:
+            sm: Structural model from CausalNex
+            data: Data nodes
+            
+        Returns:
+            Dictionary representing the graph structure
+        """
+        graph_dict = dict()
+        for name in data:
+            node = int(name.split('_')[0])
+            graph_dict[node] = []
+
+        for c, e in sm.edges:
+            node_e = int(e.split('_')[0])
+            node_c = int(c.split('_')[0])
+            tc = int(c.partition("lag")[2])
+            te = int(e.partition("lag")[2])
+            lag = -1 * tc
+            graph_dict[node_e].append((node_c, lag))
+                
+        return graph_dict
+    
+    def _dict_to_adjacency_matrix(self, result_dict, num_nodes, lookback_period):
+        """
+        Convert the graph dictionary to adjacency matrices.
+        
+        Args:
+            result_dict: Dictionary representing the graph structure
+            num_nodes: Number of nodes in the graph
+            lookback_period: Maximum time lag
+            
+        Returns:
+            Tuple of (summary adjacency matrix, lagged adjacency matrix)
+        """
+        adj_matrix = np.zeros((lookback_period, num_nodes, num_nodes))
+        lagged_adj_matrix = np.zeros((lookback_period + 1, num_nodes, num_nodes))
+        
+        nodes = list(result_dict.keys())
+        node_to_idx = {node: idx for idx, node in enumerate(nodes)}
+
+        for target, causes in result_dict.items():
+            target_idx = node_to_idx[target]
+            for cause, lag in causes:
+                cause_idx = node_to_idx[cause]
+                lag_index = -lag 
+                lagged_adj_matrix[lag_index, target_idx, cause_idx] = 1
+                    
+        summary_adj_matrix = np.any(lagged_adj_matrix, axis=0).astype(int)
+
+        return summary_adj_matrix, lagged_adj_matrix
+    
+    def save_simulation(self, output_dir: str = 'simulated_time_series', prefix: str = 'ts'):
+        """
+        Save the generated time series data and ground truth to files.
+        
+        Args:
+            output_dir: Directory to save the files
+            prefix: Prefix for the filenames
+        """
+        if self.data is None:
+            raise ValueError("Generate data first")
+            
+        # Create output directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Create a timestamp for unique filenames
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Save the data
+        data_filename = os.path.join(output_dir, f"{prefix}_{timestamp}_data.csv")
+        self.data.to_csv(data_filename, index=False)
+        
+        # Save the summary adjacency matrix
+        summary_filename = os.path.join(output_dir, f"{prefix}_{timestamp}_summary.npy")
+        np.save(summary_filename, self.ground_truth['summary_adjacency'])
+        
+        # Save the lagged adjacency matrix
+        lagged_filename = os.path.join(output_dir, f"{prefix}_{timestamp}_lagged.npy")
+        np.save(lagged_filename, self.ground_truth['lagged_adjacency'])
+        
+        # Save the configuration
+        config_filename = os.path.join(output_dir, f"{prefix}_{timestamp}_config.json")
+        with open(config_filename, 'w') as f:
+            json.dump(self.ground_truth['config'], f, indent=2, default=str)
+            
+        print(f"Time series data saved to {data_filename}")
+        print(f"Summary adjacency matrix saved to {summary_filename}")
+        print(f"Lagged adjacency matrix saved to {lagged_filename}")
+        print(f"Configuration saved to {config_filename}")
+    
+    def generate_and_save_time_series(self, 
+                                     num_nodes: int = 10, 
+                                     lag: int = 3, 
+                                     degree_inter: float = 3.0, 
+                                     degree_intra: float = 2.0,
+                                     sample_size: int = 2000, 
+                                     noise_type: str = 'linear-gauss',
+                                     output_dir: str = 'simulated_time_series', 
+                                     prefix: str = 'ts',
+                                     seed: int = None) -> None:
+        """
+        Generate time series data and save the results.
+        
+        Args:
+            num_nodes: Number of variables in the time series
+            lag: Maximum time lag for causal relationships
+            degree_inter: Average number of inter-time-slice edges per node
+            degree_intra: Average number of intra-time-slice edges per node
+            sample_size: Number of time points to generate
+            noise_type: Type of noise to use ('linear-gauss', 'linear-exp', 'linear-gumbel')
+            output_dir: Directory to save the files
+            prefix: Prefix for the filenames
+            seed: Random seed for reproducibility
+        """
+        self.generate_time_series_data(
+            num_nodes=num_nodes,
+            lag=lag,
+            degree_inter=degree_inter,
+            degree_intra=degree_intra,
+            sample_size=sample_size,
+            noise_type=noise_type,
+            seed=seed
+        )
+        self.save_simulation(output_dir, prefix)
+
+
+def test_time_series_generation():
+    """
+    Test case that generates a time series dataset with various configurations.
+    """
+    ts_simulator = TimeSeriesSimulator()
+    
+    # Generate a simple time series dataset
+    data = ts_simulator.generate_time_series_data(
+        num_nodes=5,
+        lag=3,
+        degree_inter=2.0,
+        degree_intra=1.0,
+        sample_size=500,
+        noise_type='linear-gauss',
+        seed=42
+    )
+    
+    print(f"Generated time series data with shape: {data.shape}")
+    print(f"Summary adjacency matrix shape: {ts_simulator.ground_truth['summary_adjacency'].shape}")
+    print(f"Lagged adjacency matrix shape: {ts_simulator.ground_truth['lagged_adjacency'].shape}")
+    
+    return ts_simulator.graph, data
+
+
+
 # Generate pure simulated data using base simulator
 # base_simulator = DataSimulator()
 

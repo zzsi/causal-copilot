@@ -8,6 +8,6 @@
   "indep_test": {
     "meaning": "Independence test method",
     "available_values": ["fisherz", "chisq", "kci", "fastkci", "rcit"],
-    "expert_suggestion": "Use fisherz as default. DON'T use nonlinear/nonparametric tests for linear/discrete data. Choose based on data type, 'fisherz' for linear data; 'chisq' for discrete data (only applied for pure discrete data); 'kci' for nonlinear data (very slow, use only when both condition fulfilled: variable size < 15 and sample size < 1500); 'fastkci' is faster than kci (use only when both condition fulfilled: < 20 variables and sample size < 3000); 'rcit' is the fastest approximation of kci (use only when both condition fulfilled: < 40 variables and sample size < 5000)."
+    "expert_suggestion": "Use fisherz as default. DON'T use nonlinear/nonparametric tests for linear/discrete data. Choose based on data type, 'fisherz' for linear data; 'chisq' for discrete data (only applied for pure discrete data); 'kci' for nonlinear data (very slow, use only when both condition fulfilled: variable size < 15 and sample size < 1500); 'rcit' is the fastest approximation of kci (use only when both condition fulfilled: < 100 variables and sample size < 10000); 'fastkci' is faster than kci (use only when both condition fulfilled: < 20 variables and sample size < 3000). For nonlinear data, as long as variable and sample size constraints are fulfilled, choose KCI > RCIT > FastKCI in order of accuracy."
   }
 } 

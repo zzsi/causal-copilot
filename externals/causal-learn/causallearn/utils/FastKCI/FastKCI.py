@@ -47,7 +47,7 @@ class FastKCI_CInd(object):
         self.use_gp = use_gp
         self.nullss = 5000
 
-    def compute_pvalue(self, data_x=None, data_y=None, data_z=None):
+    def compute_pvalue(self, data_x=None, data_y=None, data_z=None, n_jobs=4):
         """
         Main function: compute the p value of H_0: X|Y conditional on Z.
 
@@ -66,8 +66,8 @@ class FastKCI_CInd(object):
         self.data_z = data_z
         self.n = data_x.shape[0]
 
-        self.Z_proposal = Parallel(n_jobs=-1)(delayed(self.partition_data)() for i in range(self.J))
-        block_res = Parallel(n_jobs=-1)(delayed(self.pvalue_onblocks)(self.Z_proposal[i]) for i in range(self.J))
+        self.Z_proposal = Parallel(n_jobs=n_jobs)(delayed(self.partition_data)() for i in range(self.J))
+        block_res = Parallel(n_jobs=n_jobs)(delayed(self.pvalue_onblocks)(self.Z_proposal[i]) for i in range(self.J))
         test_stat, null_samples, log_likelihood = zip(*block_res)
 
         log_likelihood = np.array(log_likelihood)
@@ -372,7 +372,7 @@ class FastKCI_UInd(object):
         self.nullss = 5000
         self.eig_thresh = 1e-5
 
-    def compute_pvalue(self, data_x=None, data_y=None, n_jobs=4):
+    def compute_pvalue(self, data_x=None, data_y=None):
         """
         Main function: compute the p value and return it together with the test statistic
 
@@ -390,9 +390,9 @@ class FastKCI_UInd(object):
         self.data_y = data_y
         self.n = data_x.shape[0]
 
-        Z_proposal = Parallel(n_jobs=n_jobs)(delayed(self.partition_data)() for i in range(self.J))
+        Z_proposal = Parallel(n_jobs=-1)(delayed(self.partition_data)() for i in range(self.J))
         self.Z_proposal, self.prob_Y = zip(*Z_proposal)
-        block_res = Parallel(n_jobs=n_jobs)(delayed(self.pvalue_onblocks)(self.Z_proposal[i]) for i in range(self.J))
+        block_res = Parallel(n_jobs=-1)(delayed(self.pvalue_onblocks)(self.Z_proposal[i]) for i in range(self.J))
         test_stat, null_samples, log_likelihood = zip(*block_res)
         self.prob_weights = np.around(np.exp(log_likelihood-logsumexp(log_likelihood)), 6)
         self.test_stat = np.average(np.array(test_stat), weights=self.prob_weights)

@@ -23,6 +23,24 @@ class Programming(object):
             restored_graph, restored_mapping = restore_original_node_indices(
                 graph, original_indices, adjusted_mapping
             )
+
+            # Debug before and after matrix expansion
+            print(f"Original data shape: {global_state.user_data.processed_data.shape}")
+            print(f"Reduced data shape: {reduced_data.shape}")
+            print(f"Graph shape before expansion: {restored_graph.shape}")
+            print(f"Column names: {global_state.user_data.processed_data.columns.tolist()}")
+            print(f"High correlation groups: {global_state.user_data.high_corr_feature_groups}")
+
+            # Add back the highly correlated features to the graph
+            final_graph = add_correlated_nodes_to_graph(
+                restored_graph, 
+                global_state.user_data.high_corr_feature_groups,
+                global_state.user_data.processed_data
+            )   
+
+            print(f"Final graph shape after expansion: {final_graph.shape}")
+
+            
             
             # Add back the highly correlated features to the graph
             final_graph = add_correlated_nodes_to_graph(
@@ -47,7 +65,12 @@ class Programming(object):
             global_state.results.raw_info = info
             
         # Handle time-series specific data
-        if global_state.statistics.data_type=="Time-series":
+        if global_state.statistics.time_series:
+            add_correlated_nodes_to_graph(
+                global_state.results.converted_graph,
+                global_state.user_data.high_corr_feature_groups,
+                global_state.user_data.processed_data
+            )
             if 'lag_matrix' in info:
                 global_state.results.lagged_graph = info['lag_matrix']
             else:

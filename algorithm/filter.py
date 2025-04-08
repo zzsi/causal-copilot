@@ -24,7 +24,7 @@ class Filter(object):
                 "response": ""
             })  
             return  global_state
-        prompt = self.create_prompt(global_state.user_data.initial_query, global_state.user_data.processed_data, global_state.statistics.description, global_state.user_data.accept_CPDAG)
+        prompt = self.create_prompt(global_state)
 
         output = self.llm_client.chat_completion(
             prompt=f"Please choose the algorithms that provide most reliable and accurate results, up to top {TOP_K}, for the data user provided. ",
@@ -45,21 +45,15 @@ class Filter(object):
 
         return global_state
 
-    def load_prompt_context(self):
+    def load_prompt_context(self, global_state):
         # Load algorithm context
-        guidelines_path = "algorithm/context/algos/guidelines.txt"
-        tagging_path = "algorithm/context/algos/tagging.txt"
-        algos_folder = "algorithm/context/algos"
-
-        # with open(guidelines_path, "r") as f:
-        #     guidelines = f.read()
+        if global_state.statistics.time_series:
+            tagging_path = "algorithm/context/algos/ts_tagging.txt"
+        else:
+            tagging_path = "algorithm/context/algos/tab_tagging.txt"
         
         with open(tagging_path, "r", encoding="utf-8") as f:
-            tags = f.read()
-
-        # algo_context = "Here are the guidelines for causal discovery algorithms:\n" + guidelines + "\n\nHere are the tags for causal discovery algorithms:\n" + tags
-
-        algo_context = tags
+            algo_context = f.read()
         
         # Load select prompt template
         select_prompt = open(f"algorithm/context/algo_select_prompt.txt", "r", encoding="utf-8").read()
@@ -67,17 +61,17 @@ class Filter(object):
         return algo_context, select_prompt
     
 
-    def create_prompt(self, user_query, data, statistics_desc, accept_CPDAG):
-        algo_context, prompt_template = self.load_prompt_context()
+    def create_prompt(self, global_state):
+        algo_context, prompt_template = self.load_prompt_context(global_state)
         replacements = {
-            "[USER_QUERY]": user_query,
+            "[USER_QUERY]": global_state.user_data.initial_query,
             # "[TABLE_NAME]": self.args.data_file,
-            "[COLUMNS]": ', '.join(data.columns),
-            "[STATISTICS_DESC]": statistics_desc,
+            "[COLUMNS]": ', '.join(global_state.user_data.processed_data.columns),
+            "[STATISTICS_DESC]": global_state.statistics.description,
             "[ALGO_CONTEXT]": algo_context,
-            "[CUDA_WARNING]": "Current machine supports CUDA, some algorithms can be accelerated by GPU if necessary (PC, CDNOD, DirectLiNGAM)." if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.",
+            "[CUDA_WARNING]": "Current machine supports CUDA, some algorithms can be accelerated by GPU if needed." if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.",
             "[TOP_K]": str(TOP_K),
-            "[ACCEPT_CPDAG]": "The user accepts the output graph including undirected edges/undeterministic directions (CPDAG/PAG)" if accept_CPDAG else "The user does not accept the output graph including undirected edges/undeterministic directions (CPDAG/PAG), so the output graph should be a DAG."
+            "[ACCEPT_CPDAG]": "The user accepts the output graph including undirected edges/undeterministic directions (CPDAG/PAG)" if global_state.user_data.accept_CPDAG else "The user does not accept the output graph including undirected edges/undeterministic directions (CPDAG/PAG), so the output graph should be a DAG."
         }
 
         for placeholder, value in replacements.items():

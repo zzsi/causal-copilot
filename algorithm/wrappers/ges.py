@@ -25,7 +25,7 @@ class GES(CausalDiscoveryAlgorithm):
         super().__init__(params)
         self._params = {
             'score_func': 'local_score_BIC',
-            'maxP': 3,
+            'maxP': 4,
             'parameters': None,
         }
         self._params.update(params)

@@ -100,27 +100,7 @@ class XGES(CausalDiscoveryAlgorithm):
         
         # Extract the data and ground truth graph
         df = pd.DataFrame(df)
-        
-        # # Define the dataset path
-        # dataset_name = "simulated_data/copilot_benchmark_v3/1_basic_scenarios/linear_gaussian_normal_sample/20250401_222840_seed_2_nodes10_samples1500"
-        
-        # # Load the data
-        # data_file = [os.path.join(dataset_name, file) for file in os.listdir(dataset_name) if file.endswith(".csv")][0]
-        # graph_file = [os.path.join(dataset_name, file) for file in os.listdir(dataset_name) if file.endswith(".npy")][0]
-        
-        # # Load the data and ground truth graph
-        # df = pd.read_csv(data_file)
-        # gt_graph = np.load(graph_file)
-        
-        # # If the results file exists, we can also print some information from it
-        # results_file = os.path.join(base_dir, "copilot_benchmark_v3_results", "20250401_224330", f"{dataset_name}_results.json")
-        # if os.path.exists(results_file):
-        #     with open(results_file, 'r') as f:
-        #         results_data = json.load(f)
-        #         print(f"Previous benchmark results available: F1={results_data[0]['metrics']['f1']:.4f}")
-
-        print(gt_graph)
-        
+            
         print(f"Testing XGES algorithm with MLP data ({n_nodes} nodes, {n_samples} samples):")
         params = {
             'alpha': 2.0

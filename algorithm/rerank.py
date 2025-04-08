@@ -57,7 +57,7 @@ class Reranker:
             "[DIMENSIONS]": str(global_state.user_data.processed_data.shape[1]),
             "[KNOWLEDGE_INFO]": str(global_state.user_data.knowledge_docs),
             "[STATISTICS_INFO]": global_state.statistics.description,
-            "[CUDA_WARNING]": "Current machine supports CUDA, some algorithms can be accelerated by GPU if necessary (PC, CDNOD, DirectLiNGAM)." if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.",
+            "[CUDA_WARNING]": "Current machine supports CUDA, some algorithms can be accelerated by GPU if needed." if torch.cuda.is_available() else "\nCurrent machine doesn't support CUDA, do not choose any GPU-powered algorithms.",
             "[ALGORITHM_CANDIDATES]": str(list(global_state.algorithm.algorithm_candidates.keys())),
             "[WAIT_TIME]": str(global_state.algorithm.waiting_minutes),
             "[TIME_INFO]": time_info,

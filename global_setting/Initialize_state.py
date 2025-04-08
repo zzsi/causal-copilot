@@ -148,6 +148,9 @@ def global_state_initialization(args: argparse.Namespace = None) -> GlobalState:
               "8. Does the user accept the output graph including undirected edges/undeterministic directions:"
               "Key: 'accept_CPDAG'. \n\n"
               "Options of value (bool): True, False. \n\n"
+              "9. Is the dataset a time-series dataset or a tabular dataset:"
+              "Key: 'time_series'. \n\n"
+              "Options of value (bool): True, False. \n\n"
               "However, for each key, if the value extracted from queries does not match provided options, or if the queries do not provide enough information and you cannot summarize them,"
               "the value for such key should be set to None! \n\n"
               "Just give me the output in a json format, do not provide other information! \n\n")
@@ -181,7 +184,7 @@ def global_state_initialization(args: argparse.Namespace = None) -> GlobalState:
     global_state.statistics.heterogeneous = info_extracted["heterogeneous"]
     global_state.statistics.domain_index = info_extracted["domain_index"]
     global_state.algorithm.selected_algorithm = info_extracted["selected_algorithm"]
-
+    global_state.statistics.time_series = info_extracted["time_series"]
     # GPU availability
     global_state.statistics.gpu_available = torch.cuda.is_available()
 

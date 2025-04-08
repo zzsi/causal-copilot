@@ -1,6 +1,6 @@
 aiofiles==23.2.1
 annotated-types==0.7.0
-anyio==4.6.2.post1
+anyio==4.5.2
 asttokens==2.4.1
 certifi==2024.8.30
 charset-normalizer==3.4.0
@@ -120,7 +120,6 @@ progressbar2==4.5.0
 python-utils==3.9.1  
 psy==0.0.1
 importlib_metadata==8.6.1
-zipp==3.21.0
 dotenv==0.9.9
 python-dotenv==1.0.1
 

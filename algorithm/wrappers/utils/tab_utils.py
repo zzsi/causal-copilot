@@ -338,7 +338,6 @@ def remove_highly_correlated_features(data: pd.DataFrame, high_corr_feature_grou
     
     return reduced_data, adjusted_mapping, nodes_to_keep
 
-
 def add_correlated_nodes_to_graph(graph: np.ndarray, correlated_nodes_map: Dict[str, List[str]], data: pd.DataFrame) -> np.ndarray:
     """
     Add highly correlated nodes back to the graph after causal discovery.
@@ -350,7 +349,11 @@ def add_correlated_nodes_to_graph(graph: np.ndarray, correlated_nodes_map: Dict[
     Parameters
     ----------
     graph : np.ndarray
-        The adjacency matrix of shape (N, N) representing the causal graph.
+        The adjacency matrix representing the causal graph.
+        Can be either:
+        - Shape (N, N) for standard graphs
+        - Shape (L, N, N) for lagged graphs where L is the number of lags
+        
         Edge types follow the convention in GraphEvaluator.EDGE_TYPES:
         - 0: no_edge
         - 1: directed (j->i)
@@ -359,6 +362,7 @@ def add_correlated_nodes_to_graph(graph: np.ndarray, correlated_nodes_map: Dict[
         - 4: partial_directed
         - 5: partial_undirected
         - 6: partial_unknown
+        - 7: correlation (used for highly correlated features)
     
     correlated_nodes_map : Dict[str, List[str]]
         A dictionary mapping column names to lists of their highly correlated column names
@@ -372,6 +376,7 @@ def add_correlated_nodes_to_graph(graph: np.ndarray, correlated_nodes_map: Dict[
     -------
     np.ndarray
         The expanded adjacency matrix including the correlated nodes with the same relationships.
+        Will have the same dimensionality as the input graph (either 2D or 3D).
     
     Examples
     --------
@@ -383,57 +388,126 @@ def add_correlated_nodes_to_graph(graph: np.ndarray, correlated_nodes_map: Dict[
     if not correlated_nodes_map:
         return graph
     
-    # Convert name-based mapping to index-based mapping
-    idx_mapping = convert_names_to_indices(data, correlated_nodes_map)
+    # Always use full original dataset size rather than just the graph size
+    orig_size = len(data.columns)
     
-    # Find the maximum node index in the correlated nodes map
-    all_correlated_nodes = [node for sublist in idx_mapping.values() for node in sublist]
-    if not all_correlated_nodes:
-        return graph
+    # Check if we're dealing with a lagged graph (3D) or standard graph (2D)
+    is_lagged_graph = len(graph.shape) == 3
     
-    max_node_idx = max(max(all_correlated_nodes), graph.shape[0] - 1)
+    # Create mapping from column names to indices
+    col_to_idx = {col: idx for idx, col in enumerate(data.columns)}
     
-    # Create expanded graph with space for correlated nodes
-    expanded_size = max_node_idx + 1
-    expanded_graph = np.zeros((expanded_size, expanded_size), dtype=graph.dtype)
+    # Collect all node indices that need to be included in the expanded graph
+    all_nodes = set(range(graph.shape[-1]))  # Start with current graph nodes
+    for source_name, corr_names in correlated_nodes_map.items():
+        if source_name in col_to_idx:
+            all_nodes.add(col_to_idx[source_name])
+            for corr_name in corr_names:
+                if corr_name in col_to_idx:
+                    all_nodes.add(col_to_idx[corr_name])
     
-    # Copy original graph to expanded graph
-    n = graph.shape[0]
-    expanded_graph[:n, :n] = graph
+    # Determine expanded graph size - use original dataset size to ensure all nodes are included
+    expanded_size = max(orig_size, max(all_nodes) + 1 if all_nodes else 0)
     
-    # Add correlated nodes with the same relationships
-    for node_idx, correlated_indices in idx_mapping.items():
-        if node_idx >= n:
-            continue  # Skip if the reference node is outside the original graph
-            
-        node_name = data.columns[node_idx] if node_idx < len(data.columns) else f"X{node_idx}"
+    if is_lagged_graph:
+        # For lagged graphs (L, N, N)
+        L, n, _ = graph.shape
         
-        for corr_idx in correlated_indices:
-            corr_name = data.columns[corr_idx] if corr_idx < len(data.columns) else f"X{corr_idx}"
-            
-            # Copy incoming edges (parents)
-            for i in range(n):
-                if graph[i, node_idx] != 0:  # If i has an edge to node_idx
-                    expanded_graph[i, corr_idx] = graph[i, node_idx]
+        # Create expanded graph with space for all original nodes
+        expanded_graph = np.zeros((L, expanded_size, expanded_size), dtype=graph.dtype)
+        
+        # Copy original graph to expanded graph
+        expanded_graph[:, :n, :n] = graph
+        
+        # Add correlated nodes with the same relationships for each lag
+        for source_name, corr_names in correlated_nodes_map.items():
+            if source_name not in col_to_idx:
+                continue  # Skip if source node isn't in the dataset
+                
+            source_idx = col_to_idx[source_name]
+            if source_idx >= n:
+                continue  # Skip if source node is outside the original graph
+                
+            for corr_name in corr_names:
+                if corr_name not in col_to_idx:
+                    continue  # Skip if correlated node isn't in the dataset
                     
-            # Copy outgoing edges (children)
-            for j in range(n):
-                if graph[node_idx, j] != 0:  # If node_idx has an edge to j
-                    expanded_graph[corr_idx, j] = graph[node_idx, j]
-            
-            # If there are bidirectional or undirected edges, copy those too
-            for k in range(n):
-                if k != node_idx:
-                    # Check for bidirectional edges (both i->j and j->i exist)
-                    if graph[node_idx, k] != 0 and graph[k, node_idx] != 0:
-                        expanded_graph[corr_idx, k] = graph[node_idx, k]
-                        expanded_graph[k, corr_idx] = graph[k, node_idx]
-            
-            # Add associated edge between source node and its correlated node
-            expanded_graph[node_idx, corr_idx] = 7
-            expanded_graph[corr_idx, node_idx] = 0  # Following the convention where only one side is marked
+                corr_idx = col_to_idx[corr_name]
+                
+                # Process each lag layer
+                for lag in range(L):
+                    # Copy incoming edges (parents)
+                    for i in range(n):
+                        if graph[lag, i, source_idx] != 0:  # If i has an edge to source_idx
+                            expanded_graph[lag, i, corr_idx] = graph[lag, i, source_idx]
+                            
+                    # Copy outgoing edges (children)
+                    for j in range(n):
+                        if graph[lag, source_idx, j] != 0:  # If source_idx has an edge to j
+                            expanded_graph[lag, corr_idx, j] = graph[lag, source_idx, j]
+                    
+                    # If there are bidirectional or undirected edges, copy those too
+                    for k in range(n):
+                        if k != source_idx:
+                            # Check for bidirectional edges (both i->j and j->i exist)
+                            if graph[lag, source_idx, k] != 0 and graph[lag, k, source_idx] != 0:
+                                expanded_graph[lag, corr_idx, k] = graph[lag, source_idx, k]
+                                expanded_graph[lag, k, corr_idx] = graph[lag, k, source_idx]
+                
+                # Add associated edge between source node and its correlated node
+                # Only add in the contemporaneous layer (lag 0)
+                expanded_graph[0, source_idx, corr_idx] = 7
+                expanded_graph[0, corr_idx, source_idx] = 0  # Following the convention where only one side is marked
+    else:
+        # For standard graphs (N, N)
+        n = graph.shape[0]
+        
+        # Create expanded graph with space for all original nodes
+        expanded_graph = np.zeros((expanded_size, expanded_size), dtype=graph.dtype)
+        
+        # Copy original graph to expanded graph
+        expanded_graph[:n, :n] = graph
+        
+        # Add correlated nodes with the same relationships
+        for source_name, corr_names in correlated_nodes_map.items():
+            if source_name not in col_to_idx:
+                continue  # Skip if source node isn't in the dataset
+                
+            source_idx = col_to_idx[source_name]
+            if source_idx >= n:
+                continue  # Skip if source node is outside the original graph
+                
+            for corr_name in corr_names:
+                if corr_name not in col_to_idx:
+                    continue  # Skip if correlated node isn't in the dataset
+                    
+                corr_idx = col_to_idx[corr_name]
+                
+                # Copy incoming edges (parents)
+                for i in range(n):
+                    if graph[i, source_idx] != 0:  # If i has an edge to source_idx
+                        expanded_graph[i, corr_idx] = graph[i, source_idx]
+                        
+                # Copy outgoing edges (children)
+                for j in range(n):
+                    if graph[source_idx, j] != 0:  # If source_idx has an edge to j
+                        expanded_graph[corr_idx, j] = graph[source_idx, j]
+                
+                # If there are bidirectional or undirected edges, copy those too
+                for k in range(n):
+                    if k != source_idx:
+                        # Check for bidirectional edges (both i->j and j->i exist)
+                        if graph[source_idx, k] != 0 and graph[k, source_idx] != 0:
+                            expanded_graph[corr_idx, k] = graph[source_idx, k]
+                            expanded_graph[k, corr_idx] = graph[k, source_idx]
+                
+                # Add associated edge between source node and its correlated node
+                expanded_graph[source_idx, corr_idx] = 7
+                expanded_graph[corr_idx, source_idx] = 0  # Following the convention where only one side is marked
     
     return expanded_graph
+
+
 
 
 def restore_original_node_indices(reduced_graph: np.ndarray, original_indices: List[int], correlated_nodes_map: Dict[int, List[int]]) -> Tuple[np.ndarray, Dict[int, List[int]]]:
@@ -444,6 +518,9 @@ def restore_original_node_indices(reduced_graph: np.ndarray, original_indices: L
     ----------
     reduced_graph : np.ndarray
         The graph adjacency matrix with reduced indices.
+        Can be either:
+        - Shape (N, N) for standard graphs
+        - Shape (L, N, N) for lagged graphs where L is the number of lags
     original_indices : List[int]
         The list of original indices that were kept in the reduced dataset.
     correlated_nodes_map : Dict[int, List[int]]
@@ -536,11 +613,56 @@ def test_full_pipeline_with_names():
     assert final_graph[Salary_idx, Age_idx] == 1, "Salary should have same edge as Income"
     
     # Check undirected edges between source and correlated nodes
-    assert final_graph[Income_idx, Earnings_idx] == 2, "Income and Earnings should have undirected edge"
-    assert final_graph[Income_idx, Salary_idx] == 2, "Income and Salary should have undirected edge"
-    assert final_graph[Education_idx, SchoolYears_idx] == 2, "Education and SchoolYears should have undirected edge"
+    assert final_graph[Income_idx, Earnings_idx] == 7, "Income and Earnings should have correlation edge"
+    assert final_graph[Income_idx, Salary_idx] == 7, "Income and Salary should have correlation edge"
+    assert final_graph[Education_idx, SchoolYears_idx] == 7, "Education and SchoolYears should have correlation edge"
     
     print("Full pipeline with name-based mapping test passed!")
+    
+    # Test with lagged graph
+    print("\nTesting with lagged graph...")
+    
+    # Create a simple lagged graph with 2 lags and 3 nodes
+    lagged_graph = np.zeros((2, 3, 3))
+    # Lag 0 (contemporaneous)
+    lagged_graph[0, 0, 1] = 1  # Income -> Age
+    lagged_graph[0, 1, 2] = 1  # Age -> Education
+    # Lag 1
+    lagged_graph[1, 0, 2] = 1  # Income(t-1) -> Education(t)
+    
+    print("\nReduced lagged graph (from causal discovery):")
+    for lag in range(lagged_graph.shape[0]):
+        print(f"Lag {lag}:")
+        print(lagged_graph[lag])
+    
+    # Add back the highly correlated features to the lagged graph
+    final_lagged_graph = add_correlated_nodes_to_graph(lagged_graph, high_corr_feature_groups, data)
+    
+    print("\nFinal lagged graph with correlated features added back:")
+    for lag in range(final_lagged_graph.shape[0]):
+        print(f"Lag {lag}:")
+        print(final_lagged_graph[lag])
+    
+    # Verify results for lagged graph
+    assert final_lagged_graph.shape == (2, 6, 6), "Final lagged graph should be (2, 6, 6)"
+    
+    # Check contemporaneous relationships (lag 0)
+    assert final_lagged_graph[0, Income_idx, Age_idx] == 1, "Income should have directed edge to Age at lag 0"
+    assert final_lagged_graph[0, Age_idx, Education_idx] == 1, "Age should have directed edge to Education at lag 0"
+    assert final_lagged_graph[0, Earnings_idx, Age_idx] == 1, "Earnings should have same edge as Income at lag 0"
+    assert final_lagged_graph[0, Salary_idx, Age_idx] == 1, "Salary should have same edge as Income at lag 0"
+    
+    # Check lagged relationships (lag 1)
+    assert final_lagged_graph[1, Income_idx, Education_idx] == 1, "Income should have directed edge to Education at lag 1"
+    assert final_lagged_graph[1, Earnings_idx, Education_idx] == 1, "Earnings should have same edge as Income at lag 1"
+    assert final_lagged_graph[1, Salary_idx, Education_idx] == 1, "Salary should have same edge as Income at lag 1"
+    
+    # Check correlation edges (only in lag 0)
+    assert final_lagged_graph[0, Income_idx, Earnings_idx] == 7, "Income and Earnings should have correlation edge at lag 0"
+    assert final_lagged_graph[0, Income_idx, Salary_idx] == 7, "Income and Salary should have correlation edge at lag 0"
+    assert final_lagged_graph[0, Education_idx, SchoolYears_idx] == 7, "Education and SchoolYears should have correlation edge at lag 0"
+    
+    print("Lagged graph test passed!")
     return True
 
 

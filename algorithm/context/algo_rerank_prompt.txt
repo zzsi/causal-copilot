@@ -1,5 +1,11 @@
 You are an expert causal discovery algorithm advisor. Your task is to analyze dataset [TABLE_NAME] and recommend the most appropriate algorithm from the candidates.
 
+## ⚠️ HIGHEST PRIORITY INSTRUCTION ⚠️
+1. The user's query MUST be your primary consideration - all recommendations MUST directly address their specific needs
+2. Extract and apply ALL domain knowledge and requirements from the user's query
+3. Your algorithm selection MUST prioritize fulfilling the exact requirements stated by the user
+4. When user expertise contradicts general best practices, ALWAYS favor the user's domain knowledge
+
 ## User original query (TOP PRIORITY)
 
 [USER_QUERY]
@@ -21,8 +27,15 @@ FOCUS EXCLUSIVELY ON THE CURRENT DATASET CHARACTERISTICS. Do not consider hypoth
 ## Selection Process (Follow in sequence)
 
 ### 1. Dataset-Algorithm Compatibility Analysis
-For each algorithm candidate, evaluate compatibility across these dimensions (rate 1-5) BASED SOLELY ON THE CURRENT DATASET:
+For each algorithm candidate, evaluate compatibility across these dimensions BASED SOLELY ON THE CURRENT DATASET:
 - Variable type handling: How well does the algorithm process THIS dataset's {continuous/discrete/mixed} variables?
+- Variable size handling: How does the algorithm's performance scale with THIS dataset's dimensionality (p=[DIMENSIONS])?
+
+  * For small-scale problems (p < 25): Focus on accuracy over efficiency
+  * For medium-scale problems (25 ≤ p < 50): Balance accuracy and efficiency
+  * For large-scale problems (50 ≤ p < 100): Prioritize algorithms with "High" or better scalability ratings
+  * For very large-scale problems (p ≥ 100): Strictly limit to algorithms with "Very High" or "Extreme" scalability ratings
+  * When variable count exceeds 100, eliminate algorithms with poor scaling properties regardless of other strengths
 - Sample size adequacy: Is THIS dataset's sample size (N=[SAMPLES]) sufficient for the algorithm's requirements? When algorithms receive equal ratings for sample size adequacy, prioritize the algorithm with the highest empirical performance rating
 - Nonlinearity handling: Can the algorithm capture THIS dataset's relationship complexity?
 - Missing data tolerance: How well can the algorithm process THIS dataset's missing value patterns?
@@ -39,7 +52,6 @@ For each algorithm:
 ### 3. Computational Feasibility Assessment
 For each algorithm:
 - Estimate runtime based on THIS dataset's dimensions=[DIMENSIONS], samples=[SAMPLES], and expected graph density
-- Determine if memory requirements are satisfied for THIS dataset
 - Assess hardware compatibility with user constraints
 - Consider runtime estimates: [TIME_INFO]
 
@@ -66,7 +78,7 @@ The return algorithm name MUST strictly be FROM candidates here:
 
 -----------------------------------------------
 
-## Domain-Specific Benchmarking Results
+## Simulation Benchmarking Results
 Each algorithm's benchmarking with several hyperparameter choices. Extract and analyze the following from the benchmarking results:
 
 1. Overall algorithm rankings and their average performance scores
@@ -96,6 +108,7 @@ Based on this comprehensive analysis, provide TWO separate scoring assessments:
    - Consider: precision, recall, F1 score, SHD, efficiency on similar datasets
    - Highlight performance on datasets with similar characteristics to THIS dataset
    - Provide brief justification for each score
+   
 3. COMBINED RECOMMENDATION:
    - Calculate a weighted average of theoretical (0.7) and empirical scores (0.3) for each algorithm
    - Show your computation process step by step for each algorithm

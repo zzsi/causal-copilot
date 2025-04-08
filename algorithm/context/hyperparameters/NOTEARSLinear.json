@@ -1,9 +1,9 @@
 {
   "algorithm_name": "NOTEARSLinear",
-  "lambda1": {
-    "meaning": "regularization parameter for sparsity",
+  "lambda_1": {
+    "meaning": "L1 regularization parameter for sparsity",
     "available_values": [0.01, 0.1, 0.001],
-    "expert_suggestion": "Use 0.01 as default. Higher values promote sparser graphs, lower values allow more connections."
+    "expert_suggestion": "Use 0.01 as default. 0.1 for more sparse graphs (average degree 1), 0.001 for more dense graphs (average degree 15)."
   },
   "loss_type": {
     "meaning": "The type of sparsity regularization",
