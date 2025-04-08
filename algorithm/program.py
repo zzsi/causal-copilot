@@ -24,24 +24,6 @@ class Programming(object):
                 graph, original_indices, adjusted_mapping
             )
 
-            # Debug before and after matrix expansion
-            print(f"Original data shape: {global_state.user_data.processed_data.shape}")
-            print(f"Reduced data shape: {reduced_data.shape}")
-            print(f"Graph shape before expansion: {restored_graph.shape}")
-            print(f"Column names: {global_state.user_data.processed_data.columns.tolist()}")
-            print(f"High correlation groups: {global_state.user_data.high_corr_feature_groups}")
-
-            # Add back the highly correlated features to the graph
-            final_graph = add_correlated_nodes_to_graph(
-                restored_graph, 
-                global_state.user_data.high_corr_feature_groups,
-                global_state.user_data.processed_data
-            )   
-
-            print(f"Final graph shape after expansion: {final_graph.shape}")
-
-            
-            
             # Add back the highly correlated features to the graph
             final_graph = add_correlated_nodes_to_graph(
                 restored_graph, 
@@ -54,7 +36,6 @@ class Programming(object):
             global_state.results.converted_graph = final_graph
             info['original_graph'] = graph  # Store the original graph before adding correlated nodes
             info['high_corr_features_removed'] = original_indices
-            global_state.results.raw_info = info
         else:
             # Run algorithm on the full dataset
             algo_func = getattr(wrappers, global_state.algorithm.selected_algorithm)
@@ -62,18 +43,27 @@ class Programming(object):
             
             global_state.results.raw_result = raw_result
             global_state.results.converted_graph = graph
-            global_state.results.raw_info = info
             
         # Handle time-series specific data
         if global_state.statistics.time_series:
-            add_correlated_nodes_to_graph(
-                global_state.results.converted_graph,
-                global_state.user_data.high_corr_feature_groups,
-                global_state.user_data.processed_data
-            )
             if 'lag_matrix' in info:
-                global_state.results.lagged_graph = info['lag_matrix']
+                # Store the original lag matrix
+                original_lag_matrix = info['lag_matrix']
+                global_state.results.lagged_graph = original_lag_matrix
+                
+                # If we have correlated features, add them to the lag graph as well
+                if global_state.user_data.high_corr_feature_groups is not None:
+                    # Add correlated nodes to the lag graph
+                    enhanced_lag_matrix = add_correlated_nodes_to_graph(
+                        original_lag_matrix,
+                        global_state.user_data.high_corr_feature_groups,
+                        global_state.user_data.processed_data
+                    )
+                    global_state.results.lagged_graph = enhanced_lag_matrix
+                    info['lag_matrix'] = enhanced_lag_matrix
             else:
                 global_state.results.lagged_graph = None
-                
+
+        global_state.results.raw_info = info
+       
         return global_state

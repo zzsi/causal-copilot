@@ -27,13 +27,6 @@
 3. Graph density match (if algorithm can handle the scale)
 4. Other compatibility factors (as feasible)
 
-## Performance Categories
-- **Robust**: ≥80% accuracy with matched data properties
-- **Strong**: 60-80% accuracy with matched data properties
-- **Moderate**: 40-60% accuracy with matched data properties
-- **Limited**: <40% accuracy even with matched data properties
-- **Poor**: Unreliable even with matched data properties
-
 ## Algorithm Tag Categories
 
 1. **Availability**: Available, Unavailable
