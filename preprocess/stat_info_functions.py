@@ -768,7 +768,7 @@ def stat_info_collection(global_state):
             global_state.user_data.selected_features = global_state.user_data.selected_features.drop(domain_index)
     else:
         col_domain_index = None
-    if global_state.statistics.time_series:
+    if global_state.statistics.time_series and global_state.statistics.time_index is not None:
         global_state.user_data.selected_features = [feature for feature in global_state.user_data.selected_features if feature != global_state.statistics.time_index]
         data = global_state.user_data.raw_data.set_index(global_state.statistics.time_index)
         data = data.reset_index(drop=True) 
@@ -862,9 +862,9 @@ def convert_stat_info_to_text(statistics):
         text += f"- Time lag: {statistics.time_lag} \n\n"
         text += f"- Stationarity: The dataset {'is' if statistics.stationary else 'is not'} stationary. \n\n"
     else:
-        text += f"- Heterogeneity: The dataset {'is' if statistics.heterogeneous else 'is not'} heterogeneous. \n\n"
+        text += f"- Heterogeneity: The dataset {'is' if statistics.heterogeneous and statistics.domain_index is not None else 'is not'} heterogeneous. \n\n"
         
-    if statistics.domain_index is not None:
+    if statistics.heterogeneous and statistics.domain_index is not None:
         text += f"- Domain Index: {statistics.domain_index}"
     else:
         text += "\n\n"

@@ -2,58 +2,58 @@ import os
 import subprocess
 from pathlib import Path
 
-def init_graphviz():
-    # Try apt-get (Debian/Ubuntu) first
-    print("Attempting to install Graphviz using apt-get...")
-    subprocess.run("apt-get update", shell=True, check=True)
-    subprocess.run("apt-get install -y graphviz", shell=True, check=True)
+# def init_graphviz():
+#     # Try apt-get (Debian/Ubuntu) first
+#     print("Attempting to install Graphviz using apt-get...")
+#     subprocess.run("apt-get update", shell=True, check=True)
+#     subprocess.run("apt-get install -y graphviz", shell=True, check=True)
 
-    # Verify installation
-    version = subprocess.run("dot -V", shell=True, check=True, 
-                           capture_output=True, text=True)
-    print(f"Graphviz installed successfully: {version.stderr}")
+#     # Verify installation
+#     version = subprocess.run("dot -V", shell=True, check=True, 
+#                            capture_output=True, text=True)
+#     print(f"Graphviz installed successfully: {version.stderr}")
 
-    # Add to PATH if needed
-    graphviz_paths = ["/usr/local/bin", "/usr/bin"]
-    for path in graphviz_paths:
-        if os.path.exists(path) and path not in os.environ['PATH']:
-            os.environ['PATH'] = f"{os.environ['PATH']}:{path}"
+#     # # Add to PATH if needed
+#     graphviz_paths = ["/usr/local/bin", "/usr/bin"]
+#     for path in graphviz_paths:
+#         if os.path.exists(path) and path not in os.environ['PATH']:
+#             os.environ['PATH'] = f"{os.environ['PATH']}:{path}"
 
         
-def init_latex():
-    try:
-        # Install TinyTeX
-        subprocess.run("wget -qO- 'https://yihui.org/tinytex/install-bin-unix.sh' | sh", shell=True, check=True)
+# def init_latex():
+#     try:
+#         # Install TinyTeX
+#         subprocess.run("wget -qO- 'https://yihui.org/tinytex/install-bin-unix.sh' | sh", shell=True, check=True)
         
-        # Add to PATH
-        home = os.path.expanduser("~")
-        os.environ['PATH'] = f"{os.environ['PATH']}:{home}/.TinyTeX/bin/x86_64-linux"
+#         # Add to PATH
+#         home = os.path.expanduser("~")
+#         os.environ['PATH'] = f"{os.environ['PATH']}:{home}/.TinyTeX/bin/x86_64-linux"
         
-        # Install packages
-        subprocess.run(f"{home}/.TinyTeX/bin/x86_64-linux/tlmgr update --self", shell=True, check=True)
-        subprocess.run(f"{home}/.TinyTeX/bin/x86_64-linux/tlmgr install latexmk fancyhdr caption booktabs", shell=True, check=True)
+#         # Install packages
+#         subprocess.run(f"{home}/.TinyTeX/bin/x86_64-linux/tlmgr update --self", shell=True, check=True)
+#         subprocess.run(f"{home}/.TinyTeX/bin/x86_64-linux/tlmgr install latexmk fancyhdr caption booktabs", shell=True, check=True)
         
-        print("LaTeX setup completed successfully")
-    except Exception as e:
-        print(f"LaTeX setup failed: {e}")
+#         print("LaTeX setup completed successfully")
+#     except Exception as e:
+#         print(f"LaTeX setup failed: {e}")
 
-def init_causallearn():
-    subprocess.run("git submodule update --recursive", shell=True, check=True)
+# def init_causallearn():
+#     subprocess.run("git submodule update --recursive", shell=True, check=True)
 
-def install_packages():
-    subprocess.run("pip install xges=='0.1.6'", shell=True, check=True)
-    subprocess.run("pip install numba=='0.59.1'", shell=True, check=True)
-    subprocess.run("pip install gcastle", shell=True, check=True)
-    subprocess.run("pip install tigramite", shell=True, check=True)
-    subprocess.run("pip install lingam=='1.9.1'", shell=True, check=True)
-    subprocess.run("pip install CEM_LinearInf", shell=True, check=True)
-    subprocess.run("pip install dotenv", shell=True, check=True)
-    subprocess.run("pip install dcor", shell=True, check=True)
-#Run initialization before importing plumbum
-init_latex()
-init_graphviz()
-init_causallearn()
-install_packages()
+# def install_packages():
+#     subprocess.run("pip install xges=='0.1.6'", shell=True, check=True)
+#     subprocess.run("pip install numba=='0.59.1'", shell=True, check=True)
+#     subprocess.run("pip install gcastle", shell=True, check=True)
+#     subprocess.run("pip install tigramite", shell=True, check=True)
+#     subprocess.run("pip install lingam=='1.9.1'", shell=True, check=True)
+#     subprocess.run("pip install CEM_LinearInf", shell=True, check=True)
+#     subprocess.run("pip install dotenv", shell=True, check=True)
+#     subprocess.run("pip install dcor", shell=True, check=True)
+# #Run initialization before importing plumbum
+# init_latex()
+# init_graphviz()
+# init_causallearn()
+# install_packages()
 
 import gradio as gr
 import pandas as pd

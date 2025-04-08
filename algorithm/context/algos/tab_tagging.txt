@@ -11,7 +11,7 @@
 1. Graph density match (Sparse/Dense)
 2. Functional form match (Linear/Nonlinear)
 3. Noise assumptions match (Gaussian/NonGaussian)
-4. Empirical performance (only after matches verified)
+4. Empirical Performance (when data properties matched) (only after matches verified)
 5. Efficiency/Scalability
 
 ### For Large-Scale Problems (≥ 50 variables)
@@ -19,7 +19,7 @@
 2. Graph density match (Sparse/Dense)
 3. Functional form match (Linear/Nonlinear)
 4. Noise assumptions match (Gaussian/NonGaussian)
-5. Empirical performance (only after all above verified)
+5. Empirical Performance (when data properties matched) (only after all above verified)
 
 ### For Very Large-Scale Problems (≥ 100 variables)
 1. Scalability (must support target variable count)
@@ -59,20 +59,20 @@
    - Homogenous: Performance drops under heterogeneity
 
 7. **Scalability & Efficiency**: 
-   - Extreme (>100 vars): Handles up to more than 100 variables
-   - Very High (50-100 vars): Handles up to 100 variables
-   - High (20-50 vars): Handles up to 50 variables
-   - Moderate (10-20 vars): Handles up to 20 variables
-   - Limited (<10 vars): Limited to <10 variables or runtime >60 min
+   - >100 vars: Handles up to more than 100 variables
+   - 50-100 vars: Handles up to 100 variables
+   - 20-50 vars: Handles up to 50 variables
+   - 10-20 vars: Handles up to 20 variables
+   - <10 vars: Limited to <10 variables or runtime >60 min
    - Poor: Extremely long runtime (>4 hours)
 
-8. **Empirical Performance**: Based on overall benchmark score
-   - Robust: High overall score (requires matched data properties)
-   - Strong: Good overall score (requires matched data properties)
-   - Moderate: Average overall score (requires matched data properties)
-   - Limited: Below average overall score
-   - Poor: Low overall score
-   NOTE: Empirical performance is solely compute with accuracy metrics, not regarding efficiency.
+8. **Empirical Performance (when data properties matched)**: Based on overall benchmark score
+   - 80-100%: High accuracy with matched data properties
+   - 60-80%: Good accuracy with matched data properties
+   - 40-60%: Average accuracy with matched data properties
+   - 20-40%: Below average accuracy
+   - <20%: Low accuracy
+   NOTE: Empirical Performance is solely computed with accuracy metrics, not regarding efficiency.
 
 9. **Output Format**: DAG, CPDAG, PAG
 
@@ -92,8 +92,8 @@ XGES: {
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: Very High,
-    Empirical Performance: Robust,
+    Scalability & Efficiency: 50-100 vars,
+    Empirical Performance (when data properties matched): 80-100%,
     Output Format: CPDAG,
     Graph Density Preference: Sparse-Preferring
 }
@@ -106,8 +106,8 @@ GRaSP: {
     Noise: Non-Gaussian,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: High,
-    Empirical Performance: Robust,
+    Scalability & Efficiency: 20-50 vars,
+    Empirical Performance (when data properties matched): 80-100%,
     Output Format: CPDAG,
     Graph Density Preference: Sparse-Preferring
 }
@@ -121,8 +121,8 @@ GOLEM: {
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: Moderate,
-    Empirical Performance: Robust,
+    Scalability & Efficiency: 10-20 vars,
+    Empirical Performance (when data properties matched): 80-100%,
     Output Format: DAG,
     Graph Density Preference: Density-Robust
 }
@@ -135,8 +135,8 @@ FCI: {
     Noise: Flexible,
     Latent Variable Tolerance: Robust,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: High,
-    Empirical Performance: Robust,
+    Scalability & Efficiency: 20-50 vars,
+    Empirical Performance (when data properties matched): 80-100%,
     Output Format: PAG,
     Graph Density Preference: Sparse-Preferring,
     Critical Notes: "Best choice when latent confounders are suspected"
@@ -150,8 +150,8 @@ IAMBnPC: {
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: High,
-    Empirical Performance: Robust,
+    Scalability & Efficiency: 20-50 vars,
+    Empirical Performance (when data properties matched): 80-100%,
     Output Format: CPDAG,
     Graph Density Preference: Sparse-Preferring
 }
@@ -164,8 +164,8 @@ PC: {
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: Extreme,
-    Empirical Performance: Strong,
+    Scalability & Efficiency: >100 vars,
+    Empirical Performance (when data properties matched): 60-80%,
     Output Format: CPDAG,
     Graph Density Preference: Sparse-Preferring
 }
@@ -177,12 +177,12 @@ CDNOD: {
     Functional Form: Flexible,
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
-    Scalability & Efficiency: Extreme,
-    Empirical Performance: Strong,
+    Scalability & Efficiency: >100 vars,
+    Empirical Performance (when data properties matched): 60-80%,
     Output Format: CPDAG,
     Graph Density Preference: Sparse-Preferring,
     Distribution Shift: Heterogeneous,
-    Critical Notes: "Requires EXPLICIT domain_index column in the data indicating different environments/domains to analyze"
+    Critical Notes: "Requires EXPLICIT 'domain_index' column in the data indicating different environments/domains to analyze, NEVER use it when there is no 'domain_index' column or it is None even when the data is heterogeneous"
 }
 
 FGES: {
@@ -193,8 +193,8 @@ FGES: {
     Noise: Gaussian,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: Extreme,
-    Empirical Performance: Strong,
+    Scalability & Efficiency: >100 vars,
+    Empirical Performance (when data properties matched): 60-80%,
     Output Format: CPDAG,
     Graph Density Preference: Sparse-Preferring,
     Critical Notes: "Fastest algorithm for large-scale linear sparse graphs problems"
@@ -208,8 +208,8 @@ GES: {
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: High,
-    Empirical Performance: Strong,
+    Scalability & Efficiency: 20-50 vars,
+    Empirical Performance (when data properties matched): 60-80%,
     Output Format: CPDAG,
     Graph Density Preference: Sparse-Preferring
 }
@@ -222,8 +222,8 @@ NOTEARSLinear: {
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: High,
-    Empirical Performance: Robust,
+    Scalability & Efficiency: 20-50 vars,
+    Empirical Performance (when data properties matched): 80-100%,
     Output Format: DAG,
     Graph Density Preference: Density-Robust
 }
@@ -236,8 +236,8 @@ DirectLiNGAM: {
     Noise: NonGaussian,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: Very High,
-    Empirical Performance: Moderate,
+    Scalability & Efficiency: 50-100 vars,
+    Empirical Performance (when data properties matched): 40-60%,
     Output Format: DAG,
     Graph Density Preference: Density-Robust,
     Critical Notes: "Exceptional on linear non-Gaussian data, but poor otherwise"
@@ -251,8 +251,8 @@ InterIAMB: {
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: High,
-    Empirical Performance: Limited,
+    Scalability & Efficiency: 20-50 vars,
+    Empirical Performance (when data properties matched): 20-40%,
     Output Format: CPDAG,
     Graph Density Preference: Sparse-Preferring
 }
@@ -265,8 +265,8 @@ BAMB: {
     Noise: Flexible,
     Latent Variable Tolerance: Robust,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: High,
-    Empirical Performance: Limited,
+    Scalability & Efficiency: 20-50 vars,
+    Empirical Performance (when data properties matched): 20-40%,
     Output Format: CPDAG,
     Graph Density Preference: Sparse-Preferring
 }
@@ -279,8 +279,8 @@ MBOR: {
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: High,
-    Empirical Performance: Limited,
+    Scalability & Efficiency: 20-50 vars,
+    Empirical Performance (when data properties matched): 20-40%,
     Output Format: CPDAG,
     Graph Density Preference: Sparse-Preferring
 }
@@ -293,8 +293,8 @@ HITONMB: {
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: Moderate,
-    Empirical Performance: Limited,
+    Scalability & Efficiency: 10-20 vars,
+    Empirical Performance (when data properties matched): 20-40%,
     Output Format: CPDAG,
     Graph Density Preference: Sparse-Preferring
 }
@@ -307,8 +307,8 @@ CALM: {
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: Limited,
-    Empirical Performance: Moderate,
+    Scalability & Efficiency: <10 vars,
+    Empirical Performance (when data properties matched): 40-60%,
     Output Format: DAG,
     Graph Density Preference: Density-Robust
 }
@@ -321,8 +321,8 @@ CORL: {
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: Limited,
-    Empirical Performance: Moderate,
+    Scalability & Efficiency: <10 vars,
+    Empirical Performance (when data properties matched): 40-60%,
     Output Format: DAG,
     Graph Density Preference: Density-Robust
 }
@@ -335,8 +335,8 @@ NOTEARSNonlinear: {
     Noise: Flexible,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: Moderate,
-    Empirical Performance: Moderate,
+    Scalability & Efficiency: 10-20 vars,
+    Empirical Performance (when data properties matched): 40-60%,
     Output Format: DAG,
     Graph Density Preference: Density-Robust
 }
@@ -349,8 +349,8 @@ ICALiNGAM: {
     Noise: NonGaussian,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: Limited,
-    Empirical Performance: Limited,
+    Scalability & Efficiency: <10 vars,
+    Empirical Performance (when data properties matched): 20-40%,
     Output Format: DAG,
     Graph Density Preference: Density-Robust
 }
@@ -363,8 +363,8 @@ Hybrid: {
     Noise: Gaussian,
     Latent Variable Tolerance: Moderate,
     Distribution Shift: Homogenous,
-    Scalability & Efficiency: Limited,
-    Empirical Performance: Moderate,
+    Scalability & Efficiency: <10 vars,
+    Empirical Performance (when data properties matched): 40-60%,
     Output Format: DAG,
     Graph Density Preference: Sparse-Preferring
 }
