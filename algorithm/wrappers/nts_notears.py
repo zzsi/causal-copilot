@@ -4,32 +4,28 @@ from typing import Dict, Tuple, Union, List
 
 import sys
 import os
+from sklearn import preprocessing
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 algorithm_dir = os.path.join(root_dir, 'algorithm')
-nts_dir = os.path.join(root_dir, 'externals', 'nts')
 sys.path.append(root_dir)
 sys.path.append(algorithm_dir)
-sys.path.append(nts_dir)
 
 from algorithm.wrappers.base import CausalDiscoveryAlgorithm
 from algorithm.evaluation.evaluator import GraphEvaluator
 from algorithm.wrappers.utils.ts_utils import generate_stationary_linear
-# from notears.nts_model import MODEL_NTS_NOTEARS, train_NTS_NOTEARS
-from sklearn import preprocessing
-
-
+from externals.notears.model import MODEL_NTS_NOTEARS, train_NTS_NOTEARS
 class NTSNOTEARS(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
         self._params = {
-            'p': 1,
-            'lambda1': 0.1, #lambdas for convolutional parameters in each time step. In the order of ..., lag2, lag1, instantaneous. E.g. [0.02, 0.01]
-            'lambda2': 0.1, #The lambda for all parameters.
-            'w_threshold': 5, #list of w_thresholds for convolutional parameters in each time step. In the order of ..., lag2, lag1, instantaneous. E.g. [0.3, 0.3]
-            'max_iter':100,
+            'p': 10,  # number of lags
+            'lambda1': 0.005,  # lambda for convolutional parameters in each time step. Can be float or list [lag2, lag1, instantaneous]
+            'lambda2': 0.01,  # lambda for all parameters
+            'w_threshold': 0.3,  # threshold for edge weights. Can be float or list [lag2, lag1, instantaneous]
+            'max_iter': 100,
             'h_tol': 1e-8,
-            'dims_conv':10,
-            'device': 'auto',  # Device type ('cpu' or 'gpu' or 'auto')
+            'dims_conv': 10,  # hidden dimension size
+            'device': 'auto',  # Device type ('cpu', 'cuda', or 'auto')
         }
         self._params.update(params)
         # Automatically decide device if set to 'auto'

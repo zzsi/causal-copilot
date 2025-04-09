@@ -33,7 +33,7 @@ class VARLiNGAM(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
         self._params = {
-            'lags': 1,
+            'lags': 10,
             'criterion': "bic",
             'prune': True,
             'ar_coefs': None,

@@ -19,10 +19,5 @@
         "meaning": "Significance level of PC algorithm.",
         "available_values": [0.05, 0.1, 0.01],
         "expert_suggestion": "Use 0.05 as default. Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01."
-    },
-    "alpha_level": {
-        "meaning": "Significance level at which the p_matrix is thresholded to get graph.",
-        "available_values": [0.05, 0.1, 0.01],
-        "expert_suggestion": "Use 0.05 as default. Adjust based on estimated time lag, number of nodes and sample size. Larger and denser graph means low alpha value."
     }
 }       

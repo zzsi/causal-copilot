@@ -1,5 +1,7 @@
 User original query (TOP PRIORITY):
 Discover causal relationships between protein signaling molecules. The data contains flow cytometry measurements of proteins and phospholipids.
+<<<<<<< HEAD
+=======
 
 ## ⚠️ ESSENTIAL QUERY PRIORITY ⚠️
 - User query SUPERSEDES all standard hyperparameter guidelines
@@ -7,6 +9,7 @@ Discover causal relationships between protein signaling molecules. The data cont
 - Parameters MUST be adjusted to meet user's explicit requirements 
 - ALL recommendations MUST directly align with the user's stated objectives
 - User domain knowledge overrides general optimization guidelines
+>>>>>>> 3d512bc0b65d26d76f244de6e104cd5d07efa0cd
 
 -----------------------------------------------
 Given a dataset with the following properties:
@@ -32,60 +35,130 @@ Statistical Properties:
 
 
 3. Background Knowledge:
-Based on the variable names provided from the dataset (Raf, Mek, Plcg, PIP2, PIP3, Erk, Akt, PKA, PKC, P38, Jnk), these names correspond to known proteins and signaling molecules in cellular biology, particularly in the context of signal transduction pathways.
+<<<<<<< HEAD
+Based on the variable names provided, the dataset appears to relate to biological pathways, specifically signaling pathways involved in cell communication and function. Here’s a detailed breakdown:
+=======
+The provided variable names appear to be meaningful in the context of biological signaling pathways, particularly those involved in cellular processes like cell growth, proliferation, differentiation, and survival. Below is a detailed explanation of the variables, possible causal relations among them, and relevant background domain knowledge.
+>>>>>>> 3d512bc0b65d26d76f244de6e104cd5d07efa0cd
 
 ### 1. Detailed Explanation about the Variables:
 
-- **Raf**: Raf (Rapidly Accelerated Fibrosarcoma) is a family of proteins that act as serine/threonine kinases. Raf is a crucial component of the RAS-RAF-MEK-ERK signaling pathway, which is involved in cell division, differentiation, and apoptosis.
+<<<<<<< HEAD
+- **Raf**: A protein kinase that acts as a key player in the MAPK/ERK signaling pathway. It is involved in the phosphorylation of its downstream targets and plays a role in cell proliferation, differentiation, and survival.
 
-- **Mek**: Mek (MAPK/ERK kinase) is a dual-specificity kinase that is activated by Raf. It phosphorylates ERK (Extracellular signal-Regulated Kinase), thereby playing a key role in the MAPK signaling pathway.
+- **Mek**: Also known as MAPK/ERK kinase, it is a dual-specificity kinase that is activated by Raf and in turn phosphorylates and activates ERK. It acts as an intermediary in the MAPK pathway.
 
-- **Plcg**: Phospholipase C gamma (Plcg) is an enzyme that plays an important role in the inositol phosphate signaling pathway by hydrolyzing phosphatidylinositol 4,5-bisphosphate to produce inositol trisphosphate (IP3) and diacylglycerol (DAG).
+- **Plcg**: Phospholipase C gamma, an enzyme that can cleave phosphatidylinositol 4,5-bisphosphate to produce inositol trisphosphate (IP3) and diacylglycerol (DAG), thereby playing a critical role in intracellular signaling.
 
-- **PIP2**: Phosphatidylinositol 4,5-bisphosphate (PIP2) is a minor phospholipid component of cell membranes that serves as a substrate for the activation of phospholipase C and is involved in the signaling pathways of various receptors.
+- **PIP2**: Phosphatidylinositol 4,5-bisphosphate, a phospholipid component of the cell membrane that serves as a substrate for phospholipase C, thus influencing various signaling pathways.
 
-- **PIP3**: Phosphatidylinositol 3,4,5-trisphosphate (PIP3) is generated from PIP2 and is a key second messenger that recruits and activates proteins with PH domains, such as Akt, that mediate downstream signaling.
+- **PIP3**: Phosphatidylinositol (3,4,5)-trisphosphate, a product of PIP2 phosphorylation by phosphoinositide 3-kinase (PI3K) that is critical for the activation of Akt and other downstream signaling mediators.
 
-- **Erk**: ERK (Extracellular Signal-Regulated Kinase) is a key kinase in the MAPK signaling pathway that regulates various cellular processes including proliferation and differentiation.
+- **Erk**: Extracellular signal-regulated kinase, a protein kinase that is activated by MEK and is involved in mediating cellular responses to growth signals.
 
-- **Akt**: Akt (also known as Protein Kinase B) is a kinase that is central to the PI3K-Akt signaling pathway, involved in regulating cellular survival and metabolism.
+- **Akt**: Also known as protein kinase B (PKB), it is a serine/threonine kinase that is activated by PIP3 and plays a key role in promoting cell survival and growth.
 
-- **PKA**: Protein Kinase A (PKA) is a serine/threonine kinase that is activated by cyclic AMP (cAMP) and mediates various signaling pathways connected to the regulation of glycogen, sugar, and lipid metabolism.
+- **PKA**: Protein kinase A, a major regulatory enzyme that is activated by cyclic AMP (cAMP) signaling and regulates multiple cellular processes, including metabolism and gene expression.
 
-- **PKC**: Protein Kinase C (PKC) is a family of serine/threonine kinases that are activated by signals such as growth factors and diacylglycerol and are involved in various cellular responses.
+- **PKC**: Protein kinase C, a family of serine/threonine kinases that are activated by diacylglycerol and involved in various signaling pathways regulating cell growth, differentiation, and apoptosis.
 
-- **P38**: p38 MAPK is a kinase involved in stress responses and is activated by various stimuli such as proinflammatory cytokines.
+- **P38**: P38 MAPK, a type of MAP kinase that is activated by stress stimuli and involved in inflammatory responses and cell differentiation.
 
-- **Jnk**: JNK (c-Jun N-terminal kinase) is a type of MAPK involved in stress signaling and is activated by various cellular stresses, contributing to apoptotic signaling.
+- **Jnk**: c-Jun N-terminal kinase, another member of the MAPK family, which is activated in response to stress and inflammatory cytokines, playing roles in apoptosis and cellular responses to stress.
 
 ### 2. Possible Causal Relations among these variables:
 
-- **Raf → Mek**: Raf activates Mek in the MAPK signaling cascade.
-- **Mek → Erk**: Mek phosphorylates and activates Erk, advancing the signaling cascade.
-- **Raf → Plcg**: Raf may interact with Plcg to enhance signaling pathways integrating MAPK and phospholipid signaling.
-- **Plcg → PIP2 → PIP3**: Plcg hydrolyzes PIP2 to produce PIP3, which can activate pathways involving Akt and others.
-- **PIP3 → Akt**: PIP3 acts to recruit and activate Akt, promoting cell survival and metabolism.
-- **P38 and Jnk Activation**: Stressful conditions may lead to the activation of both p38 and Jnk pathways, possibly through upstream regulators like Raf or other proteins.
-- **PKA** and **PKC** may modulate the activity of several pathways, including those involving Raf, Akt, and Mek, influencing proliferative and survival responses.
+- **Raf → Mek**: Raf activates Mek by phosphorylation.
+  
+- **Mek → Erk**: Mek activates Erk by phosphorylation.
+  
+- **Plcg → PIP2 → PIP3**: Phospholipase C gamma (Plcg) breaks down PIP2 to generate PIP3.
+  
+- **PIP3 → Akt**: PIP3 recruits and activates Akt at the membrane.
+  
+- **Raf → PIP2**: While indirect, signals that activate Raf can lead to changes in PIP2 levels through the activation of downstream pathways.
+  
+- **Erk → PKA**: Erk can phosphorylate and activate PKA, linking the MAPK pathway to cAMP signaling.
+  
+- **PKC → P38/Jnk**: PKC can activate parallel signaling pathways, including P38 and Jnk.
+  
+- **P38/Jnk can also interact with many of these pathways**; e.g., they can influence the outcomes of Erk activation and cellular stress responses.
 
-### 3. Other Background Domain Knowledge:
+### 3. Other Background Domain Knowledge that may be helpful for experts to design causal discovery algorithms:
 
-- The interplay between different signaling pathways (e.g., MAPK and PI3K/Akt) is crucial for cell fate decisions. Feedback loops and crosstalk are common, leading to complex dynamics.
-- Understanding the cellular context (such as tissue type or external signals) can be essential when developing causal models, as this may change the directionality and strength of interactions.
-- Causal discovery in biological systems often involves integrating data from various sources (e.g., gene expression, protein levels, and phosphoproteomics) to infer networks.
-- Perturbation experiments, such as knockout or overexpression studies, can provide additional support for proposed causal relationships.
-- The temporal stability of interactions should be considered, as some signaling events can be transient and context-dependent. 
+- **Cell Signaling Mechanisms**: Understanding cell signaling pathways and the role of various kinases and phospholipids in mediating cellular responses is crucial. Experts should be familiar with concepts like activation and inhibition, feedback loops, and cross-talk between pathways.
 
-Thus, the variable names suggest a biological context where causal discovery can reveal insights into complex signaling networks in cells.
+- **Biological Experiments**: Information regarding experimental conditions, such as treatment with specific inhibitors (e.g., MEK inhibitors, PI3K inhibitors) can provide insight into causal relations as certain variables may be manipulated.
+
+- **Sequential Events**: Most signaling pathways are characterized by a time sequence of events, where one event can lead to another. Temporal data might enhance causal discovery analysis.
+
+- **Graphical Models**: Understanding of how to build and interpret directed graphical models (like Bayesian networks) can help in representing causal relationships among the variables.
+
+- **Assumptions**: Causal discovery algorithms typically rely on certain assumptions, such as the causal Markov condition and the faithfulness assumption, which need to be critically assessed in biological contexts.
+
+With this detailed understanding of the variables, possible causal relations, and additional background knowledge, one can proceed with causal discovery on the provided dataset.
+=======
+- **Raf**: A serine/threonine kinase that acts as a key component in the MAPK/ERK signaling pathway. It is activated by RAS and subsequently phosphorylates MEK.
+  
+- **Mek (MAP2K)**: MAP kinase/ERK kinase, which is activated by Raf. Mek phosphorylates and activates ERK, playing a crucial role in the signaling cascade.
+
+- **Plcg (Phospholipase C-gamma)**: An enzyme that hydrolyzes PIP2 to produce inositol trisphosphate (IP3) and diacylglycerol (DAG). It is involved in various signaling pathways, including those regulating calcium release and protein kinase activation.
+
+- **PIP2 (Phosphatidylinositol 4,5-bisphosphate)**: A phospholipid found in the inner leaflet of the plasma membrane that serves as a substrate for phospholipases and is involved in cellular signaling processes.
+
+- **PIP3 (Phosphatidylinositol (3,4,5)-trisphosphate)**: A product of the phosphorylation of PIP2 by PI3-kinase. It acts as a secondary messenger in signaling pathways, particularly in promoting cell survival and growth.
+
+- **Erk (Extracellular signal-regulated kinase)**: A downstream target of MEK. It is a key player in the MAPK signaling pathway affecting cell division, survival, and differentiation.
+
+- **Akt (Protein kinase B)**: A central node in many signaling pathways. It is activated by PIP3 and plays crucial roles in regulating metabolism, cell survival, and growth.
+
+- **PKA (Protein kinase A)**: A serine/threonine kinase activated by cyclic AMP (cAMP) that mediates various signaling effects in response to hormones and other stimuli.
+
+- **PKC (Protein kinase C)**: A family of serine/threonine kinases activated by diacylglycerol (DAG) and calcium ions, involved in a variety of cellular processes including cell proliferation and differentiation.
+
+- **P38 (MAPK)**: A member of the MAPK family activated by stress signals and involved in inflammation responses, apoptosis, and differentiation.
+
+- **Jnk (c-Jun N-terminal kinase)**: Another MAPK that responds to stress and is involved in cell differentiation and apoptosis.
+
+### 2. Possible Causal Relations among These Variables
+
+Based on established biological pathways, the following causal relationships may exist:
+
+- **Raf → Mek**: Raf activates Mek by phosphorylation.
+- **Mek → Erk**: Mek activates Erk by phosphorylation.
+- **Plcg → PIP2**: Phospholipase C-gamma hydrolyzes PIP2 from membranes.
+- **PIP2 → PIP3**: PIP2 is phosphorylated to form PIP3, often by the action of PI3-kinase.
+- **PIP3 → Akt**: PIP3 recruits Akt to the membrane, leading to its activation.
+- **DAG → PKC**: DAG activates Protein Kinase C, promoting signaling.
+- **Stress Signals → P38/Jnk**: Various stress signals can activate both P38 and JNK through upstream kinases.
+- **Erk → Cell Cycle progression**: Erk influences the transcription of genes involved in the cell cycle and proliferation.
+
+### 3. Other Background Domain Knowledge
+
+To better design causal discovery algorithms, the following background knowledge can be useful:
+
+- **Signaling Pathways**: Familiarity with the signaling pathways can inform assumptions about the directions and existence of causal links.
+  
+- **Temporal Dependencies**: Understanding time-series data or temporal dynamics in signaling can enhance causal inference since many interactions are time-dependent.
+
+- **Feedback Mechanisms**: Many signaling pathways involve feedback loops that can complicate causal inference; these should be carefully modeled.
+
+- **Experimental Validation**: Prior knowledge from experiments (e.g., knockdown studies) can inform causal relationships and help validate results from causal discovery algorithms.
+
+- **Pathway Databases**: Tools like KEGG, Reactome, or BioCyc provide curated pathways that can help hypothesize potential interactions and causality in biological networks.
+
+This information should serve well for causal discovery analysis in biological datasets.
+>>>>>>> 3d512bc0b65d26d76f244de6e104cd5d07efa0cd
 
 We have selected the following algorithm for causal discovery:
 
-Algorithm: GES
-Description: User specifies this algorithm.
+Algorithm: FCI
+Description: Fast Causal Inference (FCI) is a constraint-based algorithm that is robust to latent confounders and can handle flexible functional forms and noise distributions. It outputs a Partial Ancestral Graph (PAG), which represents causal relationships with potential latent variables.
+FCI is the best choice for this dataset due to its ability to handle latent confounders, which are likely present in biological signaling pathways. It also manages non-linear relationships effectively with the rcit test, aligning with the dataset's non-linear characteristics. Additionally, FCI's performance in sparse graphs and its robustness to measurement error make it well-suited for the dataset's properties. The algorithm's output format (PAG) is also acceptable to the user, providing a comprehensive view of potential causal structures.
 
 Now, we need to determine the optimal hyperparameters for this algorithm. I'll guide you through a systematic approach to select values that prioritize accuracy while maintaining computational efficiency for moderate graph sizes.
 
-Primary hyperparameters to configure: score_func, maxP
+Primary hyperparameters to configure: alpha, indep_test, depth
 
 For each hyperparameter, please follow this structured approach:
 
@@ -109,7 +182,7 @@ Step 3: Evaluate each hyperparameter's impact on accuracy vs. efficiency
 
 Step 4: Analyze algorithm-specific recommendations
    - Review expert suggestions for each parameter:
-   "**Parameter:** score_func\n- **Meaning:** Score function to be used\n- **Available Values:**\n  - local_score_BIC\n  - local_score_BDeu\n- **Expert Suggestion:** Use local_score_BIC as default. Use 'local_score_BIC' for a good balance of fit and complexity for linear data. 'BDeu' for discrete data. \n\n**Parameter:** maxP\n- **Meaning:** Allowed maximum number of parents when searching the graph\n- **Available Values:**\n  - -1\n  - 3\n  - 5\n  - 7\n- **Expert Suggestion:** Use -1 as default. For graphs with <10 nodes, use -1 (no limit) to explore all possibilities. For 10-25 nodes, limit maxP to 3. For 25-50 nodes, use maxP=5. For >50 nodes, use maxP=7 to reduce computational complexity. Each additional parent can increase runtime exponentially.\n\n"
+   "**Parameter:** alpha\n- **Meaning:** Desired significance level in (0, 1)\n- **Available Values:**\n  - 0.05\n  - 0.1\n  - 0.01\n- **Expert Suggestion:** Use 0.05 as default. Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\n\n**Parameter:** indep_test\n- **Meaning:** Independence test method\n- **Available Values:**\n  - fisherz\n  - chisq\n  - kci\n  - fastkci\n  - rcit\n- **Expert Suggestion:** Use fisherz as default (for linear data). Choose based on data type, DON'T use nonlinear/nonparametric tests for linear/discrete data. 'Fisherz' for linear data; 'chisq' for discrete data (only applied for pure discrete data); 'kci' for nonlinear data (very slow, use only when both condition fulfilled: variable size < 10 and sample size < 1500); 'rcit' is for non-linear data and the fastest approximation of kci (use only when both condition fulfilled: < 100 variables and sample size < 10000); 'fastkci' is for non-linear data and a divide-and-conquer version of kci, faster than kci in large sample size scenarios but less accurate (use only when both condition fulfilled: < 20 variables and sample size < 3000). For nonlinear data, as long as variable and sample size constraints are fulfilled, choose KCI > RCIT > FastKCI in order of accuracy.\n\n**Parameter:** depth\n- **Meaning:** Maximum depth for skeleton search\n- **Available Values:**\n  - -1\n  - 6\n  - 4\n  - 2\n  - 1\n- **Expert Suggestion:** Use -1 as default. Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 1-3) can significantly speed up the algorithm at the cost of some accuracy. A graph with node number < 10, use depth 6; A graph with node number 10 - 25, use depth 4; A graph with node number 25-50, use depth 2; A graph with node number > 50, use depth 1.\n\n"
 
 Step 5: Make final decisions based on:
    - For moderate graph sizes (<50 variables), prioritize accuracy over speed
@@ -119,7 +192,7 @@ Step 5: Make final decisions based on:
 Please provide your suggestions in a structured JSON format, with detailed reasoning for each hyperparameter. Your response should look like this:
 
 {
-  "algorithm": "GES",
+  "algorithm": "FCI",
   "hyperparameters": {
     "[HYPERPARAMETER_1_NAME]": {
       "full_name": "[HYPERPARAMETER_1_FULL_NAME]",

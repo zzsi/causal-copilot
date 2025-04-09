@@ -24,9 +24,11 @@ class PCMCI(CausalDiscoveryAlgorithm):
         self._params = {
             'indep_test': 'parcorr',
             'tau_min': 0,
-            'tau_max': 1,
+            'tau_max': 10,
             'pc_alpha': 0.05,
-            'alpha_level': 0.05,
+            'contemp_collider_rule': 'majority',
+            'conflict_resolution': True,
+            'reset_lagged_links': False,
             'fdr_method': 'none',
             'link_assumptions': None,
             'max_conds_dim': None,
@@ -44,11 +46,11 @@ class PCMCI(CausalDiscoveryAlgorithm):
         return self._params
 
     def get_primary_params(self):
-        self._primary_param_keys = ['indep_test', 'tau_min', 'tau_max', 'pc_alpha', 'alpha_level']
+        self._primary_param_keys = ['indep_test', 'tau_min', 'tau_max', 'pc_alpha']
         return {k: v for k, v in self._params.items() if k in self._primary_param_keys}
 
     def get_secondary_params(self):
-        self._secondary_param_keys = ['link_assumptions', 'max_conds_dim', 'max_combinations', 'max_conds_py', 'max_conds_px']
+        self._secondary_param_keys = ['contemp_collider_rule', 'conflict_resolution', 'reset_lagged_links', 'fdr_method', 'link_assumptions', 'max_conds_dim', 'max_combinations', 'max_conds_py', 'max_conds_px']
         return {k: v for k, v in self._params.items() if k in self._secondary_param_keys}
 
     def fit(self, data: pd.DataFrame) -> Tuple[np.ndarray, Dict, PCMCI_model]:
@@ -82,7 +84,7 @@ class PCMCI(CausalDiscoveryAlgorithm):
         params = {**self.get_primary_params(), **self.get_secondary_params()}
         # pop indep_test from params since it's already used to initialize cond_ind_test
         params.pop('indep_test')
-        results = pcmci.run_pcmci(**params)
+        results = pcmci.run_pcmciplus(**params)
         if self._params['fdr_method'] !='none':
             q_matrix = pcmci.get_corrected_pvalues(p_matrix=results['p_matrix'], 
                                                 fdr_method=self._params['fdr_method'],
@@ -90,7 +92,7 @@ class PCMCI(CausalDiscoveryAlgorithm):
         else:
             q_matrix = results['p_matrix']
 
-        matrices = (q_matrix <= self._params['alpha_level']).astype(int)
+        matrices = (q_matrix <= self._params['pc_alpha']).astype(int)
         lag_matrix = np.array([matrices[:, :, lag].T for lag in range(matrices.shape[2])])
         
         # Prepare additional information
@@ -98,7 +100,7 @@ class PCMCI(CausalDiscoveryAlgorithm):
             'val_matrix': results['val_matrix'],
             'p_matrix': results['p_matrix'],
             'conf_matrix': results['conf_matrix'],
-            'alpha': self._params['alpha_level'],
+            'alpha': self._params['pc_alpha'],
             'q_matrix': q_matrix,
             'lag_matrix': lag_matrix
         }

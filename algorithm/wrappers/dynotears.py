@@ -18,12 +18,12 @@ class DYNOTEARS(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
         self._params = {
-            'p': 1,
-            'lambda_w': 0.1,
-            'lambda_a': 0.1,
+            'p': 10,
+            'lambda_w': 0.01,
+            'lambda_a': 0.01,
             'max_iter': 100,
             'h_tol': 1e-8,
-            'w_threshold': 0.01
+            'w_threshold': 0.05
         }
         self._params.update(params)
 

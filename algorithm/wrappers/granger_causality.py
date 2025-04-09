@@ -134,9 +134,9 @@ class GrangerCausality(CausalDiscoveryAlgorithm):
     def __init__(self, params: Dict = {}):
         super().__init__(params)
         self._params = {
-            'p': 1,
+            'p': 10,
             'gc_type': 'pw', #pair-wise (pw) or multi-variate (mv)
-            'alpha': 0.1, #significance level for F test
+            'alpha': 0.05, #significance level for F test
             'criterion': None, # information criterion
         }
         self._params.update(params)
