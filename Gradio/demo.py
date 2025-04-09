@@ -321,34 +321,13 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
         if CURRENT_STAGE == 'preliminary_feedback':
             chat_history.append((message, None))
             global_state, text = parse_preliminary_feedback(chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE, message)
-            # print('preliminary_feedback', global_state.user_data.selected_features)
+            print('preliminary_feedback meaningful feature', global_state.user_data.meaningful_feature)
             if text != "":
                 chat_history.append((None, text))
             else:
                 chat_history.append((None, "✅ We do not receive any feedback from you."))
             CURRENT_STAGE = 'visual_dimension_check'
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-
-        # # Preprocess Step 2: Sparsity Checking
-        # if CURRENT_STAGE == 'sparsity_check':
-        #     # missing value detection
-        #     np_nan = np_nan_detect(global_state)
-        #     if not np_nan:
-        #         chat_history.append((None, "We do not detect NA values in your dataset, do you have the specific value that represents NA?\n"
-        #                                     "For example the 0 represents NA in your dataset, then you should input 0.\n"
-        #                                     "If so, please provide here. Otherwise please input 'NO'."))
-        #         CURRENT_STAGE = 'sparsity_check_1'
-        #         yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-        #         return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-        #     else:
-        #         CURRENT_STAGE = 'sparsity_check_2'
-        
-        # if CURRENT_STAGE == 'sparsity_check_1':
-        #     chat_history.append((message, None)) 
-        #     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-        #     chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = first_stage_sparsity_check(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE)
-        #     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                                  
 
         if CURRENT_STAGE == 'visual_dimension_check':
             ## Preprocess Step 4: Choose Visualization Variables
@@ -411,8 +390,8 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             if args.data_mode == 'real':
                 chat_history.append(("🌍 Generate background knowledge based on the dataset you provided...", None))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                # global_state = knowledge_info(args, global_state)
-                global_state.user_data.knowledge_docs = "This is fake domain knowledge for debugging purposes."
+                global_state = knowledge_info(args, global_state)
+                # global_state.user_data.knowledge_docs = "This is fake domain knowledge for debugging purposes."
                 knowledge_clean = str(global_state.user_data.knowledge_docs).replace("[", "").replace("]", "").replace('"',"").replace("\\n\\n", "\n\n").replace("\\n", "\n").replace("'", "")
                 chat_history.append((None, knowledge_clean))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -630,28 +609,12 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             if REQUIRED_INFO["interactive_mode"]:
                 chat_history.append((message, None))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-            if message.lower()=='no' or message=='':
-                CURRENT_STAGE = 'hyperparameter_selection'     
-                chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Selected algorithm: {global_state.algorithm.selected_algorithm}\n"))
+                global_state, chat_history, CURRENT_STAGE = parse_algo_selection(message, global_state, chat_history)
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-            elif message in permitted_algo_list:
-                global_state.algorithm.selected_algorithm = message
-                global_state.algorithm.algorithm_arguments = None 
-                CURRENT_STAGE = 'hyperparameter_selection'     
-                chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Selected algorithm: {global_state.algorithm.selected_algorithm}\n"))
-                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-            else: 
-                chat_history.append((None, "❌ The specified algorithm is not correct, please choose from the following: \n"
-                                        f"{', '.join(permitted_algo_list)}\n"
-                                        "Otherwise please reply NO."))
-                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-
+                if CURRENT_STAGE != 'hyperparameter_selection':
+                    return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                    
         if CURRENT_STAGE == 'hyperparameter_selection':  
-            # filter = Filter(args)
-            # global_state = filter.forward(global_state)
-            # reranker = Reranker(args)
-            # global_state = reranker.forward(global_state)
             hp_selector = HyperparameterSelector(args)
             global_state = hp_selector.forward(global_state)
             hyperparameter_text, global_state = generate_hyperparameter_text(global_state)

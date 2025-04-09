@@ -194,7 +194,7 @@ def parse_preliminary_feedback(chat_history, download_btn, global_state, REQUIRE
         print('1', meaningful_feature, '1', heterogeneity, '1', accept_CPDAG, '1', domin_index, '1', missing_value)
         # text += f"✅ Successfully parsed your provided information. \n"
         if 'meaningful_feature' in selected_variables:
-            global_state.user_data.meaningful_feature
+            global_state.user_data.meaningful_feature = meaningful_feature
             text += f"- ✅ Adjusted Meaningful Feature: {meaningful_feature}\n"
         if 'heterogeneity' in selected_variables:
             global_state.statistics.heterogeneous = heterogeneity
@@ -483,23 +483,80 @@ def parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED
                             'GES', 'FGES', 'XGES', 'GRaSP',
                             'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
                             'DirectLiNGAM', 'ICALiNGAM']
-    if message == '' or message.lower()=='no':
+    class algo_selection(BaseModel):
+        indicator: bool
+        algo: str
+    prompt = f"""You are a helpful assistant, please identify whether user select a causal discovery algorithm. 
+    I ask user whether they want to select a causal discovery algorithm from the following:
+    Algorithm List: {permitted_algo_list}
+    If user do not provide a algorithm, or the algorithm name doesn't belong to the Algorithm List, please save False in indicator.
+    If user provide a algorithm name that belongs to the Algorithm List, please save True in indicator and the algorithm name in algo.
+    Note: The algorithm name should be exactly the same as the one in the Algorithm List.
+    """
+    response = LLM_parse_query(algo_selection, prompt, message)
+    indicator, algo = response.indicator, response.algo
+    if indicator:
+        if algo in permitted_algo_list:
+            global_state.algorithm.selected_algorithm = algo
+            chat_history.append((message, f"✅ We will rerun the Causal Discovery Procedure with the Selected algorithm: {global_state.algorithm.selected_algorithm}\n"
+                                        "Please press 'enter' in the chatbox to start the running..." ))
+            CURRENT_STAGE = 'algo_selection'
+        else:
+            chat_history.append((None, "❌ The specified algorithm is not correct, please choose from the following: \n"
+                            f"{', '.join(permitted_algo_list)}\n"
+                            "Otherwise please reply NO."))
+    else:
         chat_history.append((message, "💬 No algorithm is specified, will go to the next step..."))
         if global_state.user_data.meaningful_feature and not global_state.statistics.time_series:
             CURRENT_STAGE = 'inference_analysis_check'     
         else:
             CURRENT_STAGE = 'report_generation_check'
-    elif message not in permitted_algo_list:
-        chat_history.append((message, "❌ The specified algorithm is not correct, please choose from the following: \n"
-                                    f"{', '.join(permitted_algo_list)}\n"))   
-    else:  
-        global_state.algorithm.selected_algorithm = message
-        chat_history.append((message, f"✅ We will rerun the Causal Discovery Procedure with the Selected algorithm: {global_state.algorithm.selected_algorithm}\n"
-                                       "Please press 'enter' in the chatbox to start the running..." ))
-        CURRENT_STAGE = 'algo_selection'
-        #process_message(message, chat_history, download_btn)
     return message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
 
+def parse_algo_selection(message, global_state, chat_history):
+    if global_state.statistics.time_series:
+        permitted_algo_list = ['PCMCI', 'DYNOTEARS', 'NTSNOTEARS', 'VARLiNGAM'] 
+    else:
+        if torch.cuda.is_available():
+            permitted_algo_list= ['PC', 'PCParallel', 'AcceleratedPC', 'FCI', 'CDNOD', 'AcceleratedCDNOD',
+                            'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
+                            'GES', 'FGES', 'XGES', 'GRaSP',
+                            'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
+                            'DirectLiNGAM', 'AcceleratedLiNGAM', 'ICALiNGAM']
+        else:
+            permitted_algo_list= ['PC', 'PCParallel', 'FCI', 'CDNOD',
+                            'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
+                            'GES', 'FGES', 'XGES', 'GRaSP',
+                            'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
+                            'DirectLiNGAM', 'ICALiNGAM']
+    class algo_selection(BaseModel):
+        indicator: bool
+        algo: str
+    prompt = f"""You are a helpful assistant, please identify whether user select a causal discovery algorithm. 
+    I ask user whether they want to select a causal discovery algorithm from the following:
+    Algorithm List: {permitted_algo_list}
+    If user do not provide a algorithm, or the algorithm name doesn't belong to the Algorithm List, please save False in indicator.
+    If user provide a algorithm name that belongs to the Algorithm List, please save True in indicator and the algorithm name in algo.
+    Note: The algorithm name should be exactly the same as the one in the Algorithm List.
+    """
+    response = LLM_parse_query(algo_selection, prompt, message)
+    indicator, algo = response.indicator, response.algo
+    if indicator:
+        if algo in permitted_algo_list:
+            global_state.algorithm.selected_algorithm = algo
+            global_state.algorithm.algorithm_arguments = None 
+            CURRENT_STAGE = 'hyperparameter_selection'     
+            chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Selected algorithm: {global_state.algorithm.selected_algorithm}\n"))
+        else:
+            chat_history.append((None, "❌ The specified algorithm is not correct, please choose from the following: \n"
+                            f"{', '.join(permitted_algo_list)}\n"
+                            "Otherwise please reply NO."))
+    else:
+        CURRENT_STAGE = 'hyperparameter_selection'     
+        chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Selected algorithm: {global_state.algorithm.selected_algorithm}\n"))
+    return global_state, chat_history, CURRENT_STAGE
+                    
+                    
 def prepare_hyperparameter_text(global_state, chat_history):
     algorithm = global_state.algorithm.selected_algorithm
     with open(f"algorithm/context/hyperparameters/{algorithm}.json", "r") as f:
@@ -535,6 +592,7 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
     else:
         try:
             class Param_Selector(BaseModel):
+                indicaror: bool
                 param_keys: list[str]
                 param_values: list[Union[str, int, float]]
                 valid_params: bool
@@ -552,6 +610,8 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
             {algorithm_specs}
 
             **Task**
+            1. Check if the user has provided any parameters. If not, save indicator as False, and your reason in error message.
+            If the user has provided parameters, save indicator as True, and do the following tasks:
             1. Parse the user's input to identify parameter keys and their corresponding values.
             2. Save parameter keys in the list `param_keys` and values in the list `param_values`. The order should match between the two lists.
             3. Check each parameter one by one:
@@ -573,7 +633,11 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
             Only validate parameters that exist for the current algorithm. Ignore parameters that aren't defined in the specifications.
             """
             parsed_response = LLM_parse_query(Param_Selector, prompt, message)
-            param_keys, param_values, valid_params, error_messages = parsed_response.param_keys, parsed_response.param_values, parsed_response.valid_params, parsed_response.error_messages
+            indicator, param_keys, param_values, valid_params, error_messages = parsed_response.indicaror, parsed_response.param_keys, parsed_response.param_values, parsed_response.valid_params, parsed_response.error_messages
+            if not indicator:
+                CURRENT_STAGE = 'algo_running'
+                chat_history.append((None, "💬 Continue to the next step..."))
+                return chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE
             specified_params = {param_keys[i].lower(): param_values[i] for i in range(len(param_keys))}
             print('specified_params',specified_params)
             print('valid_params', valid_params)

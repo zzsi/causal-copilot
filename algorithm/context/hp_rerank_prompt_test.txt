@@ -1,5 +1,5 @@
 User original query (TOP PRIORITY):
-This is a Time-Series dataset, Please discover the causal structure of different factors and profits.
+Discover causal relationships between protein signaling molecules. The data contains flow cytometry measurements of proteins and phospholipids.
 
 ## ⚠️ ESSENTIAL QUERY PRIORITY ⚠️
 - User query SUPERSEDES all standard hyperparameter guidelines
@@ -11,92 +11,81 @@ This is a Time-Series dataset, Please discover the causal structure of different
 -----------------------------------------------
 Given a dataset with the following properties:
 
-1. Columns: Shopping_Event	Ad_Spend	Page_Views	Unit_Price	Sold_Units	Revenue	Operational_Cost	Profit
+1. Columns: Raf	Mek	Plcg	PIP2	PIP3	Erk	Akt	PKA	PKC	P38	Jnk
 2. Statistics:
 The dataset has the following characteristics:
 
-Data Type: The overall data type is Time-series.
+Data Type: The overall data type is Continuous.
 
-The sample size is 365 with 8 features. 
+The sample size is 853 with 11 features. 
 
-This dataset is time-series data. 
+This dataset is not time-series data. 
 
 Data Quality: There are no missing values in the dataset.
 
 Statistical Properties:
-- Linearity: The relationships between variables are not predominantly linear.
+- Linearity: The relationships between variables are predominantly linear.
 - Gaussian Errors: The errors in the data do not follow a Gaussian distribution.
-- Time lag: 50 
-
-- Stationarity: The dataset is stationary. 
+- Heterogeneity: The dataset is not heterogeneous. 
 
 
 
 
 3. Background Knowledge:
-T
-h
-i
-s
- 
-i
-s
- 
-f
-a
-k
-e
- 
-d
-o
-m
-a
-i
-n
- 
-k
-n
-o
-w
-l
-e
-d
-g
-e
- 
-f
-o
-r
- 
-d
-e
-b
-u
-g
-g
-i
-n
-g
- 
-p
-u
-r
-p
-o
-s
-e
-s
-.
+Based on the variable names provided from the dataset (Raf, Mek, Plcg, PIP2, PIP3, Erk, Akt, PKA, PKC, P38, Jnk), these names correspond to known proteins and signaling molecules in cellular biology, particularly in the context of signal transduction pathways.
+
+### 1. Detailed Explanation about the Variables:
+
+- **Raf**: Raf (Rapidly Accelerated Fibrosarcoma) is a family of proteins that act as serine/threonine kinases. Raf is a crucial component of the RAS-RAF-MEK-ERK signaling pathway, which is involved in cell division, differentiation, and apoptosis.
+
+- **Mek**: Mek (MAPK/ERK kinase) is a dual-specificity kinase that is activated by Raf. It phosphorylates ERK (Extracellular signal-Regulated Kinase), thereby playing a key role in the MAPK signaling pathway.
+
+- **Plcg**: Phospholipase C gamma (Plcg) is an enzyme that plays an important role in the inositol phosphate signaling pathway by hydrolyzing phosphatidylinositol 4,5-bisphosphate to produce inositol trisphosphate (IP3) and diacylglycerol (DAG).
+
+- **PIP2**: Phosphatidylinositol 4,5-bisphosphate (PIP2) is a minor phospholipid component of cell membranes that serves as a substrate for the activation of phospholipase C and is involved in the signaling pathways of various receptors.
+
+- **PIP3**: Phosphatidylinositol 3,4,5-trisphosphate (PIP3) is generated from PIP2 and is a key second messenger that recruits and activates proteins with PH domains, such as Akt, that mediate downstream signaling.
+
+- **Erk**: ERK (Extracellular Signal-Regulated Kinase) is a key kinase in the MAPK signaling pathway that regulates various cellular processes including proliferation and differentiation.
+
+- **Akt**: Akt (also known as Protein Kinase B) is a kinase that is central to the PI3K-Akt signaling pathway, involved in regulating cellular survival and metabolism.
+
+- **PKA**: Protein Kinase A (PKA) is a serine/threonine kinase that is activated by cyclic AMP (cAMP) and mediates various signaling pathways connected to the regulation of glycogen, sugar, and lipid metabolism.
+
+- **PKC**: Protein Kinase C (PKC) is a family of serine/threonine kinases that are activated by signals such as growth factors and diacylglycerol and are involved in various cellular responses.
+
+- **P38**: p38 MAPK is a kinase involved in stress responses and is activated by various stimuli such as proinflammatory cytokines.
+
+- **Jnk**: JNK (c-Jun N-terminal kinase) is a type of MAPK involved in stress signaling and is activated by various cellular stresses, contributing to apoptotic signaling.
+
+### 2. Possible Causal Relations among these variables:
+
+- **Raf → Mek**: Raf activates Mek in the MAPK signaling cascade.
+- **Mek → Erk**: Mek phosphorylates and activates Erk, advancing the signaling cascade.
+- **Raf → Plcg**: Raf may interact with Plcg to enhance signaling pathways integrating MAPK and phospholipid signaling.
+- **Plcg → PIP2 → PIP3**: Plcg hydrolyzes PIP2 to produce PIP3, which can activate pathways involving Akt and others.
+- **PIP3 → Akt**: PIP3 acts to recruit and activate Akt, promoting cell survival and metabolism.
+- **P38 and Jnk Activation**: Stressful conditions may lead to the activation of both p38 and Jnk pathways, possibly through upstream regulators like Raf or other proteins.
+- **PKA** and **PKC** may modulate the activity of several pathways, including those involving Raf, Akt, and Mek, influencing proliferative and survival responses.
+
+### 3. Other Background Domain Knowledge:
+
+- The interplay between different signaling pathways (e.g., MAPK and PI3K/Akt) is crucial for cell fate decisions. Feedback loops and crosstalk are common, leading to complex dynamics.
+- Understanding the cellular context (such as tissue type or external signals) can be essential when developing causal models, as this may change the directionality and strength of interactions.
+- Causal discovery in biological systems often involves integrating data from various sources (e.g., gene expression, protein levels, and phosphoproteomics) to infer networks.
+- Perturbation experiments, such as knockout or overexpression studies, can provide additional support for proposed causal relationships.
+- The temporal stability of interactions should be considered, as some signaling events can be transient and context-dependent. 
+
+Thus, the variable names suggest a biological context where causal discovery can reveal insights into complex signaling networks in cells.
 
 We have selected the following algorithm for causal discovery:
 
-Algorithm: PCMCI
-Description: PCMCI (Peter and Clark algorithm with Momentary Conditional Independence) is a constraint-based causal discovery algorithm designed for time-series data. It is flexible in handling both linear and non-linear relationships and can accommodate non-Gaussian noise. PCMCI is efficient and performs well on small to medium-scale datasets, making it suitable for discovering causal structures in time-series data.
-PCMCI is the best choice for this dataset due to its ability to handle time-series data with non-linear relationships and non-Gaussian noise. It provides a CPDAG output, which is acceptable to the user, and is computationally feasible given the dataset's size and characteristics. PCMCI's robustness to violations of assumptions and its successful application in similar domains further support its selection.
+Algorithm: GES
+Description: User specifies this algorithm.
 
 Now, we need to determine the optimal hyperparameters for this algorithm. I'll guide you through a systematic approach to select values that prioritize accuracy while maintaining computational efficiency for moderate graph sizes.
 
-Primary hyperparameters to configure: indep_test, tau_min, tau_max, pc_alpha, alpha_level
+Primary hyperparameters to configure: score_func, maxP
 
 For each hyperparameter, please follow this structured approach:
 
@@ -120,7 +109,7 @@ Step 3: Evaluate each hyperparameter's impact on accuracy vs. efficiency
 
 Step 4: Analyze algorithm-specific recommendations
    - Review expert suggestions for each parameter:
-   "**Parameter:** indep_test\n- **Meaning:** Independence tests\n- **Available Values:**\n  - parcorr\n  - robustparcorr\n  - gpdc\n  - gsq\n  - regression\n  - cmi\n- **Expert Suggestion:** Use parcorr as default. parcorr, gpdc for non-linear causal relations, cmi for better accuracy but slow runtime, gsq for categorical, regression for mixed data\n\n**Parameter:** tau_min\n- **Meaning:** Minimum time lag to consider\n- **Available Values:**\n  - 0\n  - 1\n- **Expert Suggestion:** Use 0 as default. Adjust if results are required for a specific time window\n\n**Parameter:** tau_max\n- **Meaning:** Maximum time lag\n- **Available Values:**\n  - 1\n  - 5\n  - 10\n- **Expert Suggestion:** Use 1 as default. Usually adjusted based on pre-processing results\n\n**Parameter:** pc_alpha\n- **Meaning:** Significance level of PC algorithm.\n- **Available Values:**\n  - 0.05\n  - 0.1\n  - 0.01\n- **Expert Suggestion:** Use 0.05 as default. Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\n\n**Parameter:** alpha_level\n- **Meaning:** Significance level at which the p_matrix is thresholded to get graph.\n- **Available Values:**\n  - 0.05\n  - 0.1\n  - 0.01\n- **Expert Suggestion:** Use 0.05 as default. Adjust based on estimated time lag, number of nodes and sample size. Larger and denser graph means low alpha value.\n\n"
+   "**Parameter:** score_func\n- **Meaning:** Score function to be used\n- **Available Values:**\n  - local_score_BIC\n  - local_score_BDeu\n- **Expert Suggestion:** Use local_score_BIC as default. Use 'local_score_BIC' for a good balance of fit and complexity for linear data. 'BDeu' for discrete data. \n\n**Parameter:** maxP\n- **Meaning:** Allowed maximum number of parents when searching the graph\n- **Available Values:**\n  - -1\n  - 3\n  - 5\n  - 7\n- **Expert Suggestion:** Use -1 as default. For graphs with <10 nodes, use -1 (no limit) to explore all possibilities. For 10-25 nodes, limit maxP to 3. For 25-50 nodes, use maxP=5. For >50 nodes, use maxP=7 to reduce computational complexity. Each additional parent can increase runtime exponentially.\n\n"
 
 Step 5: Make final decisions based on:
    - For moderate graph sizes (<50 variables), prioritize accuracy over speed
@@ -130,7 +119,7 @@ Step 5: Make final decisions based on:
 Please provide your suggestions in a structured JSON format, with detailed reasoning for each hyperparameter. Your response should look like this:
 
 {
-  "algorithm": "PCMCI",
+  "algorithm": "GES",
   "hyperparameters": {
     "[HYPERPARAMETER_1_NAME]": {
       "full_name": "[HYPERPARAMETER_1_FULL_NAME]",
