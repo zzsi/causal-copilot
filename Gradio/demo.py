@@ -1,6 +1,9 @@
 import os
 import subprocess
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 
 def init_graphviz():
     # Try apt-get (Debian/Ubuntu) first
@@ -69,6 +72,9 @@ import traceback
 import pickle
 import torch
 import glob
+current_dir = os.path.dirname(os.path.abspath(__file__))
+demo_cases_path = os.path.join(current_dir, "demo_cases")
+gr.set_static_paths(paths=[Path.cwd().absolute()/"Gradio/public"])
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Gradio.demo_config import get_demo_config
@@ -93,6 +99,7 @@ from causal_analysis.help_functions import *
 print('##########Initialize Global Variables##########')
 # Global variables
 UPLOAD_FOLDER = "./demo_data"
+
 
 def update(info, key, value):
     new_info = info.copy()
@@ -304,7 +311,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
     heterogeneity: Set to `True` if your data comes from different domains (e.g. locations, experiments). 
     domain_index: Specify the name of the column that indicates the domain (e.g. `hospital_id`, `time_group`). Only set this if `heterogeneity` is `True`.
     missing_value: If your dataset uses a special value (like 0, -1, or missing) to represent missing data, specify it here. Otherwise, use `False`.
-                                """
+                                 """
                 chat_history.append((None, modify_prompt))
                 CURRENT_STAGE = 'preliminary_feedback'
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -319,7 +326,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 return process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn)
             
         if CURRENT_STAGE == 'preliminary_feedback':
-            chat_history.append((message, None))
+            chat_history.append((message, None)) 
             global_state, text = parse_preliminary_feedback(chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE, message)
             # print('preliminary_feedback', global_state.user_data.selected_features)
             if text != "":
@@ -526,7 +533,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 If no changes are required or the input is not valid, return an empty dictionary.
                 The keys in the json should be the variable names, and the values should be the new values. 
                 Only return a json that can be parsed directly, do not include ```json
-                message: {message}
+                message: {message} 
                 file: {file_content}
                 """
                 parsed_response = LLM_parse_query(args, None, prompt, message)
@@ -651,7 +658,6 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             # filter = Filter(args)
             # global_state = filter.forward(global_state)
             # reranker = Reranker(args)
-            # global_state = reranker.forward(global_state)
             hp_selector = HyperparameterSelector(args)
             global_state = hp_selector.forward(global_state)
             hyperparameter_text, global_state = generate_hyperparameter_text(global_state)
@@ -1294,25 +1300,73 @@ js = """
 function createGradioAnimation() {
     var container = document.createElement('div');
     container.id = 'gradio-animation';
-    container.style.fontSize = '2em';
-    container.style.fontWeight = 'bold';
-    container.style.textAlign = 'center';
+    container.style.display = 'flex';
+    container.style.justifyContent = 'center';
+    container.style.alignItems = 'center';
     container.style.marginBottom = '20px';
+    container.style.position = 'relative';
+    
+    // Title container
+    var titleContainer = document.createElement('div');
+    titleContainer.style.fontSize = '2em';
+    titleContainer.style.fontWeight = 'bold';
+    titleContainer.style.textAlign = 'center';
+    
     var text = 'Welcome to Causal Copilot!';
+    // Faster animation but still sequential
     for (var i = 0; i < text.length; i++) {
         (function(i){
             setTimeout(function(){
                 var letter = document.createElement('span');
                 letter.style.opacity = '0';
-                letter.style.transition = 'opacity 0.5s';
+                letter.style.transition = 'opacity 0.1s';
                 letter.innerText = text[i];
-                container.appendChild(letter);
+                titleContainer.appendChild(letter);
                 setTimeout(function() {
                     letter.style.opacity = '1';
-                }, 50);
-            }, i * 250);
+                }, 30);
+            }, i * 100);
         })(i);
     }
+    
+    container.appendChild(titleContainer);
+    // Create video button
+    setTimeout(function() {
+        var videoBtn = document.createElement('button');
+        videoBtn.innerHTML = '▶️ Walk-through Video';
+        videoBtn.id = 'header-video-btn';
+        videoBtn.style.marginLeft = '20px';
+        videoBtn.style.padding = '5px 10px';
+        videoBtn.style.borderRadius = '4px';
+        videoBtn.style.border = '1px solid #1976d2';
+        videoBtn.style.background = '#1976d2';
+        videoBtn.style.color = '#ffffff';
+        videoBtn.style.cursor = 'pointer';
+        videoBtn.style.transition = 'all 0.3s ease';
+        videoBtn.style.fontSize = '0.5em';
+        videoBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        
+        videoBtn.addEventListener('mouseover', function() {
+            this.style.background = '#0d5ca1';
+            this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+        });
+        
+        videoBtn.addEventListener('mouseout', function() {
+            this.style.background = '#1976d2';
+            this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        });
+        // Add click event
+        videoBtn.addEventListener('click', function() {
+            // Find and click the actual video button that has the event handler
+            var actualVideoBtn = document.querySelector('#video-btn-actual');
+            if (actualVideoBtn) {
+                actualVideoBtn.click();
+            }
+        });
+        
+        container.appendChild(videoBtn);
+    }, text.length * 100 + 200); // Add after title animation is complete with faster timing
+    
     var gradioContainer = document.querySelector('.gradio-container');
     gradioContainer.insertBefore(container, gradioContainer.firstChild);
     return 'Animation created';
@@ -1329,8 +1383,8 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
         gap: 5px !important;
     }
     .icon-button { 
-        padding: 0 !important;
-        width: 32px !important;
+        padding: 0 !important; 
+        width: 32px !important; 
         height: 32px !important;
         border-radius: 16px !important;
         background: transparent !important;
@@ -1382,6 +1436,186 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
     .user-message {
         background: #f5f5f5 !important;
         margin-left: auto !important;
+    }
+    /* Gallery Section Styles */
+    .gallery-section {
+        margin-top: 40px;
+        margin-bottom: 20px;
+    }
+    .gallery-heading {
+        width: 100%;
+        text-align: center;
+        font-size: 28px;
+        margin-bottom: 20px;
+    }
+    .filter-buttons {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .filter-btn {
+        border-radius: 20px;
+        background-color: #f5f5f5;
+        padding: 8px 16px;
+        transition: all 0.3s ease;
+    }
+    .filter-btn.active {
+        background-color: #333;
+        color: white;
+    }
+    .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+    .gallery-card {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        position: relative;
+    }
+    .gallery-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    }
+    .card-img-container {
+        width: 100%;
+        height: 200px;
+        overflow: hidden;
+    }
+    .gallery-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .card-content {
+        padding: 15px;
+    }
+    .card-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin: 0;
+        margin-bottom: 10px;
+    }
+    .card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .card-author {
+        font-size: 14px;
+        color: #555;
+    }
+    .card-likes {
+        margin-left: auto;
+        font-size: 14px;
+        color: #ff4757;
+    }
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+        .gallery-container {
+            flex-direction: column;
+        }
+        .gallery-card {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+    }
+    .report-gallery {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr); /* Changed to 6 columns for a single row */
+        gap: 15px; /* Reduced gap to fit better */
+        margin: 20px auto;
+        max-width: 1400px; /* Increased width to accommodate all 6 cards */
+    }
+    .report-card {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        position: relative;
+        cursor: pointer;
+    }
+    .report-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 20px rgba(0,0,0,0.15);
+    }
+    /* PDF Icon */
+    .pdf-icon {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 32px;
+        height: 32px;
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        z-index: 3;
+    }
+    .pdf-icon svg {
+        width: 18px;
+        height: 18px;
+        fill: #e74c3c;
+    }
+    /* Card Image Area (Always Visible) */
+    .report-card-image-area {
+        width: 100%;
+        height: 140px; /* Reduced height for better fit in single row */
+        background-color: #f0f0f0;
+        background-size: cover;
+        background-position: center;
+    }
+    .report-card-content {
+        padding: 15px; /* Reduced padding */
+    }
+    .report-card-title {
+        font-size: 16px; /* Smaller font */
+        font-weight: bold;
+        margin: 0 0 8px 0;
+        color: #333;
+    }
+    .report-card-desc {
+        font-size: 12px; /* Smaller font */
+        color: #666;
+        margin-bottom: 10px;
+        line-height: 1.3;
+    }
+    .report-card-author {
+        font-size: 12px; /* Smaller font */
+        color: #555;
+        font-style: italic;
+    }
+    /* Removed hover thumbnail styles */
+    .report-card::before {
+       /* Optional: Keep the top accent bar */
+       content: '';
+       position: absolute;
+       top: 0;
+       left: 0;
+       width: 100%;
+       height: 5px;
+       background: linear-gradient(90deg, #3498db, #2980b9);
+       z-index: 2; 
+    }
+    .message-bubble img {
+        pointer-events: none !important;
+    }
+
+    /* Optional: Also adjust image sizing */
+    .message-bubble img {
+        max-width: none !important;
+        max-height: none !important;
+        width: 400px !important;
     }
 """) as demo:
     print('##########Initialize Global Variables##########')
@@ -1472,6 +1706,12 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
                     interactive=False
                 )
                 reset_btn = gr.Button("🔄 Reset", scale=1, elem_classes=["icon-button"], size="sm")
+                # Remove the video button from here as it's now in the header
+                # Keep a hidden button that will be triggered by the header button
+                video_btn = gr.Button("▶️ Play Video", elem_id="video-btn-actual", visible=False)
+
+    with gr.Row(elem_classes=["gallery-section"]):
+        gr.Markdown("## Play with some interesting datasets!", elem_classes=["gallery-heading"])
 
     # Demo dataset buttons
     demo_btns = {}
@@ -1517,6 +1757,37 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
                 outputs=[msg]
             )
 
+    # --- Video Popup Section Start ---
+    with gr.Column(visible=False) as video_popup:
+        with gr.Row():
+             gr.Markdown("### Walk-through Video") # Title for the popup
+             close_video_btn = gr.Button("❌ Close", scale=1, min_width=10) # Close button at the top right
+        walkthrough_video = gr.Video(label="Walk-through", interactive=False, height=500) # Set desired height
+
+    # Define handler functions for video popup
+    def show_video_popup(video_path):
+        # Use the relative path format recognized by Gradio for static files
+        accessible_path = f"/file={video_path}" 
+        return {
+            video_popup: gr.update(visible=True),
+            walkthrough_video: gr.update(value=accessible_path)
+        }
+
+    def hide_video_popup():
+        return {
+            video_popup: gr.update(visible=False),
+            walkthrough_video: gr.update(value=None) # Clear the video source
+        }
+
+    # Video path state (relative to workspace root)
+    video_path_state = gr.State("Gradio/public/walk-through.mp4") # Assume video is here
+
+    # Connect handlers for video
+    video_btn.click(fn=show_video_popup, inputs=[video_path_state], outputs=[video_popup, walkthrough_video], queue=False)
+    close_video_btn.click(fn=hide_video_popup, inputs=[], outputs=[video_popup, walkthrough_video], queue=False)
+    # --- Video Popup Section End ---
+
+
     # Event handlers with queue enabled
     msg.submit(
         fn=disable_all_inputs,  # First disable all inputs
@@ -1549,8 +1820,13 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
     reset_btn.click(
         fn=clear_chat,
         inputs=[REQUIRED_INFO, stage_state, state],
-        outputs=[REQUIRED_INFO,chatbot, stage_state, state],
+        outputs=[REQUIRED_INFO, chatbot, stage_state, state],
         queue=False  # No need for queue on reset
+    ).then( # Also hide video popup on reset
+        fn=hide_video_popup,
+        inputs=[],
+        outputs=[video_popup, walkthrough_video],
+        queue=False
     )
     ###########
     file_upload.upload(
@@ -1577,13 +1853,182 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
         outputs=[*list(demo_btns.values()), download_btn, msg, file_upload, reset_btn],
         queue=True
     )
-
     # Download report handler with updated visibility
     download_btn.click()
+
+    # Define report cards with real PDF reports from output_report directory
+    report_items = [
+        {
+            "title": "Abalone Causal Analysis",
+            "description": "Discovering relationships between physical attributes and age of abalone",
+            "author": "Causal Copilot",
+            "file": "/gradio_api/file=Gradio/public/tabular-abalone.pdf",
+            "image": "/gradio_api/file=Gradio/public/abalone.png" # Path relative to static dir
+        },
+        {
+            "title": "Heart Disease Study",
+            "description": "Causal factors influencing heart disease development",
+            "author": "Causal Copilot",
+            "file": "/gradio_api/file=Gradio/public/tabular-heartdisease.pdf",
+            "image": "/gradio_api/file=Gradio/public/heartdisease.png"
+        },
+        {
+            "title": "Climate Time Series Analysis",
+            "description": "Temporal patterns and causality in climate data",
+            "author": "Causal Copilot",
+            "file": "/gradio_api/file=Gradio/public/timeseries-climate.pdf",
+            "image": "/gradio_api/file=Gradio/public/climate.png"
+        },
+        {
+            "title": "Student Performance Factors",
+            "description": "Determining key influences on academic achievement",
+            "author": "Causal Copilot",
+            "file": "/gradio_api/file=Gradio/public/tabular-student-score.pdf",
+            "image": "/gradio_api/file=Gradio/public/student_score.png"
+        },
+        {
+            "title": "Earthquake Time Series",
+            "description": "Temporal factors affecting seismic activity",
+            "author": "Causal Copilot",
+            "file": "/gradio_api/file=Gradio/public/timeseries-earthquake.pdf",
+            "image": "/gradio_api/file=Gradio/public/earthquake.png"
+        },
+        {
+            "title": "Online Shop Analysis",
+            "description": "Online shopping behavior and purchase patterns",
+            "author": "Causal Copilot",
+            "file": "/gradio_api/file=Gradio/public/timeseries-online-shop.pdf",
+            "image": "/gradio_api/file=Gradio/public/online_shop.png"
+        }
+    ]
+
+    # Gallery section for showcasing finished demos
+    with gr.Row(elem_classes=["gallery-section"]):
+        gr.Markdown("## Explore some case study Reports!", elem_classes=["gallery-heading"])
+    
+    # Use HTML for report gallery
+    gallery_html = f"""
+    <style>
+    .report-gallery {{
+        display: grid;
+        grid-template-columns: repeat(6, 1fr); /* Changed to 6 columns for a single row */
+        gap: 15px; /* Reduced gap to fit better */
+        margin: 20px auto;
+        max-width: 1400px; /* Increased width to accommodate all 6 cards */
+    }}
+    .report-card {{
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        position: relative;
+        cursor: pointer;
+    }}
+    .report-card:hover {{
+        transform: translateY(-5px);
+        box-shadow: 0 12px 20px rgba(0,0,0,0.15);
+    }}
+    /* PDF Icon */
+    .pdf-icon {{
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 32px;
+        height: 32px;
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        z-index: 3;
+    }}
+    .pdf-icon svg {{
+        width: 18px;
+        height: 18px;
+        fill: #e74c3c;
+    }}
+    /* Card Image Area (Always Visible) */
+    .report-card-image-area {{
+        width: 100%;
+        height: 140px; /* Reduced height for better fit in single row */
+        background-color: #f0f0f0;
+        background-size: cover;
+        background-position: center;
+    }}
+    .report-card-content {{
+        padding: 15px; /* Reduced padding */
+    }}
+    .report-card-title {{
+        font-size: 16px; /* Smaller font */
+        font-weight: bold;
+        margin: 0 0 8px 0;
+        color: #333;
+    }}
+    .report-card-desc {{
+        font-size: 12px; /* Smaller font */
+        color: #666;
+        margin-bottom: 10px;
+        line-height: 1.3;
+    }}
+    .report-card-author {{
+        font-size: 12px; /* Smaller font */
+        color: #555;
+        font-style: italic;
+    }}
+    /* Removed hover thumbnail styles */
+    .report-card::before {{
+       /* Optional: Keep the top accent bar */
+       content: '';
+       position: absolute;
+       top: 0;
+       left: 0;
+       width: 100%;
+       height: 5px;
+       background: linear-gradient(90deg, #3498db, #2980b9);
+       z-index: 2; 
+    }}
+    </style>
+    
+    <div class="report-gallery">
+    """
+    
+    # Add card for each report
+    for item in report_items:
+        # Link should just be /file=<filename> if dir is in allowed_paths
+        report_link = f"{item['file']}" 
+        # Image path assumes Gradio serves /static automatically
+
+        image_path = item.get('image', '/static/assets/default_cover.png') 
+        gallery_html += f"""
+        <a href="{report_link}" target="_blank" style="text-decoration: none; color: inherit;"> 
+            <div class="report-card" data-file="{item['file']}">
+                <div class="pdf-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
+                        <path d="M181.9 256.1c-5-16-4.9-46.9-2-46.9 8.4 0 7.6 36.9 2 46.9zm-1.7 47.2c-7.7 20.2-17.3 43.3-28.4 62.7 18.3-7 39-17.2 62.9-21.9-12.7-9.6-24.9-23.4-34.5-40.8zM86.1 428.1c0 .8 13.2-5.4 34.9-40.2-6.7 6.3-16.8 15.8-24.1 26.3-10.7 15.5-11.6 14-10.8 13.9zm28.6-181.9c7.4-6.5 21.6-10.7 38.8-13.3 4.9-14.7 8.4-33.4 8.4-33.4s-13.6 8.1-29.8 10.2c-14.1 1.9-24.5 7.3-34.1 20.1-9.8 13.1-8.1 10.4-8.1 10.4s9.4-6.2 24.8-6z"/>
+                        <path d="M384 121.9v6.1H256V0h6.1c6.4 0 12.5 2.5 17 7l97.9 98c4.5 4.5 7 10.6 7 16.9zM248 160h136v328c0 13.3-10.7 24-24 24H24c-13.3 0-24-10.7-24-24V24C0 10.7 10.7 0 24 0h200v136c0 13.2 10.8 24 24 24zm-84.5 98.6c19.3-5.7 45.5-10.4 67.7-13.2-7.9-35.6-10.3-53.3-10.3-53.3s-16 2.8-37.9 7.7c-36.3 7.9-38.9 9-55.8 31.1-6 7.9-9.5 14.4-12.7 19.5-18.7 26.6-41.7 51.7-52.6 66.1-5.5 7.3-13.3 18.3-19.6 22.2-9.1 5.7-21.1 1.7-23.7-7.8-2.6-9.5 4.3-19.5 9.5-22.7 3.5-2.1 8.7-9.1 15.8-20.3 10.8-15.7 19.1-33.3 19.1-33.3s-10.6 6.7-13.4 10.5c-14.9 19.7-40.8 49-51.9 73.3-10.8 24.4-4.9 37.3 8.1 42.8 9.2 3.8 21.3-4 29.5-12.6 11.7-12.1 17.9-20.2 28.3-38.8 18.1-32.3 30.6-62.8 30.6-62.8s-.3 14.2-.8 22.7c-.7 12.3-2.8 14.8-7.9 20.3-5.8 6.2-13.5 6.6-19.9 6.4-8.5-.4-10.4 5.8-7.4 9.1 9 10.2 29.2 6.3 41.4-9.2 13.1-16.6 11.6-37.8 11-46.9-1.4-21.6 2.4-49.5 2.4-49.5z"/>
+                    </svg>
+                </div>
+                <div class="report-card-image-area" style="background-image: url('{image_path}');"></div>
+                <div class="report-card-content">
+                    <h3 class="report-card-title">{item['title']}</h3>
+                    <p class="report-card-desc">{item['description']}</p>
+                    <p class="report-card-author">By {item['author']}</p>
+                </div>
+            </div>
+        </a>
+        """
+    
+    gallery_html += """
+    </div>
+    """
+    
+    with gr.Row():
+        gr.HTML(gallery_html)
 
 if __name__ == "__main__":
     demo.queue(default_concurrency_limit=MAX_CONCURRENT_REQUESTS,
                max_size=MAX_QUEUE_SIZE)  # Enable queuing at the app level
-    demo.launch(share=True)
-
-
+    
+    demo.launch(share=True, allowed_paths=["/file=Gradio/public"])
