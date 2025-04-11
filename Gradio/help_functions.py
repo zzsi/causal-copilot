@@ -628,7 +628,7 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
             Examples of validation:
             - For alpha parameters with type "float" and range [0, 1], check if the value is a float between 0 and 1
             - For indep_test parameters with type "string" and specific allowed values, verify the input matches one of those values
-            - For depth parameters with type "integer" and specific allowed values, ensure the value is an integer in the allowed set
+            - For depth parameters with type "integer" and specific allowed values, check if it's an integer within the allowed range. Note that you only need to care about the data type range, not the specific values.
 
             Only validate parameters that exist for the current algorithm. Ignore parameters that aren't defined in the specifications.
             """
