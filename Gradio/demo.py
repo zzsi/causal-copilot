@@ -255,10 +255,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             chat_history, download_btn, global_state, CURRENT_STAGE = meaningful_feature_query(global_state,message,chat_history,download_btn,CURRENT_STAGE)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             # Preprocessing - Step 3: Heterogeneity Checking
-            chat_history, download_btn, global_state, CURRENT_STAGE = heterogeneity_query(global_state, message,
-                                                                                            chat_history,
-                                                                                            download_btn,
-                                                                                            CURRENT_STAGE, args)
+            chat_history, download_btn, global_state, CURRENT_STAGE = heterogeneity_query(global_state, message, chat_history, download_btn, CURRENT_STAGE, args)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             # Preprocessing - Step 4: Accept CPDAG
             global_state.user_data.accept_CPDAG = True
@@ -1356,39 +1353,38 @@ function createGradioAnimation() {
     }
     
     container.appendChild(titleContainer);
-    // Create video button
+    
+    // Create simple YouTube link
     setTimeout(function() {
-        var videoBtn = document.createElement('button');
-        videoBtn.innerHTML = '▶️ Watch Tutorial on YouTube';
-        videoBtn.id = 'header-video-btn';
-        videoBtn.style.marginLeft = '20px';
-        videoBtn.style.padding = '5px 10px';
-        videoBtn.style.borderRadius = '4px';
-        videoBtn.style.border = '1px solid #1976d2';
-        videoBtn.style.background = '#1976d2';
-        videoBtn.style.color = '#ffffff';
-        videoBtn.style.cursor = 'pointer';
-        videoBtn.style.transition = 'all 0.3s ease';
-        videoBtn.style.fontSize = '0.5em';
-        videoBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        var ytLink = document.createElement('a');
+        ytLink.href = 'https://www.youtube.com/watch?si=3DTT2AlEIcAf-T_E&v=U9-b0ZqqM24&feature=youtu.be';
+        ytLink.target = '_blank';
+        ytLink.innerText = '▶️ Watch Tutorial on YouTube';
+        ytLink.style.marginLeft = '20px';
+        ytLink.style.padding = '5px 10px';
+        ytLink.style.borderRadius = '4px';
+        ytLink.style.border = '1px solid #1976d2';
+        ytLink.style.background = '#1976d2';
+        ytLink.style.color = '#ffffff';
+        ytLink.style.cursor = 'pointer';
+        ytLink.style.transition = 'all 0.3s ease';
+        ytLink.style.fontSize = '0.5em';
+        ytLink.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        ytLink.style.textDecoration = 'none';
+        ytLink.style.display = 'inline-block';
         
-        videoBtn.addEventListener('mouseover', function() {
+        ytLink.addEventListener('mouseover', function() {
             this.style.background = '#0d5ca1';
             this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
         });
         
-        videoBtn.addEventListener('mouseout', function() {
+        ytLink.addEventListener('mouseout', function() {
             this.style.background = '#1976d2';
             this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
         });
         
-        // Open YouTube in a new tab
-        videoBtn.addEventListener('click', function() {
-            window.open('https://www.youtube.com/watch?v=U9-b0ZqqM24', '_blank');
-        });
-        
-        container.appendChild(videoBtn);
-    }, text.length * 100 + 200); // Add after title animation is complete with faster timing
+        container.appendChild(ytLink);
+    }, text.length * 100 + 200);
     
     var gradioContainer = document.querySelector('.gradio-container');
     gradioContainer.insertBefore(container, gradioContainer.firstChild);
