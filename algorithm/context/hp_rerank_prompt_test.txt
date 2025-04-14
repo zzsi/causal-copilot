@@ -1,5 +1,7 @@
 User original query (TOP PRIORITY):
-This is a Time-Series dataset, Please discover the causal structure of different factors and profits.
+Discover causal relationships between protein signaling molecules. The data contains flow cytometry measurements of proteins and phospholipids.
+
+The computation has to be finished in the runtime of 1440.0 minutes.
 
 ## ⚠️ ESSENTIAL QUERY PRIORITY ⚠️
 - User query SUPERSEDES all standard hyperparameter guidelines
@@ -24,7 +26,7 @@ This dataset is time-series data.
 Data Quality: There are no missing values in the dataset.
 
 Statistical Properties:
-- Linearity: The relationships between variables are not predominantly linear.
+- Linearity: The relationships between variables are not linear.
 - Gaussian Errors: The errors in the data do not follow a Gaussian distribution.
 - Time lag: 5 
 
@@ -34,122 +36,63 @@ Statistical Properties:
 
 
 3. Background Knowledge:
-Based on the variable names you have provided from the dataset `2021online_shop.csv`, here is the detailed information:
-
-### 1. Detailed Explanation about the Variables
-
-- **Date**: This represents the date when the shopping events occurred. It is crucial for time series analysis and allows the observation of trends and patterns over time.
-
-- **Shopping_Event**: This likely indicates specific events or promotions related to shopping, such as sales, holidays, or marketing campaigns. It can vary by date and can significantly impact consumer behavior.
-
-- **Ad_Spend**: This denotes the amount of money spent on advertising during a specific period. It directly correlates with the marketing efforts aimed at attracting customers.
-
-- **Page_Views**: This is the count of how many times product pages on the online shop were viewed by potential customers. It serves as an indication of interest in the products.
-
-- **Unit_Price**: This represents the price of a single unit of product sold in the online shop. It can affect both revenue and sales volumes.
-
-- **Sold_Units**: This is the number of units sold during the specified period. It is crucial for calculating total revenue.
-
-- **Revenue**: This is the total income generated from sales, typically calculated as `Revenue = Unit_Price * Sold_Units`. It reflects the sales performance of the shop.
-
-- **Operational_Cost**: This represents the costs incurred for running the online shop, which can include costs like shipping, handling, and overheads. It is vitally important for calculating the profitability of the business.
-
-- **Profit**: This is calculated as `Profit = Revenue - Operational_Cost`. It indicates the financial gain after all expenses are accounted for and would guide business decisions.
-
-### 2. Possible Causal Relations among these variables
-
-- **Ad_Spend → Page_Views**: Increased advertising spending is likely to lead to more page views due to heightened visibility and interest.
-
-- **Page_Views → Sold_Units**: A higher number of page views can result in more sold units, as more visitors may lead to higher sales conversions.
-
-- **Unit_Price → Sold_Units**: The price set for a unit can influence the number of units sold. Generally, lower prices could lead to higher sales volumes and vice versa.
-
-- **Sold_Units → Revenue**: More units sold directly leads to increased revenue, as revenue is a function of the number of units sold multiplied by the unit price.
-
-- **Revenue → Profit**: Higher revenue, after deducting operational costs, results in higher profit. 
-
-- **Shopping_Event → Sold_Units**: Special shopping events (like sales or discounts) can encourage more units to be sold, affecting overall sales performance.
-
-- **Operational_Cost → Profit**: High operational costs can diminish profit, indicating that careful management of expenses is crucial to improving profitability.
-
-### 3. Other Background Domain Knowledge that may be helpful for experts to design causal discovery algorithms
-
-- **Seasonality Effects**: Understanding that shopping behaviors can be seasonal (e.g., holidays, back to school) is critical for any causal analyses. 
-
-- **Consumer Behavior Patterns**: Familiarity with how marketing and promotions affect consumer decision-making can assist in identifying causal relationships.
-
-- **Market Trends**: Being aware of wider market trends, economic conditions, and competition can provide context for observed relationships in the data.
-
-- **Statistical Methods in Causal Inference**: Experts should be proficient in utilizing methods such as structural equation modeling, Granger causality tests, and potential outcomes framework to investigate causal relationships.
-
-- **Confounding Variables**: Identifying and controlling for confounding variables is essential, as these can distort the perceived relationships between the primary variables of interest.
-
-This knowledge would be beneficial when designing statistical models or algorithms aimed at causal discovery within this dataset.
-U
-n
+T
+h
 i
-t
- 
-P
-r
-i
-c
-e
- 
-a
-n
-d
- 
-S
-o
-l
-d
- 
-U
-n
-i
-t
 s
  
-a
-r
-e
- 
-h
 i
-g
-h
-l
-y
+s
  
-c
-o
-r
-r
-e
-l
-a
-t
-e
-d
- 
-w
-i
-t
-h
- 
-P
-r
-o
 f
+a
+k
+e
+ 
+d
+o
+m
+a
 i
-t
+n
+ 
+k
+n
+o
+w
+l
+e
+d
+g
+e
+ 
+f
+o
+r
+ 
+d
+e
+b
+u
+g
+g
+i
+n
+g
+ 
+p
+u
+r
+p
+o
 s
+e
+s
+.
 
 We have selected the following algorithm for causal discovery:
 
-Algorithm: VARLiNGAM
-Description: User specifies this algorithm.
+Algorithm: FCI
 
 Now, we need to determine the optimal hyperparameters for this algorithm. I'll guide you through a systematic approach to select values that prioritize accuracy while maintaining computational efficiency for moderate graph sizes.
 
@@ -168,7 +111,7 @@ Step 2: Assess computational resources
    
 Current machine doesn't support CUDA, do not choose any GPU-powered algorithms.
 
-   - Prioritize to GPU implemented hyperparameter when dealing with large graph (variable size > 100) to achieve more efficient speedup
+   - Prioritize to GPU implemented hyperparameter when dealing with large graph (variable size > 150) to achieve more efficient speedup
 
 Step 3: Evaluate each hyperparameter's impact on accuracy vs. efficiency
    - Critical parameters affecting accuracy (e.g., significance levels, independence tests)
@@ -177,9 +120,343 @@ Step 3: Evaluate each hyperparameter's impact on accuracy vs. efficiency
 
 Step 4: Analyze algorithm-specific recommendations
    - Review expert suggestions for each parameter:
-   "**Parameter:** lags\n- **Meaning:** Number of lags.\n- **Available Values:**\n  - 1\n- **Expert Suggestion:** Use 1 as default. Number of past time lags to search\n\n**Parameter:** criterion\n- **Meaning:** Criterion to decide the best lags within lags. Searching the best lags is disabled if criterion is none.\n- **Available Values:**\n  - bic\n- **Expert Suggestion:** Use bic as default. aic - Prioritizes capturing all causal relationships, even at the risk of overfitting, fpe - Aims to fit data as closely as possible, but may overfit, hqic - Balances complexity and fit, bic - More conservative, avoids overfitting by penalizing model complexity.\n\n**Parameter:** prune\n- **Meaning:** Whether to prune the adjacency matrix of lags.\n- **Available Values:**\n  - True\n  - False\n- **Expert Suggestion:** Use true as default. If the dataset is noisy or high-dimensional, set prune=True to prevent overfitting, reduce false positives, improving interpretability.\n\n**Parameter:** gpu\n- **Meaning:** Whether to use GPU acceleration.\n- **Available Values:**\n  - False\n  - True\n- **Expert Suggestion:** Use false as default. If GPU is available, set gpu=True to use GPU acceleration. It is recommended to use GPU acceleration for large datasets.\n\n"
+   "**Parameter:** alpha\n- **Meaning:** Desired significance level in (0, 1)\n- **Available Values:**\n  - 0.05\n  - 0.1\n  - 0.01\n- **Expert Suggestion:** Use 0.05 as default. Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\n\n**Parameter:** indep_test\n- **Meaning:** Independence test method\n- **Available Values:**\n  - fisherz\n  - chisq\n  - kci\n  - fastkci\n  - rcit\n- **Expert Suggestion:** Use fisherz as default (for linear data). Choose based on data type, DON'T use nonlinear/non-parametric tests for linear/discrete data.\n\nLINEAR/DISCRETE (PARAMETRIC) TESTS:\n- 'fisherz': For linear continuous data (default choice for linear data)\n- 'chisq': For discrete data only (applied only for pure discrete data)\n\nNONLINEAR/NON-PARAMETRIC TESTS:\n- 'kci': For nonlinear data (very slow, use only if variable size < 10 and sample size < 1500)\n- 'rcit': Fastest approximation of kci for non-linear data (use only if variable size < 100 and sample size < 10000)\n- 'fastkci': Divide-and-conquer version of kci for non-linear data, faster than kci but less accurate (use only if variable size < 20 and sample size < 3000)\n\nFor nonlinear data, as long as variable and sample size constraints are fulfilled, choose in order of accuracy: KCI > RCIT > FastKCI.\n\n**Parameter:** depth\n- **Meaning:** Maximum depth for skeleton search\n- **Available Values:**\n  - -1\n  - 6\n  - 4\n  - 2\n  - 1\n- **Expert Suggestion:** Use -1 as default. Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 1-3) can significantly speed up the algorithm at the cost of some accuracy. A graph with node number < 10, use depth 6; A graph with node number 10 - 25, use depth 4; A graph with node number 25-50, use depth 2; A graph with node number > 50, use depth 1.\n\n"
 
-Step 5: Make final decisions based on:
+Step 5: Analyze algorithm performance with different hyperparameter configurations (If existed)
+   - Review benchmarking results for this algorithm with various hyperparameter settings
+   - Identify which configurations perform best on datasets with similar characteristics
+   - Consider how different hyperparameter values affect performance metrics
+   - Analyze the trade-offs between accuracy and computational efficiency
+
+# ALGORITHM BENCHMARKING RESULTS
+
+• CAUTIONARY NOTE
+  – These benchmarking results should be used as guidelines, not definitive judgments
+  – Performance may vary significantly with real-world data compared to simulations
+  – Consider your specific domain knowledge and data characteristics when selecting algorithms
+• Simulation Settings
+  – Network sizes: 5 to 1000 nodes
+  – Sample sizes: 500 to 10000 data points
+  – Edge density: 0.11 to 0.78 probability (avg. degree 1 to 7)
+  – Data types: Continuous and mixed (0-20% discrete variables)
+  – Function types: Linear and non-linear (MLP) relationships
+  – Noise types: Gaussian and uniform distributions
+
+• Challenge Scenarios
+  – Measurement error: 10%, 30%, 50% noise in observations
+  – Missing data: 10%, 20%, 30% missing values
+  – Multi-domain data: 1, 2, 5, or 10 heterogeneous domains
+  – Each configuration tested with 3 different random seeds
+
+• Key Terms
+  – (linear): Scenarios where relationships between variables follow linear functions
+  – (mlp): Scenarios where relationships are non-linear (using multilayer perceptron models)
+
+• Scenario Types
+  – Robustness scenarios (e.g., Variable Scaling, Edge Probability): Test algorithm performance across varying levels of a property
+  – Specific scenarios (e.g., Gaussian Noise, Dense Graph): Test performance at a fixed specific setting
+
+• Performance Metrics
+  – Performance level (1-10): Based on F1 score, higher is better
+  – Efficiency level (0-5): Based on runtime, higher is better (only relevant for scaling scenarios)
+  – Stability: Standard deviation of performance, lower values indicate more consistent results
+
+• Important Note on Efficiency Scoring
+  – Benchmarks include large-scale systems with up to 1000 nodes and may timeout for some algorithms
+  – For large-scale systems (node size > 200), prioritize algorithms that can utilize available GPUs
+  – GPU-accelerated methods provide significant efficiency advantages in large-scale scenarios
+
+────────────────────────────────────────────────────────
+Filtered Benchmarking Results
+────────────────────────────────────────────────────────
+
+Algorithms included: FCI
+
+────────────────────────────────────────────────────────
+Overall Algorithm Performance
+────────────────────────────────────────────────────────
+
+Overall ranking based on average performance across all scenarios:
+
+1. FCI_indep_test=fisherz: 7.4
+2. FCI_indep_test=rcit: 7.3
+3. FCI_indep_test=kci: 6.2
+4. FCI_indep_test=fastkci: 6.2
+
+
+────────────────────────────────────────────────────────
+Efficiency Comparison
+────────────────────────────────────────────────────────
+
+Note: Efficiency scores are primarily measured in Variable Scaling and Sample Scaling scenarios.
+
+| Algorithm | Variable Scaling (linear) | Sample Scaling (linear) | Variable Scaling (mlp) | Sample Scaling (mlp) | Average |
+|-----------|---------------------------|--------------------------|------------------------|----------------------|--------|
+| FCI_indep_test=fisherz | 4.7 | N/A | 4.7 | N/A | 4.7 |
+| FCI_indep_test=kci | 3.7 | N/A | 4.1 | N/A | 3.9 |
+| FCI_indep_test=fastkci | 3.4 | N/A | 4.1 | N/A | 3.8 |
+| FCI_indep_test=rcit | 3.3 | N/A | 4.0 | N/A | 3.6 |
+
+
+────────────────────────────────────────────────────────
+Algorithm Recommendations by Scenario Type
+────────────────────────────────────────────────────────
+
+• Linear Relationships
+  1. FCI_indep_test=fisherz: Performance 7.8
+  2. FCI_indep_test=rcit: Performance 7.7
+  3. FCI_indep_test=kci: Performance 6.8
+
+• Non-Linear Relationships
+  1. FCI_indep_test=fisherz: Performance 6.9
+  2. FCI_indep_test=rcit: Performance 6.6
+  3. FCI_indep_test=kci: Performance 5.4
+
+• Data with Missing Values
+  1. FCI_indep_test=rcit: Performance 7.6
+  2. FCI_indep_test=fisherz: Performance 7.3
+  3. FCI_indep_test=kci: Performance 6.3
+
+• Data with Measurement Error
+  1. FCI_indep_test=rcit: Performance 8.1
+  2. FCI_indep_test=fisherz: Performance 8.0
+  3. FCI_indep_test=fastkci: Performance 7.8
+
+• Dense vs Sparse Graphs
+  1. FCI_indep_test=rcit: Performance 6.7
+  2. FCI_indep_test=fisherz: Performance 6.4
+  3. FCI_indep_test=fastkci: Performance 5.3
+
+• Heterogeneous Data
+  1. FCI_indep_test=fisherz: Performance 6.7
+  2. FCI_indep_test=rcit: Performance 6.2
+  3. FCI_indep_test=kci: Performance 5.4
+
+
+────────────────────────────────────────────────────────
+Performance by Scenario
+────────────────────────────────────────────────────────
+
+### ROBUSTNESS SCENARIOS
+These scenarios test algorithm performance across varying levels of a property.
+
+
+• Variable Scaling (linear)
+| Algorithm | Performance | Stability | Efficiency | Overall Score |
+|-----------|------------|-----------|------------|-------------|
+| FCI_indep_test=rcit | 8.3 | 6.3 | 3.3 | 7.8 |
+| FCI_indep_test=fisherz | 8.1 | 3.3 | 4.7 | 7.6 |
+| FCI_indep_test=kci | 7.3 | 7.9 | 3.7 | 7.1 |
+| FCI_indep_test=fastkci | 7.2 | 5.8 | 3.4 | 7.0 |
+
+• Sample Scaling (linear)
+| Algorithm | Performance | Stability | Efficiency | Overall Score |
+|-----------|------------|-----------|------------|-------------|
+| FCI_indep_test=fisherz | 9.2 | 7.2 | N/A | 9.2 |
+| FCI_indep_test=rcit | 9.0 | 7.8 | N/A | 9.0 |
+| FCI_indep_test=fastkci | 8.6 | 7.7 | N/A | 8.6 |
+| FCI_indep_test=kci | 8.5 | 9.5 | N/A | 8.5 |
+
+• Heterogeneity (linear)
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=fisherz | 8.5 | 1.6 |
+| FCI_indep_test=rcit | 8.0 | 2.1 |
+| FCI_indep_test=kci | 7.2 | 3.6 |
+| FCI_indep_test=fastkci | 7.2 | 0.5 |
+
+• Measurement Error (linear)
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=fisherz | 9.1 | 10.2 |
+| FCI_indep_test=rcit | 8.9 | 5.3 |
+| FCI_indep_test=fastkci | 8.8 | 5.3 |
+| FCI_indep_test=kci | 8.5 | 8.1 |
+
+• Noise Type (linear)
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=fisherz | 9.6 | 4.5 |
+| FCI_indep_test=rcit | 8.9 | 1.5 |
+| FCI_indep_test=kci | 7.1 | 9.5 |
+| FCI_indep_test=fastkci | 7.0 | 5.5 |
+
+• Missing Data (linear)
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=fisherz | 8.0 | 3.4 |
+| FCI_indep_test=rcit | 7.9 | 4.4 |
+| FCI_indep_test=kci | 6.3 | 9.5 |
+| FCI_indep_test=fastkci | 6.2 | 5.9 |
+
+• Edge Probability (linear)
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=rcit | 6.9 | 9.4 |
+| FCI_indep_test=fisherz | 6.7 | 6.4 |
+| FCI_indep_test=fastkci | 5.8 | 6.9 |
+| FCI_indep_test=kci | 5.7 | 6.9 |
+
+• Discrete Ratio (linear)
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=fisherz | 7.6 | 2.9 |
+| FCI_indep_test=kci | 6.9 | 3.1 |
+| FCI_indep_test=rcit | 6.8 | 1.6 |
+| FCI_indep_test=fastkci | 6.8 | 7.8 |
+
+• Variable Scaling (mlp)
+| Algorithm | Performance | Stability | Efficiency | Overall Score |
+|-----------|------------|-----------|------------|-------------|
+| FCI_indep_test=rcit | 6.7 | 9.0 | 4.0 | 6.4 |
+| FCI_indep_test=fisherz | 6.0 | 6.0 | 4.7 | 5.8 |
+| FCI_indep_test=kci | 5.1 | 10.5 | 4.1 | 5.0 |
+| FCI_indep_test=fastkci | 4.8 | 3.0 | 4.1 | 4.8 |
+
+• Sample Scaling (mlp)
+| Algorithm | Performance | Stability | Efficiency | Overall Score |
+|-----------|------------|-----------|------------|-------------|
+| FCI_indep_test=rcit | 8.1 | 3.2 | N/A | 8.1 |
+| FCI_indep_test=fisherz | 7.3 | 9.0 | N/A | 7.3 |
+| FCI_indep_test=kci | 5.5 | 11.1 | N/A | 5.5 |
+| FCI_indep_test=fastkci | 5.3 | 4.0 | N/A | 5.3 |
+
+• Heterogeneity (mlp)
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=fisherz | 6.2 | 5.4 |
+| FCI_indep_test=rcit | 6.0 | 3.3 |
+| FCI_indep_test=kci | 4.6 | 5.3 |
+| FCI_indep_test=fastkci | 4.6 | 5.3 |
+
+• Measurement Error (mlp)
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=fisherz | 6.9 | 9.4 |
+| FCI_indep_test=rcit | 6.6 | 2.8 |
+| FCI_indep_test=fastkci | 5.2 | 4.3 |
+| FCI_indep_test=kci | 5.1 | 3.5 |
+
+• Noise Type (mlp)
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=fisherz | 8.1 | 1.5 |
+| FCI_indep_test=rcit | 6.5 | 2.5 |
+| FCI_indep_test=fastkci | 6.1 | 9.0 |
+| FCI_indep_test=kci | 6.1 | 8.5 |
+
+• Missing Data (mlp)
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=fisherz | 6.8 | 4.5 |
+| FCI_indep_test=kci | 6.8 | 10.4 |
+| FCI_indep_test=fastkci | 6.3 | 7.8 |
+| FCI_indep_test=rcit | 6.2 | 4.4 |
+
+• Edge Probability (mlp)
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=rcit | 7.0 | 4.6 |
+| FCI_indep_test=fisherz | 6.9 | 6.8 |
+| FCI_indep_test=kci | 5.2 | 8.1 |
+| FCI_indep_test=fastkci | 5.1 | 5.7 |
+
+• Discrete Ratio (mlp)
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=fisherz | 8.4 | 0.0 |
+| FCI_indep_test=rcit | 6.2 | 0.0 |
+| FCI_indep_test=kci | 5.8 | 0.0 |
+| FCI_indep_test=fastkci | 5.8 | 0.0 |
+
+### SPECIFIC SCENARIOS
+These scenarios test algorithm performance at specific settings rather than variable levels.
+
+
+• Linear Function
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=rcit | 6.2 | 0.0 |
+| FCI_indep_test=fisherz | 6.2 | 0.0 |
+| FCI_indep_test=fastkci | 6.0 | 0.0 |
+| FCI_indep_test=kci | 6.0 | 0.0 |
+
+• Non-Linear Function
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=rcit | 6.0 | 0.0 |
+| FCI_indep_test=fisherz | 5.1 | 0.0 |
+| FCI_indep_test=kci | 4.8 | 0.0 |
+| FCI_indep_test=fastkci | 4.0 | 0.0 |
+
+• Gaussian Noise
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=fisherz | 9.6 | 0.0 |
+| FCI_indep_test=kci | 8.4 | 0.0 |
+| FCI_indep_test=rcit | 8.3 | 0.0 |
+| FCI_indep_test=fastkci | 8.2 | 0.0 |
+
+• Non-Gaussian Noise
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=rcit | 9.5 | 0.0 |
+| FCI_indep_test=fisherz | 9.5 | 0.0 |
+| FCI_indep_test=kci | 5.8 | 0.0 |
+| FCI_indep_test=fastkci | 5.8 | 0.0 |
+
+• Dense Graph
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=rcit | 4.7 | 0.0 |
+| FCI_indep_test=fisherz | 4.6 | 0.0 |
+| FCI_indep_test=kci | 2.6 | 0.0 |
+| FCI_indep_test=fastkci | 2.6 | 0.0 |
+
+• Sparse Graph
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=rcit | 8.3 | 0.0 |
+| FCI_indep_test=fastkci | 7.7 | 0.0 |
+| FCI_indep_test=fisherz | 7.6 | 0.0 |
+| FCI_indep_test=kci | 7.4 | 0.0 |
+
+• High Missing Data
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=rcit | 8.8 | 0.0 |
+| FCI_indep_test=fisherz | 7.2 | 0.0 |
+| FCI_indep_test=kci | 5.9 | 0.0 |
+| FCI_indep_test=fastkci | 5.6 | 0.0 |
+
+• High Measurement Error
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=kci | 9.5 | 0.0 |
+| FCI_indep_test=fastkci | 9.5 | 0.0 |
+| FCI_indep_test=rcit | 8.6 | 0.0 |
+| FCI_indep_test=fisherz | 8.0 | 0.0 |
+
+• Highly Mixed Data
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=fisherz | 5.0 | 0.0 |
+| FCI_indep_test=rcit | 3.9 | 0.0 |
+| FCI_indep_test=kci | 3.8 | 0.0 |
+| FCI_indep_test=fastkci | 3.8 | 0.0 |
+
+• Highly Heterogeneous
+| Algorithm | Performance | Stability |
+|-----------|------------|----------|
+| FCI_indep_test=fisherz | 7.3 | 0.0 |
+| FCI_indep_test=rcit | 6.8 | 0.0 |
+| FCI_indep_test=kci | 6.2 | 0.0 |
+| FCI_indep_test=fastkci | 6.2 | 0.0 |
+
+
+-------------------------------------------
+
+Step 6: Make final decisions based on:
    - For moderate graph sizes (<50 variables), prioritize accuracy over speed
    - For large graphs (>50 variables), balance accuracy with feasibility and EFFICIENCY
    - For time-series data, carefully consider temporal parameters
