@@ -255,10 +255,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             chat_history, download_btn, global_state, CURRENT_STAGE = meaningful_feature_query(global_state,message,chat_history,download_btn,CURRENT_STAGE)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             # Preprocessing - Step 3: Heterogeneity Checking
-            chat_history, download_btn, global_state, CURRENT_STAGE = heterogeneity_query(global_state, message,
-                                                                                            chat_history,
-                                                                                            download_btn,
-                                                                                            CURRENT_STAGE, args)
+            chat_history, download_btn, global_state, CURRENT_STAGE = heterogeneity_query(global_state, message, chat_history, download_btn, CURRENT_STAGE, args)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             # Preprocessing - Step 4: Accept CPDAG
             global_state.user_data.accept_CPDAG = True
@@ -1356,38 +1353,38 @@ function createGradioAnimation() {
     }
     
     container.appendChild(titleContainer);
-    // Create video button
+    
+    // Create simple YouTube link
     setTimeout(function() {
-        var videoBtn = document.createElement('button');
-        videoBtn.innerHTML = '▶️ Walk-through Video';
-        videoBtn.id = 'header-video-btn';
-        videoBtn.style.marginLeft = '20px';
-        videoBtn.style.padding = '5px 10px';
-        videoBtn.style.borderRadius = '4px';
-        videoBtn.style.border = '1px solid #1976d2';
-        videoBtn.style.background = '#1976d2';
-        videoBtn.style.color = '#ffffff';
-        videoBtn.style.cursor = 'pointer';
-        videoBtn.style.transition = 'all 0.3s ease';
-        videoBtn.style.fontSize = '0.5em';
-        videoBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        var ytLink = document.createElement('a');
+        ytLink.href = 'https://www.youtube.com/watch?si=3DTT2AlEIcAf-T_E&v=U9-b0ZqqM24&feature=youtu.be';
+        ytLink.target = '_blank';
+        ytLink.innerText = '▶️ Watch Tutorial on YouTube';
+        ytLink.style.marginLeft = '20px';
+        ytLink.style.padding = '5px 10px';
+        ytLink.style.borderRadius = '4px';
+        ytLink.style.border = '1px solid #1976d2';
+        ytLink.style.background = '#1976d2';
+        ytLink.style.color = '#ffffff';
+        ytLink.style.cursor = 'pointer';
+        ytLink.style.transition = 'all 0.3s ease';
+        ytLink.style.fontSize = '0.5em';
+        ytLink.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        ytLink.style.textDecoration = 'none';
+        ytLink.style.display = 'inline-block';
         
-        videoBtn.addEventListener('mouseover', function() {
+        ytLink.addEventListener('mouseover', function() {
             this.style.background = '#0d5ca1';
             this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
         });
         
-        videoBtn.addEventListener('mouseout', function() {
+        ytLink.addEventListener('mouseout', function() {
             this.style.background = '#1976d2';
             this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
         });
-        // Add click event
+        // Add click event to open YouTube
         videoBtn.addEventListener('click', function() {
-            // Find and click the actual video button that has the event handler
-            var actualVideoBtn = document.querySelector('#video-btn-actual');
-            if (actualVideoBtn) {
-                actualVideoBtn.click();
-            }
+            window.open('https://www.youtube.com/watch?si=3DTT2AlEIcAf-T_E&v=U9-b0ZqqM24&feature=youtu.be', '_blank');
         });
         
         container.appendChild(videoBtn);
@@ -1674,7 +1671,6 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
         render_markdown=True
     )
 
-
     def disable_all_inputs(dataset_name, chatbot, clicked_btn, download_btn, msg, all_demo_buttons):
         """Disable all interactive elements"""
         updates = []
@@ -1688,9 +1684,6 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
             gr.update(interactive=False),  # For reset button
         ])
         return updates
-
-  
-
 
     def enable_all_inputs(all_demo_buttons):
         """Re-enable all interactive elements"""
@@ -1732,9 +1725,7 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
                     interactive=False
                 )
                 reset_btn = gr.Button("🔄 Reset", scale=1, elem_classes=["icon-button"], size="sm")
-                # Remove the video button from here as it's now in the header
-                # Keep a hidden button that will be triggered by the header button
-                video_btn = gr.Button("▶️ Play Video", elem_id="video-btn-actual", visible=False)
+                # No need for a hidden video button anymore
 
     with gr.Row(elem_classes=["gallery-section"]):
         gr.Markdown("## Play with some interesting datasets!", elem_classes=["gallery-heading"])
@@ -1783,37 +1774,6 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
                 outputs=[msg]
             )
 
-    # --- Video Popup Section Start ---
-    with gr.Column(visible=False) as video_popup:
-        with gr.Row():
-             gr.Markdown("### Walk-through Video") # Title for the popup
-             close_video_btn = gr.Button("❌ Close", scale=1, min_width=10) # Close button at the top right
-        walkthrough_video = gr.Video(label="Walk-through", interactive=False, height=500) # Set desired height
-
-    # Define handler functions for video popup
-    def show_video_popup(video_path):
-        # Use the relative path format recognized by Gradio for static files
-        accessible_path = f"/file={video_path}" 
-        return {
-            video_popup: gr.update(visible=True),
-            walkthrough_video: gr.update(value=accessible_path)
-        }
-
-    def hide_video_popup():
-        return {
-            video_popup: gr.update(visible=False),
-            walkthrough_video: gr.update(value=None) # Clear the video source
-        }
-
-    # Video path state (relative to workspace root)
-    video_path_state = gr.State("Gradio/public/walk-through.mp4") # Assume video is here
-
-    # Connect handlers for video
-    video_btn.click(fn=show_video_popup, inputs=[video_path_state], outputs=[video_popup, walkthrough_video], queue=False)
-    close_video_btn.click(fn=hide_video_popup, inputs=[], outputs=[video_popup, walkthrough_video], queue=False)
-    # --- Video Popup Section End ---
-
-
     # Event handlers with queue enabled
     msg.submit(
         fn=disable_all_inputs,  # First disable all inputs
@@ -1848,11 +1808,6 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
         inputs=[REQUIRED_INFO, stage_state, state],
         outputs=[REQUIRED_INFO, chatbot, stage_state, state],
         queue=False  # No need for queue on reset
-    ).then( # Also hide video popup on reset
-        fn=hide_video_popup,
-        inputs=[],
-        outputs=[video_popup, walkthrough_video],
-        queue=False
     )
     ###########
     file_upload.upload(

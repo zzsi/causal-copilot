@@ -28,8 +28,9 @@ run_benchmark() {
     
     echo "[$(date +"%Y-%m-%d %H:%M:%S")] Starting benchmark for algorithm: $algo" | tee -a "$log_file"
     
-    # Run the benchmark and redirect both stdout and stderr to the log file
-    CUDA_VISIBLE_DEVICES=7 python "$SCRIPT_DIR/benchmarking_integrated.py" &>> "$log_file"
+    # Run the benchmark with CPU restrictions and redirect both stdout and stderr to the log file
+    # Using taskset to restrict CPU usage to the last 8 cores
+    CUDA_VISIBLE_DEVICES=7 taskset -c 120-127 python "$SCRIPT_DIR/benchmarking_integrated.py" &>> "$log_file"
     
     if [ $? -eq 0 ]; then
         echo "[$(date +"%Y-%m-%d %H:%M:%S")] Benchmark for algorithm $algo completed successfully." | tee -a "$log_file"
