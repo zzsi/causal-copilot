@@ -29,11 +29,7 @@ def coarsen_continuous_variables(data, cont_confounders, bins=5):
             coarsened_col = f'coarsen_{col}'
             #data[coarsened_col] = pd.cut(data[col], bins=bins, labels=False)
             bin_edges = pd.cut(data[col], bins=bins)
-            if (data[col].max()-data[col].min()) <= 1:
-                data[coarsened_col] = bin_edges.apply(lambda interval: f"{interval.left:.1f}-{interval.right:.1f}")
-            else:
-                data[coarsened_col] = bin_edges.apply(lambda interval: f"{int(interval.left)}-{int(interval.right)}")
-            
+            data[coarsened_col] = bin_edges.apply(lambda interval: f"{interval.left:.1f}-{interval.right:.1f}")
     return data
 
 def plot_hte_dist(hte, fig_path):

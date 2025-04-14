@@ -219,8 +219,18 @@ class Analysis(object):
         Perform Coarsened Exact Matching (CEM).
         """
         # Initialize CEM
-        my_cem = cem(self.data, confounder_cols = confounders, cont_confounder_cols = cont_confounder,  col_t = treatment, col_y = outcome)
-        matched_data = my_cem.match()
+        try:
+            my_cem = cem(self.data, confounder_cols = confounders, cont_confounder_cols = cont_confounder,  col_t = treatment, col_y = outcome)
+            matched_data = my_cem.match()
+        except:
+            try:
+                confounders = confounders[:-1]
+                my_cem = cem(self.data, confounder_cols = confounders, cont_confounder_cols = cont_confounder,  col_t = treatment, col_y = outcome)
+                matched_data = my_cem.match()
+            except:
+                confounders = confounders[:-1]
+                my_cem = cem(self.data, confounder_cols = confounders, cont_confounder_cols = cont_confounder,  col_t = treatment, col_y = outcome)
+                matched_data = my_cem.match()
         return matched_data
 
     def _identify_confounders(self, treatment, outcome):

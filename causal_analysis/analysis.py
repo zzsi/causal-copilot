@@ -37,6 +37,7 @@ def generate_analysis_econml(args, global_state, key_node, treatment, parent_nod
     response_hte = LLM_parse_query(args, None, 'You are an expert in Causal Discovery.', prompt_hte)
     
     figs = []
+    hte = pd.read_csv(f'{global_state.user_data.output_graph_dir}/hte.csv')
     dist_fig_path = f'{global_state.user_data.output_graph_dir}/hte_dist.png'
     plot_hte_dist(hte, dist_fig_path)
     figs.append(dist_fig_path)
