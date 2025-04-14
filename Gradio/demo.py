@@ -1382,9 +1382,13 @@ function createGradioAnimation() {
             this.style.background = '#1976d2';
             this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
         });
+        // Add click event to open YouTube
+        videoBtn.addEventListener('click', function() {
+            window.open('https://www.youtube.com/watch?si=3DTT2AlEIcAf-T_E&v=U9-b0ZqqM24&feature=youtu.be', '_blank');
+        });
         
-        container.appendChild(ytLink);
-    }, text.length * 100 + 200);
+        container.appendChild(videoBtn);
+    }, text.length * 100 + 200); // Add after title animation is complete with faster timing
     
     var gradioContainer = document.querySelector('.gradio-container');
     gradioContainer.insertBefore(container, gradioContainer.firstChild);
@@ -1721,6 +1725,7 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
                     interactive=False
                 )
                 reset_btn = gr.Button("🔄 Reset", scale=1, elem_classes=["icon-button"], size="sm")
+                # No need for a hidden video button anymore
 
     with gr.Row(elem_classes=["gallery-section"]):
         gr.Markdown("## Play with some interesting datasets!", elem_classes=["gallery-heading"])
@@ -1768,6 +1773,35 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
                 fn=lambda: "",
                 outputs=[msg]
             )
+
+    # Event handlers with queue enabled
+    msg.submit(
+        fn=disable_all_inputs,  # First disable all inputs
+        inputs=[
+            gr.Textbox(value="", visible=False),
+            chatbot,
+            gr.Button(visible=False),
+            download_btn,
+            msg,
+            gr.Textbox(value=str(len(DEMO_DATASETS)), visible=False)  # Pass number of buttons instead
+        ],
+        outputs=[*list(demo_btns.values()), download_btn, msg, file_upload, reset_btn],
+        queue=True
+    ).then(
+        fn=process_message,
+        inputs=[msg, args, state, REQUIRED_INFO, stage_state, chatbot, download_btn],  ##########
+        outputs=[args, state, REQUIRED_INFO, stage_state, chatbot, download_btn],
+        concurrency_limit=MAX_CONCURRENT_REQUESTS,
+        queue=True
+    ).then(
+        fn=enable_all_inputs,
+        inputs=[gr.Textbox(value=str(len(DEMO_DATASETS)), visible=False)],
+        outputs=[*list(demo_btns.values()), download_btn, msg, file_upload, reset_btn],
+        queue=True
+    ).then(
+        fn=lambda: "",
+        outputs=[msg]
+    )
 
     reset_btn.click(
         fn=clear_chat,
