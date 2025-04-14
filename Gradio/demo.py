@@ -1,12 +1,6 @@
 import os
 import subprocess
 from pathlib import Path
-from dotenv import load_dotenv
-
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
-from dotenv import load_dotenv
-
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 
 def init_graphviz():
     # Try apt-get (Debian/Ubuntu) first
@@ -55,12 +49,15 @@ def install_packages():
     subprocess.run("pip install CEM_LinearInf", shell=True, check=True)
     subprocess.run("pip install dotenv", shell=True, check=True)
     subprocess.run("pip install dcor", shell=True, check=True)
+    subprocess.run("pip install xgboost", shell=True, check=True)
 #Run initialization before importing plumbum
-# init_latex()
-# init_graphviz()
-# init_causallearn()
-# install_packages()
+init_latex()
+init_graphviz()
+init_causallearn()
+install_packages()
 
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 import gradio as gr
 import pandas as pd
 import io
@@ -981,12 +978,14 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             analysis = Analysis(global_state, args)
             ### Check Confounder
             key_node = global_state.inference.task_info[global_state.inference.task_index]['key_node'][0]
-            confounders = analysis._identify_confounders(treatment, key_node)
+            confounders, potential_confounders = analysis._identify_confounders(treatment, key_node)
             global_state.inference.task_info[global_state.inference.task_index]['confounders'] = confounders
             remaining_var = list(set(analysis.data.columns) - set([treatment]) - set([key_node]) - set(confounders))
             # Allow user add confounder  
             chat_history.append((None, f"These are Confounders between treatment {treatment} and outcome {key_node}: \n"
                       f"{','.join(confounders)}\n"
+                       f"These are potential confounders: \n"
+                        f"{','.join(potential_confounders)}\n"
                       "💡 Do you want to add any variables as confounders in your dataset?\n"
                       "A confounder is a variable that influences both the cause and the outcome, potentially biasing results. Adding known confounders helps improve the accuracy of causal analysis. \n"
                       "Please do not include too many variables as confounders. Please choose from the following:\n"
@@ -1726,7 +1725,7 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
                     file_count="single"
                 )
                 download_btn = gr.DownloadButton(
-                    "📥 Download Exclusive Report",
+                    "📥 Download result package (ZIP file)",
                     size="sm",
                     elem_classes=["icon-button"],
                     scale=6,

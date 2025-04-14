@@ -62,8 +62,10 @@ class Analysis(object):
         self.args = args
         self.data = global_state.user_data.processed_data
         self.graph = convert_adj_mat(global_state.results.revised_graph)
+        print(self.graph)
         self.G = nx.from_numpy_array(self.graph, create_using=nx.DiGraph) # convert adj matrix into DiGraph
         self.G = nx.relabel_nodes(self.G, {i: name for i, name in enumerate(self.data.columns)})
+        print(self.G.edges)
         self.dot_graph = self._generate_dowhy_graph()
         # Construct Causal Model via dowhy/gcm
         self.causal_model = gcm.InvertibleStructuralCausalModel(self.G)
@@ -231,8 +233,26 @@ class Analysis(object):
             raise ValueError(f"Invalid treatment or outcome variable in the graph: {treatment}, {outcome}")
 
         # Use the causal graph to identify confounders
-        confounders = list(set(self.G.predecessors(treatment)) & set(self.G.predecessors(outcome)))
-        return confounders 
+        # confounders = list(set(self.G.predecessors(treatment)) & set(self.G.predecessors(outcome)))
+        adj_mat = self.global_state.results.revised_graph
+        treatment_idx = self.data.columns.get_loc(treatment)
+        outcome_idx = self.data.columns.get_loc(outcome)
+        confounders = []
+        potential_confounders = []
+        for idx, k in enumerate(self.data.columns):
+            if k != treatment and k != outcome:
+                # Check if k has causal influence on treatment
+                treatment_influence = adj_mat[treatment_idx][idx] in [1, 3, 4]
+                potential_treatment_influence = (adj_mat[treatment_idx][idx]==2 or adj_mat[idx][treatment_idx]==2)
+                # Check if k has causal influence on outcome
+                outcome_influence = adj_mat[outcome_idx][idx] in [1, 3, 4]
+                potential_outcome_influence = (adj_mat[outcome_idx][idx]==2 or adj_mat[idx][outcome_idx]==2)
+                # If k influences both treatment and outcome, it's a confounder
+                if treatment_influence and outcome_influence:
+                    confounders.append(k)
+                if potential_treatment_influence and potential_outcome_influence:
+                    potential_confounders.append(k)
+        return confounders, potential_confounders
     
     def _check_balance(self, data, matched_data, treatment, outcome, confounders, cont_confounders, title):
         """

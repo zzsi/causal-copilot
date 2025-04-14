@@ -848,7 +848,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 return process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn)
         
         if CURRENT_STAGE == 'inference_analysis_check':
-            with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250408_145536/sachs/output_graph/PC_global_state.pkl', 'rb') as file:
+            with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250408_192900/Abalone/output_graph/PC_global_state.pkl', 'rb') as file:
                 global_state = pickle.load(file)
                 global_state.inference.task_index = -1
                 global_state.inference.task_info = {}
@@ -982,12 +982,14 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             analysis = Analysis(global_state, args)
             ### Check Confounder
             key_node = global_state.inference.task_info[global_state.inference.task_index]['key_node'][0]
-            confounders = analysis._identify_confounders(treatment, key_node)
+            confounders, potential_confounders = analysis._identify_confounders(treatment, key_node)
             global_state.inference.task_info[global_state.inference.task_index]['confounders'] = confounders
             remaining_var = list(set(analysis.data.columns) - set([treatment]) - set([key_node]) - set(confounders))
             # Allow user add confounder  
             chat_history.append((None, f"These are Confounders between treatment {treatment} and outcome {key_node}: \n"
                       f"{','.join(confounders)}\n"
+                        f"These are potential confounders: \n"
+                        f"{','.join(potential_confounders)}\n"
                       "💡 Do you want to add any variables as confounders in your dataset?\n"
                       "A confounder is a variable that influences both the cause and the outcome, potentially biasing results. Adding known confounders helps improve the accuracy of causal analysis. \n"
                       "Please do not include too many variables as confounders. Please choose from the following:\n"

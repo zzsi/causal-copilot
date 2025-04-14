@@ -650,8 +650,11 @@ def parse_hyperparameter_query(args, message, chat_history, download_btn, global
                     # Determine if they're all integers or floats
                     if all(isinstance(val, int) for val in available_values):
                         param_info['available_values'] = "integer"
+                        if "expert_suggestion" in param_info:
+                            param_info['expert_suggestion'] = "We allow all reasonable integers." + param_info['expert_suggestion']
                     else:
                         param_info['available_values'] = "float"
+                        param_info['expert_suggestion'] = "We allow all reasonable floats." + param_info['expert_suggestion']
             prompt = f"""You are a parameter validation assistant. Please parse and validate the user's parameter inputs based on the provided context:
             **Context**
             We asked the user: "Do you want to specify values for parameters instead of the selected ones? If so, please specify your parameters."
