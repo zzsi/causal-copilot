@@ -6,7 +6,10 @@ from datetime import datetime
 import sys
 import random
 from typing import Dict, List, Tuple, Union
+import warnings
 
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 # Import the TimeSeriesSimulator from dummy.py
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from dummy import TimeSeriesSimulator, set_random_seed

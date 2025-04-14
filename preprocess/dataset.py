@@ -126,8 +126,29 @@ def knowledge_info(args, global_state):
     )
     knowledge_doc = response.choices[0].message.content
     knowledge_docs = [knowledge_doc]
-
     global_state.user_data.knowledge_docs = knowledge_docs
+    
+    client2 = OpenAI()
+    prompt2 = ("I will conduct causal discovery on the Dataset %s containing the following Columns: \n\n"
+              "%s\n\nPlease provide comprehensive domain knowledge about this data. If variable names are meaningful, analyze in detail. If they're just symbols (like x1, y1), respond with 'No Knowledge'.\n\n"
+              "Please cover these aspects with clear structure:\n\n"
+              "1. VARIABLE DESCRIPTIONS: Detailed explanation of each variable, its meaning, measurement units, and typical ranges\n\n"
+              "2. CAUSAL RELATIONSHIPS: Potential direct and indirect causal connections between variables based on domain expertise\n\n"
+              "3. RELATIONSHIP NATURE: Are relationships primarily linear or nonlinear? Explain with examples\n\n"
+              ) % (table_name, table_columns)
+    response2 = client2.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a domain expert specializing in causal inference across multiple fields. Analyze dataset variables to extract comprehensive domain knowledge that would help with causal discovery. "},
+            {"role": "user", "content": prompt2}
+        ]
+    )
+    knowledge_doc_for_user = response2.choices[0].message.content
+    knowledge_docs_for_user = [knowledge_doc_for_user]
+    print(knowledge_docs_for_user)
+    global_state.user_data.knowledge_docs_for_user = knowledge_docs_for_user
+
+    
 
     return global_state
 
