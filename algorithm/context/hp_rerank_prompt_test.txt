@@ -13,24 +13,22 @@ The computation has to be finished in the runtime of 1440.0 minutes.
 -----------------------------------------------
 Given a dataset with the following properties:
 
-1. Columns: Shopping_Event	Ad_Spend	Page_Views	Unit_Price	Sold_Units	Revenue	Operational_Cost	Profit
+1. Columns: Raf	Mek	Plcg	PIP2	PIP3	Erk	Akt	PKA	PKC	P38	Jnk
 2. Statistics:
 The dataset has the following characteristics:
 
-Data Type: The overall data type is Time-series.
+Data Type: The overall data type is Continuous.
 
-The sample size is 365 with 8 features. 
+The sample size is 853 with 11 features. 
 
-This dataset is time-series data. 
+This dataset is not time-series data. 
 
 Data Quality: There are no missing values in the dataset.
 
 Statistical Properties:
 - Linearity: The relationships between variables are not linear.
 - Gaussian Errors: The errors in the data do not follow a Gaussian distribution.
-- Time lag: 5 
-
-- Stationarity: The dataset is stationary. 
+- Heterogeneity: The dataset is not heterogeneous. 
 
 
 
@@ -92,11 +90,11 @@ s
 
 We have selected the following algorithm for causal discovery:
 
-Algorithm: FCI
+Algorithm: PC
 
 Now, we need to determine the optimal hyperparameters for this algorithm. I'll guide you through a systematic approach to select values that prioritize accuracy while maintaining computational efficiency for moderate graph sizes.
 
-Primary hyperparameters to configure: lags, criterion, prune, gpu
+Primary hyperparameters to configure: alpha, indep_test, depth
 
 For each hyperparameter, please follow this structured approach:
 
@@ -120,7 +118,7 @@ Step 3: Evaluate each hyperparameter's impact on accuracy vs. efficiency
 
 Step 4: Analyze algorithm-specific recommendations
    - Review expert suggestions for each parameter:
-   "**Parameter:** alpha\n- **Meaning:** Desired significance level in (0, 1)\n- **Available Values:**\n  - 0.05\n  - 0.1\n  - 0.01\n- **Expert Suggestion:** Use 0.05 as default. Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\n\n**Parameter:** indep_test\n- **Meaning:** Independence test method\n- **Available Values:**\n  - fisherz\n  - chisq\n  - kci\n  - fastkci\n  - rcit\n- **Expert Suggestion:** Use fisherz as default (for linear data). Choose based on data type, DON'T use nonlinear/non-parametric tests for linear/discrete data.\n\nLINEAR/DISCRETE (PARAMETRIC) TESTS:\n- 'fisherz': For linear continuous data (default choice for linear data)\n- 'chisq': For discrete data only (applied only for pure discrete data)\n\nNONLINEAR/NON-PARAMETRIC TESTS:\n- 'kci': For nonlinear data (very slow, use only if variable size < 10 and sample size < 1500)\n- 'rcit': Fastest approximation of kci for non-linear data (use only if variable size < 100 and sample size < 10000)\n- 'fastkci': Divide-and-conquer version of kci for non-linear data, faster than kci but less accurate (use only if variable size < 20 and sample size < 3000)\n\nFor nonlinear data, as long as variable and sample size constraints are fulfilled, choose in order of accuracy: KCI > RCIT > FastKCI.\n\n**Parameter:** depth\n- **Meaning:** Maximum depth for skeleton search\n- **Available Values:**\n  - -1\n  - 6\n  - 4\n  - 2\n  - 1\n- **Expert Suggestion:** Use -1 as default. Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 1-3) can significantly speed up the algorithm at the cost of some accuracy. A graph with node number < 10, use depth 6; A graph with node number 10 - 25, use depth 4; A graph with node number 25-50, use depth 2; A graph with node number > 50, use depth 1.\n\n"
+   "**Parameter:** alpha\n- **Meaning:** Desired significance level in (0, 1)\n- **Available Values:**\n  - 0.05\n  - 0.1\n  - 0.01\n- **Expert Suggestion:** Use 0.05 as default. Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\n\n**Parameter:** indep_test\n- **Meaning:** Independence test method\n- **Available Values:**\n  - fisherz_cpu\n  - fisherz_gpu\n  - chisq_cpu\n  - chisq_gpu\n  - kci_cpu\n  - cmiknn_gpu\n  - fastkci_cpu\n  - rcit_cpu\n- **Expert Suggestion:** Use fisherz_cpu as default (for linear data). Choose based on data type and hardware. DON'T use nonlinear/non-parametric tests for linear/discrete data.\n\nLINEAR/DISCRETE (PARAMETRIC) TESTS:\n- 'fisherz_cpu': For linear continuous data (default choice for linear data)\n- 'fisherz_gpu': GPU version for linear continuous data (only if variable size > 150 and sample size > 7500)\n- 'chisq_cpu': For discrete data only\n- 'chisq_gpu': GPU version for discrete data (only if variable size > 150 and sample size > 7500)\n\nNONLINEAR/NON-PARAMETRIC TESTS:\n- 'kci_cpu': For nonlinear data (very slow, ONLY use if variable size < 10 and sample size < 1500)\n- 'rcit_cpu': Fastest approximation of kci (use only if variable size < 100 and sample size < 10000)\n- 'fastkci_cpu': Divide-and-conquer version of kci, faster than kci but less accurate (use only if variable size < 20 and sample size < 3000)\n- 'cmiknn_gpu': GPU accelerated nonlinear test (use only if data is nonlinear, and variable size > 50 or sample size > 3000)\n\nFor nonlinear data, as long as variable and sample size constraints are fulfilled, choose in order of accuracy: KCI > RCIT > FastKCI >= CMiKNN. For smaller datasets, use CPU tests for better accuracy even if GPU is available. You MUST use GPU tests for large datasets (variable size > 150) if GPU is available.\n\n**Parameter:** depth\n- **Meaning:** Maximum depth for skeleton search\n- **Available Values:**\n  - -1\n  - 6\n  - 5\n  - 4\n  - 3\n- **Expert Suggestion:** Use -1 as default. Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 2-4) can significantly speed up the algorithm with a minor trade-off in accuracy. For CPU-based independence tests: A graph with node number < 10, use depth 6; A graph with node number 10-25, use depth 5; A graph with node number 25-50, use depth 4; A graph with node number > 50, use depth 3. For GPU-accelerated independence tests: A graph with node number < 50, use depth -1; A graph with node number 50-100, use depth 5; A graph with node number > 100, use depth 4.\n\n"
 
 Step 5: Analyze algorithm performance with different hyperparameter configurations (If existed)
    - Review benchmarking results for this algorithm with various hyperparameter settings
@@ -170,18 +168,24 @@ Step 5: Analyze algorithm performance with different hyperparameter configuratio
 Filtered Benchmarking Results
 ────────────────────────────────────────────────────────
 
-Algorithms included: FCI
+Algorithms included: PC
 
 ────────────────────────────────────────────────────────
 Overall Algorithm Performance
 ────────────────────────────────────────────────────────
 
+⚠️ IMPORTANT: Overall rankings can be misleading! ⚠️
+- An algorithm with high average performance may perform poorly on specific scenarios
+- Always check scenario-specific performance for your use case
+
 Overall ranking based on average performance across all scenarios:
 
-1. FCI_indep_test=fisherz: 7.4
-2. FCI_indep_test=rcit: 7.3
-3. FCI_indep_test=kci: 6.2
-4. FCI_indep_test=fastkci: 6.2
+1. PC_indep_test=rcit_cpu: 6.8
+2. PC_indep_test=kci_cpu: 6.6
+3. PC_indep_test=fisherz_cpu: 6.3
+4. PC_indep_test=fisherz_gpu: 6.1
+5. PC_indep_test=fastkci_cpu: 6.1
+6. PC_indep_test=cmiknn_gpu: 5.1
 
 
 ────────────────────────────────────────────────────────
@@ -192,10 +196,12 @@ Note: Efficiency scores are primarily measured in Variable Scaling and Sample Sc
 
 | Algorithm | Variable Scaling (linear) | Sample Scaling (linear) | Variable Scaling (mlp) | Sample Scaling (mlp) | Average |
 |-----------|---------------------------|--------------------------|------------------------|----------------------|--------|
-| FCI_indep_test=fisherz | 4.7 | N/A | 4.7 | N/A | 4.7 |
-| FCI_indep_test=kci | 3.7 | N/A | 4.1 | N/A | 3.9 |
-| FCI_indep_test=fastkci | 3.4 | N/A | 4.1 | N/A | 3.8 |
-| FCI_indep_test=rcit | 3.3 | N/A | 4.0 | N/A | 3.6 |
+| PC_indep_test=fisherz_gpu | 5.0 | N/A | 5.0 | N/A | 5.0 |
+| PC_indep_test=cmiknn_gpu | 4.0 | N/A | 4.1 | N/A | 4.1 |
+| PC_indep_test=fisherz_cpu | 3.9 | N/A | 3.9 | N/A | 3.9 |
+| PC_indep_test=rcit_cpu | 3.2 | N/A | 3.5 | N/A | 3.4 |
+| PC_indep_test=kci_cpu | 2.0 | N/A | 2.1 | N/A | 2.1 |
+| PC_indep_test=fastkci_cpu | 1.4 | N/A | 1.6 | N/A | 1.5 |
 
 
 ────────────────────────────────────────────────────────
@@ -203,34 +209,34 @@ Algorithm Recommendations by Scenario Type
 ────────────────────────────────────────────────────────
 
 • Linear Relationships
-  1. FCI_indep_test=fisherz: Performance 7.8
-  2. FCI_indep_test=rcit: Performance 7.7
-  3. FCI_indep_test=kci: Performance 6.8
+  1. PC_indep_test=fisherz_cpu: Performance 7.0
+  2. PC_indep_test=rcit_cpu: Performance 7.0
+  3. PC_indep_test=kci_cpu: Performance 6.9
 
 • Non-Linear Relationships
-  1. FCI_indep_test=fisherz: Performance 6.9
-  2. FCI_indep_test=rcit: Performance 6.6
-  3. FCI_indep_test=kci: Performance 5.4
+  1. PC_indep_test=rcit_cpu: Performance 6.9
+  2. PC_indep_test=kci_cpu: Performance 6.3
+  3. PC_indep_test=fisherz_cpu: Performance 5.4
 
 • Data with Missing Values
-  1. FCI_indep_test=rcit: Performance 7.6
-  2. FCI_indep_test=fisherz: Performance 7.3
-  3. FCI_indep_test=kci: Performance 6.3
+  1. PC_indep_test=kci_cpu: Performance 6.8
+  2. PC_indep_test=rcit_cpu: Performance 6.8
+  3. PC_indep_test=fisherz_cpu: Performance 6.3
 
 • Data with Measurement Error
-  1. FCI_indep_test=rcit: Performance 8.1
-  2. FCI_indep_test=fisherz: Performance 8.0
-  3. FCI_indep_test=fastkci: Performance 7.8
+  1. PC_indep_test=kci_cpu: Performance 7.8
+  2. PC_indep_test=fisherz_gpu: Performance 7.7
+  3. PC_indep_test=fastkci_cpu: Performance 7.7
 
 • Dense vs Sparse Graphs
-  1. FCI_indep_test=rcit: Performance 6.7
-  2. FCI_indep_test=fisherz: Performance 6.4
-  3. FCI_indep_test=fastkci: Performance 5.3
+  1. PC_indep_test=rcit_cpu: Performance 5.9
+  2. PC_indep_test=fastkci_cpu: Performance 5.4
+  3. PC_indep_test=fisherz_cpu: Performance 5.3
 
 • Heterogeneous Data
-  1. FCI_indep_test=fisherz: Performance 6.7
-  2. FCI_indep_test=rcit: Performance 6.2
-  3. FCI_indep_test=kci: Performance 5.4
+  1. PC_indep_test=kci_cpu: Performance 5.7
+  2. PC_indep_test=fisherz_cpu: Performance 5.5
+  3. PC_indep_test=rcit_cpu: Performance 5.4
 
 
 ────────────────────────────────────────────────────────
@@ -244,130 +250,162 @@ These scenarios test algorithm performance across varying levels of a property.
 • Variable Scaling (linear)
 | Algorithm | Performance | Stability | Efficiency | Overall Score |
 |-----------|------------|-----------|------------|-------------|
-| FCI_indep_test=rcit | 8.3 | 6.3 | 3.3 | 7.8 |
-| FCI_indep_test=fisherz | 8.1 | 3.3 | 4.7 | 7.6 |
-| FCI_indep_test=kci | 7.3 | 7.9 | 3.7 | 7.1 |
-| FCI_indep_test=fastkci | 7.2 | 5.8 | 3.4 | 7.0 |
+| PC_indep_test=rcit_cpu | 8.0 | 14.1 | 3.2 | 7.5 |
+| PC_indep_test=fisherz_cpu | 7.8 | 6.3 | 3.9 | 7.2 |
+| PC_indep_test=fastkci_cpu | 7.3 | 4.4 | 1.4 | 6.6 |
+| PC_indep_test=fisherz_gpu | 7.3 | 12.0 | 5.0 | 7.2 |
+| PC_indep_test=kci_cpu | 7.0 | 7.2 | 2.0 | 6.4 |
+| PC_indep_test=cmiknn_gpu | 6.5 | 15.2 | 4.0 | 6.0 |
 
 • Sample Scaling (linear)
 | Algorithm | Performance | Stability | Efficiency | Overall Score |
 |-----------|------------|-----------|------------|-------------|
-| FCI_indep_test=fisherz | 9.2 | 7.2 | N/A | 9.2 |
-| FCI_indep_test=rcit | 9.0 | 7.8 | N/A | 9.0 |
-| FCI_indep_test=fastkci | 8.6 | 7.7 | N/A | 8.6 |
-| FCI_indep_test=kci | 8.5 | 9.5 | N/A | 8.5 |
+| PC_indep_test=fisherz_cpu | 8.9 | 8.7 | N/A | 8.9 |
+| PC_indep_test=kci_cpu | 8.6 | 6.8 | N/A | 8.6 |
+| PC_indep_test=fisherz_gpu | 8.5 | 9.3 | N/A | 8.5 |
+| PC_indep_test=rcit_cpu | 8.3 | 5.2 | N/A | 8.3 |
+| PC_indep_test=fastkci_cpu | 8.3 | 7.9 | N/A | 8.3 |
+| PC_indep_test=cmiknn_gpu | 6.6 | 4.2 | N/A | 6.6 |
 
 • Heterogeneity (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 8.5 | 1.6 |
-| FCI_indep_test=rcit | 8.0 | 2.1 |
-| FCI_indep_test=kci | 7.2 | 3.6 |
-| FCI_indep_test=fastkci | 7.2 | 0.5 |
+| PC_indep_test=kci_cpu | 7.7 | 14.3 |
+| PC_indep_test=fisherz_cpu | 7.5 | 10.7 |
+| PC_indep_test=fastkci_cpu | 7.2 | 3.3 |
+| PC_indep_test=fisherz_gpu | 7.0 | 6.9 |
+| PC_indep_test=rcit_cpu | 6.8 | 9.3 |
+| PC_indep_test=cmiknn_gpu | 5.1 | 0.5 |
 
 • Measurement Error (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 9.1 | 10.2 |
-| FCI_indep_test=rcit | 8.9 | 5.3 |
-| FCI_indep_test=fastkci | 8.8 | 5.3 |
-| FCI_indep_test=kci | 8.5 | 8.1 |
+| PC_indep_test=fastkci_cpu | 8.9 | 7.3 |
+| PC_indep_test=kci_cpu | 8.8 | 6.6 |
+| PC_indep_test=fisherz_gpu | 8.8 | 8.9 |
+| PC_indep_test=rcit_cpu | 8.3 | 12.3 |
+| PC_indep_test=fisherz_cpu | 8.1 | 12.6 |
+| PC_indep_test=cmiknn_gpu | 6.4 | 2.3 |
 
 • Noise Type (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 9.6 | 4.5 |
-| FCI_indep_test=rcit | 8.9 | 1.5 |
-| FCI_indep_test=kci | 7.1 | 9.5 |
-| FCI_indep_test=fastkci | 7.0 | 5.5 |
+| PC_indep_test=fisherz_cpu | 8.8 | 3.0 |
+| PC_indep_test=kci_cpu | 8.7 | 0.5 |
+| PC_indep_test=rcit_cpu | 7.8 | 0.0 |
+| PC_indep_test=fastkci_cpu | 7.1 | 9.5 |
+| PC_indep_test=fisherz_gpu | 6.9 | 1.5 |
+| PC_indep_test=cmiknn_gpu | 6.1 | 0.5 |
 
 • Missing Data (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 8.0 | 3.4 |
-| FCI_indep_test=rcit | 7.9 | 4.4 |
-| FCI_indep_test=kci | 6.3 | 9.5 |
-| FCI_indep_test=fastkci | 6.2 | 5.9 |
+| PC_indep_test=fisherz_cpu | 7.0 | 3.1 |
+| PC_indep_test=rcit_cpu | 6.7 | 8.2 |
+| PC_indep_test=kci_cpu | 6.7 | 7.9 |
+| PC_indep_test=fisherz_gpu | 6.3 | 3.0 |
+| PC_indep_test=fastkci_cpu | 5.9 | 6.8 |
+| PC_indep_test=cmiknn_gpu | 4.9 | 7.5 |
 
 • Edge Probability (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=rcit | 6.9 | 9.4 |
-| FCI_indep_test=fisherz | 6.7 | 6.4 |
-| FCI_indep_test=fastkci | 5.8 | 6.9 |
-| FCI_indep_test=kci | 5.7 | 6.9 |
+| PC_indep_test=rcit_cpu | 6.1 | 7.3 |
+| PC_indep_test=fisherz_cpu | 6.0 | 9.6 |
+| PC_indep_test=fastkci_cpu | 5.8 | 6.9 |
+| PC_indep_test=fisherz_gpu | 5.7 | 6.1 |
+| PC_indep_test=kci_cpu | 5.4 | 9.9 |
+| PC_indep_test=cmiknn_gpu | 4.4 | 3.1 |
 
 • Discrete Ratio (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 7.6 | 2.9 |
-| FCI_indep_test=kci | 6.9 | 3.1 |
-| FCI_indep_test=rcit | 6.8 | 1.6 |
-| FCI_indep_test=fastkci | 6.8 | 7.8 |
+| PC_indep_test=fisherz_gpu | 6.7 | 11.0 |
+| PC_indep_test=fisherz_cpu | 6.2 | 6.6 |
+| PC_indep_test=fastkci_cpu | 6.2 | 2.9 |
+| PC_indep_test=rcit_cpu | 6.1 | 7.8 |
+| PC_indep_test=kci_cpu | 5.5 | 8.7 |
+| PC_indep_test=cmiknn_gpu | 4.4 | 2.5 |
 
 • Variable Scaling (mlp)
 | Algorithm | Performance | Stability | Efficiency | Overall Score |
 |-----------|------------|-----------|------------|-------------|
-| FCI_indep_test=rcit | 6.7 | 9.0 | 4.0 | 6.4 |
-| FCI_indep_test=fisherz | 6.0 | 6.0 | 4.7 | 5.8 |
-| FCI_indep_test=kci | 5.1 | 10.5 | 4.1 | 5.0 |
-| FCI_indep_test=fastkci | 4.8 | 3.0 | 4.1 | 4.8 |
+| PC_indep_test=rcit_cpu | 6.6 | 16.8 | 3.5 | 6.4 |
+| PC_indep_test=kci_cpu | 5.5 | 10.6 | 2.1 | 5.2 |
+| PC_indep_test=fisherz_cpu | 5.3 | 7.9 | 3.9 | 5.4 |
+| PC_indep_test=cmiknn_gpu | 5.2 | 15.8 | 4.1 | 5.0 |
+| PC_indep_test=fisherz_gpu | 4.8 | 7.4 | 5.0 | 4.8 |
+| PC_indep_test=fastkci_cpu | 4.5 | 10.4 | 1.6 | 4.4 |
 
 • Sample Scaling (mlp)
 | Algorithm | Performance | Stability | Efficiency | Overall Score |
 |-----------|------------|-----------|------------|-------------|
-| FCI_indep_test=rcit | 8.1 | 3.2 | N/A | 8.1 |
-| FCI_indep_test=fisherz | 7.3 | 9.0 | N/A | 7.3 |
-| FCI_indep_test=kci | 5.5 | 11.1 | N/A | 5.5 |
-| FCI_indep_test=fastkci | 5.3 | 4.0 | N/A | 5.3 |
+| PC_indep_test=rcit_cpu | 8.4 | 11.6 | N/A | 8.4 |
+| PC_indep_test=fisherz_cpu | 6.7 | 4.1 | N/A | 6.7 |
+| PC_indep_test=kci_cpu | 6.5 | 15.2 | N/A | 6.5 |
+| PC_indep_test=fisherz_gpu | 5.5 | 6.4 | N/A | 5.5 |
+| PC_indep_test=cmiknn_gpu | 5.4 | 15.6 | N/A | 5.4 |
+| PC_indep_test=fastkci_cpu | 5.4 | 8.1 | N/A | 5.4 |
 
 • Heterogeneity (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 6.2 | 5.4 |
-| FCI_indep_test=rcit | 6.0 | 3.3 |
-| FCI_indep_test=kci | 4.6 | 5.3 |
-| FCI_indep_test=fastkci | 4.6 | 5.3 |
+| PC_indep_test=kci_cpu | 6.0 | 2.9 |
+| PC_indep_test=rcit_cpu | 5.6 | 2.4 |
+| PC_indep_test=cmiknn_gpu | 4.7 | 16.7 |
+| PC_indep_test=fisherz_gpu | 4.6 | 4.9 |
+| PC_indep_test=fastkci_cpu | 4.6 | 5.3 |
+| PC_indep_test=fisherz_cpu | 4.2 | 7.0 |
 
 • Measurement Error (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 6.9 | 9.4 |
-| FCI_indep_test=rcit | 6.6 | 2.8 |
-| FCI_indep_test=fastkci | 5.2 | 4.3 |
-| FCI_indep_test=kci | 5.1 | 3.5 |
+| PC_indep_test=kci_cpu | 6.9 | 3.7 |
+| PC_indep_test=rcit_cpu | 6.7 | 5.2 |
+| PC_indep_test=fisherz_cpu | 5.6 | 5.8 |
+| PC_indep_test=fisherz_gpu | 4.9 | 6.9 |
+| PC_indep_test=fastkci_cpu | 4.8 | 4.3 |
+| PC_indep_test=cmiknn_gpu | 4.4 | 8.1 |
 
 • Noise Type (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 8.1 | 1.5 |
-| FCI_indep_test=rcit | 6.5 | 2.5 |
-| FCI_indep_test=fastkci | 6.1 | 9.0 |
-| FCI_indep_test=kci | 6.1 | 8.5 |
+| PC_indep_test=rcit_cpu | 7.9 | 2.5 |
+| PC_indep_test=kci_cpu | 6.8 | 2.0 |
+| PC_indep_test=fisherz_cpu | 5.8 | 5.0 |
+| PC_indep_test=fisherz_gpu | 5.7 | 0.5 |
+| PC_indep_test=fastkci_cpu | 5.1 | 0.5 |
+| PC_indep_test=cmiknn_gpu | 4.6 | 0.0 |
 
 • Missing Data (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 6.8 | 4.5 |
-| FCI_indep_test=kci | 6.8 | 10.4 |
-| FCI_indep_test=fastkci | 6.3 | 7.8 |
-| FCI_indep_test=rcit | 6.2 | 4.4 |
+| PC_indep_test=kci_cpu | 7.5 | 4.2 |
+| PC_indep_test=rcit_cpu | 6.5 | 14.9 |
+| PC_indep_test=fastkci_cpu | 6.1 | 10.1 |
+| PC_indep_test=fisherz_cpu | 5.8 | 7.0 |
+| PC_indep_test=fisherz_gpu | 5.6 | 9.1 |
+| PC_indep_test=cmiknn_gpu | 4.3 | 10.4 |
 
 • Edge Probability (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=rcit | 7.0 | 4.6 |
-| FCI_indep_test=fisherz | 6.9 | 6.8 |
-| FCI_indep_test=kci | 5.2 | 8.1 |
-| FCI_indep_test=fastkci | 5.1 | 5.7 |
+| PC_indep_test=rcit_cpu | 6.4 | 8.9 |
+| PC_indep_test=kci_cpu | 6.3 | 9.8 |
+| PC_indep_test=fastkci_cpu | 5.5 | 10.7 |
+| PC_indep_test=fisherz_gpu | 5.3 | 12.2 |
+| PC_indep_test=fisherz_cpu | 5.2 | 4.3 |
+| PC_indep_test=cmiknn_gpu | 4.9 | 7.5 |
 
 • Discrete Ratio (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 8.4 | 0.0 |
-| FCI_indep_test=rcit | 6.2 | 0.0 |
-| FCI_indep_test=kci | 5.8 | 0.0 |
-| FCI_indep_test=fastkci | 5.8 | 0.0 |
+| PC_indep_test=rcit_cpu | 8.0 | 0.0 |
+| PC_indep_test=kci_cpu | 6.7 | 0.0 |
+| PC_indep_test=fisherz_cpu | 6.4 | 0.0 |
+| PC_indep_test=fisherz_gpu | 5.8 | 0.0 |
+| PC_indep_test=fastkci_cpu | 5.8 | 0.0 |
+| PC_indep_test=cmiknn_gpu | 3.9 | 0.0 |
 
 ### SPECIFIC SCENARIOS
 These scenarios test algorithm performance at specific settings rather than variable levels.
@@ -376,82 +414,102 @@ These scenarios test algorithm performance at specific settings rather than vari
 • Linear Function
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=rcit | 6.2 | 0.0 |
-| FCI_indep_test=fisherz | 6.2 | 0.0 |
-| FCI_indep_test=fastkci | 6.0 | 0.0 |
-| FCI_indep_test=kci | 6.0 | 0.0 |
+| PC_indep_test=kci_cpu | 6.0 | 0.0 |
+| PC_indep_test=fisherz_cpu | 6.0 | 0.0 |
+| PC_indep_test=fastkci_cpu | 6.0 | 0.0 |
+| PC_indep_test=rcit_cpu | 6.0 | 0.0 |
+| PC_indep_test=fisherz_gpu | 5.9 | 0.0 |
+| PC_indep_test=cmiknn_gpu | 5.0 | 0.0 |
 
 • Non-Linear Function
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=rcit | 6.0 | 0.0 |
-| FCI_indep_test=fisherz | 5.1 | 0.0 |
-| FCI_indep_test=kci | 4.8 | 0.0 |
-| FCI_indep_test=fastkci | 4.0 | 0.0 |
+| PC_indep_test=rcit_cpu | 5.8 | 0.0 |
+| PC_indep_test=kci_cpu | 4.8 | 0.0 |
+| PC_indep_test=cmiknn_gpu | 4.3 | 0.0 |
+| PC_indep_test=fisherz_gpu | 4.0 | 0.0 |
+| PC_indep_test=fisherz_cpu | 3.9 | 0.0 |
+| PC_indep_test=fastkci_cpu | 3.9 | 0.0 |
 
 • Gaussian Noise
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 9.6 | 0.0 |
-| FCI_indep_test=kci | 8.4 | 0.0 |
-| FCI_indep_test=rcit | 8.3 | 0.0 |
-| FCI_indep_test=fastkci | 8.2 | 0.0 |
+| PC_indep_test=fastkci_cpu | 8.3 | 0.0 |
+| PC_indep_test=fisherz_cpu | 8.2 | 0.0 |
+| PC_indep_test=kci_cpu | 8.1 | 0.0 |
+| PC_indep_test=fisherz_gpu | 8.0 | 0.0 |
+| PC_indep_test=rcit_cpu | 8.0 | 0.0 |
+| PC_indep_test=cmiknn_gpu | 5.2 | 0.0 |
 
 • Non-Gaussian Noise
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=rcit | 9.5 | 0.0 |
-| FCI_indep_test=fisherz | 9.5 | 0.0 |
-| FCI_indep_test=kci | 5.8 | 0.0 |
-| FCI_indep_test=fastkci | 5.8 | 0.0 |
+| PC_indep_test=kci_cpu | 9.3 | 0.0 |
+| PC_indep_test=fisherz_cpu | 9.3 | 0.0 |
+| PC_indep_test=rcit_cpu | 7.6 | 0.0 |
+| PC_indep_test=cmiknn_gpu | 7.0 | 0.0 |
+| PC_indep_test=fisherz_gpu | 5.8 | 0.0 |
+| PC_indep_test=fastkci_cpu | 5.8 | 0.0 |
 
 • Dense Graph
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=rcit | 4.7 | 0.0 |
-| FCI_indep_test=fisherz | 4.6 | 0.0 |
-| FCI_indep_test=kci | 2.6 | 0.0 |
-| FCI_indep_test=fastkci | 2.6 | 0.0 |
+| PC_indep_test=rcit_cpu | 3.4 | 0.0 |
+| PC_indep_test=fisherz_cpu | 3.3 | 0.0 |
+| PC_indep_test=fisherz_gpu | 2.6 | 0.0 |
+| PC_indep_test=fastkci_cpu | 2.6 | 0.0 |
+| PC_indep_test=kci_cpu | 2.6 | 0.0 |
+| PC_indep_test=cmiknn_gpu | 2.2 | 0.0 |
 
 • Sparse Graph
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=rcit | 8.3 | 0.0 |
-| FCI_indep_test=fastkci | 7.7 | 0.0 |
-| FCI_indep_test=fisherz | 7.6 | 0.0 |
-| FCI_indep_test=kci | 7.4 | 0.0 |
+| PC_indep_test=rcit_cpu | 7.9 | 0.0 |
+| PC_indep_test=fastkci_cpu | 7.6 | 0.0 |
+| PC_indep_test=fisherz_gpu | 7.3 | 0.0 |
+| PC_indep_test=fisherz_cpu | 6.8 | 0.0 |
+| PC_indep_test=kci_cpu | 6.8 | 0.0 |
+| PC_indep_test=cmiknn_gpu | 6.4 | 0.0 |
 
 • High Missing Data
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=rcit | 8.8 | 0.0 |
-| FCI_indep_test=fisherz | 7.2 | 0.0 |
-| FCI_indep_test=kci | 5.9 | 0.0 |
-| FCI_indep_test=fastkci | 5.6 | 0.0 |
+| PC_indep_test=rcit_cpu | 7.2 | 0.0 |
+| PC_indep_test=cmiknn_gpu | 6.6 | 0.0 |
+| PC_indep_test=kci_cpu | 6.3 | 0.0 |
+| PC_indep_test=fisherz_gpu | 6.1 | 0.0 |
+| PC_indep_test=fastkci_cpu | 6.1 | 0.0 |
+| PC_indep_test=fisherz_cpu | 5.9 | 0.0 |
 
 • High Measurement Error
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=kci | 9.5 | 0.0 |
-| FCI_indep_test=fastkci | 9.5 | 0.0 |
-| FCI_indep_test=rcit | 8.6 | 0.0 |
-| FCI_indep_test=fisherz | 8.0 | 0.0 |
+| PC_indep_test=fisherz_gpu | 9.5 | 0.0 |
+| PC_indep_test=fastkci_cpu | 9.5 | 0.0 |
+| PC_indep_test=kci_cpu | 7.8 | 0.0 |
+| PC_indep_test=rcit_cpu | 6.1 | 0.0 |
+| PC_indep_test=cmiknn_gpu | 5.6 | 0.0 |
+| PC_indep_test=fisherz_cpu | 5.3 | 0.0 |
 
 • Highly Mixed Data
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 5.0 | 0.0 |
-| FCI_indep_test=rcit | 3.9 | 0.0 |
-| FCI_indep_test=kci | 3.8 | 0.0 |
-| FCI_indep_test=fastkci | 3.8 | 0.0 |
+| PC_indep_test=fisherz_gpu | 3.8 | 0.0 |
+| PC_indep_test=fastkci_cpu | 3.8 | 0.0 |
+| PC_indep_test=rcit_cpu | 3.8 | 0.0 |
+| PC_indep_test=fisherz_cpu | 3.8 | 0.0 |
+| PC_indep_test=kci_cpu | 3.0 | 0.0 |
+| PC_indep_test=cmiknn_gpu | 2.2 | 0.0 |
 
 • Highly Heterogeneous
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 7.3 | 0.0 |
-| FCI_indep_test=rcit | 6.8 | 0.0 |
-| FCI_indep_test=kci | 6.2 | 0.0 |
-| FCI_indep_test=fastkci | 6.2 | 0.0 |
+| PC_indep_test=fisherz_cpu | 6.6 | 0.0 |
+| PC_indep_test=fisherz_gpu | 6.2 | 0.0 |
+| PC_indep_test=fastkci_cpu | 6.2 | 0.0 |
+| PC_indep_test=kci_cpu | 5.9 | 0.0 |
+| PC_indep_test=rcit_cpu | 5.7 | 0.0 |
+| PC_indep_test=cmiknn_gpu | 5.3 | 0.0 |
 
 
 -------------------------------------------
@@ -464,7 +522,7 @@ Step 6: Make final decisions based on:
 Please provide your suggestions in a structured JSON format, with detailed reasoning for each hyperparameter. Your response should look like this:
 
 {
-  "algorithm": "VARLiNGAM",
+  "algorithm": "PC",
   "hyperparameters": {
     "[HYPERPARAMETER_1_NAME]": {
       "full_name": "[HYPERPARAMETER_1_FULL_NAME]",
