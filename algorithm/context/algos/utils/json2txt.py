@@ -1161,8 +1161,7 @@ def test_create_filtered_benchmarking_results():
         benchmarking_json = json.load(f)
     
     # Select two algorithms to test
-    algorithm_list = ["GOLEM", "XGES"] #["PC", "GES", "FCI", "CDNOD", "XGES", "FGES", "GRaSP", "NOTEARSLinear", "GOLEM",
-                    #   "DirectLiNGAM", "InterIAMB", "BAMB", "HITONMB", "IAMBnPC", "MBOR"]
+    algorithm_list = ["PC", "GES", "FCI", "CDNOD", "XGES", "FGES", "GRaSP", "NOTEARSLinear", "GOLEM", "DirectLiNGAM", "InterIAMB", "BAMB", "HITONMB", "IAMBnPC", "MBOR"]
     print(benchmarking_json['Sample Scaling (linear)']['PC_indep_test=fisherz_gpu'])
 
 

@@ -172,4 +172,5 @@ algorithm/context/algos/consolidated_benchmarking_results.txt
 # algorithm/context/benchmarking/algorithm_performance_analysis.json
 figures/
 improved_figures/
+Gradio/public/
 Gradio/demo_official.py

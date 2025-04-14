@@ -1359,7 +1359,7 @@ function createGradioAnimation() {
     // Create video button
     setTimeout(function() {
         var videoBtn = document.createElement('button');
-        videoBtn.innerHTML = '▶️ Walk-through Video';
+        videoBtn.innerHTML = '▶️ Watch Tutorial on YouTube';
         videoBtn.id = 'header-video-btn';
         videoBtn.style.marginLeft = '20px';
         videoBtn.style.padding = '5px 10px';
@@ -1381,13 +1381,10 @@ function createGradioAnimation() {
             this.style.background = '#1976d2';
             this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
         });
-        // Add click event
+        
+        // Open YouTube in a new tab
         videoBtn.addEventListener('click', function() {
-            // Find and click the actual video button that has the event handler
-            var actualVideoBtn = document.querySelector('#video-btn-actual');
-            if (actualVideoBtn) {
-                actualVideoBtn.click();
-            }
+            window.open('https://www.youtube.com/watch?v=U9-b0ZqqM24', '_blank');
         });
         
         container.appendChild(videoBtn);
@@ -1674,7 +1671,6 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
         render_markdown=True
     )
 
-
     def disable_all_inputs(dataset_name, chatbot, clicked_btn, download_btn, msg, all_demo_buttons):
         """Disable all interactive elements"""
         updates = []
@@ -1688,9 +1684,6 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
             gr.update(interactive=False),  # For reset button
         ])
         return updates
-
-  
-
 
     def enable_all_inputs(all_demo_buttons):
         """Re-enable all interactive elements"""
@@ -1732,9 +1725,6 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
                     interactive=False
                 )
                 reset_btn = gr.Button("🔄 Reset", scale=1, elem_classes=["icon-button"], size="sm")
-                # Remove the video button from here as it's now in the header
-                # Keep a hidden button that will be triggered by the header button
-                video_btn = gr.Button("▶️ Play Video", elem_id="video-btn-actual", visible=False)
 
     with gr.Row(elem_classes=["gallery-section"]):
         gr.Markdown("## Play with some interesting datasets!", elem_classes=["gallery-heading"])
@@ -1783,76 +1773,11 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
                 outputs=[msg]
             )
 
-    # --- Video Popup Section Start ---
-    with gr.Column(visible=False) as video_popup:
-        with gr.Row():
-             gr.Markdown("### Walk-through Video") # Title for the popup
-             close_video_btn = gr.Button("❌ Close", scale=1, min_width=10) # Close button at the top right
-        walkthrough_video = gr.Video(label="Walk-through", interactive=False, height=500) # Set desired height
-
-    # Define handler functions for video popup
-    def show_video_popup(video_path):
-        # Use the relative path format recognized by Gradio for static files
-        accessible_path = f"/file={video_path}" 
-        return {
-            video_popup: gr.update(visible=True),
-            walkthrough_video: gr.update(value=accessible_path)
-        }
-
-    def hide_video_popup():
-        return {
-            video_popup: gr.update(visible=False),
-            walkthrough_video: gr.update(value=None) # Clear the video source
-        }
-
-    # Video path state (relative to workspace root)
-    video_path_state = gr.State("Gradio/public/walk-through.mp4") # Assume video is here
-
-    # Connect handlers for video
-    video_btn.click(fn=show_video_popup, inputs=[video_path_state], outputs=[video_popup, walkthrough_video], queue=False)
-    close_video_btn.click(fn=hide_video_popup, inputs=[], outputs=[video_popup, walkthrough_video], queue=False)
-    # --- Video Popup Section End ---
-
-
-    # Event handlers with queue enabled
-    msg.submit(
-        fn=disable_all_inputs,  # First disable all inputs
-        inputs=[
-            gr.Textbox(value="", visible=False),
-            chatbot,
-            gr.Button(visible=False),
-            download_btn,
-            msg,
-            gr.Textbox(value=str(len(DEMO_DATASETS)), visible=False)  # Pass number of buttons instead
-        ],
-        outputs=[*list(demo_btns.values()), download_btn, msg, file_upload, reset_btn],
-        queue=True
-    ).then(
-        fn=process_message,
-        inputs=[msg, args, state, REQUIRED_INFO, stage_state, chatbot, download_btn],  ##########
-        outputs=[args, state, REQUIRED_INFO, stage_state, chatbot, download_btn],
-        concurrency_limit=MAX_CONCURRENT_REQUESTS,
-        queue=True
-    ).then(
-        fn=enable_all_inputs,
-        inputs=[gr.Textbox(value=str(len(DEMO_DATASETS)), visible=False)],
-        outputs=[*list(demo_btns.values()), download_btn, msg, file_upload, reset_btn],
-        queue=True
-    ).then(
-        fn=lambda: "",
-        outputs=[msg]
-    )
-
     reset_btn.click(
         fn=clear_chat,
         inputs=[REQUIRED_INFO, stage_state, state],
         outputs=[REQUIRED_INFO, chatbot, stage_state, state],
         queue=False  # No need for queue on reset
-    ).then( # Also hide video popup on reset
-        fn=hide_video_popup,
-        inputs=[],
-        outputs=[video_popup, walkthrough_video],
-        queue=False
     )
     ###########
     file_upload.upload(

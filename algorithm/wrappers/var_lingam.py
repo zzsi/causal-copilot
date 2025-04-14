@@ -24,9 +24,93 @@ import torch
 cuda_available = torch.cuda.is_available()
 try:
     from culingam.varlingam import VARLiNGAM as AcVarLiNGAM
+    from culingam.utils import check_array
+    from culingam.directlingam import DirectLiNGAM as AcDirectLiNGAM
 except ImportError:
     if not cuda_available:
         print("CUDA is not available, will not use GPU acceleration")
+
+
+class AcVarLiNGAMWrapper(AcVarLiNGAM):
+    """
+    A wrapper for AcVarLiNGAM that fixes compatibility issues with the fit method.
+    This class overrides the fit method to handle the 'original' parameter issue.
+    """
+    
+    def __init__(self, lags=1, criterion='bic', prune=True, ar_coefs=None, lingam_model=None, random_state=None):
+        """
+        Initialize the AcVarLiNGAM wrapper with the same parameters as the original class.
+        
+        Parameters
+        ----------
+        lags : int, optional (default=1)
+            Number of lags.
+        criterion : {'aic', 'fpe', 'hqic', 'bic', None}, optional (default='bic')
+            Criterion to decide the best lags within ``lags``.
+        prune : boolean, optional (default=True)
+            Whether to prune the adjacency matrix of lags or not.
+        ar_coefs : array-like, optional (default=None)
+            Coefficients of AR model.
+        lingam_model : lingam object, optional (default=None)
+            LiNGAM model for causal discovery.
+        random_state : int, optional (default=None)
+            Seed for random number generator.
+        """
+        super().__init__(lags=lags, criterion=criterion, prune=prune, 
+                         ar_coefs=ar_coefs, lingam_model=lingam_model, 
+                         random_state=random_state)
+    
+    def fit(self, X, disable_tqdm=False):
+        """
+        Fit the model to X, removing the 'original' parameter that causes issues.
+        
+        Parameters
+        ----------
+        X: array-like, shape (n_samples, n_features)
+            Training data, where ``n_samples`` is the number of samples
+            and ``n_features`` is the number of features.
+        disable_tqdm: bool, optional (default=False)
+            Whether to disable the tqdm progress bar.
+            
+        Returns
+        -------
+        self : object
+            Returns the instance itself.
+        """
+        self._causal_order = None
+        self._adjacency_matrices = None
+        
+        X = check_array(X)
+        
+        lingam_model = self._lingam_model
+        if lingam_model is None:
+            lingam_model = AcDirectLiNGAM()
+            
+        M_taus = self._ar_coefs
+        
+        if M_taus is None:
+            M_taus, lags, residuals = self._estimate_var_coefs(X)
+        else:
+            lags = M_taus.shape[0]
+            residuals = self._calc_residuals(X, M_taus, lags)
+            
+        model = lingam_model
+        # Call fit without the 'original' parameter
+        model.fit(residuals, disable_tqdm=disable_tqdm)
+        
+        B_taus = self._calc_b(X, model._adjacency_matrix, M_taus)
+        
+        if self._prune:
+            B_taus = self._pruning(X, B_taus, model._causal_order)
+            
+        self._ar_coefs = M_taus
+        self._lags = lags
+        self._residuals = residuals
+        
+        self._causal_order = model._causal_order
+        self._adjacency_matrix = B_taus
+        return self
+
 
 # {‘aic’, ‘fpe’, ‘hqic’, ‘bic’, None}
 class VARLiNGAM(CausalDiscoveryAlgorithm):
@@ -39,7 +123,7 @@ class VARLiNGAM(CausalDiscoveryAlgorithm):
             'ar_coefs': None,
             'lingam_model': None,
             'random_state': None,
-            'gpu': False
+            'gpu': True
         }
         self._params.update(params)
 
@@ -72,12 +156,13 @@ class VARLiNGAM(CausalDiscoveryAlgorithm):
         all_params.pop('gpu')
 
         if cuda_available and self._params['gpu']:
-            model = AcVarLiNGAM(**all_params)
+            model = AcVarLiNGAMWrapper(**all_params)
+            model.fit(data_values)
+            lag_matrix = model._adjacency_matrix
         else:
             model = VARLiNGAM_model(**all_params)
-        model.fit(data_values)
-        
-        lag_matrix = model._adjacency_matrices
+            model.fit(data_values)
+            lag_matrix = model._adjacency_matrices
 
         # Prepare additional information
         info = {
@@ -97,7 +182,7 @@ class VARLiNGAM(CausalDiscoveryAlgorithm):
         n_samples = 1000
         n_nodes = 3
         lag = 2
-        
+
         df, gt_graph, gt_summary, graph_net = generate_stationary_linear(
             n_nodes,
             n_samples,
