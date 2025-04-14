@@ -20,25 +20,32 @@ from algorithm.evaluation.evaluator import GraphEvaluator
 from algorithm.tests.benchmarking_config import get_config
 
 class BenchmarkRunner:
-    def __init__(self, algorithm, hyperparams=None, debug_mode: bool = False):
+    def __init__(self, algorithm, hyperparams=None, debug_mode: bool = False, resume_dir: str = None):
         self.config = get_config()
         self.algorithm = algorithm
         self.hyperparams = hyperparams or {}
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.data_dir = self.config['data_dir']
-        self.output_dir = os.path.join(self.config['output_dir'], self.timestamp)
+        self.resume_dir = resume_dir if resume_dir != 'none' else None
+        self.output_dir = self.resume_dir if resume_dir else os.path.join(self.config['output_dir'], self.timestamp)
         self.evaluator = GraphEvaluator()
         self.debug_mode = debug_mode
+        self.processed_datasets = set()  # Track already processed datasets
+        
         os.makedirs(self.output_dir, exist_ok=True)
         print(f"Benchmarking data directory: {self.data_dir}")
         print(f"Benchmarking output directory: {self.output_dir}")
-        # Load all algorithm classes from wrappers
-        # self.algorithm_candidates = self.config['algorithms']
-        self.algorithm_candidates = [self.algorithm]
-        self.algorithms = self._load_algorithms()
         
         # Create algorithm identifier with hyperparameters
         self.algo_id = self._create_algo_id()
+        
+        # Load all algorithm classes from wrappers
+        self.algorithm_candidates = [self.algorithm]
+        self.algorithms = self._load_algorithms()
+        
+        # If resuming, load existing results to avoid reprocessing
+        if self.resume_dir:
+            self._load_existing_results()
         
         # Index all available datasets
         self.dataset_index = self._index_datasets()
@@ -291,6 +298,26 @@ class BenchmarkRunner:
         
         with open(output_file, 'w') as f:
             json.dump(existing_results, f, indent=2, default=str)
+            
+    def _load_existing_results(self) -> None:
+        """Load existing results to avoid reprocessing datasets"""
+        result_file = os.path.join(self.output_dir, f"{self.algo_id}_results.json")
+        if os.path.exists(result_file):
+            print(f"Found existing results file: {result_file}")
+            try:
+                with open(result_file, 'r') as f:
+                    existing_results = json.load(f)
+                
+                # Extract dataset names from successful runs
+                for result in existing_results:
+                    if result.get('success', False) and 'dataset' in result:
+                        self.processed_datasets.add(result['dataset'])
+                
+                print(f"Loaded {len(self.processed_datasets)} previously processed datasets")
+            except Exception as e:
+                print(f"Error loading existing results: {e}")
+                self.processed_datasets = set()
+
     def run_all_experiments(self) -> None:
         """Run all benchmark experiments"""
         all_results = {}
@@ -300,9 +327,15 @@ class BenchmarkRunner:
         timeseries_groups = {}  # For time series datasets
         
         for dataset_name, dataset_dir, config in self.dataset_index:
+            # Skip already processed datasets if we're resuming
+            if dataset_name in self.processed_datasets:
+                print(f"Skipping already processed dataset: {dataset_name}")
+                continue
+                
             node_size = config['n_nodes']
             sample_size = config['n_samples']
             function_type = config.get('function_type', 'unknown')
+            n_domains = config.get('n_domains', 1)
             
             # Determine if this is a time series dataset
             is_time_series = 'lag' in config and 'degree_inter' in config and 'degree_intra' in config
@@ -331,16 +364,20 @@ class BenchmarkRunner:
                 # Tabular dataset grouping
                 edge_probability = config.get('edge_probability', 0)
                 
-                # Create hierarchical grouping
+                # Create hierarchical grouping with additional n_domains and function_type
                 if node_size not in tabular_groups:
                     tabular_groups[node_size] = {}
                 if sample_size not in tabular_groups[node_size]:
                     tabular_groups[node_size][sample_size] = {}
                 if edge_probability not in tabular_groups[node_size][sample_size]:
-                    tabular_groups[node_size][sample_size][edge_probability] = []
+                    tabular_groups[node_size][sample_size][edge_probability] = {}
+                if n_domains not in tabular_groups[node_size][sample_size][edge_probability]:
+                    tabular_groups[node_size][sample_size][edge_probability][n_domains] = {}
+                if function_type not in tabular_groups[node_size][sample_size][edge_probability][n_domains]:
+                    tabular_groups[node_size][sample_size][edge_probability][n_domains][function_type] = []
                 
-                config_signature = f"tab_nodes{node_size}_func{function_type}_edgeprob{edge_probability}"
-                tabular_groups[node_size][sample_size][edge_probability].append(
+                config_signature = f"tab_nodes{node_size}_samples{sample_size}_edgeprob{edge_probability}_domains{n_domains}_func{function_type}"
+                tabular_groups[node_size][sample_size][edge_probability][n_domains][function_type].append(
                     (dataset_name, dataset_dir, config, config_signature)
                 )
         
@@ -359,52 +396,64 @@ class BenchmarkRunner:
                     sorted_edge_probs = sorted(tabular_groups[node_size][sample_size].keys())
                     
                     for edge_prob in sorted_edge_probs:
-                        datasets = tabular_groups[node_size][sample_size][edge_prob]
+                        sorted_domains = sorted(tabular_groups[node_size][sample_size][edge_prob].keys())
                         
-                        for dataset_name, dataset_dir, config, config_signature in datasets:
-                            # Skip if we've already had a timeout for this specific configuration
-                            if config_signature in timeout_config:
-                                print(f"Skipping {dataset_name} as timeout occurred for similar configuration: {config_signature}")
-                                skip_result = {
-                                    "success": False,
-                                    "error": f"Skipped due to previous timeout with similar configuration: {config_signature}",
-                                    "data_config": config,
-                                    "algorithm": next(iter(self.algorithms.keys())),
-                                    "hyperparams": self.hyperparams,
-                                    "algorithm_id": self.algo_id,
-                                    "dataset": dataset_name
-                                }
-                                if self.algo_id not in all_results:
-                                    all_results[self.algo_id] = []
-                                all_results[self.algo_id].append(skip_result)
-                                self._save_result(self.algo_id, skip_result)
-                                continue
+                        for n_domains in sorted_domains:
+                            sorted_functions = sorted(tabular_groups[node_size][sample_size][edge_prob][n_domains].keys())
                             
-                            try:
-                                data, true_graph, _ = self._load_dataset(dataset_dir)
+                            for function_type in sorted_functions:
+                                datasets = tabular_groups[node_size][sample_size][edge_prob][n_domains][function_type]
                                 
-                                for algo_name, algo_class in self.algorithms.items():
-                                    algo_instance = algo_class(self.hyperparams)
-                                    print(f"Running {self.algo_id} on {dataset_name}")
-                                    result = self._run_single_experiment(algo_instance, data, true_graph, config)
-                                    result['algorithm'] = algo_name
-                                    result['hyperparams'] = self.hyperparams
-                                    result['algorithm_id'] = self.algo_id
-                                    result['dataset'] = dataset_name
+                                for dataset_name, dataset_dir, config, config_signature in datasets:
+                                    # Skip if we've already had a timeout for this specific configuration
+                                    if config_signature in timeout_config:
+                                        print(f"Skipping {dataset_name} as timeout occurred for similar configuration: {config_signature}")
+                                        skip_result = {
+                                            "success": False,
+                                            "error": f"Skipped due to previous timeout with similar configuration: {config_signature}",
+                                            "data_config": config,
+                                            "algorithm": next(iter(self.algorithms.keys())),
+                                            "hyperparams": self.hyperparams,
+                                            "algorithm_id": self.algo_id,
+                                            "dataset": dataset_name
+                                        }
+                                        if self.algo_id not in all_results:
+                                            all_results[self.algo_id] = []
+                                        all_results[self.algo_id].append(skip_result)
+                                        self._save_result(self.algo_id, skip_result)
+                                        continue
                                     
-                                    if self.algo_id not in all_results:
-                                        all_results[self.algo_id] = []
-                                    all_results[self.algo_id].append(result)
-                                    self._save_result(self.algo_id, result)
+                                    try:
+                                        data, true_graph, _ = self._load_dataset(dataset_dir)
+                                        
+                                        for algo_name, algo_class in self.algorithms.items():
+                                            algo_instance = algo_class(self.hyperparams)
+                                            print(f"Running {self.algo_id} on {dataset_name}")
+                                            result = self._run_single_experiment(algo_instance, data, true_graph, config)
+                                            result['algorithm'] = algo_name
+                                            result['hyperparams'] = self.hyperparams
+                                            result['algorithm_id'] = self.algo_id
+                                            result['dataset'] = dataset_name
+                                            
+                                            if self.algo_id not in all_results:
+                                                all_results[self.algo_id] = []
+                                            all_results[self.algo_id].append(result)
+                                            self._save_result(self.algo_id, result)
+                                            
+                                            # Check if timeout occurred
+                                            if not result['success'] and 'timed out' in str(result.get('error', '')).lower():
+                                                timeout_config[config_signature] = True
+                                                break
                                     
-                                    # Check if timeout occurred
-                                    if not result['success'] and 'timed out' in str(result.get('error', '')).lower():
-                                        timeout_config[config_signature] = True
-                                        break
+                                    except Exception as e:
+                                        print(f"Error processing {dataset_name}: {str(e)}")
+                                        continue
+                                
+                                if self.debug_mode:
+                                    break  # Only test the first function type in debug mode
                             
-                            except Exception as e:
-                                print(f"Error processing {dataset_name}: {str(e)}")
-                                continue
+                            if self.debug_mode:
+                                break  # Only test the first n_domains in debug mode
                         
                         if self.debug_mode:
                             break  # Only test the first edge probability in debug mode
@@ -414,7 +463,6 @@ class BenchmarkRunner:
                 
                 if self.debug_mode:
                     break  # Only test the first node size in debug mode
-        
         # Process time series datasets
         if timeseries_groups:
             print("Processing time series datasets...")
@@ -857,6 +905,7 @@ def main():
     parser.add_argument('--param_file', type=str, help='Path to JSON file containing algorithm hyperparameters')
     parser.add_argument('--debug', action='store_true', help='Run in debug mode (only first dataset)')
     parser.add_argument('--test', action='store_true', help='Run tests instead of benchmark')
+    parser.add_argument('--resume_dir', type=str, help='Directory containing previous results to resume from')
     
     args = parser.parse_args()
     
@@ -895,7 +944,7 @@ def main():
     
     # Run benchmark
     print(f"Running benchmark for algorithm: {args.algorithm}")
-    benchmark = BenchmarkRunner(args.algorithm, hyperparams, debug_mode=args.debug)
+    benchmark = BenchmarkRunner(args.algorithm, hyperparams, debug_mode=args.debug, resume_dir=args.resume_dir)
     benchmark.run_all_experiments()
 
 if __name__ == '__main__':

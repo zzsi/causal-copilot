@@ -4,7 +4,7 @@
 SCRIPT_DIR="algorithm/tests"
 
 # Set number of parallel jobs
-N_JOBS=2
+N_JOBS=20
 
 # Define GPU devices to use in rotation
 GPU_DEVICES=(2 7) # Modify this array with your available GPU IDs
@@ -18,6 +18,9 @@ fi
 # Define CPU allocation per job
 CPUS_PER_JOB=8 # Number of CPU cores to allocate per job
 
+# Resume from previous benchmark run
+RESUME_DIR="simuated_data/heavy_benchmarking_v6_results/20250413_130846"
+
 # Get list of algorithms from config
 ALGORITHMS=(PC DirectLiNGAM) # GOLEM FCI CDNOD FGES XGES GRaSP GES 
 #             NOTEARSLinear BAMB IAMBnPC MBOR InterIAMB # HITONMB
@@ -29,38 +32,38 @@ ALGORITHMS=(PC DirectLiNGAM) # GOLEM FCI CDNOD FGES XGES GRaSP GES
 ALGORITHM_HYPERPARAMS=(
     # # PC algorithm - nonlinear variants
     # "PC:{\"indep_test\":\"rcit_cpu\"}"
-    # "PC:{\"indep_test\":\"fastkci_cpu\"}"
-    # "PC:{\"indep_test\":\"kci_cpu\"}"
+    "PC:{\"indep_test\":\"fastkci_cpu\"}"
+    "PC:{\"indep_test\":\"kci_cpu\"}"
     
     # # # # FCI algorithm - nonlinear variants
     # "FCI:{\"indep_test\":\"rcit\"}"
-    # "FCI:{\"indep_test\":\"fastkci\"}"
-    # "FCI:{\"indep_test\":\"kci\"}"
+    "FCI:{\"indep_test\":\"fastkci\"}"
+    "FCI:{\"indep_test\":\"kci\"}"
     
     # # # # CDNOD algorithm - nonlinear variants
     # "CDNOD:{\"indep_test\":\"rcit\"}"
-    # # "CDNOD:{\"indep_test\":\"fastkci\"}"
-    # # "CDNOD:{\"indep_test\":\"kci_cpu\"}"
+    "CDNOD:{\"indep_test\":\"fastkci\"}"
+    "CDNOD:{\"indep_test\":\"kci_cpu\"}"
     
     # # # # DirectLiNGAM - kernel-based nonlinear variant
     # "DirectLiNGAM:{\"measure\":\"kernel\",\"gpu\":false}"
     
     # # # Markov blanket algorithms - nonlinear independence tests
     # "BAMB:{\"indep_test\":\"rcit\"}"
-    # "BAMB:{\"indep_test\":\"fastkci\"}"
-    # "BAMB:{\"indep_test\":\"kci\"}"
+    "BAMB:{\"indep_test\":\"fastkci\"}"
+    "BAMB:{\"indep_test\":\"kci\"}"
     
     # "IAMBnPC:{\"indep_test\":\"rcit\"}"
-    # "IAMBnPC:{\"indep_test\":\"fastkci\"}"
-    # "IAMBnPC:{\"indep_test\":\"kci\"}"
+    "IAMBnPC:{\"indep_test\":\"fastkci\"}"
+    "IAMBnPC:{\"indep_test\":\"kci\"}"
     
     # "MBOR:{\"indep_test\":\"rcit\"}"
-    # "MBOR:{\"indep_test\":\"fastkci\"}"
-    # "MBOR:{\"indep_test\":\"kci\"}"
+    "MBOR:{\"indep_test\":\"fastkci\"}"
+    "MBOR:{\"indep_test\":\"kci\"}"
     
     # "InterIAMB:{\"indep_test\":\"rcit\"}"
-    # "InterIAMB:{\"indep_test\":\"fastkci\"}"
-    # "InterIAMB:{\"indep_test\":\"kci\"}"
+    "InterIAMB:{\"indep_test\":\"fastkci\"}"
+    "InterIAMB:{\"indep_test\":\"kci\"}"
 
     # # Linear methods first
     
@@ -72,15 +75,15 @@ ALGORITHM_HYPERPARAMS=(
     
     # # # PC algorithm - linear variant
     # "PC:{\"indep_test\":\"fisherz_cpu\"}"
-    "PC:{\"indep_test\":\"fisherz_gpu\"}"
-    "PC:{\"indep_test\":\"cmiknn_gpu\"}"
+    # "PC:{\"indep_test\":\"fisherz_gpu\"}"
+    # "PC:{\"indep_test\":\"cmiknn_gpu\"}"
     
     # # # FCI algorithm - linear variant
     # "FCI:{\"indep_test\":\"fisherz\"}"
     
     # # # # CDNOD algorithm - linear variant
-    "CDNOD:{\"indep_test\":\"fisherz_gpu\"}"
-    "CDNOD:{\"indep_test\":\"cmiknn_gpu\"}"
+    # "CDNOD:{\"indep_test\":\"fisherz_gpu\"}"
+    # "CDNOD:{\"indep_test\":\"cmiknn_gpu\"}"
     # "CDNOD:{\"indep_test\":\"fisherz_cpu\"}"
     
     # # # # # FGES algorithm
@@ -204,13 +207,13 @@ run_benchmark() {
         local param_file="${LOG_DIR}/${algo}_params_${params_json}_${timestamp}.json"
         echo "$params_json" > "$param_file"
         
-        # Run with the param file
-        CUDA_VISIBLE_DEVICES=$gpu_device taskset -c $cpu_range python "$SCRIPT_DIR/benchmarking.py" --algorithm "$algo" --param_file "$param_file" >> "$log_file" 2>&1
+        # Run with the param file and resume directory
+        CUDA_VISIBLE_DEVICES=$gpu_device taskset -c $cpu_range python "$SCRIPT_DIR/benchmarking.py" --algorithm "$algo" --param_file "$param_file" --resume_dir "$RESUME_DIR" >> "$log_file" 2>&1
         
         # Clean up
         rm -f "$param_file"
     else
-        CUDA_VISIBLE_DEVICES=$gpu_device taskset -c $cpu_range python "$SCRIPT_DIR/benchmarking.py" --algorithm "$algo" >> "$log_file" 2>&1
+        CUDA_VISIBLE_DEVICES=$gpu_device taskset -c $cpu_range python "$SCRIPT_DIR/benchmarking.py" --algorithm "$algo" --resume_dir "$RESUME_DIR" >> "$log_file" 2>&1
     fi
     
     if [ $? -eq 0 ]; then
@@ -233,9 +236,11 @@ export LOG_DIR
 export SCRIPT_DIR
 export N_JOBS
 export CPUS_PER_JOB
+export RESUME_DIR
 
 echo "[$(date +"%Y-%m-%d %H:%M:%S")] Starting all benchmarks..."
 echo "CPU allocation: $CPUS_PER_JOB cores per job"
+echo "Resuming from previous run: $RESUME_DIR"
 
 # Check if we should run with hyperparameters
 if [ "$1" == "--with-params" ]; then
