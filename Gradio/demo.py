@@ -51,10 +51,10 @@ def install_packages():
     subprocess.run("pip install dcor", shell=True, check=True)
     subprocess.run("pip install xgboost", shell=True, check=True)
 #Run initialization before importing plumbum
-init_latex()
-init_graphviz()
-init_causallearn()
-install_packages()
+# init_latex()
+# init_graphviz()
+# init_causallearn()
+# install_packages()
 
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
