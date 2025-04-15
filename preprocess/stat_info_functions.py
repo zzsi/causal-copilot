@@ -343,9 +343,10 @@ def time_series_lag_est(df: pd.DataFrame, nlags = 30):
     
     mode_lag, count = mode(est_lags)
     median_lag = int(np.median(est_lags))
-    final_lag = round((mode_lag * 0.6) + (median_lag * 0.4))
+    print(mode_lag, median_lag)
+    # final_lag = round((mode_lag * 0.6) + (median_lag * 0.4))
         
-    return final_lag
+    return median_lag
 
 def check_instantaneous(df: pd.DataFrame) -> bool:
     '''
@@ -555,7 +556,7 @@ def linearity_check_ts(df_raw: pd.DataFrame, global_state, save_plot=True):
     :return: indicator of linearity, fitting a VAR model and checking the residuals
     '''
     maxlags = global_state.statistics.time_lag
-    print("maxlags", maxlags)
+    # print("maxlags", maxlags)
     path = global_state.user_data.output_graph_dir
     alpha = global_state.statistics.alpha
     model = VAR(df_raw)

@@ -18,7 +18,7 @@
     "FCI": ["[root_dir]/externals/causal-learn/causallearn/search/ConstraintBased/FCI.py", "[root_dir]/externals/causal-learn/causallearn/utils/PCUtils/SkeletonDiscovery.py"],
     "CDNOD": ["[root_dir]/externals/causal-learn/causallearn/search/ConstraintBased/CDNOD.py", "[root_dir]/externals/causal-learn/causallearn/utils/PCUtils/SkeletonDiscovery.py"],
 
-    "PCMCI": ["https://github.com/jakobrunge/tigramite/blob/master/tigramite/pcmci.py"],
+    "PCMCI": ["https://github.com/jakobrunge/tigramite/blob/master/tigramite/pcmci_base.py"],
     "VARLiNGAM": "[root_dir]/externals/causal-learn/causallearn/search/FCMBased/lingam/var_lingam.py",
     "DYNOTEARS": ["https://github.com/mckinsey/causalnex/blob/develop/causalnex/structure/dynotears.py"],
     "NTSNOTEARS": ["[root_dir]/externals/nts/notears/nts_model.py", "[root_dir]externals/nts/notears/lbfgsb_scipy.py"],

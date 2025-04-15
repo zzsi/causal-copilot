@@ -1222,6 +1222,415 @@ def test_create_filtered_benchmarking_results():
     
     print("Test passed! All expected information is present in the output.")
 
+def create_filtered_benchmarking_results_ts(benchmarking_json, algorithm_list=None, output_filename=None):
+    """Create a consolidated benchmarking results text with only the specified algorithms.
+    
+    Args:
+        benchmarking_json (dict): Dictionary containing benchmarking results
+        algorithm_list (list): List of algorithm names to include in the results
+        output_filename (str, optional): Name of the output file if saving is desired
+    
+    Returns:
+        str: Formatted text containing the filtered benchmarking results
+    """
+    if algorithm_list is None or len(algorithm_list) == 0:
+        print("No algorithms specified for filtering. Using all algorithms.")
+        return None
+    
+    algorithm_mapping = {}
+    
+    # Expert bias adjustments for mapped algorithms
+    # Adjusts performance and efficiency scores based on expert knowledge
+    algorithm_bias = {}
+    
+    # Filter the benchmarking_json to only include the specified algorithms
+    from copy import deepcopy
+    filtered_json = {}
+    for scenario, algorithms in benchmarking_json.items():
+        filtered_algorithms = {}
+        for algo in algorithm_list:
+            # Check if algorithm exists directly in the benchmarking results
+            matching_algos = [a for a in algorithms.keys() if a.startswith(algo)]
+            
+            if matching_algos:
+                for a in matching_algos:        
+                    filtered_algorithms[a] = deepcopy(algorithms[a])
+            elif algo in algorithm_mapping and any(a.startswith(algorithm_mapping[algo]) for a in algorithms.keys()):
+                # If algorithm doesn't exist but has a mapping, use the mapped algorithm's data
+                mapped_algo = algorithm_mapping[algo]
+                matching_mapped_algos = [a for a in algorithms.keys() if a.startswith(mapped_algo)]
+                
+                if matching_mapped_algos:
+                    for a in matching_mapped_algos:
+                        # Create a deep copy of the mapped algorithm's data
+                        mapped_data = deepcopy(algorithms[a])
+                        
+                        # Apply expert bias adjustments if available
+                        if algo in algorithm_bias:
+                            # Adjust performance score
+                            if 'levels' in mapped_data and 'performance' in mapped_data['levels']:
+                                perf = mapped_data['levels']['performance']
+                                if perf != 'N/A':
+                                    adjusted_perf = float(perf) + algorithm_bias[algo]['performance']
+                                    # Cap performance between 0 and 10
+                                    mapped_data['levels']['performance'] = max(0, min(10, adjusted_perf))
+                            
+                            # Adjust efficiency score
+                            if 'levels' in mapped_data and 'efficiency' in mapped_data['levels']:
+                                eff = mapped_data['levels']['efficiency']
+                                if eff != 'N/A':
+                                    adjusted_eff = float(eff) + algorithm_bias[algo]['efficiency']
+                                    # Cap efficiency between 0 and 5
+                                    mapped_data['levels']['efficiency'] = max(0, min(5, adjusted_eff))
+                            
+                            # Adjust composite score if present
+                            if 'levels' in mapped_data and 'composite' in mapped_data['levels']:
+                                comp = mapped_data['levels']['composite']
+                                if comp != 'N/A':
+                                    # Recalculate composite based on adjusted performance and efficiency
+                                    perf = mapped_data['levels']['performance']
+                                    eff = mapped_data['levels'].get('efficiency', 0)
+                                    if perf != 'N/A' and eff != 'N/A':
+                                        mapped_data['levels']['composite'] = 0.9 * float(perf) + 0.1 * float(eff)
+                        
+                        # Store the adjusted data with the original algorithm name
+                        filtered_algorithms[algo] = mapped_data
+        
+        if filtered_algorithms:  # Only include scenarios that have at least one of the specified algorithms
+            filtered_json[scenario] = filtered_algorithms
+    
+    if not filtered_json:
+        return "No results found for the specified algorithms."
+    
+    # Create the output text
+    output_text = ""
+    output_text += "# ALGORITHM BENCHMARKING RESULTS\n\n"
+    
+    output_text += "• CAUTIONARY NOTE\n"
+    output_text += "  – These benchmarking results should be used as guidelines, not definitive judgments\n"
+    output_text += "  – Performance may vary significantly with real-world data compared to simulations\n"
+    output_text += "  – Consider your specific domain knowledge and data characteristics when selecting algorithms\n"
+    
+    output_text += "• Simulation Settings\n"
+    output_text += "  – Network sizes: 5 to 100 nodes\n"
+    output_text += "  – Time Lags: 3 to 20 time steps\n"
+    output_text += "  – Sample sizes: 500 to 5000 data points\n"
+    output_text += "  – Lagged Edge degree: 2.0 to 16.0 (avg 4.0)\n"
+    output_text += "  – Instantaneous Edge degree: 0.0 to 4.0 (avg 2.0)\n"
+    output_text += "  – Data types: Continuous stationary\n"
+    output_text += "  – Function types: Linear relationships\n"
+    output_text += "  – Noise types: Gaussian distributions\n\n"
+    
+    output_text += "• Scenario Types\n"
+    output_text += "  – Robustness scenarios (e.g., Variable Scaling, Lag Scaling): Test algorithm performance across varying levels of a property\n"
+    output_text += "  – Specific scenarios (e.g., Dense Graph, Long time lag): Test performance at a fixed specific setting\n\n"
+    
+    output_text += "• Performance Metrics\n"
+    output_text += "  – Performance level (1-10): Based on F1 score, higher is better\n"
+    output_text += "  – Efficiency level (0-5): Based on runtime, higher is better (only relevant for scaling scenarios)\n"
+    output_text += "  – Stability: Standard deviation of performance, lower values indicate more consistent results\n\n"
+    
+    output_text += "• Important Note on Efficiency Scoring\n"
+    output_text += "  – Benchmarks include large-scale systems with up to 100 nodes x 3 lag and may timeout for some algorithms\n"
+    output_text += "  – For large-scale systems (node count x time lag > 200), prioritize algorithms that can utilize available GPUs\n"
+    output_text += "  – GPU-accelerated methods provide significant efficiency advantages in large-scale scenarios\n\n"
+    output_text += "────────────────────────────────────────────────────────\n"
+    output_text += "Filtered Benchmarking Results\n"
+    output_text += "────────────────────────────────────────────────────────\n\n"
+    
+    output_text += f"Algorithms included: {', '.join(algorithm_list)}\n\n"
+    
+    # Overall algorithm performance across all scenarios
+    output_text += "────────────────────────────────────────────────────────\n"
+    output_text += "Overall Algorithm Performance\n"
+    output_text += "────────────────────────────────────────────────────────\n\n"
+    output_text += "⚠️ IMPORTANT: Overall rankings can be misleading! ⚠️\n"
+    output_text += "- An algorithm with high average performance may perform poorly on specific scenarios\n"
+    output_text += "- Always check scenario-specific performance for your use case\n\n"
+    
+    # Get all unique algorithm names across all scenarios
+    all_algos = set()
+    for scenario in filtered_json:
+        all_algos.update(filtered_json[scenario].keys())
+    
+    # Calculate average performance for each algorithm
+    algo_avg_performance = {}
+    for algo in all_algos:
+        performances = []
+        for scenario in filtered_json:
+            if algo in filtered_json[scenario]:
+                perf = filtered_json[scenario][algo]['levels'].get('performance', 'N/A')
+                if perf != 'N/A':
+                    performances.append(float(perf))
+        
+        if performances:
+            algo_avg_performance[algo] = sum(performances) / len(performances)
+    
+    # Sort algorithms by average performance
+    sorted_algos = sorted(algo_avg_performance.items(), key=lambda x: x[1], reverse=True)
+    
+    # Display overall ranking
+    output_text += "Overall ranking based on average performance across all scenarios:\n\n"
+    for i, (algo_name, avg_perf) in enumerate(sorted_algos):
+        output_text += f"{i+1}. {algo_name}: {avg_perf:.1f}\n"
+    # Efficiency comparison section (only for scaling scenarios)
+    output_text += "\n\n────────────────────────────────────────────────────────\n"
+    output_text += "Efficiency Comparison\n"
+    output_text += "────────────────────────────────────────────────────────\n\n"
+    output_text += "Note: Efficiency scores are primarily measured in Variable Scaling, Lag Scaling and Sample Scaling scenarios.\n\n"
+    
+    # Calculate variable scaling efficiency for ranking
+    algo_var_scaling_efficiency = {}
+    for algo_name in all_algos:
+        var_scaling_efficiencies = []
+        for scenario in filtered_json.keys():
+            if "variable scaling" in scenario.lower():
+                if scenario in filtered_json and algo_name in filtered_json[scenario]:
+                    eff = filtered_json[scenario][algo_name]['levels'].get('efficiency', 'N/A')
+                    if eff != 'N/A':
+                        var_scaling_efficiencies.append(float(eff))
+        
+        if var_scaling_efficiencies:
+            algo_var_scaling_efficiency[algo_name] = sum(var_scaling_efficiencies) / len(var_scaling_efficiencies)
+    
+    # Sort algorithms by variable scaling efficiency
+    sorted_algos_by_var_scaling = sorted(algo_var_scaling_efficiency.items(), key=lambda x: x[1], reverse=True)
+    
+    # Create a table for efficiency comparison, ranked by variable scaling efficiency
+    output_text += "| Algorithm | Variable Scaling | Sample Scaling | Lag Scaling | Average |\n"
+    output_text += "|-----------|------------------|----------------|-------------|---------|\n"
+    
+    for algo_name, _ in sorted_algos_by_var_scaling:
+        efficiency_row = f"| {algo_name} |"
+        efficiencies = []
+        
+        for scenario in filtered_json.keys():
+            if "scaling" in scenario.lower():
+                if scenario in filtered_json and algo_name in filtered_json[scenario]:
+                    eff = filtered_json[scenario][algo_name]['levels'].get('efficiency', 'N/A')
+                    if scenario == "Variable Scaling" and algo_name == "DYNOTEARS":
+                        print(scenario, algo_name, eff)
+                    if eff != 'N/A':
+                        eff_value = float(eff)
+                        efficiencies.append(eff_value)
+                        efficiency_row += f" {eff_value:.1f} |"
+                    else:
+                        efficiency_row += " N/A |"
+                else:
+                    efficiency_row += " N/A |"
+        
+        # Calculate and add average efficiency
+        if efficiencies:
+            if algo_name == "PCMCI_indep_test=parcorr":
+                print(scenario, algo_name, efficiencies)
+            avg_eff = sum(efficiencies) / len(efficiencies)
+            efficiency_row += f" {avg_eff:.1f} |"
+        else:
+            efficiency_row += " N/A |"
+            
+        output_text += efficiency_row + "\n"
+    
+    # Top algorithm recommendations
+    output_text += "\n\n────────────────────────────────────────────────────────\n"
+    output_text += "Algorithm Recommendations by Scenario Type\n"
+    output_text += "────────────────────────────────────────────────────────\n\n"
+    
+    # Define scenario categories
+    scenario_categories = {
+        "Linear Relationships": [s for s in filtered_json.keys()],
+        "Dense vs Sparse Graphs": ["Lagged Edge Density", "w Instantaneous Edges", "w/o Instantaneous Edges"]
+    }
+    
+    for category, scenarios in scenario_categories.items():
+        valid_scenarios = [s for s in scenarios if s in filtered_json]
+        if not valid_scenarios:
+            continue
+            
+        output_text += f"• {category}\n"
+        
+        # Calculate average performance per algorithm for this category
+        category_performance = {}
+        for algo in all_algos:
+            performances = []
+            for scenario in valid_scenarios:
+                if algo in filtered_json[scenario]:
+                    perf = filtered_json[scenario][algo]['levels'].get('performance', 'N/A')
+                    if perf != 'N/A':
+                        performances.append(float(perf))
+            
+            if performances:
+                category_performance[algo] = sum(performances) / len(performances)
+        
+        # Sort and display top algorithms for this category
+        sorted_category = sorted(category_performance.items(), key=lambda x: x[1], reverse=True)
+        for i, (algo, perf) in enumerate(sorted_category[:3]):  # Show top 3
+            output_text += f"  {i+1}. {algo}: Performance {perf:.1f}\n"
+        output_text += "\n"
+    
+    # Scenario-specific results
+    output_text += "\n────────────────────────────────────────────────────────\n"
+    output_text += "Performance by Scenario\n"
+    output_text += "────────────────────────────────────────────────────────\n\n"
+    
+    output_text += "### ROBUSTNESS SCENARIOS\n"
+    output_text += "These scenarios test algorithm performance across varying levels of a property.\n\n"
+    
+    # Define which scenarios are robustness scenarios (with variable levels)
+    robustness_scenarios = [
+        "Variable Scaling", "Lag Scaling", 
+        "Sample Size Scaling", "Lagged Edge Density",
+        "w Instantaneous Edges", "w/o Instantaneous Edges"
+    ]
+    
+    # Define which scenarios are specific settings
+    specific_scenarios = [
+        "Dense Graph", "Long Time Lag", "Large Sample Size"
+    ]
+    
+    # First process robustness scenarios
+    for scenario in filtered_json:
+        if scenario not in robustness_scenarios:
+            continue
+            
+        output_text += f"\n• {scenario}\n"
+        
+        # Create a comparison table for this scenario
+        # For scaling scenarios, include efficiency
+        is_scaling_scenario = "Scaling" in scenario
+        
+        if is_scaling_scenario:
+            output_text += "| Algorithm | Performance | Stability | Efficiency | Overall Score |\n"
+            output_text += "|-----------|------------|-----------|------------|-------------|\n"
+        else:
+            output_text += "| Algorithm | Performance | Stability |\n"
+            output_text += "|-----------|------------|----------|\n"
+        
+        # Sort algorithms by performance for this scenario
+        sorted_algos = sorted(
+            [(algo, filtered_json[scenario][algo]['levels'].get('performance', 0)) 
+             for algo in filtered_json[scenario]],
+            key=lambda x: x[1],
+            reverse=True  # Higher performance is better
+        )
+        
+        for algo_name, perf in sorted_algos:
+            result = filtered_json[scenario][algo_name]
+            perf_str = f"{float(perf):.1f}" if perf != 'N/A' else 'N/A'
+            
+            # Get standard deviation for stability
+            stability = result['ranking'].get('std', 'N/A')
+            stability_str = f"{float(stability):.1f}" if stability != 'N/A' else 'N/A'
+            
+            if is_scaling_scenario:
+                # Add row with efficiency and overall score for scaling scenarios
+                eff = result['levels'].get('efficiency', 'N/A')
+                eff_str = f"{float(eff):.1f}" if eff != 'N/A' else 'N/A'
+                
+                comp = result['levels'].get('composite', 'N/A')
+                comp_str = f"{float(comp):.1f}" if comp != 'N/A' else 'N/A'
+                
+                output_text += f"| {algo_name} | {perf_str} | {stability_str} | {eff_str} | {comp_str} |\n"
+            else:
+                # Only performance and stability for non-scaling scenarios
+                output_text += f"| {algo_name} | {perf_str} | {stability_str} |\n"
+    
+    # Then process specific scenarios
+    output_text += "\n### SPECIFIC SCENARIOS\n"
+    output_text += "These scenarios test algorithm performance at specific settings rather than variable levels.\n\n"
+    
+    for scenario in filtered_json:
+        if scenario not in specific_scenarios:
+            continue
+            
+        output_text += f"\n• {scenario}\n"
+        output_text += "| Algorithm | Performance | Stability |\n"
+        output_text += "|-----------|------------|----------|\n"
+        
+        # Sort algorithms by performance for this scenario
+        sorted_algos = sorted(
+            [(algo, filtered_json[scenario][algo]['levels'].get('performance', 0)) 
+             for algo in filtered_json[scenario]],
+            key=lambda x: x[1],
+            reverse=True  # Higher performance is better
+        )
+        
+        for algo_name, perf in sorted_algos:
+            result = filtered_json[scenario][algo_name]
+            perf_str = f"{float(perf):.1f}" if perf != 'N/A' else 'N/A'
+            
+            # Get standard deviation for stability
+            stability = result['ranking'].get('std', 'N/A')
+            stability_str = f"{float(stability):.1f}" if stability != 'N/A' else 'N/A'
+            
+            output_text += f"| {algo_name} | {perf_str} | {stability_str} |\n"
+    
+    # Save to file if output_filename is provided
+    if output_filename:
+        with open(output_filename, 'w') as f:
+            f.write(output_text)
+        print(f"Filtered benchmarking results saved to {output_filename}")
+    
+    return output_text
+
+def test_create_filtered_benchmarking_results_ts():
+    # Load the benchmarking JSON data
+    with open('algorithm/context/benchmarking/algorithm_performance_analysis_ts.json', 'r') as f:
+        benchmarking_json = json.load(f)
+    
+    # Select two algorithms to test
+    algorithm_list = ["PCMCI", "VARLiNGAM", "GrangerCausality", "DYNOTEARS", "NTSNOTEARS"] #
+    print(benchmarking_json['Sample Size Scaling']['PCMCI_indep_test=parcorr'])
+
+
+    # Call the function to generate filtered results
+    output_text = create_filtered_benchmarking_results_ts(benchmarking_json, algorithm_list)
+    
+    # Save output for inspection
+    with open('test_filtered_results.txt', 'w') as f:
+        f.write(output_text)
+    
+    # Verify the output contains all expected information
+    
+    # 1. Check if algorithms are included
+    for algo in algorithm_list:
+        assert algo in output_text, f"Algorithm {algo} not found in output"
+    
+    # 2. Check if all scenarios are included for these algorithms
+    expected_scenarios = [
+        "Variable Scaling", "Lag Scaling", 
+        "Sample Size Scaling", "Lagged Edge Density",
+        "w Instantaneous Edges", "w/o Instantaneous Edges"
+        # "Dense Graph", "Long time lag", "Large Sample Size" 
+    ]
+    
+    # Check for scenarios where both algorithms exist
+    for scenario in expected_scenarios:
+        if scenario in benchmarking_json and all(algo in benchmarking_json[scenario] for algo in algorithm_list):
+            assert scenario in output_text, f"Scenario {scenario} not found in output"
+    
+    # 3. Check if performance, efficiency, and composite scores are included
+    metrics = ["performance", "Overall Score", "Efficiency"] #efficiency
+    # for metric in metrics:
+    #     assert metric in output_text, f"Metric {metric} not found in output"
+    
+    # 4. Check if ranking information is included
+    assert "Overall ranking" in output_text, "Overall ranking section not found"
+
+    print(output_text)
+    
+    # 5. Check if scenario groups are correctly formatted
+    scenario_groups = ["Scaling Scenarios", "Function Type Scenarios", 
+                       "Noise Type Scenarios", "Other Scenarios"]
+    for group in scenario_groups:
+        assert group in output_text, f"Scenario group {group} not found"
+    
+    # 6. Check if top/bottom performers sections exist
+    assert "Top and Bottom Performers by Scenario" in output_text
+    assert "Top performers:" in output_text
+    assert "Bottom performers:" in output_text
+    
+    print("Test passed! All expected information is present in the output.")
+
 # Run the test
 if __name__ == "__main__":
     test_create_filtered_benchmarking_results()

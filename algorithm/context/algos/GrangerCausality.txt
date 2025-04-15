@@ -16,7 +16,7 @@
 - **Data Type Handling**: Designed for continuous variables only
 
 ## Interpretability
-- **Output Format**: Simple directed graph showing predictive relationships
+- **Output Format**: Simple directed graph showing predictive relationships. Only provides summary graph
 - **Edge Meanings**: Edges represent statistical predictability, not necessarily causation
 - **Uncertainty Metrics**: Provides p-values but no effect size estimates
 

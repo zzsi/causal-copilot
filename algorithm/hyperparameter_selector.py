@@ -2,7 +2,7 @@ import json
 import torch
 import algorithm.wrappers as wrappers
 from algorithm.llm_client import LLMClient
-from .context.algos.utils.json2txt import create_filtered_benchmarking_results
+from .context.algos.utils.json2txt import create_filtered_benchmarking_results, create_filtered_benchmarking_results_ts 
 
 class HyperparameterSelector:
     def __init__(self, args):
@@ -49,9 +49,14 @@ class HyperparameterSelector:
         return convert_to_natural_language(hp_context)
 
     def create_prompt(self, global_state, selected_algo, hp_context, algorithm_optimum_reason):
-        with open(f"algorithm/context/benchmarking/algorithm_performance_analysis.json", "r", encoding="utf-8") as f:
-            algorithm_benchmarking_results = json.load(f)
-            algorithm_benchmarking_results = create_filtered_benchmarking_results(algorithm_benchmarking_results, [selected_algo])
+        if global_state.statistics.data_type=="Time-series" or global_state.statistics.time_series:
+            with open(f"algorithm/context/benchmarking/algorithm_performance_analysis_ts.json", "r", encoding="utf-8") as f:
+                algorithm_benchmarking_results = json.load(f)
+                algorithm_benchmarking_results = create_filtered_benchmarking_results_ts(algorithm_benchmarking_results, [selected_algo])
+        else:
+            with open(f"algorithm/context/benchmarking/algorithm_performance_analysis.json", "r", encoding="utf-8") as f:
+                algorithm_benchmarking_results = json.load(f)
+                algorithm_benchmarking_results = create_filtered_benchmarking_results(algorithm_benchmarking_results, [selected_algo])
 
         with open("algorithm/context/hyperparameter_select_prompt.txt", "r", encoding="utf-8") as f:
             hp_prompt = f.read()
