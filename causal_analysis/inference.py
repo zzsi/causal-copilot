@@ -60,7 +60,7 @@ class Analysis(object):
         """
         self.global_state = global_state
         self.args = args
-        self.data = global_state.user_data.processed_data
+        self.data = global_state.user_data.processed_data.copy()
         self.graph = convert_adj_mat(global_state.results.revised_graph)
         print(self.graph)
         self.G = nx.from_numpy_array(self.graph, create_using=nx.DiGraph) # convert adj matrix into DiGraph
@@ -249,7 +249,8 @@ class Analysis(object):
         outcome_idx = self.data.columns.get_loc(outcome)
         confounders = []
         potential_confounders = []
-        for idx, k in enumerate(self.data.columns):
+        col_len = self.graph.shape[0]
+        for idx, k in enumerate(self.data.columns[:col_len]):
             if k != treatment and k != outcome:
                 # Check if k has causal influence on treatment
                 treatment_influence = adj_mat[treatment_idx][idx] in [1, 3, 4]

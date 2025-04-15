@@ -976,12 +976,12 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             ### Check Confounder
             key_node = global_state.inference.task_info[global_state.inference.task_index]['key_node'][0]
             confounders, potential_confounders = analysis._identify_confounders(treatment, key_node)
-            global_state.inference.task_info[global_state.inference.task_index]['confounders'] = confounders
-            remaining_var = list(set(analysis.data.columns) - set([treatment]) - set([key_node]) - set(confounders))
+            global_state.inference.task_info[global_state.inference.task_index]['confounders'] = list(set(confounders) | set(potential_confounders))
+            remaining_var = list(set(analysis.data.columns) - set([treatment]) - set([key_node]) - set(confounders)-set(potential_confounders))
             # Allow user add confounder  
             chat_history.append((None, f"These are Confounders between treatment {treatment} and outcome {key_node}: \n"
                       f"{','.join(confounders)}\n"
-                       f"These are potential confounders: \n"
+                        f"These are potential confounders: \n"
                         f"{','.join(potential_confounders)}\n"
                       "💡 Do you want to add any variables as confounders in your dataset?\n"
                       "A confounder is a variable that influences both the cause and the outcome, potentially biasing results. Adding known confounders helps improve the accuracy of causal analysis. \n"
@@ -1006,16 +1006,16 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             confounders = global_state.inference.task_info[global_state.inference.task_index]['confounders']
             cont_confounders = [col for col in confounders if global_state.statistics.data_type_column[col]=='Continuous']
             global_state.inference.task_info[global_state.inference.task_index]['cont_confounders'] = cont_confounders
-            # No Confounder Case and Add LLM variable selection
-            if len(confounders) == 0:
-                task_info = global_state.inference.task_info[global_state.inference.task_index]
-                LLM_confounders = LLM_select_confounders(task_info['treatment'], task_info['key_node'], args, global_state.user_data.processed_data)
-                chat_history.append((None, "According to your provided graph, there is no confounder between your treatment and result variables.\n"
-                    "We add the following variables suggested by LLM as confounders:\n"
-                    f'{",".join(LLM_confounders)}'))
-                confounders = LLM_confounders
-                global_state.inference.task_info[global_state.inference.task_index]['confounders'] = confounders
-                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            #No Confounder Case and Add LLM variable selection
+            # if len(confounders) == 0:
+            #     task_info = global_state.inference.task_info[global_state.inference.task_index]
+            #     LLM_confounders = LLM_select_confounders(task_info['treatment'], task_info['key_node'], args, global_state.user_data.processed_data)
+            #     chat_history.append((None, "According to your provided graph, there is no confounder between your treatment and result variables.\n"
+            #         "We add the following variables suggested by LLM as confounders:\n"
+            #         f'{",".join(LLM_confounders)}'))
+            #     confounders = LLM_confounders
+            #     global_state.inference.task_info[global_state.inference.task_index]['confounders'] = confounders
+            #     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
             CURRENT_STAGE = "inference_info_collection_hte" 
             chat_history.append((None, "💡 Is there any heterogeneous variables you care about? \n"
@@ -1048,7 +1048,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             if exist_IV:
                 global_state.inference.task_info[global_state.inference.task_index]['IV'] = iv_variable
                 method = "iv"
-            elif len(confounders) <= 5:
+            elif (len(confounders) <= 5) and (len(confounders) > 0):
                 if len(confounders) - len(cont_confounders) > len(cont_confounders):  # If more than half discrete confounders
                     method = "cem"
                 else:
@@ -1066,13 +1066,21 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             elif method == "drl":
                 chat_history.append((None, "**Doubly Robust Learning (DRL)** is chosen because the sample size is small. It remains consistent even if only one of the nuisance models (propensity scores or outcome models) is correctly specified. This property makes DRL more robust in small datasets, where limited data can lead to inaccuracies in machine learning model estimates."))
             CURRENT_STAGE = "method_selection_check"
-            chat_history.append((None, "Do you want to change the method? If so, please choose one from the following: \n"
-                                    "1️⃣ PSM (Propensity Score Matching)\n"
-                                    "2️⃣ CEM (Coarsen Exact Matching)\n"
-                                    "3️⃣ DRL (Doubly Robust Learning)\n"
-                                    "4️⃣ DML (Doubly Machine Learning)\n"
-                                    "5️⃣ IV (Instrumental Variable Method)\n"
-                                    "Otherwise please reply NO."))
+            confounders = global_state.inference.task_info[global_state.inference.task_index]['confounders']
+            if len(confounders) > 0:
+                chat_history.append((None, "Do you want to change the method? If so, please choose one from the following: \n"
+                                        "1️⃣ PSM (Propensity Score Matching)\n"
+                                        "2️⃣ CEM (Coarsen Exact Matching)\n"
+                                        "3️⃣ DRL (Doubly Robust Learning)\n"
+                                        "4️⃣ DML (Doubly Machine Learning)\n"
+                                        "5️⃣ IV (Instrumental Variable Method)\n"
+                                        "Otherwise please reply NO."))
+            else:
+                chat_history.append((None, "Do you want to change the method? If so, please choose one from the following: \n"
+                                        "1️⃣ DRL (Doubly Robust Learning)\n"
+                                        "2️⃣ DML (Doubly Machine Learning)\n"
+                                        "3️⃣ IV (Instrumental Variable Method)\n"
+                                        "Otherwise please reply NO."))
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
