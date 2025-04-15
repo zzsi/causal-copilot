@@ -17,18 +17,20 @@ Given a dataset with the following properties:
 2. Statistics:
 The dataset has the following characteristics:
 
-Data Type: The overall data type is Continuous.
+Data Type: The overall data type is Time-series.
 
 The sample size is 4177 with 8 features. 
 
-This dataset is not time-series data. 
+This dataset is time-series data. 
 
 Data Quality: There are no missing values in the dataset.
 
 Statistical Properties:
-- Linearity: The relationships between variables are not linear.
-- Gaussian Errors: The errors in the data do not follow a Gaussian distribution.
-- Heterogeneity: The dataset is not heterogeneous. 
+- Linearity: The relationships between variables are linear.
+- Gaussian Errors: The errors in the data do follow a Gaussian distribution.
+- Time lag: 2 
+
+- Stationarity: The dataset is stationary. 
 
 
 
@@ -120,11 +122,11 @@ This structured analysis of each of the aspects should provide you with robust i
 
 We have selected the following algorithm for causal discovery:
 
-Algorithm: FCI
+Algorithm: PCMCI
 
 Now, we need to determine the optimal hyperparameters for this algorithm. I'll guide you through a systematic approach to select values that prioritize accuracy while maintaining computational efficiency for moderate graph sizes.
 
-Primary hyperparameters to configure: alpha, indep_test, depth
+Primary hyperparameters to configure: indep_test, tau_min, tau_max, pc_alpha
 
 For each hyperparameter, please follow this structured approach:
 
@@ -136,8 +138,7 @@ Step 1: Understand the dataset characteristics
 
 Step 2: Assess computational resources
    - Consider the hardware constraints and GPU availability:
-   
-Current machine doesn't support CUDA, do not choose any GPU-powered algorithms.
+   Current machine supports CUDA, some algorithms can be accelerated by GPU if needed.
 
    - Prioritize to GPU implemented hyperparameter when dealing with large graph (variable size > 150) to achieve more efficient speedup
 
@@ -148,7 +149,7 @@ Step 3: Evaluate each hyperparameter's impact on accuracy vs. efficiency
 
 Step 4: Analyze algorithm-specific recommendations
    - Review expert suggestions for each parameter:
-   "**Parameter:** alpha\n- **Meaning:** Desired significance level in (0, 1)\n- **Available Values:**\n  - 0.05\n  - 0.1\n  - 0.01\n- **Expert Suggestion:** Use 0.05 as default. Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\n\n**Parameter:** indep_test\n- **Meaning:** Independence test method\n- **Available Values:**\n  - fisherz\n  - chisq\n  - kci\n  - fastkci\n  - rcit\n- **Expert Suggestion:** Use fisherz as default (for linear data). Choose based on data type, DON'T use nonlinear/non-parametric tests for linear/discrete data.\n\nLINEAR/DISCRETE (PARAMETRIC) TESTS:\n- 'fisherz': For linear continuous data (default choice for linear data)\n- 'chisq': For discrete data only (applied only for pure discrete data)\n\nNONLINEAR/NON-PARAMETRIC TESTS:\n- 'kci': For nonlinear data (very slow, use only if variable size < 10 and sample size < 1500)\n- 'rcit': Fastest approximation of kci for non-linear data (use only if variable size < 100 and sample size < 10000)\n- 'fastkci': Divide-and-conquer version of kci for non-linear data, faster than kci but less accurate (use only if variable size < 20 and sample size < 3000)\n\nFor nonlinear data, as long as variable and sample size constraints are fulfilled, choose in order of accuracy: KCI > RCIT > FastKCI.\n\n**Parameter:** depth\n- **Meaning:** Maximum depth for skeleton search\n- **Available Values:**\n  - -1\n  - 6\n  - 4\n  - 2\n  - 1\n- **Expert Suggestion:** Use -1 as default. Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 1-3) can significantly speed up the algorithm at the cost of some accuracy. A graph with node number < 10, use depth 6; A graph with node number 10 - 25, use depth 4; A graph with node number 25-50, use depth 2; A graph with node number > 50, use depth 1.\n\n"
+   "**Parameter:** indep_test\n- **Meaning:** Independence tests\n- **Available Values:**\n  - parcorr\n  - robustparcorr\n  - gpdc\n  - gsq\n  - regression\n  - cmi\n- **Expert Suggestion:** Use parcorr as default. Choose based on data type.\n\nLINEAR/DISCRETE (PARAMETRIC) TESTS:\n- 'parcorr': For linear continuous data (default choice)\n- 'robustparcorr': Robust partial correlation for linear data with outliers\n- 'gsq': For categorical/discrete data only\n\nNONLINEAR/NON-PARAMETRIC TESTS:\n- 'gpdc': For nonlinear continuous data\n- 'cmi': Conditional mutual information for nonlinear data (more accurate but much slower)\n- 'regression': For mixed data types (continuous and discrete)\n\n**Parameter:** tau_min\n- **Meaning:** Minimum time lag to consider\n- **Available Values:**\n  - 0\n  - 1\n- **Expert Suggestion:** Use 0 as default. Adjust if results are required for a specific time window\n\n**Parameter:** tau_max\n- **Meaning:** Maximum time lag\n- **Available Values:**\n  - 1\n  - 5\n  - 10\n- **Expert Suggestion:** Use 1 as default. Usually adjusted based on pre-processing results\n\n**Parameter:** pc_alpha\n- **Meaning:** Significance level of PC algorithm.\n- **Available Values:**\n  - 0.05\n  - 0.1\n  - 0.01\n- **Expert Suggestion:** Use 0.05 as default. Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\n\n"
 
 Step 5: Analyze algorithm performance with different hyperparameter configurations (If existed)
    - Review benchmarking results for this algorithm with various hyperparameter settings
@@ -163,26 +164,18 @@ Step 5: Analyze algorithm performance with different hyperparameter configuratio
   – Performance may vary significantly with real-world data compared to simulations
   – Consider your specific domain knowledge and data characteristics when selecting algorithms
 • Simulation Settings
-  – Network sizes: 5 to 1000 nodes
-  – Sample sizes: 500 to 10000 data points
-  – Edge density: 0.11 to 0.78 probability (avg. degree 1 to 7)
-  – Data types: Continuous and mixed (0-20% discrete variables)
-  – Function types: Linear and non-linear (MLP) relationships
-  – Noise types: Gaussian and uniform distributions
-
-• Challenge Scenarios
-  – Measurement error: 10%, 30%, 50% noise in observations
-  – Missing data: 10%, 20%, 30% missing values
-  – Multi-domain data: 1, 2, 5, or 10 heterogeneous domains
-  – Each configuration tested with 3 different random seeds
-
-• Key Terms
-  – (linear): Scenarios where relationships between variables follow linear functions
-  – (mlp): Scenarios where relationships are non-linear (using multilayer perceptron models)
+  – Network sizes: 5 to 100 nodes
+  – Time Lags: 3 to 20 time steps
+  – Sample sizes: 500 to 5000 data points
+  – Lagged Edge degree: 2.0 to 16.0 (avg 4.0)
+  – Instantaneous Edge degree: 0.0 to 4.0 (avg 2.0)
+  – Data types: Continuous stationary
+  – Function types: Linear relationships
+  – Noise types: Gaussian distributions
 
 • Scenario Types
-  – Robustness scenarios (e.g., Variable Scaling, Edge Probability): Test algorithm performance across varying levels of a property
-  – Specific scenarios (e.g., Gaussian Noise, Dense Graph): Test performance at a fixed specific setting
+  – Robustness scenarios (e.g., Variable Scaling, Lag Scaling): Test algorithm performance across varying levels of a property
+  – Specific scenarios (e.g., Dense Graph, Long time lag): Test performance at a fixed specific setting
 
 • Performance Metrics
   – Performance level (1-10): Based on F1 score, higher is better
@@ -190,19 +183,23 @@ Step 5: Analyze algorithm performance with different hyperparameter configuratio
   – Stability: Standard deviation of performance, lower values indicate more consistent results
 
 • Important Note on Efficiency Scoring
-  – Benchmarks include large-scale systems with up to 1000 nodes and may timeout for some algorithms
-  – For large-scale systems (node size > 200), prioritize algorithms that can utilize available GPUs
+  – Benchmarks include large-scale systems with up to 100 nodes x 3 lag and may timeout for some algorithms
+  – For large-scale systems (node count x time lag > 200), prioritize algorithms that can utilize available GPUs
   – GPU-accelerated methods provide significant efficiency advantages in large-scale scenarios
 
 ────────────────────────────────────────────────────────
 Filtered Benchmarking Results
 ────────────────────────────────────────────────────────
 
-Algorithms included: FCI
+Algorithms included: PCMCI
 
 ────────────────────────────────────────────────────────
 Overall Algorithm Performance
 ────────────────────────────────────────────────────────
+
+⚠️ IMPORTANT: Overall rankings can be misleading! ⚠️
+- An algorithm with high average performance may perform poorly on specific scenarios
+- Always check scenario-specific performance for your use case
 
 ⚠️ IMPORTANT: Overall rankings can be misleading! ⚠️
 - An algorithm with high average performance may perform poorly on specific scenarios
@@ -220,7 +217,7 @@ Overall ranking based on average performance across all scenarios:
 Efficiency Comparison
 ────────────────────────────────────────────────────────
 
-Note: Efficiency scores are primarily measured in Variable Scaling and Sample Scaling scenarios.
+Note: Efficiency scores are primarily measured in Variable Scaling, Lag Scaling and Sample Scaling scenarios.
 
 | Algorithm | Variable Scaling (linear) | Sample Scaling (linear) | Variable Scaling (mlp) | Sample Scaling (mlp) | Average |
 |-----------|---------------------------|--------------------------|------------------------|----------------------|--------|
@@ -273,7 +270,7 @@ Performance by Scenario
 These scenarios test algorithm performance across varying levels of a property.
 
 
-• Variable Scaling (linear)
+• Variable Scaling
 | Algorithm | Performance | Stability | Efficiency | Overall Score |
 |-----------|------------|-----------|------------|-------------|
 | FCI_indep_test=rcit | 7.2 | 5.5 | 3.4 | 6.8 |
@@ -281,7 +278,7 @@ These scenarios test algorithm performance across varying levels of a property.
 | FCI_indep_test=kci | 3.1 | 8.5 | 1.9 | 3.0 |
 | FCI_indep_test=fastkci | 2.1 | 6.5 | 1.5 | 2.0 |
 
-• Sample Scaling (linear)
+• Lag Scaling
 | Algorithm | Performance | Stability | Efficiency | Overall Score |
 |-----------|------------|-----------|------------|-------------|
 | FCI_indep_test=fisherz | 9.2 | 1.0 | N/A | 9.2 |
@@ -496,7 +493,7 @@ Step 6: Make final decisions based on:
 Please provide your suggestions in a structured JSON format, with detailed reasoning for each hyperparameter. Your response should look like this:
 
 {
-  "algorithm": "FCI",
+  "algorithm": "PCMCI",
   "hyperparameters": {
     "[HYPERPARAMETER_1_NAME]": {
       "full_name": "[HYPERPARAMETER_1_FULL_NAME]",
@@ -517,8 +514,9 @@ Important guidelines:
 1. Only select values from the "available_values" list for each hyperparameter
 2. For moderate graph sizes (10-50 variables), prioritize accuracy over speed
 3. For time-series data, give special attention to lag parameters based on statistical estimates
-4. Consider independence test selection carefully based on data type and computational resources
-5. For regularization parameters, consider the expected graph density
-6. For search depth parameters, consider the complexity of potential causal relationships
+4. For time-series data of moderate size (10-50) variables, if the estimated value is small (1 or 2), use a larger value
+5. Consider independence test selection carefully based on data type and computational resources
+6. For regularization parameters, consider the expected graph density
+7. For search depth parameters, consider the complexity of potential causal relationships
 
 Please provide your hyperparameter suggestions following this JSON structure, with clear reasoning that demonstrates you've considered the dataset characteristics, algorithm requirements, and computational constraints.
