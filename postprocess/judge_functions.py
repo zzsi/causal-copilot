@@ -94,7 +94,7 @@ def bootstrap_probability(boot_result, algorithm):
 
 
 
-def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, parallel):
+def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, parallel, progress=None):
     '''
     :param data: Given Tabular Data in Pandas DataFrame format
     :param full_graph: An adjacent matrix in Numpy Ndarray format -
@@ -110,7 +110,8 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, parall
              bootstrap probability of the existence of edge j -> i.
     '''
 
-    from multiprocessing import Pool
+    # from multiprocessing import Pool
+    from joblib import Parallel, delayed
 
     m = data.shape[1]
     errors = {}
@@ -124,14 +125,19 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, parall
             boot_effect_save.append(boot_graph)
 
     if parallel:
-        pool = Pool()
+        # pool = Pool()
 
-        # Prepare arguments for each process
-        args = [(data, ts, algorithm, hyperparameters) for _ in range(boot_num)]
-        boot_effect_save = pool.starmap(bootstrap_iteration, args)
+        # # Prepare arguments for each process
+        # args = [(data, ts, algorithm, hyperparameters) for _ in range(boot_num)]
+        # boot_effect_save = pool.starmap(bootstrap_iteration, args)
 
-        pool.close()
-        pool.join()
+        # pool.close()
+        # pool.join()
+        print('Parallel computing')
+        boot_effect_save = Parallel(n_jobs=-1, backend="threading")(
+                delayed(bootstrap_iteration)(data, ts, algorithm, hyperparameters)
+                for _ in range(boot_num)
+            )
 
     boot_effect_save_array = np.array(boot_effect_save)
 
@@ -258,7 +264,7 @@ def bootstrap_recommend(raw_graph, boot_edges_prob):
 
 
 def get_json(args, prompt):
-        client = OpenAI(api_key=args.apikey)
+        client = OpenAI()
         response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
@@ -547,7 +553,7 @@ def edges_to_relationship(data, edges_dict, boot_edges_prob=None):
 
 
 def LLM_remove_cycles(args, message):
-    client = OpenAI(api_key=args.apikey)
+    client = OpenAI()
     class VarList(BaseModel):
         nodes: list[str]
     

@@ -21,7 +21,7 @@ class DemoConfig:
     data_mode: str = "real"
     debug: bool = False
     initial_query: Optional[str] = None  # Will be set when user inputs query
-    parallel: bool = False
+    parallel: bool = True
 
     # Statistical Analysis Settings
     alpha: float = 0.1

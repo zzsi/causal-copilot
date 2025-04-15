@@ -1,5 +1,5 @@
 User original query (TOP PRIORITY):
-Analyze causal relationships between variables in the CCS dataset. The data contains multiple continuous variables.
+Find causal relationships between physical measurements and age of abalone. The dataset contains numerical measurements of physical characteristics.
 
 The computation has to be finished in the runtime of 1440.0 minutes.
 
@@ -13,13 +13,13 @@ The computation has to be finished in the runtime of 1440.0 minutes.
 -----------------------------------------------
 Given a dataset with the following properties:
 
-1. Columns: Cement	Blast_furnace_slag	Fly_ash	Water	Superplasticizer	Coarse_aggregate	Fine_aggregate	Age	Compressive_strength
+1. Columns: Age	Length	Shell_weight	Diameter	Height	Whole_weight	Shucked_weight	Viscera_weight
 2. Statistics:
 The dataset has the following characteristics:
 
 Data Type: The overall data type is Continuous.
 
-The sample size is 1030 with 9 features. 
+The sample size is 4177 with 8 features. 
 
 This dataset is not time-series data. 
 
@@ -34,88 +34,97 @@ Statistical Properties:
 
 
 3. Background Knowledge:
-Here’s a comprehensive analysis of the specified dataset concerning concrete mix design and its effect on compressive strength.
+Below is a comprehensive analysis of the variables in the dataset "Abalone.csv" based on the provided attributes related to abalones.
 
 ### 1. VARIABLE DESCRIPTIONS
-- **Cement**: The quantity of cement used in the mix, measured in kilograms (kg). Typical ranges can be from 200 to 600 kg/m³.
-- **Blast_furnace_slag**: The amount of ground granulated blast-furnace slag included, usually measured in kg. It can range from 0 to 300 kg/m³ depending on the desired properties and proportions in the mix.
-- **Fly_ash**: The quantity of fly ash added, also measured in kg, typically between 0 to 200 kg/m³.
-- **Water**: The water-to-cement ratio is crucial for hydration, measured in kg. Typical values can range from 150 to 250 kg/m³ for most concrete mixes.
-- **Superplasticizer**: The amount of superplasticizer used to improve workability, usually quantified as kg. Typical ranges vary from 0 to about 10 kg/m³.
-- **Coarse_aggregate**: The volume of coarse aggregate (gravel or crushed stone), typically expressed in kg/m³, which can range from 800 to 1200 kg/m³.
-- **Fine_aggregate**: The amount of fine aggregate (sand), generally also expressed as kg/m³, ranging from 300 to 600 kg/m³.
-- **Age**: Age of the concrete when compressive strength is tested, measured in days. Common ranges are 1, 7, 14, and 28 days.
-- **Compressive_strength**: The compressive strength of the concrete, typically measured in megapascals (MPa). Values can range from around 10 to over 60 MPa depending on mix design.
+1. **Age**: Represents the age of the abalone, determined typically through methods such as counting growth rings. Measured in years, the typical range for age in the wild can vary widely but is often from 0 to 10, with some reaching beyond that. 
+   
+2. **Length**: This refers to the length of the abalone's shell, measured in millimeters (mm). Typical lengths can range from 60mm to 200mm, as different species and maturities can affect growth.
+   
+3. **Shell_weight**: This is the weight of the shell alone, recorded in grams. Variability can be high, but weights often range from 30g to 350g depending on age and size.
+   
+4. **Diameter**: This measures the shell's diameter, also in millimeters (mm). Similar to length, diameters can be found between approximately 40mm and 160mm.
+   
+5. **Height**: Refers to the height of the abalone's shell, indicated in millimeters (mm). Heights for abalones typically range from 10mm to 40mm.
+   
+6. **Whole_weight**: The total weight of the abalone, inclusive of its innards in grams. It typically ranges significantly from 40g to over 600g.
+   
+7. **Shucked_weight**: Refers to the weight of the abalone without its shell, measured in grams. This weight can vary, often ranging from 20g to 200g.
+   
+8. **Viscera_weight**: This is the weight of the abalone's internal organs, recorded in grams, generally ranging from 5g to 150g.
 
 ### 2. CAUSAL RELATIONSHIPS
-- Direct causal effects:
-  - Cement, water, and aggregates have direct effects on compressive strength. Increased cement and lower water-to-cement ratios generally improve strength.
-- Indirect relationships:
-  - The interaction between water and superplasticizer affects workability, which can indirectly influence the compressive strength through better packing of aggregates.
+- **Direct Causal Links**: Length, shell weight, diameter, and whole weight can directly influence the age of the abalone, as larger abalones are often older due to their growth patterns.
+- **Indirect Relationships**: Shell weight might depend on both length and width, which can affect other metrics of health and reproduction. Likewise, visceral weight is likely tied indirectly to overall health status, influenced by whole weight.
 
 ### 3. RELATIONSHIP NATURE
-- Relationships tend to be nonlinear. For instance, a small increase in water can significantly reduce strength; the same applies to the water-cement ratio, which exhibits diminishing returns.
+- **Linear Relationships**: There may be linear correlations between age and other metrics like length, width, and whole weight where an increase in age often correlates with an increase in these measurements.
+- **Nonlinear Relationships**: The relationship between weight measures and length might be nonlinear, especially in the growth phase, where initial growth could be quite rapid but later stages show diminishing returns.
 
 ### 4. DATA DISTRIBUTION
-- Compressive strength typically exhibits a normal (Gaussian) distribution in well-designed concrete mixes, while variables like water and superplasticizer may show skewed distributions due to their specific usage in practical scenarios.
+- **Normal Distribution**: Variables such as age and length may often exhibit a roughly Gaussian distribution, particularly in natural populations, where most individuals cluster around a mean.
+- **Heavy-tailed distributions**: Variables like age may also reflect heavy tails due to the presence of older individuals that survive longer in ideal conditions.
 
 ### 5. CONFOUNDERS
-- Important potential confounders include aggregate quality and type, curing conditions, environmental factors (humidity, temperature), and mixing time/technique, which are not measured in this dataset.
+Potential confounding variables not included in the dataset could include environmental factors (e.g., water temperature, salinity), ecosystem interactions (predation or competition), and genetic factors influencing growth.
 
 ### 6. TEMPORAL ASPECTS
-- Age is a crucial temporal factor, as compressive strength increases over time due to hydration. Testing strength at different intervals (1, 7, 14, and 28 days) is standard practice.
+While this dataset does not include temporal data, one can infer that growth and age should reflect seasonal changes in availability of nutrients and feeding conditions.
 
 ### 7. HETEROGENEITY
-- Relationships may vary by concrete type (e.g., structural vs. non-structural), application (industrial vs. residential), and geographical conditions (climate, altitude).
+Sex-based differences could play a significant role, as males and females may grow differently due to different reproductive strategies. Additionally, different species of abalones can exhibit notable size and growth variances.
 
 ### 8. GRAPH DENSITY
-- Causal relationships in cement mix design are likely to be sparse. Key variables interact primarily with compressive strength, with fewer direct relationships among the mix components.
+Expected relationships in this field are likely to be sparse, as while some fundamental growth measures may influence each other, many of them are also influenced by external factors that aren’t measured here.
 
 ### 9. DOMAIN-SPECIFIC CONSTRAINTS
-- Constraints include physical properties of materials (e.g., maximum water-cement ratios) and chemical compatibility (certain admixtures may negatively interact).
+Physical constraints include the physiological limits of growth in marine organisms. There are limits as to how large an abalone can grow based on environmental conditions and available resources.
 
 ### 10. RELEVANT LITERATURE
-- Key studies include works by ACI (American Concrete Institute) and research on concrete properties published in journals like "Cement and Concrete Research" and "Materials and Structures."
+Relevant literature could include studies on marine biology focusing on abalone growth patterns, such as "Growth and reproduction of abalone" by various marine biologists, or ecosystem impact studies on marine growth.
 
 ### 11. DATA QUALITY ISSUES
-- Common issues include missing data due to incomplete records or measurement errors related to inconsistent material qualities or environmental conditions affecting results.
+Possible issues include measurement errors in weights and misreporting of age, particularly if ages are estimated based on growth rings rather than precise measures. 
 
 ### 12. INTERACTION EFFECTS
-- Parameter interactions, particularly between water and superplasticizers, can lead to multiplicative effects on strength and workability.
+There could be interactions between length and weight where larger lengths could exhibit significant increases in both whole weight and shucked weight, suggesting multiplicative interactions rather than simple additive effects.
 
 ### 13. FEEDBACK LOOPS
-- While direct feedback loops are less common, there can be a cyclic relationship between mix design adjustments and performance feedback over time.
+While less common in this uncomplicated biological context, if conditions were to improve (food availability), it could result in larger sizes leading to more reproduction, thus affecting population dynamics.
 
 ### 14. INSTRUMENTAL VARIABLES
-- Variables such as aggregate type or environmental conditions may serve as instrumental variables to identify causal relationships if they relate to changes in compressive strength but are uncorrelated with measurement error.
+External variables such as environmental indices (e.g., temperature and acidity) might act as instruments to study how specific climate factors influence age and growth metrics.
 
 ### 15. INTERVENTION HISTORY
-- If experimental setups or changes in typical mix designs were applied (for instance, changes in superplasticizer formulations), they should be explicitly noted.
+Understanding of how abalone populations have responded historically to fisheries management practices could demonstrate the impacts of specific policies. For example, changes to harvesting limits in certain seasons could drastically alter age and size distributions.
+
+### FOR TIME-SERIES DATA (if applicable):
+Since this dataset appears not to be time-series based, most of the following points are not applicable.
 
 ### 16. STATIONARITY
-- The dataset does not reflect typical time-series behavior, thus stationarity is not directly applicable; however, compressive strength often shows trends related to mix changes instead.
+This does not apply as there are no time-indexed variables.
 
 ### 17. LAG STRUCTURE
-- Age would be the primary lagged variable, with strength typically developing over weeks/months, suggesting lags of several days to months in observing effects.
+This does not apply to the dataset.
 
 ### 18. REGIME CHANGES
-- Significant changes in codes or practices (e.g., introduction of new additives or sustainability criteria) represent regime changes that could alter causal relationships.
+No changes are applicable here as this dataset does not have a temporal component.
 
 ### 19. CONTEMPORANEOUS EFFECTS
-- Direct interactions occur among inputs (e.g., instantaneous changes in additive proportions) which will have immediate impacts on mix properties and performance.
+All variables might exhibit contemporaneous relationships during growth periods, especially during spawning seasons when conditions affect all measures.
 
 ### 20. PERIODICITY
-- The data is not inherently cyclical; however, usage patterns may show periodicity linked to seasonal construction practices.
+Not applicable due to lack of time-series data.
 
-In summary, concrete mix design is a complex area with many interdependencies, and this dataset contains critical variables that could inform causal relationships affecting compressive strength. Understanding these dynamics will be vital in any causal analysis derived from the provided dataset.
+This structured analysis of each of the aspects should provide you with robust insights and guidance as you proceed with causal discovery in this dataset.
 
 We have selected the following algorithm for causal discovery:
 
-Algorithm: XGES
+Algorithm: FCI
 
 Now, we need to determine the optimal hyperparameters for this algorithm. I'll guide you through a systematic approach to select values that prioritize accuracy while maintaining computational efficiency for moderate graph sizes.
 
-Primary hyperparameters to configure: alpha
+Primary hyperparameters to configure: alpha, indep_test, depth
 
 For each hyperparameter, please follow this structured approach:
 
@@ -139,7 +148,7 @@ Step 3: Evaluate each hyperparameter's impact on accuracy vs. efficiency
 
 Step 4: Analyze algorithm-specific recommendations
    - Review expert suggestions for each parameter:
-   "**Parameter:** alpha\n- **Meaning:** The penalty term for the model complexity in BIC score\n- **Available Values:**\n  - 2\n  - 1\n- **Expert Suggestion:** Use 2 as default. Use alpha = 2 for standard BIC and some sparsity and simplicity.\n\n"
+   "**Parameter:** alpha\n- **Meaning:** Desired significance level in (0, 1)\n- **Available Values:**\n  - 0.05\n  - 0.1\n  - 0.01\n- **Expert Suggestion:** Use 0.05 as default. Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\n\n**Parameter:** indep_test\n- **Meaning:** Independence test method\n- **Available Values:**\n  - fisherz\n  - chisq\n  - kci\n  - fastkci\n  - rcit\n- **Expert Suggestion:** Use fisherz as default (for linear data). Choose based on data type, DON'T use nonlinear/non-parametric tests for linear/discrete data.\n\nLINEAR/DISCRETE (PARAMETRIC) TESTS:\n- 'fisherz': For linear continuous data (default choice for linear data)\n- 'chisq': For discrete data only (applied only for pure discrete data)\n\nNONLINEAR/NON-PARAMETRIC TESTS:\n- 'kci': For nonlinear data (very slow, use only if variable size < 10 and sample size < 1500)\n- 'rcit': Fastest approximation of kci for non-linear data (use only if variable size < 100 and sample size < 10000)\n- 'fastkci': Divide-and-conquer version of kci for non-linear data, faster than kci but less accurate (use only if variable size < 20 and sample size < 3000)\n\nFor nonlinear data, as long as variable and sample size constraints are fulfilled, choose in order of accuracy: KCI > RCIT > FastKCI.\n\n**Parameter:** depth\n- **Meaning:** Maximum depth for skeleton search\n- **Available Values:**\n  - -1\n  - 6\n  - 4\n  - 2\n  - 1\n- **Expert Suggestion:** Use -1 as default. Use -1 for unlimited depth. For large graphs, limiting depth (e.g., 1-3) can significantly speed up the algorithm at the cost of some accuracy. A graph with node number < 10, use depth 6; A graph with node number 10 - 25, use depth 4; A graph with node number 25-50, use depth 2; A graph with node number > 50, use depth 1.\n\n"
 
 Step 5: Analyze algorithm performance with different hyperparameter configurations (If existed)
    - Review benchmarking results for this algorithm with various hyperparameter settings
@@ -189,7 +198,7 @@ Step 5: Analyze algorithm performance with different hyperparameter configuratio
 Filtered Benchmarking Results
 ────────────────────────────────────────────────────────
 
-Algorithms included: XGES
+Algorithms included: FCI
 
 ────────────────────────────────────────────────────────
 Overall Algorithm Performance
@@ -201,10 +210,10 @@ Overall Algorithm Performance
 
 Overall ranking based on average performance across all scenarios:
 
-1. XGES_alpha=2: 7.3
-2. XGES_alpha=4: 7.1
-3. XGES_alpha=1: 7.0
-4. XGES_alpha=0.5: 5.6
+1. FCI_indep_test=fisherz: 7.3
+2. FCI_indep_test=rcit: 7.2
+3. FCI_indep_test=kci: 6.6
+4. FCI_indep_test=fastkci: 1.3
 
 
 ────────────────────────────────────────────────────────
@@ -215,10 +224,10 @@ Note: Efficiency scores are primarily measured in Variable Scaling and Sample Sc
 
 | Algorithm | Variable Scaling (linear) | Sample Scaling (linear) | Variable Scaling (mlp) | Sample Scaling (mlp) | Average |
 |-----------|---------------------------|--------------------------|------------------------|----------------------|--------|
-| XGES_alpha=2 | 3.9 | N/A | 3.9 | N/A | 3.9 |
-| XGES_alpha=4 | 3.9 | N/A | 3.9 | N/A | 3.9 |
-| XGES_alpha=1 | 3.6 | N/A | 3.5 | N/A | 3.6 |
-| XGES_alpha=0.5 | 3.2 | N/A | 3.2 | N/A | 3.2 |
+| FCI_indep_test=fisherz | 4.0 | N/A | 4.0 | N/A | 4.0 |
+| FCI_indep_test=rcit | 3.4 | N/A | 3.5 | N/A | 3.4 |
+| FCI_indep_test=kci | 1.9 | N/A | 1.9 | N/A | 1.9 |
+| FCI_indep_test=fastkci | 1.5 | N/A | 1.5 | N/A | 1.5 |
 
 
 ────────────────────────────────────────────────────────
@@ -226,34 +235,34 @@ Algorithm Recommendations by Scenario Type
 ────────────────────────────────────────────────────────
 
 • Linear Relationships
-  1. XGES_alpha=2: Performance 8.1
-  2. XGES_alpha=4: Performance 7.8
-  3. XGES_alpha=1: Performance 7.7
+  1. FCI_indep_test=fisherz: Performance 7.6
+  2. FCI_indep_test=rcit: Performance 7.4
+  3. FCI_indep_test=kci: Performance 5.9
 
 • Non-Linear Relationships
-  1. XGES_alpha=2: Performance 5.6
-  2. XGES_alpha=4: Performance 5.5
-  3. XGES_alpha=1: Performance 5.4
+  1. FCI_indep_test=fisherz: Performance 6.8
+  2. FCI_indep_test=rcit: Performance 6.5
+  3. FCI_indep_test=kci: Performance 5.7
 
 • Data with Missing Values
-  1. XGES_alpha=4: Performance 7.0
-  2. XGES_alpha=2: Performance 6.9
-  3. XGES_alpha=1: Performance 6.5
+  1. FCI_indep_test=kci: Performance 7.7
+  2. FCI_indep_test=rcit: Performance 7.6
+  3. FCI_indep_test=fisherz: Performance 7.3
 
 • Data with Measurement Error
-  1. XGES_alpha=2: Performance 8.8
-  2. XGES_alpha=1: Performance 8.5
-  3. XGES_alpha=4: Performance 8.2
+  1. FCI_indep_test=kci: Performance 8.4
+  2. FCI_indep_test=rcit: Performance 8.1
+  3. FCI_indep_test=fisherz: Performance 8.0
 
 • Dense vs Sparse Graphs
-  1. XGES_alpha=1: Performance 7.1
-  2. XGES_alpha=2: Performance 7.0
-  3. XGES_alpha=4: Performance 6.8
+  1. FCI_indep_test=rcit: Performance 6.7
+  2. FCI_indep_test=fisherz: Performance 6.4
+  3. FCI_indep_test=kci: Performance 6.3
 
 • Heterogeneous Data
-  1. XGES_alpha=4: Performance 5.7
-  2. XGES_alpha=2: Performance 5.6
-  3. XGES_alpha=1: Performance 5.1
+  1. FCI_indep_test=kci: Performance 7.3
+  2. FCI_indep_test=fisherz: Performance 6.7
+  3. FCI_indep_test=rcit: Performance 6.2
 
 
 ────────────────────────────────────────────────────────
@@ -267,130 +276,130 @@ These scenarios test algorithm performance across varying levels of a property.
 • Variable Scaling (linear)
 | Algorithm | Performance | Stability | Efficiency | Overall Score |
 |-----------|------------|-----------|------------|-------------|
-| XGES_alpha=2 | 8.7 | 4.9 | 3.9 | 8.4 |
-| XGES_alpha=4 | 8.6 | 12.8 | 3.9 | 8.2 |
-| XGES_alpha=1 | 7.8 | 13.2 | 3.6 | 7.1 |
-| XGES_alpha=0.5 | 5.3 | 3.6 | 3.2 | 5.1 |
+| FCI_indep_test=rcit | 7.2 | 5.5 | 3.4 | 6.8 |
+| FCI_indep_test=fisherz | 7.0 | 2.6 | 4.0 | 6.6 |
+| FCI_indep_test=kci | 3.1 | 8.5 | 1.9 | 3.0 |
+| FCI_indep_test=fastkci | 2.1 | 6.5 | 1.5 | 2.0 |
 
 • Sample Scaling (linear)
 | Algorithm | Performance | Stability | Efficiency | Overall Score |
 |-----------|------------|-----------|------------|-------------|
-| XGES_alpha=2 | 9.8 | 1.0 | N/A | 9.8 |
-| XGES_alpha=4 | 9.6 | 0.8 | N/A | 9.6 |
-| XGES_alpha=1 | 9.5 | 1.5 | N/A | 9.5 |
-| XGES_alpha=0.5 | 8.5 | 13.1 | N/A | 8.5 |
+| FCI_indep_test=fisherz | 9.2 | 1.0 | N/A | 9.2 |
+| FCI_indep_test=rcit | 9.0 | 1.9 | N/A | 9.0 |
+| FCI_indep_test=kci | 3.9 | 10.6 | N/A | 3.9 |
+| FCI_indep_test=fastkci | 2.3 | 2.1 | N/A | 2.3 |
 
 • Heterogeneity (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=4 | 7.9 | 6.3 |
-| XGES_alpha=2 | 7.9 | 13.6 |
-| XGES_alpha=1 | 7.8 | 12.3 |
-| XGES_alpha=0.5 | 5.8 | 0.5 |
+| FCI_indep_test=kci | 8.8 | 1.9 |
+| FCI_indep_test=fisherz | 8.5 | 2.2 |
+| FCI_indep_test=rcit | 8.0 | 2.6 |
+| FCI_indep_test=fastkci | 1.0 | 1.7 |
 
 • Measurement Error (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=2 | 10.0 | 0.5 |
-| XGES_alpha=1 | 9.8 | 2.3 |
-| XGES_alpha=4 | 8.4 | 16.3 |
-| XGES_alpha=0.5 | 8.0 | 12.0 |
+| FCI_indep_test=fisherz | 9.1 | 7.2 |
+| FCI_indep_test=kci | 9.0 | 5.5 |
+| FCI_indep_test=rcit | 8.9 | 3.0 |
+| FCI_indep_test=fastkci | 1.0 | 1.5 |
 
 • Noise Type (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=2 | 10.0 | 1.5 |
-| XGES_alpha=1 | 10.0 | 2.0 |
-| XGES_alpha=4 | 9.5 | 0.5 |
-| XGES_alpha=0.5 | 7.0 | 10.5 |
+| FCI_indep_test=fisherz | 9.6 | 4.5 |
+| FCI_indep_test=kci | 9.6 | 2.5 |
+| FCI_indep_test=rcit | 8.9 | 1.5 |
+| FCI_indep_test=fastkci | 1.0 | 1.5 |
 
 • Missing Data (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=4 | 7.9 | 1.7 |
-| XGES_alpha=2 | 7.8 | 7.0 |
-| XGES_alpha=1 | 7.4 | 10.5 |
-| XGES_alpha=0.5 | 5.7 | 8.2 |
+| FCI_indep_test=fisherz | 8.0 | 4.4 |
+| FCI_indep_test=rcit | 7.9 | 5.7 |
+| FCI_indep_test=kci | 7.8 | 0.4 |
+| FCI_indep_test=fastkci | 1.0 | 2.9 |
 
 • Edge Probability (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=1 | 7.6 | 5.7 |
-| XGES_alpha=2 | 7.5 | 5.5 |
-| XGES_alpha=4 | 7.2 | 6.0 |
-| XGES_alpha=0.5 | 6.5 | 15.1 |
+| FCI_indep_test=rcit | 6.9 | 6.4 |
+| FCI_indep_test=kci | 6.8 | 8.9 |
+| FCI_indep_test=fisherz | 6.7 | 5.7 |
+| FCI_indep_test=fastkci | 1.1 | 2.3 |
 
 • Discrete Ratio (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=2 | 7.8 | 4.5 |
-| XGES_alpha=4 | 7.5 | 3.7 |
-| XGES_alpha=1 | 6.9 | 15.1 |
-| XGES_alpha=0.5 | 5.6 | 9.5 |
+| FCI_indep_test=fisherz | 7.6 | 0.8 |
+| FCI_indep_test=kci | 7.4 | 3.7 |
+| FCI_indep_test=rcit | 6.8 | 2.4 |
+| FCI_indep_test=fastkci | 1.3 | 3.3 |
 
 • Variable Scaling (mlp)
 | Algorithm | Performance | Stability | Efficiency | Overall Score |
 |-----------|------------|-----------|------------|-------------|
-| XGES_alpha=2 | 5.9 | 5.0 | 3.9 | 5.9 |
-| XGES_alpha=4 | 5.7 | 16.4 | 3.9 | 5.6 |
-| XGES_alpha=1 | 5.3 | 11.0 | 3.5 | 5.1 |
-| XGES_alpha=0.5 | 4.0 | 5.8 | 3.2 | 4.1 |
+| FCI_indep_test=rcit | 6.2 | 7.8 | 3.5 | 5.9 |
+| FCI_indep_test=fisherz | 5.5 | 5.9 | 4.0 | 5.2 |
+| FCI_indep_test=kci | 2.9 | 12.9 | 1.9 | 2.8 |
+| FCI_indep_test=fastkci | 1.8 | 6.5 | 1.5 | 1.8 |
 
 • Sample Scaling (mlp)
 | Algorithm | Performance | Stability | Efficiency | Overall Score |
 |-----------|------------|-----------|------------|-------------|
-| XGES_alpha=4 | 6.6 | 8.1 | N/A | 6.6 |
-| XGES_alpha=2 | 6.3 | 6.8 | N/A | 6.3 |
-| XGES_alpha=1 | 5.3 | 8.8 | N/A | 5.3 |
-| XGES_alpha=0.5 | 4.5 | 10.7 | N/A | 4.5 |
+| FCI_indep_test=rcit | 8.1 | 3.5 | N/A | 8.1 |
+| FCI_indep_test=fisherz | 7.3 | 8.3 | N/A | 7.3 |
+| FCI_indep_test=kci | 3.8 | 15.6 | N/A | 3.8 |
+| FCI_indep_test=fastkci | 2.3 | 8.5 | N/A | 2.3 |
 
 • Heterogeneity (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=2 | 4.7 | 5.8 |
-| XGES_alpha=4 | 3.8 | 10.6 |
-| XGES_alpha=1 | 3.7 | 10.3 |
-| XGES_alpha=0.5 | 2.9 | 4.1 |
+| FCI_indep_test=kci | 7.3 | 1.2 |
+| FCI_indep_test=fisherz | 6.2 | 7.0 |
+| FCI_indep_test=rcit | 6.0 | 3.3 |
+| FCI_indep_test=fastkci | 1.0 | 0.9 |
 
 • Measurement Error (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=2 | 6.4 | 5.0 |
-| XGES_alpha=1 | 6.3 | 13.4 |
-| XGES_alpha=4 | 6.1 | 9.1 |
-| XGES_alpha=0.5 | 5.1 | 11.5 |
+| FCI_indep_test=kci | 7.5 | 3.3 |
+| FCI_indep_test=fisherz | 6.9 | 12.0 |
+| FCI_indep_test=rcit | 6.6 | 3.0 |
+| FCI_indep_test=fastkci | 1.2 | 4.4 |
 
 • Noise Type (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=1 | 6.8 | 2.0 |
-| XGES_alpha=2 | 6.1 | 9.5 |
-| XGES_alpha=4 | 5.6 | 9.0 |
-| XGES_alpha=0.5 | 3.8 | 0.5 |
+| FCI_indep_test=fisherz | 8.1 | 3.0 |
+| FCI_indep_test=kci | 8.0 | 1.5 |
+| FCI_indep_test=rcit | 6.5 | 1.5 |
+| FCI_indep_test=fastkci | 1.0 | 3.5 |
 
 • Missing Data (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=2 | 5.9 | 11.7 |
-| XGES_alpha=4 | 5.5 | 6.6 |
-| XGES_alpha=1 | 5.2 | 7.0 |
-| XGES_alpha=0.5 | 3.9 | 4.9 |
+| FCI_indep_test=kci | 7.6 | 0.8 |
+| FCI_indep_test=fisherz | 6.8 | 6.1 |
+| FCI_indep_test=rcit | 6.2 | 4.0 |
+| FCI_indep_test=fastkci | 2.4 | 14.4 |
 
 • Edge Probability (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=1 | 5.8 | 6.3 |
-| XGES_alpha=4 | 5.5 | 9.1 |
-| XGES_alpha=2 | 5.0 | 10.0 |
-| XGES_alpha=0.5 | 4.3 | 11.2 |
+| FCI_indep_test=rcit | 7.0 | 4.6 |
+| FCI_indep_test=fisherz | 6.9 | 7.3 |
+| FCI_indep_test=kci | 5.7 | 13.8 |
+| FCI_indep_test=fastkci | 1.0 | 5.1 |
 
 • Discrete Ratio (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=1 | 6.5 | 0.0 |
-| XGES_alpha=4 | 5.8 | 0.0 |
-| XGES_alpha=2 | 5.7 | 0.0 |
-| XGES_alpha=0.5 | 3.7 | 0.0 |
+| FCI_indep_test=fisherz | 8.4 | 0.0 |
+| FCI_indep_test=kci | 7.5 | 0.0 |
+| FCI_indep_test=rcit | 6.2 | 0.0 |
+| FCI_indep_test=fastkci | 1.0 | 0.0 |
 
 ### SPECIFIC SCENARIOS
 These scenarios test algorithm performance at specific settings rather than variable levels.
@@ -399,82 +408,82 @@ These scenarios test algorithm performance at specific settings rather than vari
 • Linear Function
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=2 | 7.0 | 0.0 |
-| XGES_alpha=4 | 6.9 | 0.0 |
-| XGES_alpha=1 | 5.9 | 0.0 |
-| XGES_alpha=0.5 | 4.9 | 0.0 |
+| FCI_indep_test=fisherz | 5.4 | 0.0 |
+| FCI_indep_test=rcit | 5.4 | 0.0 |
+| FCI_indep_test=kci | 2.1 | 0.0 |
+| FCI_indep_test=fastkci | 1.0 | 0.0 |
 
 • Non-Linear Function
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=2 | 4.9 | 0.0 |
-| XGES_alpha=4 | 4.8 | 0.0 |
-| XGES_alpha=1 | 3.8 | 0.0 |
-| XGES_alpha=0.5 | 2.9 | 0.0 |
+| FCI_indep_test=rcit | 5.5 | 0.0 |
+| FCI_indep_test=fisherz | 4.6 | 0.0 |
+| FCI_indep_test=kci | 1.0 | 0.0 |
+| FCI_indep_test=fastkci | 1.0 | 0.0 |
 
 • Gaussian Noise
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=2 | 10.0 | 0.0 |
-| XGES_alpha=1 | 10.0 | 0.0 |
-| XGES_alpha=4 | 9.1 | 0.0 |
-| XGES_alpha=0.5 | 5.9 | 0.0 |
+| FCI_indep_test=fisherz | 9.6 | 0.0 |
+| FCI_indep_test=kci | 9.6 | 0.0 |
+| FCI_indep_test=rcit | 8.3 | 0.0 |
+| FCI_indep_test=fastkci | 1.0 | 0.0 |
 
 • Non-Gaussian Noise
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=2 | 10.0 | 0.0 |
-| XGES_alpha=4 | 10.0 | 0.0 |
-| XGES_alpha=1 | 10.0 | 0.0 |
-| XGES_alpha=0.5 | 8.1 | 0.0 |
+| FCI_indep_test=kci | 9.5 | 0.0 |
+| FCI_indep_test=rcit | 9.5 | 0.0 |
+| FCI_indep_test=fisherz | 9.5 | 0.0 |
+| FCI_indep_test=fastkci | 1.0 | 0.0 |
 
 • Dense Graph
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=0.5 | 5.7 | 0.0 |
-| XGES_alpha=2 | 5.5 | 0.0 |
-| XGES_alpha=1 | 5.3 | 0.0 |
-| XGES_alpha=4 | 4.7 | 0.0 |
+| FCI_indep_test=kci | 4.9 | 0.0 |
+| FCI_indep_test=rcit | 4.7 | 0.0 |
+| FCI_indep_test=fisherz | 4.6 | 0.0 |
+| FCI_indep_test=fastkci | 1.0 | 0.0 |
 
 • Sparse Graph
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=2 | 10.0 | 0.0 |
-| XGES_alpha=4 | 10.0 | 0.0 |
-| XGES_alpha=1 | 9.6 | 0.0 |
-| XGES_alpha=0.5 | 7.9 | 0.0 |
+| FCI_indep_test=rcit | 8.3 | 0.0 |
+| FCI_indep_test=kci | 7.6 | 0.0 |
+| FCI_indep_test=fisherz | 7.6 | 0.0 |
+| FCI_indep_test=fastkci | 1.6 | 0.0 |
 
 • High Missing Data
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=4 | 7.8 | 0.0 |
-| XGES_alpha=1 | 7.0 | 0.0 |
-| XGES_alpha=2 | 6.9 | 0.0 |
-| XGES_alpha=0.5 | 6.0 | 0.0 |
+| FCI_indep_test=rcit | 8.8 | 0.0 |
+| FCI_indep_test=kci | 7.9 | 0.0 |
+| FCI_indep_test=fisherz | 7.2 | 0.0 |
+| FCI_indep_test=fastkci | 1.0 | 0.0 |
 
 • High Measurement Error
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=2 | 10.0 | 0.0 |
-| XGES_alpha=4 | 10.0 | 0.0 |
-| XGES_alpha=0.5 | 9.7 | 0.0 |
-| XGES_alpha=1 | 9.6 | 0.0 |
+| FCI_indep_test=kci | 8.8 | 0.0 |
+| FCI_indep_test=rcit | 8.6 | 0.0 |
+| FCI_indep_test=fisherz | 8.0 | 0.0 |
+| FCI_indep_test=fastkci | 1.0 | 0.0 |
 
 • Highly Mixed Data
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=2 | 3.7 | 0.0 |
-| XGES_alpha=4 | 3.7 | 0.0 |
-| XGES_alpha=0.5 | 3.5 | 0.0 |
-| XGES_alpha=1 | 2.6 | 0.0 |
+| FCI_indep_test=kci | 5.5 | 0.0 |
+| FCI_indep_test=fisherz | 5.0 | 0.0 |
+| FCI_indep_test=rcit | 3.9 | 0.0 |
+| FCI_indep_test=fastkci | 1.0 | 0.0 |
 
 • Highly Heterogeneous
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| XGES_alpha=4 | 7.5 | 0.0 |
-| XGES_alpha=2 | 6.1 | 0.0 |
-| XGES_alpha=1 | 6.1 | 0.0 |
-| XGES_alpha=0.5 | 5.8 | 0.0 |
+| FCI_indep_test=kci | 7.7 | 0.0 |
+| FCI_indep_test=fisherz | 7.3 | 0.0 |
+| FCI_indep_test=rcit | 6.8 | 0.0 |
+| FCI_indep_test=fastkci | 1.0 | 0.0 |
 
 
 -------------------------------------------
@@ -487,7 +496,7 @@ Step 6: Make final decisions based on:
 Please provide your suggestions in a structured JSON format, with detailed reasoning for each hyperparameter. Your response should look like this:
 
 {
-  "algorithm": "XGES",
+  "algorithm": "FCI",
   "hyperparameters": {
     "[HYPERPARAMETER_1_NAME]": {
       "full_name": "[HYPERPARAMETER_1_FULL_NAME]",

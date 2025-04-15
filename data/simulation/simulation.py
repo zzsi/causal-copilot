@@ -9,7 +9,7 @@ from openai import OpenAI
 class SimulationManager:
     def __init__(self, args):
         self.args = args
-        self.client = OpenAI(api_key=args.apikey)
+        self.client = OpenAI()
         self.base_simulator = DataSimulator()
 
     def generate_simulation_config(self) -> Dict[str, Any]:
