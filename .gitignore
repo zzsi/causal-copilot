@@ -173,3 +173,5 @@ algorithm/context/algos/consolidated_benchmarking_results.txt
 figures/
 improved_figures/
 Gradio/public/
+
+copilot.pem
