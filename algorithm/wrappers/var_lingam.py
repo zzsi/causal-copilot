@@ -156,8 +156,8 @@ class VARLiNGAM(CausalDiscoveryAlgorithm):
         all_params.pop('gpu')
 
         if cuda_available and self._params['gpu']:
-            model = AcVarLiNGAMWrapper(**all_params)
-            model.fit(data_values)
+            model = AcVarLiNGAM(**all_params)
+            model = model.fit(data_values)
             lag_matrix = model._adjacency_matrix
         else:
             model = VARLiNGAM_model(**all_params)

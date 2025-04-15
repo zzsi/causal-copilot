@@ -557,11 +557,13 @@ def parse_algo_selection(message, global_state, chat_history):
     return global_state, chat_history, CURRENT_STAGE
      
 def parse_method_selection_query(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE):               
-    permitted_algo_list= ['cem', 'propensity_score', 'dml', 'drl', 'iv']
     class algo_selection(BaseModel):
         indicator: bool
         algo: str 
-    prompt = f"""You are a helpful assistant, please identify whether user select a causal discovery algorithm. 
+    confounders = global_state.inference.task_info[global_state.inference.task_index]['confounders']
+    if len(confounders) > 0:
+        permitted_algo_list= ['cem', 'propensity_score', 'dml', 'drl', 'iv']
+        prompt = f"""You are a helpful assistant, please identify whether user select a causal discovery algorithm. 
     I ask user whether they want to select a causal discovery algorithm from the following:
     Algorithm List: {permitted_algo_list}
     Question for user: "Do you want to change the method? If so, please choose one from the following: "
@@ -571,6 +573,20 @@ def parse_method_selection_query(message, chat_history, download_btn, args, glob
                                     "4️⃣ DML (Doubly Machine Learning)"
                                     "5️⃣ IV (Instrumental Variable Method)"
                                     "Otherwise please reply NO."
+    """
+    else:
+        permitted_algo_list= ['dml', 'drl', 'iv']
+        prompt = f"""You are a helpful assistant, please identify whether user select a causal discovery algorithm. 
+    I ask user whether they want to select a causal discovery algorithm from the following:
+    Algorithm List: {permitted_algo_list}
+    Question for user: "Do you want to change the method? If so, please choose one from the following: "
+                                    "3️⃣ DRL (Doubly Robust Learning)"
+                                    "4️⃣ DML (Doubly Machine Learning)"
+                                    "5️⃣ IV (Instrumental Variable Method)"
+                                    "Otherwise please reply NO."
+    """
+    
+    prompt += """            
     If user do not provide a algorithm, or the algorithm name doesn't belong to the Algorithm List, please save False in indicator.
     If user provide a algorithm name that belongs to the Algorithm List, please save True in indicator and the algorithm name in algo.
     Note: The algorithm name should be exactly the same as the one in the Algorithm List.

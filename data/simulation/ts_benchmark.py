@@ -70,6 +70,7 @@ simulation_config = {
     "node_counts": [5, 10, 25, 50, 100],
     "lag_values": [3, 5, 10, 15, 20],
     "degree_inter_values": [2.0, 4.0, 8.0, 12.0, 16.0],
+    "sample_sizes" : [500, 1000, 2000, 5000],
     "intra_inter_combinations": [
       {"num_nodes": 10, "lag": 3, "degree_inter": 3.0, "degree_intra": 0.0},
       {"num_nodes": 20, "lag": 3, "degree_inter": 3.0, "degree_intra": 0.0},
@@ -156,6 +157,18 @@ if __name__ == "__main__":
         })
     all_configs.append(("edge_density", edge_config, os.path.join(output_dir, "edge_density")))
     
+    # Sample size scaling configuration
+    sample_scale_config_nodes = []
+    for sample_size in simulation_config["variations"]["sample_sizes"]:
+        sample_scale_config_nodes.append({
+            "num_nodes": 20,
+            "lag": 5,
+            "degree_inter": 4.0,
+            "degree_intra": 3.0,
+            "n_samples": sample_size
+        })
+    all_configs.append(("sample_size_scaling", sample_scale_config_nodes, os.path.join(output_dir, "sample_size_scaling")))
+    
     # Loop through all configurations
     for config_name, configs, save_dir in all_configs:
         print(f"\nRunning {config_name} benchmark...")
@@ -174,6 +187,10 @@ if __name__ == "__main__":
                 current_seed = base_seed + i + seed_idx
                 
                 # Create a seed-specific subfolder
+                if 'n_samples' in config:
+                    n_samples = config.get('n_samples')
+                    seed_idx += n_samples
+                    
                 seed_folder = f"{config_folder}_seed_{seed_idx}"
                 os.makedirs(seed_folder, exist_ok=True)
                 

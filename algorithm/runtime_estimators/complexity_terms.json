@@ -496,23 +496,27 @@
     "DYNOTEARS": {
         "terms": [
             {
-                "name": "data_transform_term",
+                "name": "data_scaling_term",
                 "expression": "N * p"
             },
             {
-                "name": "matrix_multiplication_term",
-                "expression": "N * p**2"
+                "name": "adjacency_learning_term",
+                "expression": "T * p**3"
             },
             {
-                "name": "matrix_exponential_term",
-                "expression": "p**3"
+                "name": "acyclicity_constraint_term",
+                "expression": "T * p**2"
+            },
+            {
+                "name": "optimization_term",
+                "expression": "T * p**3"
             }
         ],
         "log_transform": false,
         "param_calculations": {
-            "lbfgs_iterations": {
-                "type": "iteration",
-                "expression": "max_iter"
+            "T": {
+                "type": "timesteps",
+                "expression": "int(N / p)"
             }
         },
         "min_runtime": 60
@@ -521,34 +525,58 @@
         "terms": [
             {
                 "name": "data_scaling_term",
-                "expression": "N * d"
+                "expression": "N * p"
             },
             {
                 "name": "var_fit_term",
-                "expression": "N * d**2 * p"
+                "expression": "N * p**2 * l"
             },
             {
                 "name": "forecast_term",
-                "expression": "N * d**2"
+                "expression": "N * p**2"
             },
             {
                 "name": "mvgc_inner_loop_term",
-                "expression": "N * d**3"
+                "expression": "N * p**3"
             },
             {
                 "name": "granger_test_term",
-                "expression": "N * p * d**2"
+                "expression": "N * l * p**2"
             }
         ],
         "log_transform": false,
         "param_calculations": {
-            "p": {
+            "l": {
                 "type": "lag",
-                "expression": "p"
+                "expression": "int(N / (10 * p**2))"
+            }
+        },
+        "min_runtime": 60
+    },
+    "PCMCI": {
+        "terms": [
+            {
+                "name": "data_scaling_term",
+                "expression": "N * p"
             },
-            "d": {
-                "type": "dimension",
-                "expression": "d"
+            {
+                "name": "independence_tests_term",
+                "expression": "p**2 * l * N"
+            },
+            {
+                "name": "condition_set_growth_term",
+                "expression": "p**3 * l * N"
+            },
+            {
+                "name": "graph_pruning_term",
+                "expression": "p**2 * l"
+            }
+        ],
+        "log_transform": false,
+        "param_calculations": {
+            "l": {
+                "type": "lag",
+                "expression": "int(N / (10 * p**2))"
             }
         },
         "min_runtime": 60

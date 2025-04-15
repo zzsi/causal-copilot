@@ -4,7 +4,7 @@ from .wrappers import __all__ as all_algos
 from .hyperparameter_selector import HyperparameterSelector
 from .runtime_estimators.runtime_estimator import RuntimeEstimator
 from .llm_client import LLMClient
-from .context.algos.utils.json2txt import create_filtered_benchmarking_results
+from .context.algos.utils.json2txt import create_filtered_benchmarking_results, create_filtered_benchmarking_results_ts
 
 class Reranker:
     def __init__(self, args):
@@ -28,9 +28,14 @@ class Reranker:
         return global_state
     
     def create_prompt(self, global_state, algo_info, time_info):
-        with open(f"algorithm/context/benchmarking/algorithm_performance_analysis.json", "r", encoding="utf-8") as f:
-            algorithm_benchmarking_results = json.load(f)
-            algorithm_benchmarking_results = create_filtered_benchmarking_results(algorithm_benchmarking_results, list(global_state.algorithm.algorithm_candidates.keys()))
+        if global_state.statistics.data_type=="Time-series" or global_state.statistics.time_series:
+            with open(f"algorithm/context/benchmarking/algorithm_performance_analysis_ts.json", "r", encoding="utf-8") as f:
+                algorithm_benchmarking_results = json.load(f)
+                algorithm_benchmarking_results = create_filtered_benchmarking_results_ts(algorithm_benchmarking_results, list(global_state.algorithm.algorithm_candidates.keys()))
+        else:
+            with open(f"algorithm/context/benchmarking/algorithm_performance_analysis.json", "r", encoding="utf-8") as f:
+                algorithm_benchmarking_results = json.load(f)
+                algorithm_benchmarking_results = create_filtered_benchmarking_results(algorithm_benchmarking_results, list(global_state.algorithm.algorithm_candidates.keys()))
             
         with open(f"algorithm/context/algo_rerank_prompt.txt", "r", encoding="utf-8") as f:
             prompt_template = f.read()

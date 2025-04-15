@@ -134,7 +134,7 @@ def bootstrap(data, full_graph, algorithm, hyperparameters, boot_num, ts, parall
         # pool.close()
         # pool.join()
         print('Parallel computing')
-        boot_effect_save = Parallel(n_jobs=-1, backend="threading")(
+        boot_effect_save = Parallel(n_jobs=4)(
                 delayed(bootstrap_iteration)(data, ts, algorithm, hyperparameters)
                 for _ in range(boot_num)
             )
