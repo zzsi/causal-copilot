@@ -9,7 +9,6 @@ from postprocess.visualization import Visualization, convert_to_edges
 from preprocess.eda_generation import EDA
 from report.report_generation import Report_generation
 from global_setting.Initialize_state import global_state_initialization, load_data
-from algorithm.evaluation.evaluator import GraphEvaluator
 import json
 import argparse
 import numpy as np
@@ -19,47 +18,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
-# small_lag
-# data_path ="simulated_data/ts_evaluation/lag_scaling/n_nodes_10_lag_5_degree_inter_3.0_degree_intra_2.0_seed_1/ts_20250410_172246"
-# data_path ="simulated_data/ts_evaluation/lag_scaling/n_nodes_10_lag_3_degree_inter_3.0_degree_intra_2.0_seed_1/ts_20250410_172245"
-# big lag
-# data_path ="simulated_data/ts_evaluation/lag_scaling/n_nodes_10_lag_20_degree_inter_3.0_degree_intra_2.0_seed_2/ts_20250410_172253"
-# data_path ="simulated_data/ts_evaluation/lag_scaling/n_nodes_10_lag_20_degree_inter_3.0_degree_intra_2.0_seed_1/ts_20250410_172252"
-
-#sample size large
-# data_path = 'simulated_data/ts_evaluation/sample_size_scaling/n_nodes_20_lag_5_degree_inter_4.0_degree_intra_3.0_seed_5000/ts_20250412_180600'
-# data_path = 'simulated_data/ts_evaluation/sample_size_scaling/n_nodes_20_lag_5_degree_inter_4.0_degree_intra_3.0_seed_5002/ts_20250412_180603_'
-# data_path = 'simulated_data/ts_evaluation/sample_size_scaling/n_nodes_20_lag_5_degree_inter_4.0_degree_intra_3.0_seed_5001/ts_20250412_180602_'
-#sample size small
-# data_path = 'simulated_data/ts_evaluation/sample_size_scaling/n_nodes_20_lag_5_degree_inter_4.0_degree_intra_3.0_seed_2000/ts_20250412_180558_'
-# data_path = 'simulated_data/ts_evaluation/sample_size_scaling/n_nodes_20_lag_5_degree_inter_4.0_degree_intra_3.0_seed_2001/ts_20250412_180558_'
-
-#small nodes
-# data_path = 'simulated_data/ts_evaluation/node_scaling/n_nodes_5_lag_3_degree_inter_3.0_degree_intra_2.0_seed_0/ts_20250410_172138'
-# data_path = 'simulated_data/ts_evaluation/node_scaling/n_nodes_5_lag_3_degree_inter_3.0_degree_intra_2.0_seed_1/ts_20250410_172139'
-#amid nodes 
-# data_path = 'simulated_data/ts_evaluation/node_scaling/n_nodes_50_lag_3_degree_inter_3.0_degree_intra_2.0_seed_0/ts_20250410_172147'
-# data_path = 'simulated_data/ts_evaluation/node_scaling/n_nodes_50_lag_3_degree_inter_3.0_degree_intra_2.0_seed_1/ts_20250410_172150'
-# data_path = 'simulated_data/ts_evaluation/node_scaling/n_nodes_50_lag_3_degree_inter_3.0_degree_intra_2.0_seed_2/ts_20250410_172154_'
-# big nodes
-# data_path = "simulated_data/ts_evaluation/node_scaling/n_nodes_100_lag_3_degree_inter_3.0_degree_intra_2.0_seed_0/ts_20250410_172211"
-
-# data_path ='simulated_data/ts_evaluation/default/n_nodes_20_lag_5_degree_inter_4.0_degree_intra_3.0_seed_0/ts_20250410_172135_'
-# data_path = 'simulated_data/ts_evaluation/default/n_nodes_20_lag_5_degree_inter_4.0_degree_intra_3.0_seed_1/ts_20250410_172137_'
-data_path = 'simulated_data/ts_evaluation/default/n_nodes_20_lag_5_degree_inter_4.0_degree_intra_3.0_seed_2/ts_20250410_172138_'
-#exp 
-# data_path ='simulated_data/ts_exp/num_nodes_20_lag_4_inter_5.0_intra_0.0_seed_2038/'
-# data_path ='simulated_data/ts_exp/num_nodes_10_lag_3_inter_7.0_intra_4.0_seed_2012/'
-# data_path = 'simulated_data/ts_exp/num_nodes_10_lag_3_inter_7.0_intra_4.0_seed_2012/'
-# data_path = 'simulated_data/ts_exp/num_nodes_20_lag_3_inter_5.0_intra_0.0_seed_2037/'
-# data_path = 'simulated_data/ts_exp/num_nodes_5_lag_5_inter_4.0_intra_3.0_seed_2035/'
-# data_path = 'simulated_data/ts_exp/num_nodes_10_lag_5_inter_4.0_intra_3.0_seed_2036/'
-#gauss 
-# data_path = 'simulated_data/ts_gaussian/num_nodes_10_lag_1_inter_4.0_intra_2.0_seed_2011/'
-# data_path = 'simulated_data/ts_gaussian/num_nodes_10_lag_3_inter_7.0_intra_0.0_seed_2008/'
-# data_path = 'simulated_data/ts_gaussian/num_nodes_20_lag_3_inter_10.0_intra_0.0_seed_2037/'
-# data_path = 'simulated_data/ts_gaussian/num_nodes_20_lag_10_inter_25.0_intra_5.0_seed_2041/'
-# data_path = 'simulated_data/ts_gaussian/num_nodes_10_lag_10_inter_10.0_intra_5.0_seed_2040/'
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Causal Learning Tool for Data Analysis')
@@ -68,7 +26,7 @@ def parse_args():
     parser.add_argument(
         '--data-file',
         type=str,
-        default=data_path + "data.csv",
+        default= "simulated_data/default/data.csv",
         help='Path to the input dataset file (e.g., CSV format or directory location)'
     )
 
@@ -205,8 +163,8 @@ def main(args):
     print("Knowledge Info: ", global_state.user_data.knowledge_docs)
 
     #############EDA###################
-    # my_eda = EDA(global_state)
-    # my_eda.generate_eda()
+    my_eda = EDA(global_state)
+    my_eda.generate_eda()
     
     # Algorithm selection and deliberation
     filter = Filter(args)
@@ -230,11 +188,6 @@ def main(args):
                 _ = my_visual_initial.plot_pdag(converted_graph[i], f'{global_state.algorithm.selected_algorithm}_initial_graph_{i}.svg', pos=pos_est)
             summary_graph = np.any(converted_graph, axis=0).astype(int)
             # pos_est = my_visual_initial.get_pos(summary_graph)
-            evaluator = GraphEvaluator()
-            gt_summary = np.load(data_path + "graph.npy")
-            # gt_summary = np.load(data_path + "summary.npy")
-            metrics_s = evaluator._compute_single_metrics(gt_summary, summary_graph)
-            print(metrics_s)
             _ = my_visual_initial.plot_pdag(summary_graph, f'{global_state.algorithm.selected_algorithm}_initial_graph_summary.svg', pos=pos_est)
             my_report = Report_generation(global_state, args)
     else:
@@ -276,33 +229,33 @@ def main(args):
         flag, algorithm_setup = judge(preprocessed_data, code, results, statistics_dict, algorithm_setup, knowledge_docs)
     '''
     #############Report Generation###################
-    # import os 
-    # try_num = 1
-    # global_state.results.raw_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.processed_data.columns, global_state.results.converted_graph)
-    # global_state.logging.graph_conversion['initial_graph_analysis'] = my_report.graph_effect_prompts()
-    # analysis_clean = global_state.logging.graph_conversion['initial_graph_analysis'].replace('"',"").replace("\\n\\n", "\n\n").replace("\\n", "\n").replace("'", "")
-    # print(analysis_clean)
+    import os 
+    try_num = 1
+    global_state.results.raw_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.processed_data.columns, global_state.results.converted_graph)
+    global_state.logging.graph_conversion['initial_graph_analysis'] = my_report.graph_effect_prompts()
+    analysis_clean = global_state.logging.graph_conversion['initial_graph_analysis'].replace('"',"").replace("\\n\\n", "\n\n").replace("\\n", "\n").replace("'", "")
+    print(analysis_clean)
     
-    # my_report = Report_generation(global_state, args)
-    # report = my_report.generation()
-    # my_report.save_report(report)
-    # report_path = os.path.join(global_state.user_data.output_report_dir, 'report.pdf')  
-    # while (not os.path.isfile(report_path)) and try_num<3:
-    #     try_num += 1
-    #     print('Error occur during the Report Generation, try again')
-    #     report_gen = Report_generation(global_state, args)
-    #     report = report_gen.generation(debug=False)
-    #     report_gen.save_report(report)
-    # if not os.path.isfile(report_path) and try_num == 3:
-    #     print('Error occur during the Report Generation three times, we stop.')
-    # ################################
+    my_report = Report_generation(global_state, args)
+    report = my_report.generation()
+    my_report.save_report(report)
+    report_path = os.path.join(global_state.user_data.output_report_dir, 'report.pdf')  
+    while (not os.path.isfile(report_path)) and try_num<3:
+        try_num += 1
+        print('Error occur during the Report Generation, try again')
+        report_gen = Report_generation(global_state, args)
+        report = report_gen.generation(debug=False)
+        report_gen.save_report(report)
+    if not os.path.isfile(report_path) and try_num == 3:
+        print('Error occur during the Report Generation three times, we stop.')
+    ################################
 
-    # # User discussion part
-    # from user.discuss import Discussion
-    # discussion = Discussion(args, report)
-    # discussion.forward(global_state)
+    # User discussion part
+    from user.discuss import Discussion
+    discussion = Discussion(args, report)
+    discussion.forward(global_state)
 
-    # return report, global_state
+    return report, global_state
 
 if __name__ == '__main__':
     args = parse_args()
