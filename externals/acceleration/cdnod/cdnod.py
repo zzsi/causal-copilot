@@ -204,7 +204,6 @@ def skeleton_discovery_gpu(data: np.ndarray, alpha: float, indep_test: str = 'fi
         # Get skeleton and sepsets using GPU-accelerated CMIknn
         adj_matrix, sep_dict = gpu_single(data)
 
-
         for i in range(adj_matrix.shape[0]):
             adj_matrix[i, i] = 0
             adj_matrix[i, -1] = 0

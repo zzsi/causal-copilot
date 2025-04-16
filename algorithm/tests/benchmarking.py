@@ -26,7 +26,7 @@ class BenchmarkRunner:
         self.hyperparams = hyperparams or {}
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.data_dir = self.config['data_dir']
-        self.resume_dir = resume_dir if resume_dir != 'none' else None
+        self.resume_dir = resume_dir 
         self.output_dir = self.resume_dir if resume_dir else os.path.join(self.config['output_dir'], self.timestamp)
         self.evaluator = GraphEvaluator()
         self.debug_mode = debug_mode
@@ -905,9 +905,12 @@ def main():
     parser.add_argument('--param_file', type=str, help='Path to JSON file containing algorithm hyperparameters')
     parser.add_argument('--debug', action='store_true', help='Run in debug mode (only first dataset)')
     parser.add_argument('--test', action='store_true', help='Run tests instead of benchmark')
-    parser.add_argument('--resume_dir', type=str, help='Directory containing previous results to resume from')
+    parser.add_argument('--resume_dir', type=str, help='Directory containing previous results to resume from', default="none")
     
     args = parser.parse_args()
+
+    if args.resume_dir == "none":
+        args.resume_dir = None
     
     # Run tests if requested
     if args.test:

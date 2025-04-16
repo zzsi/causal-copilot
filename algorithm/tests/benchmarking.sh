@@ -19,7 +19,7 @@ fi
 CPUS_PER_JOB=8 # Number of CPU cores to allocate per job
 
 # Resume from previous benchmark run
-RESUME_DIR="simuated_data/heavy_benchmarking_v6_results/20250413_130846"
+RESUME_DIR="none" # "simuated_data/heavy_benchmarking_v6_results/20250413_130846"
 
 # Get list of algorithms from config
 ALGORITHMS=(PC DirectLiNGAM) # GOLEM FCI CDNOD FGES XGES GRaSP GES 
