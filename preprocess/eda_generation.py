@@ -67,8 +67,9 @@ class EDA(object):
         # If important features are defined, prioritize them
         important_features = []
         if hasattr(self.global_state.user_data, 'important_features'):
-            important_features = [f for f in self.global_state.user_data.important_features 
-                                 if f in df.columns]
+            if self.global_state.user_data.important_features is not None:
+                important_features = [f for f in self.global_state.user_data.important_features 
+                                    if f in df.columns]
         
         # Calculate feature importance or variability
         feature_scores = {}
@@ -645,7 +646,7 @@ class EDA(object):
         # Select series to analyze - limit if too many
         if df.shape[1] > max_vars:
             # Try to include important features first
-            if hasattr(self.global_state.user_data, 'important_features'):
+            if hasattr(self.global_state.user_data, 'important_features') and self.global_state.user_data.important_features is not None:
                 important_features = [f for f in self.global_state.user_data.important_features 
                                     if f in df.columns][:max_vars]
                 remaining = max_vars - len(important_features)

@@ -69,7 +69,7 @@ class SLearner(Estimator):
 
 class TLearner(Estimator):
     def __init__(self, y_col: str, T_col: str, X_col: list, params: Dict = {}, W_col: list = None, T0: int=0, T1: int=1):
-        super().__init__(params, y_col, T0, T1, T_col, X_col, W_col)
+        super().__init__(params, y_col, T_col, T0, T1, X_col, W_col)
         tlearner_params = {
             'categories': self._params.get('categories', 'auto'),  # Default: 'auto' to use the unique sorted values,The first category will be treated as the control treatment.
             'allow_missing': self._params.get('allow_missing', False)  # Default: False

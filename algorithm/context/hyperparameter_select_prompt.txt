@@ -89,8 +89,9 @@ Important guidelines:
 1. Only select values from the "available_values" list for each hyperparameter
 2. For moderate graph sizes (10-50 variables), prioritize accuracy over speed
 3. For time-series data, give special attention to lag parameters based on statistical estimates
-4. Consider independence test selection carefully based on data type and computational resources
-5. For regularization parameters, consider the expected graph density
-6. For search depth parameters, consider the complexity of potential causal relationships
+4. For time-series data of moderate size (10-50) variables, if the estimated time lag is small (1 or 2), consider using a larger value
+5. Consider independence test selection carefully based on data type and computational resources
+6. For regularization parameters, consider the expected graph density
+7. For search depth parameters, consider the complexity of potential causal relationships
 
 Please provide your hyperparameter suggestions following this JSON structure, with clear reasoning that demonstrates you've considered the dataset characteristics, algorithm requirements, and computational constraints.
