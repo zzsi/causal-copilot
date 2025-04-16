@@ -6,7 +6,7 @@ from openai import OpenAI
 import os
 from pydantic import BaseModel
 from dotenv import load_dotenv
-load_dotenv('/Users/wwy/Documents/Project/Causal-Copilot/.env')
+load_dotenv('.env')
 
 def convert_adj_mat(mat):
     # In downstream analysis, we only keep direct edges and ignore all undirected edges

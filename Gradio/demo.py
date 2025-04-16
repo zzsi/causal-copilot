@@ -596,20 +596,22 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
 
         if CURRENT_STAGE == 'user_algo_selection': 
             if global_state.statistics.time_series:
-                permitted_algo_list = ['PCMCI', 'DYNOTEARS', 'NTSNOTEARS', 'VARLiNGAM'] 
+                permitted_algo_list = ['PCMCI', 'DYNOTEARS', 'NTSNOTEARS', 'VARLiNGAM', 'NTSNOTEARS'] 
             else:
                 if torch.cuda.is_available():
                     permitted_algo_list= ['PC', 'PCParallel', 'AcceleratedPC', 'FCI', 'CDNOD', 'AcceleratedCDNOD',
                                     'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
                                     'GES', 'FGES', 'XGES', 'GRaSP',
                                     'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
-                                    'DirectLiNGAM', 'AcceleratedLiNGAM', 'ICALiNGAM']
+                                    'DirectLiNGAM', 'AcceleratedLiNGAM', 'ICALiNGAM',
+                                    'Hybrid']
                 else:
                     permitted_algo_list= ['PC', 'PCParallel', 'FCI', 'CDNOD',
                                     'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
                                     'GES', 'FGES', 'XGES', 'GRaSP',
                                     'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
-                                    'DirectLiNGAM', 'ICALiNGAM']
+                                    'DirectLiNGAM', 'ICALiNGAM',
+                                    'Hybrid']
                 
             if REQUIRED_INFO["interactive_mode"]:
                 chat_history.append((message, None))
@@ -697,7 +699,10 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                         yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                         return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                     else:
-                        CURRENT_STAGE = 'retry_algo'
+                        global_state.results.revised_graph = global_state.results.converted_graph
+                        global_state.results.llm_errors = {'direct_record':None, 'forbid_record': None}
+                        global_state.results.bootstrap_probability = None
+                        CURRENT_STAGE = 'user_prune'
                         yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 else:
                     CURRENT_STAGE = 'revise_graph'
@@ -1404,7 +1409,7 @@ function createGradioAnimation() {
 }
 """
 
-with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
+with gr.Blocks(title="Causal Copilot", js=js, theme=gr.themes.Soft(), css="""
     .input-buttons { 
         position: absolute !important; 
         right: 10px !important;

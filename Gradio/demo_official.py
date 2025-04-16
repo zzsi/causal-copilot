@@ -13,7 +13,7 @@ def init_graphviz():
                            capture_output=True, text=True)
     print(f"Graphviz installed successfully: {version.stderr}")
 
-    # Add to PATH if needed
+    # # Add to PATH if needed
     graphviz_paths = ["/usr/local/bin", "/usr/bin"]
     for path in graphviz_paths:
         if os.path.exists(path) and path not in os.environ['PATH']:
@@ -48,12 +48,16 @@ def install_packages():
     subprocess.run("pip install lingam=='1.9.1'", shell=True, check=True)
     subprocess.run("pip install CEM_LinearInf", shell=True, check=True)
     subprocess.run("pip install dotenv", shell=True, check=True)
+    subprocess.run("pip install dcor", shell=True, check=True)
+    subprocess.run("pip install xgboost", shell=True, check=True)
 #Run initialization before importing plumbum
 # init_latex()
 # init_graphviz()
 # init_causallearn()
 # install_packages()
 
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 import gradio as gr
 import pandas as pd
 import io
@@ -67,6 +71,10 @@ import time
 import traceback
 import pickle
 import torch
+import glob
+current_dir = os.path.dirname(os.path.abspath(__file__))
+demo_cases_path = os.path.join(current_dir, "demo_cases")
+gr.set_static_paths(paths=[Path.cwd().absolute()/"Gradio/public", Path.cwd().absolute()/"asset"])
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Gradio.demo_config import get_demo_config
@@ -85,13 +93,13 @@ from report.report_generation import Report_generation
 from user.discuss import Discussion
 from openai import OpenAI
 from pydantic import BaseModel
+from help_functions import *
 from causal_analysis.help_functions import *
-from Gradio.help_functions import *
-
 
 print('##########Initialize Global Variables##########')
 # Global variables
 UPLOAD_FOLDER = "./demo_data"
+
 
 def update(info, key, value):
     new_info = info.copy()
@@ -107,32 +115,37 @@ DEMO_DATASETS = {
     "Abalone": {
         "name": "🐚 Real Dataset:Abalone",
         "path": "dataset/Abalone/Abalone.csv",
-        "query": "YES. Find causal relationships between physical measurements and age of abalone. The dataset contains numerical measurements of physical characteristics.",
+        "query": "Find causal relationships between physical measurements and age of abalone. The dataset contains numerical measurements of physical characteristics.",
     },
     "Sachs": {
         "name": "🧬 Real Dataset: Sachs",
         "path": "dataset/sachs/sachs.csv", 
-        "query": "YES. Discover causal relationships between protein signaling molecules. The data contains flow cytometry measurements of proteins and phospholipids."
+        "query": "Discover causal relationships between protein signaling molecules. The data contains flow cytometry measurements of proteins and phospholipids."
     },
     "CCS Data": {
         "name": "📊 Real Dataset: CCS Data",
         "path": "dataset/CCS_Data/CCS_Data.csv",
-        "query": "YES. Analyze causal relationships between variables in the CCS dataset. The data contains multiple continuous variables."
+        "query": "Analyze causal relationships between variables in the CCS dataset. The data contains multiple continuous variables."
     },
-    "Ozone": {
-        "name": "🌫️ Real Dataset: Ozone", 
-        "path": "dataset/Ozone/Ozone.csv",
-        "query": "YES. This is a Time-Series dataset, investigate causal factors affecting ozone levels. The data contains atmospheric and weather measurements over time."
+    "Earth Quakes": {
+        "name": "🏚️ Real Dataset: Earth Quakes (Time-Series)", 
+        "path": "dataset/earthquakes/earthquakes.csv",
+        "query": "This is a Time-Series dataset, investigate causal factors affecting number of deaths. The data contains multiple continuous variables."
+    },
+    "Online Shop": {
+        "name": "🛍️ Real Dataset: Online Shop (Time-Series)",
+        "path": "dataset/onlineshop/2021online_shop.csv",
+        "query": "This is a Time-Series dataset, Please discover the causal structure of different factors and profits."
     },
     "Linear_Gaussian": {
         "name": "🟦 Simulated Data: Linear Gaussian",
         "path": "dataset/Linear_Gaussian/Linear_Gaussian_data.csv",
-        "query": "NO. The data follows linear relationships with Gaussian noise. Please discover the causal structure."
+        "query": "The data follows linear relationships with Gaussian noise. Please discover the causal structure."
     },
     "Linear_Nongaussian": {
         "name": "🟩 Simulated Data: Linear Non-Gaussian",
         "path": "dataset/Linear_Nongaussian/Linear_Nongaussian_data.csv", 
-        "query": "NO. The data follows linear relationships with non-Gaussian noise. Please discover the causal structure."
+        "query": "The data follows linear relationships with non-Gaussian noise. Please discover the causal structure."
     }
 }
 
@@ -185,6 +198,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 # Initialize config
                 config = get_demo_config()
                 config.data_file = REQUIRED_INFO['target_path']
+                args.data_file = REQUIRED_INFO['target_path']
                 for key, value in config.__dict__.items():
                     setattr(args, key, value)
                 print('check initial query')
@@ -204,13 +218,21 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 global_state.user_data.raw_data.columns = [col.replace(' ', '_') for col in global_state.user_data.raw_data.columns]
                 global_state.user_data.selected_features = global_state.user_data.raw_data.columns
                 global_state.user_data.processed_data = global_state.user_data.raw_data
-                chat_history.append((None, f"Do you have important features you care about? These are features in your provided dataset:\n"
-                                        f"{', '.join(global_state.user_data.raw_data.columns)}"))
-                CURRENT_STAGE = 'important_feature_selection'
-                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                
-            
+                if len(global_state.user_data.raw_data.columns) > 20:
+                    chat_history.append((None, f"Do you have any important features you'd like us to focus on? "
+                                            "These features will be prioritized and visualized in the upcoming analysis.\n\n"
+                                            "Here are the features available in your dataset:\n"
+                                            f"{', '.join(global_state.user_data.raw_data.columns)}"))
+                    CURRENT_STAGE = 'important_feature_selection'
+                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                    return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                else:
+                    chat_history.append((None, "These are all features in your dataset:\n"
+                                            f"{', '.join(global_state.user_data.raw_data.columns)}"))
+                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                    CURRENT_STAGE = 'preliminary_check'
+                    global_state.user_data.important_features = []
+                    
         if CURRENT_STAGE == 'important_feature_selection':
             ##### Collect Important Features #####
             args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn = parse_important_feature_query(message, chat_history, download_btn, CURRENT_STAGE, args, global_state, REQUIRED_INFO)
@@ -233,44 +255,47 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             chat_history, download_btn, global_state, CURRENT_STAGE = meaningful_feature_query(global_state,message,chat_history,download_btn,CURRENT_STAGE)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             # Preprocessing - Step 3: Heterogeneity Checking
-            var_list, chat_history, download_btn, global_state, CURRENT_STAGE = heterogeneity_query(global_state, message,
-                                                                                            chat_history,
-                                                                                            download_btn,
-                                                                                            CURRENT_STAGE, args)
+            chat_history, download_btn, global_state, CURRENT_STAGE = heterogeneity_query(global_state, message, chat_history, download_btn, CURRENT_STAGE, args)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             # Preprocessing - Step 4: Accept CPDAG
             global_state.user_data.accept_CPDAG = True
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             # Preprocessing - Step 5: Missing Value Checking
             np_nan = np_nan_detect(global_state)
-            # Preprocessing - Step 6: Correlation Checking
+            # Preprocessing - Step 6: Remove Constant Features
+            global_state = remove_constant(global_state)
+            # Preprocessing - Step 7: Correlation Checking
             global_state, drop = correlation_check(global_state)
 
             tables = "We conduct the following preliminary checks on your dataset: \n"\
             f"""
 | Sample size | Meaningful Feature | Heterogeneity | Accept CPDAG | Missing Value | Highly Correlated Features |
 |:-----------:|:-------------------:|:-------------:|:------------:|:-------------:|:-------------:|
-|{'✅ Enough' if enough_sample else '⚠️ Not Enough'}|{'✅ Meaningful' if global_state.user_data.meaningful_feature else '🚫 Simulated Data'}|{global_state.statistics.domain_index if global_state.statistics.domain_index else '🚫 Non Heterogeneous'}|{'✅ Accept'}|{'✅ No Missingness' if not np_nan else '⚠️ Missingness'}|{'✅ No Highly Correlated Features' if not global_state.user_data.high_corr_drop_features else '⚠️ Highly Correlated Features'}|
+|{'✅ Enough' if enough_sample else '⚠️ Not Enough'}|{'✅ Yes' if global_state.user_data.meaningful_feature else '🚫 Simulated Data'}|{f'✅ {global_state.statistics.domain_index}' if global_state.statistics.domain_index else '🚫 No'}|{'✅ Accept'}|{'✅ No Missingness' if not np_nan else '⚠️ Missingness'}|{'✅ No Highly Correlated Features' if not global_state.user_data.high_corr_drop_features else '⚠️ Highly Correlated Features'}|
 """
             chat_history.append((None, tables))
             texts = ""
             if not global_state.user_data.meaningful_feature:
                 texts += "- No meaningful features are detected in your dataset, we will treat it as a simulated dataset.\n"
             if global_state.statistics.domain_index:
-                texts += f"- The dataset is heterogeneous, the domain index is {global_state.statistics.domain_index}.\n"
+                texts += (
+        f"- The dataset is **heterogeneous**, meaning it contains samples collected under different conditions or domains (such as time, location, or experimental setup). "
+        f"  → The column **`{global_state.statistics.domain_index}`** is identified as the **domain index**, indicating the domain or environment each sample belongs to.\n"
+        "Please note that the domain index is set by LLM, please set 'heterogeneity' to be False if you think it is not heterogeneous.\n"
+    )
             if not np_nan:
-                texts += "- We do not detect NA values in your dataset, if you have the specific value that represents NA like 0, then you can provide it.\n"
+                texts += "- We have not found NA values in your dataset. If you have the specific value that represents NA like 0, then you can provide it.\n"
             else:
                 info, global_state, CURRENT_STAGE = drop_spare_features(chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE)
                 texts += f"- {info}\n"
-            if global_state.user_data.high_corr_drop_features:
-                if drop:
-                    texts += f"- We will drop {', '.join(list(set(global_state.user_data.high_corr_drop_features)))} due to the fact that they are highly correlated with other features."
-                else:
-                    texts += "- The following variables are highly correlated with others, but due to the variable number limitation, we will not drop them: \n"\
-                                            f"{', '.join(list(set(global_state.user_data.high_corr_drop_features)))}"
+            if global_state.user_data.high_corr_drop_features: # group
+                # if drop:
+                #     texts += f"- We will drop {', '.join(list(set(global_state.user_data.high_corr_drop_features)))} due to the fact that they are highly correlated with other features."
+                # else:
+                texts += "- The following variables are highly correlated with others: \n"\
+                                        f"{', '.join(list(set(global_state.user_data.high_corr_drop_features)))}"
             chat_history.append((None, texts))
-            print('preliminary check', global_state.user_data.processed_data.columns)
+            # print('preliminary check', global_state.user_data.selected_features)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             if not enough_sample:
                 texts += "- " + info 
@@ -278,12 +303,12 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             else:
                 modify_prompt = "You can modify the result above following the template below; Otherwise please input 'NO'. \n"\
                                 """
-                                meaningful_feature: True/False
-                                heterogeneity: True/False
-                                accept_CPDAG: True/False
-                                domin_index: The column name of domin_index (Can only be set when heterogeneity is True)
-                                missing_value: special NA value/False
-                                """
+    meaningful_feature (True/False): Set to `True` if your dataset contains real, meaningful features. Set to `False` if it's simulated data.
+    accept_CPDAG (True/False): Set to `True` to proceed with causal discovery using the CPDAG method.
+    heterogeneity (True/False): Set to `True` if your data comes from different domains (e.g. locations, experiments). 
+    domain_index (column name/False): Specify the name of the column that indicates the domain (e.g. `hospital_id`, `time_group`). Only set this if `heterogeneity` is `True`.
+    missing_value (value/False): If your dataset uses a special value (like 0, -1, or missing) to represent missing data, specify it here. Otherwise, use `False`.
+                                 """
                 chat_history.append((None, modify_prompt))
                 CURRENT_STAGE = 'preliminary_feedback'
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -298,36 +323,15 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 return process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn)
             
         if CURRENT_STAGE == 'preliminary_feedback':
-            chat_history.append((message, None))
-            global_state, text = parse_preliminary_feedback(global_state, message)
-            print('preliminary_feedback', global_state.user_data.processed_data.columns)
+            chat_history.append((message, None)) 
+            global_state, text = parse_preliminary_feedback(chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE, message)
+            print('preliminary_feedback meaningful feature', global_state.user_data.meaningful_feature)
             if text != "":
                 chat_history.append((None, text))
             else:
                 chat_history.append((None, "✅ We do not receive any feedback from you."))
             CURRENT_STAGE = 'visual_dimension_check'
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-
-        # # Preprocess Step 2: Sparsity Checking
-        # if CURRENT_STAGE == 'sparsity_check':
-        #     # missing value detection
-        #     np_nan = np_nan_detect(global_state)
-        #     if not np_nan:
-        #         chat_history.append((None, "We do not detect NA values in your dataset, do you have the specific value that represents NA?\n"
-        #                                     "For example the 0 represents NA in your dataset, then you should input 0.\n"
-        #                                     "If so, please provide here. Otherwise please input 'NO'."))
-        #         CURRENT_STAGE = 'sparsity_check_1'
-        #         yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-        #         return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-        #     else:
-        #         CURRENT_STAGE = 'sparsity_check_2'
-        
-        # if CURRENT_STAGE == 'sparsity_check_1':
-        #     chat_history.append((message, None)) 
-        #     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-        #     chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = first_stage_sparsity_check(message, chat_history, download_btn, args, global_state, REQUIRED_INFO, CURRENT_STAGE)
-        #     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                                  
 
         if CURRENT_STAGE == 'visual_dimension_check':
             ## Preprocess Step 4: Choose Visualization Variables
@@ -354,13 +358,12 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                     chat_history.append((None, "Dimension Checking Summary:\n"\
                                          "💡 Because of the high dimensionality, We will only visualize 20 variables and include variables you care about."))
                     other_variables = list(set(global_state.user_data.selected_features) - (set(global_state.user_data.selected_features)&set(global_state.user_data.important_features)))
+                    if global_state.statistics.heterogeneous and global_state.statistics.domain_index is not None:
+                        other_variables = [var for var in other_variables if var != global_state.statistics.domain_index]
                     remaining_num = 20 - len(global_state.user_data.important_features)
                     global_state.user_data.visual_selected_features = other_variables[:remaining_num+1]
-                    if not global_state.statistics.heterogeneous:
-                        global_state.user_data.visual_selected_features.extend(global_state.user_data.important_features)
+                    global_state.user_data.visual_selected_features.extend(global_state.user_data.important_features)
                     CURRENT_STAGE = 'knowledge_generation'
-                    print('visual_dimension_check', global_state.user_data.processed_data.columns)
-                    print('visual_dimension_check', global_state.user_data.visual_selected_features)
                     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             else: 
                 global_state.user_data.visual_selected_features = global_state.user_data.selected_features
@@ -381,6 +384,8 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 else:
                     var_list, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE = parse_var_selection_query(message, chat_history, download_btn, 'knowledge_generation', args, global_state, REQUIRED_INFO, CURRENT_STAGE)
                 # Update the selected variables
+                if global_state.statistics.heterogeneous and global_state.statistics.domain_index is not None:
+                    var_list = [var for var in var_list if var != global_state.statistics.domain_index]
                 global_state.user_data.visual_selected_features = var_list
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
         
@@ -389,19 +394,20 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             if args.data_mode == 'real':
                 chat_history.append(("🌍 Generate background knowledge based on the dataset you provided...", None))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                #global_state = knowledge_info(args, global_state)
-                global_state.user_data.knowledge_docs = "This is fake domain knowledge for debugging purposes."
-                knowledge_clean = str(global_state.user_data.knowledge_docs).replace("[", "").replace("]", "").replace('"',"").replace("\\n\\n", "\n\n").replace("\\n", "\n").replace("'", "")
+                global_state = knowledge_info(args, global_state)
+                # global_state.user_data.knowledge_docs = "This is fake domain knowledge for debugging purposes."
+                # global_state.user_data.knowledge_docs_for_user = "This is fake domain knowledge for debugging purposes."
+                knowledge_clean = str(global_state.user_data.knowledge_docs_for_user).replace("[", "").replace("]", "").replace('"',"").replace("\\n\\n", "\n\n").replace("\\n", "\n").replace("'", "")
                 chat_history.append((None, knowledge_clean))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                if REQUIRED_INFO["interactive_mode"]:
-                    chat_history.append((None, 'If you have some more background information you want to add, please enter it here! Type No to skip this step. \n'
-                                         'Example Knowledge: Variable A can be the cause for Variable B.'))
-                    CURRENT_STAGE = 'check_user_background'
-                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                    return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                else:
-                    CURRENT_STAGE = 'stat_analysis'
+                # if REQUIRED_INFO["interactive_mode"]: 
+                #     chat_history.append((None, 'If you have some more background information you want to add, please enter it here! Type No to skip this step. \n'
+                #                          'Example Knowledge: Variable A can be the cause for Variable B.'))
+                #     CURRENT_STAGE = 'check_user_background'
+                #     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                #     return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                # else:
+                CURRENT_STAGE = 'stat_analysis'
             else:
                 global_state = knowledge_info(args, global_state)
                 CURRENT_STAGE = 'stat_analysis'
@@ -420,9 +426,13 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
         if CURRENT_STAGE == 'stat_analysis':
             # Statistical Analysis: Time Series
             chat_history.append((None, "Please indicate whether your dataset is Time-Series and set your time lag: \n"\
-                                           "1️⃣ Input 'YES' or 'NO' to clarify whether it is a Time-Series dataset;\n"\
-                                           "2️⃣ Input your time lag if you want to set it by yourself;\n"\
-                                           "3️⃣ Input 'continue' if you want the time lag to be set automatically;\n"))
+                                           "1️⃣ Clarify whether it is a Time-Series dataset;\n"\
+                                           "2️⃣ If it is a Time-Series dataset, set your time lag  by yourself or input 'default' if you want the time lag to be set automatically;\n"\
+                                           "3️⃣ Leave the time_lag as None if it is not a Time-Series dataset.\n"
+                                           """
+    is_time_series: True/False
+    time_lag: [an integer] / default / None
+                                           """))
             CURRENT_STAGE = 'ts_check'
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -440,8 +450,10 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
 
             user_linear = global_state.statistics.linearity
             user_gaussian = global_state.statistics.gaussian_error
-
+            # print('stat_analysis', global_state.user_data.selected_features)
             global_state = stat_info_collection(global_state)
+            print('stat_analysis', global_state.user_data.processed_data.columns)
+            print('stat_analysis', global_state.user_data.selected_features)
             global_state.statistics.description = convert_stat_info_to_text(global_state.statistics)
 
             if global_state.statistics.data_type == "Continuous":
@@ -459,15 +471,23 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             chat_history.append((None, global_state.statistics.description))
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             if REQUIRED_INFO["interactive_mode"]:
-                chat_history.append(('Here we just finished statistical Analysis for the dataset! Please enter anything you want to correct! Or type NO to skip this step.\n'
-                                    "Template:\n"
-                                    """
-                                    linearity: True/False
-                                    gaussian_error: True/False
-                                    heterogeneous: True/False
-                                    domain_index: variable name of your domain index
-                                    """,
-                        None))
+                info = 'Here we just finished statistical Analysis for the dataset! Please enter anything you want to correct! Or type NO to skip this step.\n'
+                if global_state.statistics.time_series:
+                    info += """
+                    Template:
+                    linearity: True/False
+                    gaussian_error: True/False
+                    """
+                else:
+                    info += """
+                    Template:
+                    linearity: True/False
+                    gaussian_error: True/False
+                    heterogeneous: True/False
+                    domain_index: variable name of your domain index
+                    """
+                chat_history.append((info, None))
+                
                 CURRENT_STAGE = 'check_user_feedback'
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -490,7 +510,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 If no changes are required or the input is not valid, return an empty dictionary.
                 The keys in the json should be the variable names, and the values should be the new values. 
                 Only return a json that can be parsed directly, do not include ```json
-                message: {message}
+                message: {message} 
                 file: {file_content}
                 """
                 parsed_response = LLM_parse_query(args, None, prompt, message)
@@ -518,12 +538,19 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             chat_history.append(("🔍 Run exploratory data analysis...", None))
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             print('eda_generation', global_state.user_data.processed_data.columns)
-            print('eda_generation', global_state.user_data.visual_selected_features)
+            print('eda_generation', global_state.user_data.selected_features)
             my_eda = EDA(global_state)
             my_eda.generate_eda()
-            chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_corr.jpg',)))
-            chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_additional.jpg',)))
-            chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_dist.jpg',)))
+            if global_state.statistics.time_series:
+                chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_lag_correlation.jpg',)))
+                # chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_ts_diagnostics.jpg',)))
+                matching_ts_diagnostics_files = glob.glob(f"{global_state.user_data.output_graph_dir}/eda_ts_diagnostics_*")
+                for file in matching_ts_diagnostics_files:
+                    chat_history.append((None, (file,)))
+            else:
+                chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_corr.jpg',)))
+                chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_additional.jpg',)))
+                chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/eda_dist.jpg',)))
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             CURRENT_STAGE = 'algo_selection'
 
@@ -548,22 +575,14 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
 
                 if REQUIRED_INFO["interactive_mode"]:
                     CURRENT_STAGE = 'user_algo_selection'
-                    if torch.cuda.is_available():
-                        chat_history.append((None, "Do you want to use other algorithms? If so, please choose one from the following: \n"
-                                                "- **Constraint-based Methods**: PC, PCParallel, AcceleratedPC, FCI, CDNOD, AcceleratedCDNOD;\n"
-                                                "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
-                                                "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
-                                                "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
-                                                "Otherwise please reply NO."))
+                    from Gradio.algo_context import TABULAR_CUDA, TABULAR_CPU, TS
+                    if global_state.statistics.time_series: 
+                        chat_history.append((None, TS))
                     else:
-                        chat_history.append((None, "Do you want to use other algorithms? If so, please choose one from the following: \n"
-                                                "- **Constraint-based Methods**: PC, PCParallel, FCI, CDNOD;\n"
-                                                "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
-                                                "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
-                                                "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, ICALiNGAM;"
-                                                "Otherwise please reply NO."))
+                        if torch.cuda.is_available():
+                            chat_history.append((None, TABULAR_CUDA))
+                        else:
+                            chat_history.append((None, TABULAR_CPU))
                     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                     return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 else:           
@@ -575,45 +594,34 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 CURRENT_STAGE = 'hyperparameter_selection'  
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
-        if CURRENT_STAGE == 'user_algo_selection':  
-            if torch.cuda.is_available():
-                permitted_algo_list= ['PC', 'PCParallel', 'AcceleratedPC', 'FCI', 'CDNOD', 'AcceleratedCDNOD',
-                                'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
-                                'GES', 'FGES', 'XGES', 'GRaSP',
-                                'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
-                                'DirectLiNGAM', 'AcceleratedLiNGAM', 'ICALiNGAM']
+        if CURRENT_STAGE == 'user_algo_selection': 
+            if global_state.statistics.time_series:
+                permitted_algo_list = ['PCMCI', 'DYNOTEARS', 'NTSNOTEARS', 'VARLiNGAM', 'NTSNOTEARS'] 
             else:
-                permitted_algo_list= ['PC', 'PCParallel', 'FCI', 'CDNOD',
-                                'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
-                                'GES', 'FGES', 'XGES', 'GRaSP',
-                                'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
-                                'DirectLiNGAM', 'ICALiNGAM']
+                if torch.cuda.is_available():
+                    permitted_algo_list= ['PC', 'PCParallel', 'AcceleratedPC', 'FCI', 'CDNOD', 'AcceleratedCDNOD',
+                                    'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
+                                    'GES', 'FGES', 'XGES', 'GRaSP',
+                                    'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
+                                    'DirectLiNGAM', 'AcceleratedLiNGAM', 'ICALiNGAM',
+                                    'Hybrid']
+                else:
+                    permitted_algo_list= ['PC', 'PCParallel', 'FCI', 'CDNOD',
+                                    'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
+                                    'GES', 'FGES', 'XGES', 'GRaSP',
+                                    'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
+                                    'DirectLiNGAM', 'ICALiNGAM',
+                                    'Hybrid']
                 
             if REQUIRED_INFO["interactive_mode"]:
                 chat_history.append((message, None))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-            if message.lower()=='no' or message=='':
-                CURRENT_STAGE = 'hyperparameter_selection'     
-                chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Selected algorithm: {global_state.algorithm.selected_algorithm}\n"))
+                global_state, chat_history, CURRENT_STAGE = parse_algo_selection(message, global_state, chat_history)
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-            elif message in permitted_algo_list:
-                global_state.algorithm.selected_algorithm = message
-                global_state.algorithm.algorithm_arguments = None 
-                CURRENT_STAGE = 'hyperparameter_selection'     
-                chat_history.append((None, f"✅ We will run the Causal Discovery Procedure with the Selected algorithm: {global_state.algorithm.selected_algorithm}\n"))
-                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-            else: 
-                chat_history.append((None, "❌ The specified algorithm is not correct, please choose from the following: \n"
-                                        f"{', '.join(permitted_algo_list)}\n"
-                                        "Otherwise please reply NO."))
-                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-
+                if CURRENT_STAGE != 'hyperparameter_selection':
+                    return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                    
         if CURRENT_STAGE == 'hyperparameter_selection':  
-            # filter = Filter(args)
-            # global_state = filter.forward(global_state)
-            # reranker = Reranker(args)
-            # global_state = reranker.forward(global_state)
             hp_selector = HyperparameterSelector(args)
             global_state = hp_selector.forward(global_state)
             hyperparameter_text, global_state = generate_hyperparameter_text(global_state)
@@ -624,18 +632,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
 
             if REQUIRED_INFO["interactive_mode"]:
                 CURRENT_STAGE = 'user_param_selection'
-                with open('Gradio/param_context.json', 'r') as f:
-                    param_hint = json.load(f)[global_state.algorithm.selected_algorithm]
-                instruction = "Do you want to specify values for parameters instead of the selected one? If so, please specify your parameter following the template below: \n"
-                for key in param_hint.keys():
-                    instruction += f"{key}: value\n"
-                instruction += "Otherwise please reply NO."
-                chat_history.append((None, instruction))
-                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                hint = "Here are instructions for hyper-parameter tuning:\n"
-                for key, value in param_hint.items():
-                    hint += f"- {key}: \n{value};\n "
-                chat_history.append((None, hint))
+                chat_history = prepare_hyperparameter_text(global_state, chat_history)
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             else:           
@@ -665,13 +662,23 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             my_visual_initial = Visualization(global_state)
             if global_state.results.raw_pos is None:
                 data_idx = [global_state.user_data.processed_data.columns.get_loc(var) for var in global_state.user_data.visual_selected_features]
+                print(global_state.results.converted_graph)
                 pos = my_visual_initial.get_pos(global_state.results.converted_graph[data_idx, :][:, data_idx])
                 global_state.results.raw_pos = pos
-            if global_state.user_data.ground_truth is not None:
-                my_visual_initial.plot_pdag(global_state.user_data.ground_truth, f'{global_state.algorithm.selected_algorithm}_true_graph.jpg', global_state.results.raw_pos)
-                my_visual_initial.plot_pdag(global_state.user_data.ground_truth, f'{global_state.algorithm.selected_algorithm}_true_graph.pdf', global_state.results.raw_pos)
-                chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/{global_state.algorithm.selected_algorithm}_true_graph.jpg',)))
-                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            # if global_state.user_data.ground_truth is not None:
+            #     my_visual_initial.plot_pdag(global_state.user_data.ground_truth, f'{global_state.algorithm.selected_algorithm}_true_graph.jpg', global_state.results.raw_pos)
+            #     my_visual_initial.plot_pdag(global_state.user_data.ground_truth, f'{global_state.algorithm.selected_algorithm}_true_graph.pdf', global_state.results.raw_pos)
+            #     chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/{global_state.algorithm.selected_algorithm}_true_graph.jpg',)))
+            #     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn 
+            if global_state.statistics.time_series:
+                if global_state.results.lagged_graph is not None:
+                    print('lagged graph', global_state.results.lagged_graph)
+                    my_visual_initial.plot_lag_pdag(global_state.results.lagged_graph, val_matrix=None, save_path=f'{global_state.algorithm.selected_algorithm}_timelag_graph.jpg')
+                    my_visual_initial.plot_lag_pdag(global_state.results.lagged_graph, val_matrix=None, save_path=f'{global_state.algorithm.selected_algorithm}_timelag_graph.pdf')
+                    chat_history.append((None, (f'{global_state.user_data.output_graph_dir}/{global_state.algorithm.selected_algorithm}_timelag_graph.jpg',)))
+                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                else:
+                    print('lagged graph is None')
             if global_state.results.converted_graph is not None:
                 my_visual_initial.plot_pdag(global_state.results.converted_graph, f'{global_state.algorithm.selected_algorithm}_initial_graph.jpg', global_state.results.raw_pos)
                 my_visual_initial.plot_pdag(global_state.results.converted_graph, f'{global_state.algorithm.selected_algorithm}_initial_graph.pdf', global_state.results.raw_pos)
@@ -686,10 +693,17 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
                 if REQUIRED_INFO["interactive_mode"]:
-                    chat_history.append((None, "Do you want to further prune the initial graph with LLM and analyze the graph reliability?"))
-                    CURRENT_STAGE = 'LLM_prune'
-                    yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
-                    return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                    if global_state.user_data.meaningful_feature:
+                        chat_history.append((None, "Do you want to further prune the initial graph with LLM and analyze the graph reliability? (It may take some time for large dataset)"))
+                        CURRENT_STAGE = 'LLM_prune'
+                        yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                        return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+                    else:
+                        global_state.results.revised_graph = global_state.results.converted_graph
+                        global_state.results.llm_errors = {'direct_record':None, 'forbid_record': None}
+                        global_state.results.bootstrap_probability = None
+                        CURRENT_STAGE = 'user_prune'
+                        yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 else:
                     CURRENT_STAGE = 'revise_graph'
 
@@ -707,6 +721,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             else: 
                 global_state.results.revised_graph = global_state.results.converted_graph
                 global_state.results.llm_errors = {'direct_record':None, 'forbid_record': None}
+                global_state.results.bootstrap_probability = None
                 CURRENT_STAGE = 'user_prune'
 
         # Evaluation for Initial Graph
@@ -715,17 +730,18 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             try:
                 judge = Judge(global_state, args)
-                global_state = judge.forward(global_state, 'cot_all_relation', 3)
+                global_state = judge.forward(global_state, 'cot_all_relation', 1)
             except Exception as e:
                 print('error during judging:', e)
+                # traceback.print_exc()
                 judge = Judge(global_state, args)
-                global_state = judge.forward(global_state, 'cot_all_relation', 3) 
+                global_state = judge.forward(global_state, 'cot_all_relation', 1) 
             my_visual_revise = Visualization(global_state)
             global_state.results.revised_edges = convert_to_edges(global_state.algorithm.selected_algorithm, global_state.user_data.processed_data.columns, global_state.results.revised_graph)
             # Plot Bootstrap Heatmap
             paths = my_visual_revise.boot_heatmap_plot()
             chat_history.append(
-                (None, f"The following heatmaps show the confidence probability we have on different kinds of edges in the initial graph"))
+                (None, f"The following heatmaps show the confidence probability we have on different kinds of edges in the original graph produced by {global_state.algorithm.selected_algorithm} algorithm."))
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             for path in paths:
                 chat_history.append((None, (path,)))
@@ -767,22 +783,14 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 with open(f'{global_state.user_data.output_graph_dir}/{global_state.algorithm.selected_algorithm}_global_state.pkl', 'wb') as f:
                     pickle.dump(global_state, f)
                 #global_state.logging.global_state_logging.append(global_state.algorithm.selected_algorithm)
-                if torch.cuda.is_available():
-                    chat_history.append((None, "Do you want to retry other algorithms? If so, please choose one from the following: \n"
-                                                "- **Constraint-based Methods**: PC, PCParallel, AcceleratedPC, FCI, CDNOD, AcceleratedCDNOD;\n"
-                                                "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
-                                                "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
-                                                "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
-                                                "Otherwise please reply NO."))
+                from Gradio.algo_context import TABULAR_CUDA, TABULAR_CPU, TS
+                if global_state.statistics.time_series: 
+                    chat_history.append((None, TS))
                 else:
-                    chat_history.append((None, "Do you want to retry other algorithms? If so, please choose one from the following: \n"
-                                                "- **Constraint-based Methods**: PC, PCParallel, FCI, CDNOD;\n"
-                                                "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
-                                                "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
-                                                "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, ICALiNGAM;"
-                                                "Otherwise please reply NO."))
+                    if torch.cuda.is_available():
+                        chat_history.append((None, TABULAR_CUDA))
+                    else:
+                        chat_history.append((None, TABULAR_CPU))
                 CURRENT_STAGE = 'retry_algo'
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn                
@@ -794,7 +802,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             print('user_revise_dict', user_revise_dict)
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             if CURRENT_STAGE == 'postprocess_parse_done':
-                judge = Judge(global_state, args)
+                judge = Judge(global_state, args) # check 4o and conditional independence
                 global_state = judge.user_postprocess(user_revise_dict)
                 my_visual_revise = Visualization(global_state)
                 if global_state.results.revised_graph is not None:
@@ -819,22 +827,14 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 with open(f'{global_state.user_data.output_graph_dir}/{global_state.algorithm.selected_algorithm}_global_state.pkl', 'wb') as f:
                     pickle.dump(global_state, f)
                 #global_state.logging.global_state_logging.append(global_state.algorithm.selected_algorithm)
-                if torch.cuda.is_available():
-                    chat_history.append((None, "Do you want to retry other algorithms? If so, please choose one from the following: \n"
-                                                "- **Constraint-based Methods**: PC, PCParallel, AcceleratedPC, FCI, CDNOD, AcceleratedCDNOD;\n"
-                                                "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
-                                                "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
-                                                "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
-                                                "Otherwise please reply NO."))
+                from Gradio.algo_context import TABULAR_CUDA, TABULAR_CPU, TS
+                if global_state.statistics.time_series: 
+                    chat_history.append((None, TS))
                 else:
-                    chat_history.append((None, "Do you want to retry other algorithms? If so, please choose one from the following: \n"
-                                                "- **Constraint-based Methods**: PC, PCParallel, AcceleratedPC, FCI, CDNOD, AcceleratedCDNOD;\n"
-                                                "- **MB-based Methods**: InterIAMB, BAMB, HITONMB, IAMBnPC, MBOR;\n"
-                                                "- **Score-based Methods**: GES, FGES, XGES, GRaSP;\n"
-                                                "- **Continuous-optimization Methods**: GOLEM, CALM, CORL, NOTEARSLinear, NOTEARSNonlinear;\n"
-                                                "- **Functional Model-based Methods (LiNGAM Family)**: DirectLiNGAM, AcceleratedLiNGAM, ICALiNGAM;"
-                                                "Otherwise please reply NO."))
+                    if torch.cuda.is_available():
+                        chat_history.append((None, TABULAR_CUDA))
+                    else:
+                        chat_history.append((None, TABULAR_CPU))
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
                 return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
@@ -848,10 +848,8 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
                 return process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn)
         
         if CURRENT_STAGE == 'inference_analysis_check':
-            with open('Causal-Copilot/demo_data/20250408_145536/sachs/output_graph/GES_global_state.pkl', 'rb') as file:
-                global_state = pickle.load(file)
-                global_state.inference.task_index = -1
-                global_state.inference.task_info = {}
+            global_state.inference.task_index = -1
+            global_state.inference.task_info = {} 
             chat_history.append((None, "Do you want to conduct downstream analysis based on the causal discovery result? You can describe your needs.\n"
                                         "Otherwise please input 'NO'.\n"
                                            "We support the following tasks: \n"
@@ -983,12 +981,12 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             ### Check Confounder
             key_node = global_state.inference.task_info[global_state.inference.task_index]['key_node'][0]
             confounders, potential_confounders = analysis._identify_confounders(treatment, key_node)
-            global_state.inference.task_info[global_state.inference.task_index]['confounders'] = list(set(confounders) | set(potential_confounders))
-            remaining_var = list(set(analysis.data.columns) - set([treatment]) - set([key_node]) - set(confounders)-set(potential_confounders))
+            global_state.inference.task_info[global_state.inference.task_index]['confounders'] = confounders
+            remaining_var = list(set(analysis.data.columns) - set([treatment]) - set([key_node]) - set(confounders))
             # Allow user add confounder  
             chat_history.append((None, f"These are Confounders between treatment {treatment} and outcome {key_node}: \n"
                       f"{','.join(confounders)}\n"
-                        f"These are potential confounders: \n"
+                       f"These are potential confounders: \n"
                         f"{','.join(potential_confounders)}\n"
                       "💡 Do you want to add any variables as confounders in your dataset?\n"
                       "A confounder is a variable that influences both the cause and the outcome, potentially biasing results. Adding known confounders helps improve the accuracy of causal analysis. \n"
@@ -1013,16 +1011,16 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             confounders = global_state.inference.task_info[global_state.inference.task_index]['confounders']
             cont_confounders = [col for col in confounders if global_state.statistics.data_type_column[col]=='Continuous']
             global_state.inference.task_info[global_state.inference.task_index]['cont_confounders'] = cont_confounders
-            #No Confounder Case and Add LLM variable selection
-            # if len(confounders) == 0:
-            #     task_info = global_state.inference.task_info[global_state.inference.task_index]
-            #     LLM_confounders = LLM_select_confounders(task_info['treatment'], task_info['key_node'], args, global_state.user_data.processed_data)
-            #     chat_history.append((None, "According to your provided graph, there is no confounder between your treatment and result variables.\n"
-            #         "We add the following variables suggested by LLM as confounders:\n"
-            #         f'{",".join(LLM_confounders)}'))
-            #     confounders = LLM_confounders
-            #     global_state.inference.task_info[global_state.inference.task_index]['confounders'] = confounders
-            #     yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
+            # No Confounder Case and Add LLM variable selection
+            if len(confounders) == 0:
+                task_info = global_state.inference.task_info[global_state.inference.task_index]
+                LLM_confounders = LLM_select_confounders(task_info['treatment'], task_info['key_node'], args, global_state.user_data.processed_data)
+                chat_history.append((None, "According to your provided graph, there is no confounder between your treatment and result variables.\n"
+                    "We add the following variables suggested by LLM as confounders:\n"
+                    f'{",".join(LLM_confounders)}'))
+                confounders = LLM_confounders
+                global_state.inference.task_info[global_state.inference.task_index]['confounders'] = confounders
+                yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
             CURRENT_STAGE = "inference_info_collection_hte" 
             chat_history.append((None, "💡 Is there any heterogeneous variables you care about? \n"
@@ -1055,7 +1053,7 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             if exist_IV:
                 global_state.inference.task_info[global_state.inference.task_index]['IV'] = iv_variable
                 method = "iv"
-            elif (len(confounders) <= 5) and (len(confounders) > 0):
+            elif len(confounders) <= 5:
                 if len(confounders) - len(cont_confounders) > len(cont_confounders):  # If more than half discrete confounders
                     method = "cem"
                 else:
@@ -1073,21 +1071,13 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
             elif method == "drl":
                 chat_history.append((None, "**Doubly Robust Learning (DRL)** is chosen because the sample size is small. It remains consistent even if only one of the nuisance models (propensity scores or outcome models) is correctly specified. This property makes DRL more robust in small datasets, where limited data can lead to inaccuracies in machine learning model estimates."))
             CURRENT_STAGE = "method_selection_check"
-            confounders = global_state.inference.task_info[global_state.inference.task_index]['confounders']
-            if len(confounders) > 0:
-                chat_history.append((None, "Do you want to change the method? If so, please choose one from the following: \n"
-                                        "1️⃣ PSM (Propensity Score Matching)\n"
-                                        "2️⃣ CEM (Coarsen Exact Matching)\n"
-                                        "3️⃣ DRL (Doubly Robust Learning)\n"
-                                        "4️⃣ DML (Doubly Machine Learning)\n"
-                                        "5️⃣ IV (Instrumental Variable Method)\n"
-                                        "Otherwise please reply NO."))
-            else:
-                chat_history.append((None, "Do you want to change the method? If so, please choose one from the following: \n"
-                                        "1️⃣ DRL (Doubly Robust Learning)\n"
-                                        "2️⃣ DML (Doubly Machine Learning)\n"
-                                        "3️⃣ IV (Instrumental Variable Method)\n"
-                                        "Otherwise please reply NO."))
+            chat_history.append((None, "Do you want to change the method? If so, please choose one from the following: \n"
+                                    "1️⃣ PSM (Propensity Score Matching)\n"
+                                    "2️⃣ CEM (Coarsen Exact Matching)\n"
+                                    "3️⃣ DRL (Doubly Robust Learning)\n"
+                                    "4️⃣ DML (Doubly Machine Learning)\n"
+                                    "5️⃣ IV (Instrumental Variable Method)\n"
+                                    "Otherwise please reply NO."))
             yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
             return args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
 
@@ -1155,17 +1145,18 @@ def process_message(message, args, global_state, REQUIRED_INFO, CURRENT_STAGE, c
 
         # Report Generation
         if CURRENT_STAGE == 'report_generation_check': # empty query or postprocess query parsed successfully
-            import glob
+            import glob 
             global_state_files = glob.glob(f"{global_state.user_data.output_graph_dir}/*_global_state.pkl")
             global_state.logging.global_state_logging = []
             for file in global_state_files:
-                with open(file, 'rb') as f:
-                    temp_global_state = pickle.load(f)
-                    global_state.logging.global_state_logging.append(temp_global_state.algorithm.selected_algorithm)
+                if file != f'{global_state.user_data.output_graph_dir}/inference_global_state.pkl':
+                    with open(file, 'rb') as f:
+                        temp_global_state = pickle.load(f)
+                        global_state.logging.global_state_logging.append(temp_global_state.algorithm.selected_algorithm)
             if len(global_state.logging.global_state_logging) > 1:
                 algos = global_state.logging.global_state_logging
-                chat_history.append((None, "Detailed analysis of which algorithm do you want to be included in the report?\n"
-                                     f"Please choose from the following: {', '.join(algos)}\n"
+                chat_history.append((None, "Please specify which algorithm you would like to be included in the detailed report. We will provide a comprehensive explanation of its processing procedure and present the corresponding results in detail. \n"
+                                     f"Please choose one from the following: {', '.join(algos)}\n"
                                      "Note that a comparision of all algorithms'results will be included in the report."))
                 CURRENT_STAGE = 'report_algo_selection'
                 yield args, global_state, REQUIRED_INFO, CURRENT_STAGE, chat_history, download_btn
@@ -1337,32 +1328,80 @@ js = """
 function createGradioAnimation() {
     var container = document.createElement('div');
     container.id = 'gradio-animation';
-    container.style.fontSize = '2em';
-    container.style.fontWeight = 'bold';
-    container.style.textAlign = 'center';
+    container.style.display = 'flex';
+    container.style.justifyContent = 'center';
+    container.style.alignItems = 'center';
     container.style.marginBottom = '20px';
+    container.style.position = 'relative';
+    
+    // Title container
+    var titleContainer = document.createElement('div');
+    titleContainer.style.fontSize = '2em';
+    titleContainer.style.fontWeight = 'bold';
+    titleContainer.style.textAlign = 'center';
+    
     var text = 'Welcome to Causal Copilot!';
+    // Faster animation but still sequential
     for (var i = 0; i < text.length; i++) {
         (function(i){
             setTimeout(function(){
                 var letter = document.createElement('span');
                 letter.style.opacity = '0';
-                letter.style.transition = 'opacity 0.5s';
+                letter.style.transition = 'opacity 0.1s';
                 letter.innerText = text[i];
-                container.appendChild(letter);
+                titleContainer.appendChild(letter);
                 setTimeout(function() {
                     letter.style.opacity = '1';
-                }, 50);
-            }, i * 250);
+                }, 30);
+            }, i * 100);
         })(i);
     }
+    
+    container.appendChild(titleContainer);
+    
+    // Create simple YouTube link
+    setTimeout(function() {
+        var ytLink = document.createElement('a');
+        ytLink.href = 'https://www.youtube.com/watch?si=3DTT2AlEIcAf-T_E&v=U9-b0ZqqM24&feature=youtu.be';
+        ytLink.target = '_blank';
+        ytLink.innerText = '▶️ Watch Tutorial on YouTube';
+        ytLink.style.marginLeft = '20px';
+        ytLink.style.padding = '5px 10px';
+        ytLink.style.borderRadius = '4px';
+        ytLink.style.border = '1px solid #1976d2';
+        ytLink.style.background = '#1976d2';
+        ytLink.style.color = '#ffffff';
+        ytLink.style.cursor = 'pointer';
+        ytLink.style.transition = 'all 0.3s ease';
+        ytLink.style.fontSize = '0.5em';
+        ytLink.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        ytLink.style.textDecoration = 'none';
+        ytLink.style.display = 'inline-block';
+        
+        ytLink.addEventListener('mouseover', function() {
+            this.style.background = '#0d5ca1';
+            this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+        });
+        
+        ytLink.addEventListener('mouseout', function() {
+            this.style.background = '#1976d2';
+            this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        });
+        // Add click event to open YouTube
+        videoBtn.addEventListener('click', function() {
+            window.open('https://www.youtube.com/watch?si=3DTT2AlEIcAf-T_E&v=U9-b0ZqqM24&feature=youtu.be', '_blank');
+        });
+        
+        container.appendChild(videoBtn);
+    }, text.length * 100 + 200); // Add after title animation is complete with faster timing
+    
     var gradioContainer = document.querySelector('.gradio-container');
     gradioContainer.insertBefore(container, gradioContainer.firstChild);
     return 'Animation created';
 }
 """
 
-with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
+with gr.Blocks(title="Causal Copilot", js=js, theme=gr.themes.Soft(), css="""
     .input-buttons { 
         position: absolute !important; 
         right: 10px !important;
@@ -1372,8 +1411,8 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
         gap: 5px !important;
     }
     .icon-button { 
-        padding: 0 !important;
-        width: 32px !important;
+        padding: 0 !important; 
+        width: 32px !important; 
         height: 32px !important;
         border-radius: 16px !important;
         background: transparent !important;
@@ -1426,9 +1465,189 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
         background: #f5f5f5 !important;
         margin-left: auto !important;
     }
+    /* Gallery Section Styles */
+    .gallery-section {
+        margin-top: 40px;
+        margin-bottom: 20px;
+    }
+    .gallery-heading {
+        width: 100%;
+        text-align: center;
+        font-size: 28px;
+        margin-bottom: 20px;
+    }
+    .filter-buttons {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .filter-btn {
+        border-radius: 20px;
+        background-color: #f5f5f5;
+        padding: 8px 16px;
+        transition: all 0.3s ease;
+    }
+    .filter-btn.active {
+        background-color: #333;
+        color: white;
+    }
+    .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+    .gallery-card {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        position: relative;
+    }
+    .gallery-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    }
+    .card-img-container {
+        width: 100%;
+        height: 200px;
+        overflow: hidden;
+    }
+    .gallery-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .card-content {
+        padding: 15px;
+    }
+    .card-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin: 0;
+        margin-bottom: 10px;
+    }
+    .card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .card-author {
+        font-size: 14px;
+        color: #555;
+    }
+    .card-likes {
+        margin-left: auto;
+        font-size: 14px;
+        color: #ff4757;
+    }
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+        .gallery-container {
+            flex-direction: column;
+        }
+        .gallery-card {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+    }
+    .report-gallery {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr); /* Changed to 6 columns for a single row */
+        gap: 15px; /* Reduced gap to fit better */
+        margin: 20px auto;
+        max-width: 1400px; /* Increased width to accommodate all 6 cards */
+    }
+    .report-card {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        position: relative;
+        cursor: pointer;
+    }
+    .report-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 20px rgba(0,0,0,0.15);
+    }
+    /* PDF Icon */
+    .pdf-icon {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 32px;
+        height: 32px;
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        z-index: 3;
+    }
+    .pdf-icon svg {
+        width: 18px;
+        height: 18px;
+        fill: #e74c3c;
+    }
+    /* Card Image Area (Always Visible) */
+    .report-card-image-area {
+        width: 100%;
+        height: 140px; /* Reduced height for better fit in single row */
+        background-color: #f0f0f0;
+        background-size: cover;
+        background-position: center;
+    }
+    .report-card-content {
+        padding: 15px; /* Reduced padding */
+    }
+    .report-card-title {
+        font-size: 16px; /* Smaller font */
+        font-weight: bold;
+        margin: 0 0 8px 0;
+        color: #333;
+    }
+    .report-card-desc {
+        font-size: 12px; /* Smaller font */
+        color: #666;
+        margin-bottom: 10px;
+        line-height: 1.3;
+    }
+    .report-card-author {
+        font-size: 12px; /* Smaller font */
+        color: #555;
+        font-style: italic;
+    }
+    /* Removed hover thumbnail styles */
+    .report-card::before {
+       /* Optional: Keep the top accent bar */
+       content: '';
+       position: absolute;
+       top: 0;
+       left: 0;
+       width: 100%;
+       height: 5px;
+       background: linear-gradient(90deg, #3498db, #2980b9);
+       z-index: 2; 
+    }
+    .message-bubble img {
+        pointer-events: none !important;
+    }
+
+    /* Optional: Also adjust image sizing */
+    .message-bubble img {
+        max-width: none !important;
+        max-height: none !important;
+        width: 400px !important;
+    }
 """) as demo:
     print('##########Initialize Global Variables##########')
-    stage_state = gr.State('inference_analysis_check')
+    stage_state = gr.State('initial_process')
     state = gr.State(None)
     REQUIRED_INFO = gr.State({
             'data_uploaded': False,
@@ -1457,7 +1676,6 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
         render_markdown=True
     )
 
-
     def disable_all_inputs(dataset_name, chatbot, clicked_btn, download_btn, msg, all_demo_buttons):
         """Disable all interactive elements"""
         updates = []
@@ -1471,9 +1689,6 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
             gr.update(interactive=False),  # For reset button
         ])
         return updates
-
-  
-
 
     def enable_all_inputs(all_demo_buttons):
         """Re-enable all interactive elements"""
@@ -1508,13 +1723,17 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
                     file_count="single"
                 )
                 download_btn = gr.DownloadButton(
-                    "📥 Download Exclusive Report",
+                    "📥 Download result package (ZIP file)",
                     size="sm",
                     elem_classes=["icon-button"],
                     scale=6,
                     interactive=False
                 )
                 reset_btn = gr.Button("🔄 Reset", scale=1, elem_classes=["icon-button"], size="sm")
+                # No need for a hidden video button anymore
+
+    with gr.Row(elem_classes=["gallery-section"]):
+        gr.Markdown("## Play with some interesting datasets!", elem_classes=["gallery-heading"])
 
     # Demo dataset buttons
     demo_btns = {}
@@ -1592,7 +1811,7 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
     reset_btn.click(
         fn=clear_chat,
         inputs=[REQUIRED_INFO, stage_state, state],
-        outputs=[REQUIRED_INFO,chatbot, stage_state, state],
+        outputs=[REQUIRED_INFO, chatbot, stage_state, state],
         queue=False  # No need for queue on reset
     )
     ###########
@@ -1620,13 +1839,182 @@ with gr.Blocks(js=js, theme=gr.themes.Soft(), css="""
         outputs=[*list(demo_btns.values()), download_btn, msg, file_upload, reset_btn],
         queue=True
     )
-
     # Download report handler with updated visibility
     download_btn.click()
+
+    # Define report cards with real PDF reports from output_report directory
+    report_items = [
+        {
+            "title": "Abalone Causal Analysis",
+            "description": "Discovering relationships between physical attributes and age of abalone",
+            "author": "Causal Copilot",
+            "file": "/gradio_api/file=Gradio/public/tabular-abalone.pdf",
+            "image": "/gradio_api/file=Gradio/public/abalone.png" # Path relative to static dir
+        },
+        {
+            "title": "Heart Disease Study",
+            "description": "Causal factors influencing heart disease development",
+            "author": "Causal Copilot",
+            "file": "/gradio_api/file=Gradio/public/tabular-heartdisease.pdf",
+            "image": "/gradio_api/file=Gradio/public/heartdisease.png"
+        },
+        {
+            "title": "Climate Time Series Analysis",
+            "description": "Temporal patterns and causality in climate data",
+            "author": "Causal Copilot",
+            "file": "/gradio_api/file=Gradio/public/timeseries-climate.pdf",
+            "image": "/gradio_api/file=Gradio/public/climate.png"
+        },
+        {
+            "title": "Student Performance Factors",
+            "description": "Determining key influences on academic achievement",
+            "author": "Causal Copilot",
+            "file": "/gradio_api/file=Gradio/public/tabular-student-score.pdf",
+            "image": "/gradio_api/file=Gradio/public/student_score.png"
+        },
+        {
+            "title": "Earthquake Time Series",
+            "description": "Temporal factors affecting seismic activity",
+            "author": "Causal Copilot",
+            "file": "/gradio_api/file=Gradio/public/timeseries-earthquake.pdf",
+            "image": "/gradio_api/file=Gradio/public/earthquake.png"
+        },
+        {
+            "title": "Online Shop Analysis",
+            "description": "Online shopping behavior and purchase patterns",
+            "author": "Causal Copilot",
+            "file": "/gradio_api/file=Gradio/public/timeseries-onlineshop.pdf",
+            "image": "/gradio_api/file=Gradio/public/online_shop.png"
+        }
+    ]
+
+    # Gallery section for showcasing finished demos
+    with gr.Row(elem_classes=["gallery-section"]):
+        gr.Markdown("## Explore some case study Reports!", elem_classes=["gallery-heading"])
+    
+    # Use HTML for report gallery
+    gallery_html = f"""
+    <style>
+    .report-gallery {{
+        display: grid;
+        grid-template-columns: repeat(6, 1fr); /* Changed to 6 columns for a single row */
+        gap: 15px; /* Reduced gap to fit better */
+        margin: 20px auto;
+        max-width: 1400px; /* Increased width to accommodate all 6 cards */
+    }}
+    .report-card {{
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        position: relative;
+        cursor: pointer;
+    }}
+    .report-card:hover {{
+        transform: translateY(-5px);
+        box-shadow: 0 12px 20px rgba(0,0,0,0.15);
+    }}
+    /* PDF Icon */
+    .pdf-icon {{
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 32px;
+        height: 32px;
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        z-index: 3;
+    }}
+    .pdf-icon svg {{
+        width: 18px;
+        height: 18px;
+        fill: #e74c3c;
+    }}
+    /* Card Image Area (Always Visible) */
+    .report-card-image-area {{
+        width: 100%;
+        height: 140px; /* Reduced height for better fit in single row */
+        background-color: #f0f0f0;
+        background-size: cover;
+        background-position: center;
+    }}
+    .report-card-content {{
+        padding: 15px; /* Reduced padding */
+    }}
+    .report-card-title {{
+        font-size: 16px; /* Smaller font */
+        font-weight: bold;
+        margin: 0 0 8px 0;
+        color: #333;
+    }}
+    .report-card-desc {{
+        font-size: 12px; /* Smaller font */
+        color: #666;
+        margin-bottom: 10px;
+        line-height: 1.3;
+    }}
+    .report-card-author {{
+        font-size: 12px; /* Smaller font */
+        color: #555;
+        font-style: italic;
+    }}
+    /* Removed hover thumbnail styles */
+    .report-card::before {{
+       /* Optional: Keep the top accent bar */
+       content: '';
+       position: absolute;
+       top: 0;
+       left: 0;
+       width: 100%;
+       height: 5px;
+       background: linear-gradient(90deg, #3498db, #2980b9);
+       z-index: 2; 
+    }}
+    </style>
+    
+    <div class="report-gallery">
+    """
+    
+    # Add card for each report
+    for item in report_items:
+        # Link should just be /file=<filename> if dir is in allowed_paths
+        report_link = f"{item['file']}" 
+        # Image path assumes Gradio serves /static automatically
+
+        image_path = item.get('image', '/static/assets/default_cover.png') 
+        gallery_html += f"""
+        <a href="{report_link}" target="_blank" style="text-decoration: none; color: inherit;"> 
+            <div class="report-card" data-file="{item['file']}">
+                <div class="pdf-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
+                        <path d="M181.9 256.1c-5-16-4.9-46.9-2-46.9 8.4 0 7.6 36.9 2 46.9zm-1.7 47.2c-7.7 20.2-17.3 43.3-28.4 62.7 18.3-7 39-17.2 62.9-21.9-12.7-9.6-24.9-23.4-34.5-40.8zM86.1 428.1c0 .8 13.2-5.4 34.9-40.2-6.7 6.3-16.8 15.8-24.1 26.3-10.7 15.5-11.6 14-10.8 13.9zm28.6-181.9c7.4-6.5 21.6-10.7 38.8-13.3 4.9-14.7 8.4-33.4 8.4-33.4s-13.6 8.1-29.8 10.2c-14.1 1.9-24.5 7.3-34.1 20.1-9.8 13.1-8.1 10.4-8.1 10.4s9.4-6.2 24.8-6z"/>
+                        <path d="M384 121.9v6.1H256V0h6.1c6.4 0 12.5 2.5 17 7l97.9 98c4.5 4.5 7 10.6 7 16.9zM248 160h136v328c0 13.3-10.7 24-24 24H24c-13.3 0-24-10.7-24-24V24C0 10.7 10.7 0 24 0h200v136c0 13.2 10.8 24 24 24zm-84.5 98.6c19.3-5.7 45.5-10.4 67.7-13.2-7.9-35.6-10.3-53.3-10.3-53.3s-16 2.8-37.9 7.7c-36.3 7.9-38.9 9-55.8 31.1-6 7.9-9.5 14.4-12.7 19.5-18.7 26.6-41.7 51.7-52.6 66.1-5.5 7.3-13.3 18.3-19.6 22.2-9.1 5.7-21.1 1.7-23.7-7.8-2.6-9.5 4.3-19.5 9.5-22.7 3.5-2.1 8.7-9.1 15.8-20.3 10.8-15.7 19.1-33.3 19.1-33.3s-10.6 6.7-13.4 10.5c-14.9 19.7-40.8 49-51.9 73.3-10.8 24.4-4.9 37.3 8.1 42.8 9.2 3.8 21.3-4 29.5-12.6 11.7-12.1 17.9-20.2 28.3-38.8 18.1-32.3 30.6-62.8 30.6-62.8s-.3 14.2-.8 22.7c-.7 12.3-2.8 14.8-7.9 20.3-5.8 6.2-13.5 6.6-19.9 6.4-8.5-.4-10.4 5.8-7.4 9.1 9 10.2 29.2 6.3 41.4-9.2 13.1-16.6 11.6-37.8 11-46.9-1.4-21.6 2.4-49.5 2.4-49.5z"/>
+                    </svg>
+                </div>
+                <div class="report-card-image-area" style="background-image: url('{image_path}');"></div>
+                <div class="report-card-content">
+                    <h3 class="report-card-title">{item['title']}</h3>
+                    <p class="report-card-desc">{item['description']}</p>
+                    <p class="report-card-author">By {item['author']}</p>
+                </div>
+            </div>
+        </a>
+        """
+    
+    gallery_html += """
+    </div>
+    """
+    
+    with gr.Row():
+        gr.HTML(gallery_html)
 
 if __name__ == "__main__":
     demo.queue(default_concurrency_limit=MAX_CONCURRENT_REQUESTS,
                max_size=MAX_QUEUE_SIZE)  # Enable queuing at the app level
-    demo.launch(share=True)
-
-
+    
+    demo.launch(favicon_path="asset/logo.png", server_name="0.0.0.0", server_port=7860, allowed_paths=["/file=Gradio/public", "/file=asset"])

@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from typing import List, Union, Any, Optional, Literal
 import torch 
 from dotenv import load_dotenv
-load_dotenv('/Users/wwy/Documents/Project/Causal-Copilot/.env')
+load_dotenv('.env')
 
 def try_numeric(value):
     """Convert string to int first, then float if possible, otherwise return string"""
@@ -469,20 +469,22 @@ def drop_spare_features(chat_history, download_btn, global_state, REQUIRED_INFO,
 
 def parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED_INFO, CURRENT_STAGE):
     if global_state.statistics.time_series:
-        permitted_algo_list = ['PCMCI', 'DYNOTEARS', 'NTSNOTEARS', 'VARLiNGAM'] 
+        permitted_algo_list = ['PCMCI', 'DYNOTEARS', 'NTSNOTEARS', 'VARLiNGAM', 'NTSNOTEARS'] 
     else:
         if torch.cuda.is_available():
             permitted_algo_list= ['PC', 'PCParallel', 'AcceleratedPC', 'FCI', 'CDNOD', 'AcceleratedCDNOD',
                             'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
                             'GES', 'FGES', 'XGES', 'GRaSP',
                             'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
-                            'DirectLiNGAM', 'AcceleratedLiNGAM', 'ICALiNGAM']
+                            'DirectLiNGAM', 'AcceleratedLiNGAM', 'ICALiNGAM',
+                            'Hybrid']
         else:
             permitted_algo_list= ['PC', 'PCParallel', 'FCI', 'CDNOD',
                             'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
                             'GES', 'FGES', 'XGES', 'GRaSP',
                             'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
-                            'DirectLiNGAM', 'ICALiNGAM']
+                            'DirectLiNGAM', 'ICALiNGAM',
+                            'Hybrid']
     class algo_selection(BaseModel):
         indicator: bool
         algo: str
@@ -507,7 +509,7 @@ def parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED
                             "Otherwise please reply NO."))
     else:
         chat_history.append((message, "💬 No algorithm is specified, will go to the next step..."))
-        if global_state.user_data.meaningful_feature and not global_state.statistics.time_series:
+        if not global_state.statistics.time_series:
             CURRENT_STAGE = 'inference_analysis_check'     
         else:
             CURRENT_STAGE = 'report_generation_check'
@@ -515,20 +517,22 @@ def parse_algo_query(message, chat_history, download_btn, global_state, REQUIRED
 
 def parse_algo_selection(message, global_state, chat_history):
     if global_state.statistics.time_series:
-        permitted_algo_list = ['PCMCI', 'DYNOTEARS', 'NTSNOTEARS', 'VARLiNGAM'] 
+        permitted_algo_list = ['PCMCI', 'DYNOTEARS', 'NTSNOTEARS', 'VARLiNGAM', 'NTSNOTEARS'] 
     else:
         if torch.cuda.is_available():
             permitted_algo_list= ['PC', 'PCParallel', 'AcceleratedPC', 'FCI', 'CDNOD', 'AcceleratedCDNOD',
                             'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
                             'GES', 'FGES', 'XGES', 'GRaSP',
                             'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
-                            'DirectLiNGAM', 'AcceleratedLiNGAM', 'ICALiNGAM']
+                            'DirectLiNGAM', 'AcceleratedLiNGAM', 'ICALiNGAM',
+                            'Hybrid']
         else:
             permitted_algo_list= ['PC', 'PCParallel', 'FCI', 'CDNOD',
                             'InterIAMB', 'BAMB', 'HITONMB', 'IAMBnPC', 'MBOR',
                             'GES', 'FGES', 'XGES', 'GRaSP',
                             'GOLEM', 'CALM', 'CORL', 'NOTEARSLinear', 'NOTEARSNonlinear',
-                            'DirectLiNGAM', 'ICALiNGAM']
+                            'DirectLiNGAM', 'ICALiNGAM',
+                            'Hybrid']
     class algo_selection(BaseModel):
         indicator: bool
         algo: str

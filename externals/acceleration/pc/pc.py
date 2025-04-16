@@ -246,7 +246,7 @@ def cmiknn_gpu(data: np.ndarray, alpha: float, depth: int, node_names: list) -> 
     globals.gpu_free_mem = gpucmiknn.init_gpu()
         
     # Get skeleton and sepsets using GPU-accelerated CMIknn
-    skeleton, sepsets = gpu_row(data)
+    skeleton, sepsets = gpu_single(data)
 
     for i in range(skeleton.shape[0]):
         skeleton[i, i] = 0
