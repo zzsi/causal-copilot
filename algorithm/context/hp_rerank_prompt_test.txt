@@ -1,5 +1,5 @@
 User original query (TOP PRIORITY):
-Find causal relationships between physical measurements and age of abalone. The dataset contains numerical measurements of physical characteristics.
+The data follows linear relationships with Gaussian noise. Please discover the causal structure.
 
 The computation has to be finished in the runtime of 1440.0 minutes.
 
@@ -13,120 +13,98 @@ The computation has to be finished in the runtime of 1440.0 minutes.
 -----------------------------------------------
 Given a dataset with the following properties:
 
-1. Columns: Age	Length	Shell_weight	Diameter	Height	Whole_weight	Shucked_weight	Viscera_weight
+1. Columns: X1	X2	X3	X4	X5
 2. Statistics:
 The dataset has the following characteristics:
 
-Data Type: The overall data type is Time-series.
+Data Type: The overall data type is Continuous.
 
-The sample size is 4177 with 8 features. 
+The sample size is 1000 with 5 features. 
 
-This dataset is time-series data. 
+This dataset is not time-series data. 
 
 Data Quality: There are no missing values in the dataset.
 
 Statistical Properties:
 - Linearity: The relationships between variables are linear.
 - Gaussian Errors: The errors in the data do follow a Gaussian distribution.
-- Time lag: 2 
-
-- Stationarity: The dataset is stationary. 
+- Heterogeneity: The dataset is not heterogeneous. 
 
 
 
 
 3. Background Knowledge:
-Below is a comprehensive analysis of the variables in the dataset "Abalone.csv" based on the provided attributes related to abalones.
+1. **VARIABLE DESCRIPTIONS**: 
+   - **No Knowledge**: The variable names (X1, X2, X3, X4, X5) do not provide any meaningful context. To offer insights, it would be necessary to know what these variables represent in the domain, including any measurement units (e.g., time, rate, percentage) and typical ranges or expected values.
 
-### 1. VARIABLE DESCRIPTIONS
-1. **Age**: Represents the age of the abalone, determined typically through methods such as counting growth rings. Measured in years, the typical range for age in the wild can vary widely but is often from 0 to 10, with some reaching beyond that. 
-   
-2. **Length**: This refers to the length of the abalone's shell, measured in millimeters (mm). Typical lengths can range from 60mm to 200mm, as different species and maturities can affect growth.
-   
-3. **Shell_weight**: This is the weight of the shell alone, recorded in grams. Variability can be high, but weights often range from 30g to 350g depending on age and size.
-   
-4. **Diameter**: This measures the shell's diameter, also in millimeters (mm). Similar to length, diameters can be found between approximately 40mm and 160mm.
-   
-5. **Height**: Refers to the height of the abalone's shell, indicated in millimeters (mm). Heights for abalones typically range from 10mm to 40mm.
-   
-6. **Whole_weight**: The total weight of the abalone, inclusive of its innards in grams. It typically ranges significantly from 40g to over 600g.
-   
-7. **Shucked_weight**: Refers to the weight of the abalone without its shell, measured in grams. This weight can vary, often ranging from 20g to 200g.
-   
-8. **Viscera_weight**: This is the weight of the abalone's internal organs, recorded in grams, generally ranging from 5g to 150g.
+2. **CAUSAL RELATIONSHIPS**: 
+   - **No Knowledge**: Without an understanding of what each variable signifies, I cannot suggest potential causal connections. Domain experts should clarify the nature and role of each variable to assess the causal relationships adequately.
 
-### 2. CAUSAL RELATIONSHIPS
-- **Direct Causal Links**: Length, shell weight, diameter, and whole weight can directly influence the age of the abalone, as larger abalones are often older due to their growth patterns.
-- **Indirect Relationships**: Shell weight might depend on both length and width, which can affect other metrics of health and reproduction. Likewise, visceral weight is likely tied indirectly to overall health status, influenced by whole weight.
+3. **RELATIONSHIP NATURE**: 
+   - **No Knowledge**: Without clear definitions of X1 through X5, the nature of relationships—whether linear or nonlinear—remains unknown. Details on the variable types and their possible interactions would be essential to analyze this aspect.
 
-### 3. RELATIONSHIP NATURE
-- **Linear Relationships**: There may be linear correlations between age and other metrics like length, width, and whole weight where an increase in age often correlates with an increase in these measurements.
-- **Nonlinear Relationships**: The relationship between weight measures and length might be nonlinear, especially in the growth phase, where initial growth could be quite rapid but later stages show diminishing returns.
+4. **DATA DISTRIBUTION**: 
+   - **No Knowledge**: Information about the distributions of X1, X2, X3, X4, and X5 is not obtainable from the variable names alone. Knowledge about the underlying data characteristics, such as whether they follow Gaussian distributions or exhibit skewness, is required.
 
-### 4. DATA DISTRIBUTION
-- **Normal Distribution**: Variables such as age and length may often exhibit a roughly Gaussian distribution, particularly in natural populations, where most individuals cluster around a mean.
-- **Heavy-tailed distributions**: Variables like age may also reflect heavy tails due to the presence of older individuals that survive longer in ideal conditions.
+5. **CONFOUNDERS**: 
+   - **No Knowledge**: Identifying potential confounders is not feasible without understanding the variables' meanings and their relationships. Domain experts should provide insights into other variables that could influence the dataset's key variables.
 
-### 5. CONFOUNDERS
-Potential confounding variables not included in the dataset could include environmental factors (e.g., water temperature, salinity), ecosystem interactions (predation or competition), and genetic factors influencing growth.
+6. **TEMPORAL ASPECTS**: 
+   - **No Knowledge**: Information on temporal dependencies is not available. If the context of the data spans over time, additional information on whether the variables change over time would be necessary to analyze temporal relationships.
 
-### 6. TEMPORAL ASPECTS
-While this dataset does not include temporal data, one can infer that growth and age should reflect seasonal changes in availability of nutrients and feeding conditions.
+7. **HETEROGENEITY**: 
+   - **No Knowledge**: Without understanding the variables, I cannot comment on how relationships may differ across subgroups or contexts. Insights from domain experts are essential to identify heterogeneity amongst the variables.
 
-### 7. HETEROGENEITY
-Sex-based differences could play a significant role, as males and females may grow differently due to different reproductive strategies. Additionally, different species of abalones can exhibit notable size and growth variances.
+8. **GRAPH DENSITY**: 
+   - **No Knowledge**: It is unclear whether causal relationships might be sparse or dense based on variable names alone. Clarification on the interactions among variables would help determine the expected density of causal connectivity.
 
-### 8. GRAPH DENSITY
-Expected relationships in this field are likely to be sparse, as while some fundamental growth measures may influence each other, many of them are also influenced by external factors that aren’t measured here.
+9. **DOMAIN-SPECIFIC CONSTRAINTS**: 
+   - **No Knowledge**: No specific constraints can be identified without the context of the variables. Domain experts should share relevant constraints derived from their field of expertise that could influence causal relationships.
 
-### 9. DOMAIN-SPECIFIC CONSTRAINTS
-Physical constraints include the physiological limits of growth in marine organisms. There are limits as to how large an abalone can grow based on environmental conditions and available resources.
+10. **RELEVANT LITERATURE**: 
+   - **No Knowledge**: I cannot identify studies or literature without knowing the domain context associated with the variables. Broad insights into related research would depend on understanding the specific application or field represented by X1 through X5.
 
-### 10. RELEVANT LITERATURE
-Relevant literature could include studies on marine biology focusing on abalone growth patterns, such as "Growth and reproduction of abalone" by various marine biologists, or ecosystem impact studies on marine growth.
+11. **DATA QUALITY ISSUES**: 
+   - **No Knowledge**: There is no way to ascertain typical data quality issues such as missing data patterns or biases without the context behind the variable names. Experts are needed to elaborate on common data challenges within this domain.
 
-### 11. DATA QUALITY ISSUES
-Possible issues include measurement errors in weights and misreporting of age, particularly if ages are estimated based on growth rings rather than precise measures. 
+12. **INTERACTION EFFECTS**: 
+   - **No Knowledge**: I cannot evaluate complex interactions without knowing what variables represent and their expected interactions. Domain context is essential for assessing potential interaction effects.
 
-### 12. INTERACTION EFFECTS
-There could be interactions between length and weight where larger lengths could exhibit significant increases in both whole weight and shucked weight, suggesting multiplicative interactions rather than simple additive effects.
+13. **FEEDBACK LOOPS**: 
+   - **No Knowledge**: The presence of feedback loops is unassessable with variable names alone. Further details on how the variables interact over time would be necessary to identify potential cyclic causal relationships.
 
-### 13. FEEDBACK LOOPS
-While less common in this uncomplicated biological context, if conditions were to improve (food availability), it could result in larger sizes leading to more reproduction, thus affecting population dynamics.
+14. **INSTRUMENTAL VARIABLES**: 
+   - **No Knowledge**: Without understanding the variables' nature, it’s impossible to identify potential instrumental variables. Domain experts could provide insights into valid instruments for causal identification.
 
-### 14. INSTRUMENTAL VARIABLES
-External variables such as environmental indices (e.g., temperature and acidity) might act as instruments to study how specific climate factors influence age and growth metrics.
+15. **INTERVENTION HISTORY**: 
+   - **No Knowledge**: The dataset doesn’t offer historical intervention information. Insights from domain experts can reveal whether any of the variables are based on treatments or interventions.
 
-### 15. INTERVENTION HISTORY
-Understanding of how abalone populations have responded historically to fisheries management practices could demonstrate the impacts of specific policies. For example, changes to harvesting limits in certain seasons could drastically alter age and size distributions.
+For **TIME-SERIES DATA** (if applicable):
 
-### FOR TIME-SERIES DATA (if applicable):
-Since this dataset appears not to be time-series based, most of the following points are not applicable.
+16. **STATIONARITY**: 
+   - **No Knowledge**: The stationarity of the data cannot be established without information on how the variables behave over time. Experts should indicate if they expect trends, cycles, or regular fluctuations.
 
-### 16. STATIONARITY
-This does not apply as there are no time-indexed variables.
+17. **LAG STRUCTURE**: 
+   - **No Knowledge**: Expected lag structures cannot be determined without context on temporal relationships between variables. Domain specialists should clarify relationships among the variables over time.
 
-### 17. LAG STRUCTURE
-This does not apply to the dataset.
+18. **REGIME CHANGES**: 
+   - **No Knowledge**: Without understanding the variables’ domain context, it’s impossible to identify periods of regime change. Insights are needed from experts who know when causal mechanisms might alter.
 
-### 18. REGIME CHANGES
-No changes are applicable here as this dataset does not have a temporal component.
+19. **CONTEMPORANEOUS EFFECTS**: 
+   - **No Knowledge**: I cannot identify which variables might have instantaneous causal effects without knowing their meanings and interrelations. Domain context is crucial for this analysis.
 
-### 19. CONTEMPORANEOUS EFFECTS
-All variables might exhibit contemporaneous relationships during growth periods, especially during spawning seasons when conditions affect all measures.
+20. **PERIODICITY**: 
+   - **No Knowledge**: Any cyclical patterns or periodicities cannot be assessed without understanding the domain and definitions of the variables in the dataset. 
 
-### 20. PERIODICITY
-Not applicable due to lack of time-series data.
-
-This structured analysis of each of the aspects should provide you with robust insights and guidance as you proceed with causal discovery in this dataset.
+In summary, the variable names provided are not informative. To conduct a comprehensive causal analysis, detailed descriptions and contextual information from domain experts are essential.
 
 We have selected the following algorithm for causal discovery:
 
-Algorithm: PCMCI
+Algorithm: XGES
 
 Now, we need to determine the optimal hyperparameters for this algorithm. I'll guide you through a systematic approach to select values that prioritize accuracy while maintaining computational efficiency for moderate graph sizes.
 
-Primary hyperparameters to configure: indep_test, tau_min, tau_max, pc_alpha
+Primary hyperparameters to configure: alpha
 
 For each hyperparameter, please follow this structured approach:
 
@@ -138,7 +116,8 @@ Step 1: Understand the dataset characteristics
 
 Step 2: Assess computational resources
    - Consider the hardware constraints and GPU availability:
-   Current machine supports CUDA, some algorithms can be accelerated by GPU if needed.
+   
+Current machine doesn't support CUDA, do not choose any GPU-powered algorithms.
 
    - Prioritize to GPU implemented hyperparameter when dealing with large graph (variable size > 150) to achieve more efficient speedup
 
@@ -149,7 +128,7 @@ Step 3: Evaluate each hyperparameter's impact on accuracy vs. efficiency
 
 Step 4: Analyze algorithm-specific recommendations
    - Review expert suggestions for each parameter:
-   "**Parameter:** indep_test\n- **Meaning:** Independence tests\n- **Available Values:**\n  - parcorr\n  - robustparcorr\n  - gpdc\n  - gsq\n  - regression\n  - cmi\n- **Expert Suggestion:** Use parcorr as default. Choose based on data type.\n\nLINEAR/DISCRETE (PARAMETRIC) TESTS:\n- 'parcorr': For linear continuous data (default choice)\n- 'robustparcorr': Robust partial correlation for linear data with outliers\n- 'gsq': For categorical/discrete data only\n\nNONLINEAR/NON-PARAMETRIC TESTS:\n- 'gpdc': For nonlinear continuous data\n- 'cmi': Conditional mutual information for nonlinear data (more accurate but much slower)\n- 'regression': For mixed data types (continuous and discrete)\n\n**Parameter:** tau_min\n- **Meaning:** Minimum time lag to consider\n- **Available Values:**\n  - 0\n  - 1\n- **Expert Suggestion:** Use 0 as default. Adjust if results are required for a specific time window\n\n**Parameter:** tau_max\n- **Meaning:** Maximum time lag\n- **Available Values:**\n  - 1\n  - 5\n  - 10\n- **Expert Suggestion:** Use 1 as default. Usually adjusted based on pre-processing results\n\n**Parameter:** pc_alpha\n- **Meaning:** Significance level of PC algorithm.\n- **Available Values:**\n  - 0.05\n  - 0.1\n  - 0.01\n- **Expert Suggestion:** Use 0.05 as default. Adjust based on sample size, more conservative (lower) values for larger samples. If < 500, use 0.1; Else if 500-10000 (<10000 but >500), use 0.05; Else if > 10000, using 0.01.\n\n"
+   "**Parameter:** alpha\n- **Meaning:** The penalty term for the model complexity in BIC score\n- **Available Values:**\n  - 2\n  - 1\n- **Expert Suggestion:** Use 2 as default. Use alpha = 2 for standard BIC and some sparsity and simplicity.\n\n"
 
 Step 5: Analyze algorithm performance with different hyperparameter configurations (If existed)
    - Review benchmarking results for this algorithm with various hyperparameter settings
@@ -164,18 +143,26 @@ Step 5: Analyze algorithm performance with different hyperparameter configuratio
   – Performance may vary significantly with real-world data compared to simulations
   – Consider your specific domain knowledge and data characteristics when selecting algorithms
 • Simulation Settings
-  – Network sizes: 5 to 100 nodes
-  – Time Lags: 3 to 20 time steps
-  – Sample sizes: 500 to 5000 data points
-  – Lagged Edge degree: 2.0 to 16.0 (avg 4.0)
-  – Instantaneous Edge degree: 0.0 to 4.0 (avg 2.0)
-  – Data types: Continuous stationary
-  – Function types: Linear relationships
-  – Noise types: Gaussian distributions
+  – Network sizes: 5 to 1000 nodes
+  – Sample sizes: 500 to 10000 data points
+  – Edge density: 0.11 to 0.78 probability (avg. degree 1 to 7)
+  – Data types: Continuous and mixed (0-20% discrete variables)
+  – Function types: Linear and non-linear (MLP) relationships
+  – Noise types: Gaussian and uniform distributions
+
+• Challenge Scenarios
+  – Measurement error: 10%, 30%, 50% noise in observations
+  – Missing data: 10%, 20%, 30% missing values
+  – Multi-domain data: 1, 2, 5, or 10 heterogeneous domains
+  – Each configuration tested with 3 different random seeds
+
+• Key Terms
+  – (linear): Scenarios where relationships between variables follow linear functions
+  – (mlp): Scenarios where relationships are non-linear (using multilayer perceptron models)
 
 • Scenario Types
-  – Robustness scenarios (e.g., Variable Scaling, Lag Scaling): Test algorithm performance across varying levels of a property
-  – Specific scenarios (e.g., Dense Graph, Long time lag): Test performance at a fixed specific setting
+  – Robustness scenarios (e.g., Variable Scaling, Edge Probability): Test algorithm performance across varying levels of a property
+  – Specific scenarios (e.g., Gaussian Noise, Dense Graph): Test performance at a fixed specific setting
 
 • Performance Metrics
   – Performance level (1-10): Based on F1 score, higher is better
@@ -183,15 +170,15 @@ Step 5: Analyze algorithm performance with different hyperparameter configuratio
   – Stability: Standard deviation of performance, lower values indicate more consistent results
 
 • Important Note on Efficiency Scoring
-  – Benchmarks include large-scale systems with up to 100 nodes x 3 lag and may timeout for some algorithms
-  – For large-scale systems (node count x time lag > 200), prioritize algorithms that can utilize available GPUs
+  – Benchmarks include large-scale systems with up to 1000 nodes and may timeout for some algorithms
+  – For large-scale systems (node size > 200), prioritize algorithms that can utilize available GPUs
   – GPU-accelerated methods provide significant efficiency advantages in large-scale scenarios
 
 ────────────────────────────────────────────────────────
 Filtered Benchmarking Results
 ────────────────────────────────────────────────────────
 
-Algorithms included: PCMCI
+Algorithms included: XGES
 
 ────────────────────────────────────────────────────────
 Overall Algorithm Performance
@@ -201,30 +188,26 @@ Overall Algorithm Performance
 - An algorithm with high average performance may perform poorly on specific scenarios
 - Always check scenario-specific performance for your use case
 
-⚠️ IMPORTANT: Overall rankings can be misleading! ⚠️
-- An algorithm with high average performance may perform poorly on specific scenarios
-- Always check scenario-specific performance for your use case
-
 Overall ranking based on average performance across all scenarios:
 
-1. FCI_indep_test=fisherz: 7.3
-2. FCI_indep_test=rcit: 7.2
-3. FCI_indep_test=kci: 6.6
-4. FCI_indep_test=fastkci: 1.3
+1. XGES_alpha=2: 7.2
+2. XGES_alpha=4: 7.0
+3. XGES_alpha=1: 6.9
+4. XGES_alpha=0.5: 5.4
 
 
 ────────────────────────────────────────────────────────
 Efficiency Comparison
 ────────────────────────────────────────────────────────
 
-Note: Efficiency scores are primarily measured in Variable Scaling, Lag Scaling and Sample Scaling scenarios.
+Note: Efficiency scores are primarily measured in Variable Scaling and Sample Scaling scenarios.
 
 | Algorithm | Variable Scaling (linear) | Sample Scaling (linear) | Variable Scaling (mlp) | Sample Scaling (mlp) | Average |
 |-----------|---------------------------|--------------------------|------------------------|----------------------|--------|
-| FCI_indep_test=fisherz | 4.0 | N/A | 4.0 | N/A | 4.0 |
-| FCI_indep_test=rcit | 3.4 | N/A | 3.5 | N/A | 3.4 |
-| FCI_indep_test=kci | 1.9 | N/A | 1.9 | N/A | 1.9 |
-| FCI_indep_test=fastkci | 1.5 | N/A | 1.5 | N/A | 1.5 |
+| XGES_alpha=4 | 3.9 | N/A | 3.9 | N/A | 3.9 |
+| XGES_alpha=2 | 3.9 | N/A | 3.9 | N/A | 3.9 |
+| XGES_alpha=1 | 3.6 | N/A | 3.5 | N/A | 3.6 |
+| XGES_alpha=0.5 | 3.2 | N/A | 3.2 | N/A | 3.2 |
 
 
 ────────────────────────────────────────────────────────
@@ -232,34 +215,34 @@ Algorithm Recommendations by Scenario Type
 ────────────────────────────────────────────────────────
 
 • Linear Relationships
-  1. FCI_indep_test=fisherz: Performance 7.6
-  2. FCI_indep_test=rcit: Performance 7.4
-  3. FCI_indep_test=kci: Performance 5.9
+  1. XGES_alpha=2: Performance 7.9
+  2. XGES_alpha=4: Performance 7.5
+  3. XGES_alpha=1: Performance 7.4
 
 • Non-Linear Relationships
-  1. FCI_indep_test=fisherz: Performance 6.8
-  2. FCI_indep_test=rcit: Performance 6.5
-  3. FCI_indep_test=kci: Performance 5.7
+  1. XGES_alpha=2: Performance 5.5
+  2. XGES_alpha=1: Performance 5.3
+  3. XGES_alpha=4: Performance 5.3
 
 • Data with Missing Values
-  1. FCI_indep_test=kci: Performance 7.7
-  2. FCI_indep_test=rcit: Performance 7.6
-  3. FCI_indep_test=fisherz: Performance 7.3
+  1. XGES_alpha=4: Performance 7.0
+  2. XGES_alpha=2: Performance 6.9
+  3. XGES_alpha=1: Performance 6.5
 
 • Data with Measurement Error
-  1. FCI_indep_test=kci: Performance 8.4
-  2. FCI_indep_test=rcit: Performance 8.1
-  3. FCI_indep_test=fisherz: Performance 8.0
+  1. XGES_alpha=2: Performance 8.8
+  2. XGES_alpha=1: Performance 8.5
+  3. XGES_alpha=4: Performance 8.2
 
 • Dense vs Sparse Graphs
-  1. FCI_indep_test=rcit: Performance 6.7
-  2. FCI_indep_test=fisherz: Performance 6.4
-  3. FCI_indep_test=kci: Performance 6.3
+  1. XGES_alpha=1: Performance 7.1
+  2. XGES_alpha=2: Performance 7.0
+  3. XGES_alpha=4: Performance 6.8
 
 • Heterogeneous Data
-  1. FCI_indep_test=kci: Performance 7.3
-  2. FCI_indep_test=fisherz: Performance 6.7
-  3. FCI_indep_test=rcit: Performance 6.2
+  1. XGES_alpha=4: Performance 5.7
+  2. XGES_alpha=2: Performance 5.6
+  3. XGES_alpha=1: Performance 5.1
 
 
 ────────────────────────────────────────────────────────
@@ -270,133 +253,133 @@ Performance by Scenario
 These scenarios test algorithm performance across varying levels of a property.
 
 
-• Variable Scaling
+• Variable Scaling (linear)
 | Algorithm | Performance | Stability | Efficiency | Overall Score |
 |-----------|------------|-----------|------------|-------------|
-| FCI_indep_test=rcit | 7.2 | 5.5 | 3.4 | 6.8 |
-| FCI_indep_test=fisherz | 7.0 | 2.6 | 4.0 | 6.6 |
-| FCI_indep_test=kci | 3.1 | 8.5 | 1.9 | 3.0 |
-| FCI_indep_test=fastkci | 2.1 | 6.5 | 1.5 | 2.0 |
+| XGES_alpha=2 | 7.7 | 12.3 | 3.9 | 7.5 |
+| XGES_alpha=4 | 7.6 | 12.7 | 3.9 | 7.5 |
+| XGES_alpha=1 | 6.8 | 15.1 | 3.6 | 6.2 |
+| XGES_alpha=0.5 | 3.5 | 7.9 | 3.2 | 3.6 |
 
-• Lag Scaling
+• Sample Scaling (linear)
 | Algorithm | Performance | Stability | Efficiency | Overall Score |
 |-----------|------------|-----------|------------|-------------|
-| FCI_indep_test=fisherz | 9.2 | 1.0 | N/A | 9.2 |
-| FCI_indep_test=rcit | 9.0 | 1.9 | N/A | 9.0 |
-| FCI_indep_test=kci | 3.9 | 10.6 | N/A | 3.9 |
-| FCI_indep_test=fastkci | 2.3 | 2.1 | N/A | 2.3 |
+| XGES_alpha=2 | 9.8 | 1.0 | N/A | 9.8 |
+| XGES_alpha=4 | 9.6 | 0.8 | N/A | 9.6 |
+| XGES_alpha=1 | 9.5 | 1.1 | N/A | 9.5 |
+| XGES_alpha=0.5 | 8.5 | 11.4 | N/A | 8.5 |
 
 • Heterogeneity (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=kci | 8.8 | 1.9 |
-| FCI_indep_test=fisherz | 8.5 | 2.2 |
-| FCI_indep_test=rcit | 8.0 | 2.6 |
-| FCI_indep_test=fastkci | 1.0 | 1.7 |
+| XGES_alpha=4 | 7.9 | 6.2 |
+| XGES_alpha=2 | 7.9 | 9.4 |
+| XGES_alpha=1 | 7.8 | 8.3 |
+| XGES_alpha=0.5 | 5.8 | 0.0 |
 
 • Measurement Error (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 9.1 | 7.2 |
-| FCI_indep_test=kci | 9.0 | 5.5 |
-| FCI_indep_test=rcit | 8.9 | 3.0 |
-| FCI_indep_test=fastkci | 1.0 | 1.5 |
+| XGES_alpha=2 | 10.0 | 0.5 |
+| XGES_alpha=1 | 9.8 | 1.9 |
+| XGES_alpha=4 | 8.4 | 14.5 |
+| XGES_alpha=0.5 | 8.0 | 13.1 |
 
 • Noise Type (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 9.6 | 4.5 |
-| FCI_indep_test=kci | 9.6 | 2.5 |
-| FCI_indep_test=rcit | 8.9 | 1.5 |
-| FCI_indep_test=fastkci | 1.0 | 1.5 |
+| XGES_alpha=2 | 10.0 | 1.5 |
+| XGES_alpha=1 | 10.0 | 2.0 |
+| XGES_alpha=4 | 9.5 | 0.5 |
+| XGES_alpha=0.5 | 7.0 | 5.5 |
 
 • Missing Data (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 8.0 | 4.4 |
-| FCI_indep_test=rcit | 7.9 | 5.7 |
-| FCI_indep_test=kci | 7.8 | 0.4 |
-| FCI_indep_test=fastkci | 1.0 | 2.9 |
+| XGES_alpha=4 | 7.9 | 1.5 |
+| XGES_alpha=2 | 7.8 | 7.3 |
+| XGES_alpha=1 | 7.4 | 9.5 |
+| XGES_alpha=0.5 | 5.7 | 2.9 |
 
 • Edge Probability (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=rcit | 6.9 | 6.4 |
-| FCI_indep_test=kci | 6.8 | 8.9 |
-| FCI_indep_test=fisherz | 6.7 | 5.7 |
-| FCI_indep_test=fastkci | 1.1 | 2.3 |
+| XGES_alpha=1 | 7.6 | 6.5 |
+| XGES_alpha=2 | 7.5 | 6.2 |
+| XGES_alpha=4 | 7.2 | 7.1 |
+| XGES_alpha=0.5 | 6.5 | 12.7 |
 
 • Discrete Ratio (linear)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 7.6 | 0.8 |
-| FCI_indep_test=kci | 7.4 | 3.7 |
-| FCI_indep_test=rcit | 6.8 | 2.4 |
-| FCI_indep_test=fastkci | 1.3 | 3.3 |
+| XGES_alpha=2 | 7.8 | 5.9 |
+| XGES_alpha=4 | 7.5 | 5.1 |
+| XGES_alpha=1 | 6.9 | 14.2 |
+| XGES_alpha=0.5 | 5.6 | 10.9 |
 
 • Variable Scaling (mlp)
 | Algorithm | Performance | Stability | Efficiency | Overall Score |
 |-----------|------------|-----------|------------|-------------|
-| FCI_indep_test=rcit | 6.2 | 7.8 | 3.5 | 5.9 |
-| FCI_indep_test=fisherz | 5.5 | 5.9 | 4.0 | 5.2 |
-| FCI_indep_test=kci | 2.9 | 12.9 | 1.9 | 2.8 |
-| FCI_indep_test=fastkci | 1.8 | 6.5 | 1.5 | 1.8 |
+| XGES_alpha=2 | 5.5 | 12.5 | 3.9 | 5.4 |
+| XGES_alpha=4 | 5.3 | 16.5 | 3.9 | 5.1 |
+| XGES_alpha=1 | 4.9 | 12.4 | 3.5 | 4.6 |
+| XGES_alpha=0.5 | 3.2 | 8.5 | 3.2 | 3.2 |
 
 • Sample Scaling (mlp)
 | Algorithm | Performance | Stability | Efficiency | Overall Score |
 |-----------|------------|-----------|------------|-------------|
-| FCI_indep_test=rcit | 8.1 | 3.5 | N/A | 8.1 |
-| FCI_indep_test=fisherz | 7.3 | 8.3 | N/A | 7.3 |
-| FCI_indep_test=kci | 3.8 | 15.6 | N/A | 3.8 |
-| FCI_indep_test=fastkci | 2.3 | 8.5 | N/A | 2.3 |
+| XGES_alpha=4 | 6.6 | 8.5 | N/A | 6.6 |
+| XGES_alpha=2 | 6.3 | 7.5 | N/A | 6.3 |
+| XGES_alpha=1 | 5.3 | 8.0 | N/A | 5.3 |
+| XGES_alpha=0.5 | 4.5 | 9.9 | N/A | 4.5 |
 
 • Heterogeneity (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=kci | 7.3 | 1.2 |
-| FCI_indep_test=fisherz | 6.2 | 7.0 |
-| FCI_indep_test=rcit | 6.0 | 3.3 |
-| FCI_indep_test=fastkci | 1.0 | 0.9 |
+| XGES_alpha=2 | 4.7 | 1.7 |
+| XGES_alpha=4 | 3.8 | 4.3 |
+| XGES_alpha=1 | 3.7 | 5.8 |
+| XGES_alpha=0.5 | 2.9 | 5.8 |
 
 • Measurement Error (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=kci | 7.5 | 3.3 |
-| FCI_indep_test=fisherz | 6.9 | 12.0 |
-| FCI_indep_test=rcit | 6.6 | 3.0 |
-| FCI_indep_test=fastkci | 1.2 | 4.4 |
+| XGES_alpha=2 | 6.4 | 6.5 |
+| XGES_alpha=1 | 6.3 | 10.8 |
+| XGES_alpha=4 | 6.1 | 12.5 |
+| XGES_alpha=0.5 | 5.1 | 7.2 |
 
 • Noise Type (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 8.1 | 3.0 |
-| FCI_indep_test=kci | 8.0 | 1.5 |
-| FCI_indep_test=rcit | 6.5 | 1.5 |
-| FCI_indep_test=fastkci | 1.0 | 3.5 |
+| XGES_alpha=1 | 6.8 | 0.5 |
+| XGES_alpha=2 | 6.1 | 7.0 |
+| XGES_alpha=4 | 5.6 | 4.5 |
+| XGES_alpha=0.5 | 3.8 | 0.0 |
 
 • Missing Data (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=kci | 7.6 | 0.8 |
-| FCI_indep_test=fisherz | 6.8 | 6.1 |
-| FCI_indep_test=rcit | 6.2 | 4.0 |
-| FCI_indep_test=fastkci | 2.4 | 14.4 |
+| XGES_alpha=2 | 5.9 | 10.1 |
+| XGES_alpha=4 | 5.5 | 4.1 |
+| XGES_alpha=1 | 5.2 | 4.4 |
+| XGES_alpha=0.5 | 3.9 | 2.7 |
 
 • Edge Probability (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=rcit | 7.0 | 4.6 |
-| FCI_indep_test=fisherz | 6.9 | 7.3 |
-| FCI_indep_test=kci | 5.7 | 13.8 |
-| FCI_indep_test=fastkci | 1.0 | 5.1 |
+| XGES_alpha=1 | 5.8 | 4.8 |
+| XGES_alpha=4 | 5.5 | 9.7 |
+| XGES_alpha=2 | 5.0 | 9.7 |
+| XGES_alpha=0.5 | 4.3 | 9.9 |
 
 • Discrete Ratio (mlp)
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 8.4 | 0.0 |
-| FCI_indep_test=kci | 7.5 | 0.0 |
-| FCI_indep_test=rcit | 6.2 | 0.0 |
-| FCI_indep_test=fastkci | 1.0 | 0.0 |
+| XGES_alpha=1 | 6.5 | 0.0 |
+| XGES_alpha=4 | 5.8 | 0.0 |
+| XGES_alpha=2 | 5.7 | 0.0 |
+| XGES_alpha=0.5 | 3.7 | 0.0 |
 
 ### SPECIFIC SCENARIOS
 These scenarios test algorithm performance at specific settings rather than variable levels.
@@ -405,82 +388,82 @@ These scenarios test algorithm performance at specific settings rather than vari
 • Linear Function
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 5.4 | 0.0 |
-| FCI_indep_test=rcit | 5.4 | 0.0 |
-| FCI_indep_test=kci | 2.1 | 0.0 |
-| FCI_indep_test=fastkci | 1.0 | 0.0 |
+| XGES_alpha=2 | 6.2 | 0.0 |
+| XGES_alpha=4 | 6.2 | 0.0 |
+| XGES_alpha=1 | 5.1 | 0.0 |
+| XGES_alpha=0.5 | 4.0 | 0.0 |
 
 • Non-Linear Function
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=rcit | 5.5 | 0.0 |
-| FCI_indep_test=fisherz | 4.6 | 0.0 |
-| FCI_indep_test=kci | 1.0 | 0.0 |
-| FCI_indep_test=fastkci | 1.0 | 0.0 |
+| XGES_alpha=2 | 4.4 | 0.0 |
+| XGES_alpha=1 | 3.4 | 0.0 |
+| XGES_alpha=4 | 3.4 | 0.0 |
+| XGES_alpha=0.5 | 2.4 | 0.0 |
 
 • Gaussian Noise
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=fisherz | 9.6 | 0.0 |
-| FCI_indep_test=kci | 9.6 | 0.0 |
-| FCI_indep_test=rcit | 8.3 | 0.0 |
-| FCI_indep_test=fastkci | 1.0 | 0.0 |
+| XGES_alpha=2 | 10.0 | 0.0 |
+| XGES_alpha=1 | 10.0 | 0.0 |
+| XGES_alpha=4 | 9.1 | 0.0 |
+| XGES_alpha=0.5 | 5.9 | 0.0 |
 
 • Non-Gaussian Noise
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=kci | 9.5 | 0.0 |
-| FCI_indep_test=rcit | 9.5 | 0.0 |
-| FCI_indep_test=fisherz | 9.5 | 0.0 |
-| FCI_indep_test=fastkci | 1.0 | 0.0 |
+| XGES_alpha=2 | 10.0 | 0.0 |
+| XGES_alpha=4 | 10.0 | 0.0 |
+| XGES_alpha=1 | 10.0 | 0.0 |
+| XGES_alpha=0.5 | 8.1 | 0.0 |
 
 • Dense Graph
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=kci | 4.9 | 0.0 |
-| FCI_indep_test=rcit | 4.7 | 0.0 |
-| FCI_indep_test=fisherz | 4.6 | 0.0 |
-| FCI_indep_test=fastkci | 1.0 | 0.0 |
+| XGES_alpha=0.5 | 5.7 | 0.0 |
+| XGES_alpha=2 | 5.5 | 0.0 |
+| XGES_alpha=1 | 5.3 | 0.0 |
+| XGES_alpha=4 | 4.7 | 0.0 |
 
 • Sparse Graph
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=rcit | 8.3 | 0.0 |
-| FCI_indep_test=kci | 7.6 | 0.0 |
-| FCI_indep_test=fisherz | 7.6 | 0.0 |
-| FCI_indep_test=fastkci | 1.6 | 0.0 |
+| XGES_alpha=2 | 10.0 | 0.0 |
+| XGES_alpha=4 | 10.0 | 0.0 |
+| XGES_alpha=1 | 9.6 | 0.0 |
+| XGES_alpha=0.5 | 7.9 | 0.0 |
 
 • High Missing Data
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=rcit | 8.8 | 0.0 |
-| FCI_indep_test=kci | 7.9 | 0.0 |
-| FCI_indep_test=fisherz | 7.2 | 0.0 |
-| FCI_indep_test=fastkci | 1.0 | 0.0 |
+| XGES_alpha=4 | 7.8 | 0.0 |
+| XGES_alpha=1 | 7.0 | 0.0 |
+| XGES_alpha=2 | 6.9 | 0.0 |
+| XGES_alpha=0.5 | 6.0 | 0.0 |
 
 • High Measurement Error
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=kci | 8.8 | 0.0 |
-| FCI_indep_test=rcit | 8.6 | 0.0 |
-| FCI_indep_test=fisherz | 8.0 | 0.0 |
-| FCI_indep_test=fastkci | 1.0 | 0.0 |
+| XGES_alpha=2 | 10.0 | 0.0 |
+| XGES_alpha=4 | 10.0 | 0.0 |
+| XGES_alpha=0.5 | 9.7 | 0.0 |
+| XGES_alpha=1 | 9.6 | 0.0 |
 
 • Highly Mixed Data
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=kci | 5.5 | 0.0 |
-| FCI_indep_test=fisherz | 5.0 | 0.0 |
-| FCI_indep_test=rcit | 3.9 | 0.0 |
-| FCI_indep_test=fastkci | 1.0 | 0.0 |
+| XGES_alpha=2 | 3.7 | 0.0 |
+| XGES_alpha=4 | 3.7 | 0.0 |
+| XGES_alpha=0.5 | 3.5 | 0.0 |
+| XGES_alpha=1 | 2.6 | 0.0 |
 
 • Highly Heterogeneous
 | Algorithm | Performance | Stability |
 |-----------|------------|----------|
-| FCI_indep_test=kci | 7.7 | 0.0 |
-| FCI_indep_test=fisherz | 7.3 | 0.0 |
-| FCI_indep_test=rcit | 6.8 | 0.0 |
-| FCI_indep_test=fastkci | 1.0 | 0.0 |
+| XGES_alpha=4 | 7.5 | 0.0 |
+| XGES_alpha=2 | 6.1 | 0.0 |
+| XGES_alpha=1 | 6.1 | 0.0 |
+| XGES_alpha=0.5 | 5.8 | 0.0 |
 
 
 -------------------------------------------
@@ -493,7 +476,7 @@ Step 6: Make final decisions based on:
 Please provide your suggestions in a structured JSON format, with detailed reasoning for each hyperparameter. Your response should look like this:
 
 {
-  "algorithm": "PCMCI",
+  "algorithm": "XGES",
   "hyperparameters": {
     "[HYPERPARAMETER_1_NAME]": {
       "full_name": "[HYPERPARAMETER_1_FULL_NAME]",
@@ -514,7 +497,7 @@ Important guidelines:
 1. Only select values from the "available_values" list for each hyperparameter
 2. For moderate graph sizes (10-50 variables), prioritize accuracy over speed
 3. For time-series data, give special attention to lag parameters based on statistical estimates
-4. For time-series data of moderate size (10-50) variables, if the estimated value is small (1 or 2), use a larger value
+4. For time-series data of moderate size (10-50) variables, if the estimated time lag is small (1 or 2), consider using a larger value
 5. Consider independence test selection carefully based on data type and computational resources
 6. For regularization parameters, consider the expected graph density
 7. For search depth parameters, consider the complexity of potential causal relationships

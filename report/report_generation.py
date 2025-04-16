@@ -1241,10 +1241,10 @@ def parse_args():
 import pickle  
 if __name__ == '__main__':
     # args = parse_args()
-    # with open('/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250408_105532/DailyDelhiClimate/output_graph/PCMCI_global_state.pkl', 'rb') as file:
+    # with open('demo_data/20250408_105532/DailyDelhiClimate/output_graph/PCMCI_global_state.pkl', 'rb') as file:
     #     global_state = pickle.load(file)
     # test(args, global_state)
-    save_path = '/Users/wwy/Documents/Project/Causal-Copilot/demo_data/20250408_145536/sachs/output_report'
+    save_path = 'demo_data/20250408_145536/sachs/output_report'
     compile_tex_to_pdf_with_refs(f'{save_path}/report.tex', save_path)
     
 
