@@ -5,9 +5,15 @@ Causal-Copilot: An Autonomous Causal Analysis Agent
 </h1>
 <p align="center">
   <a href="https://huggingface.co/spaces/Causal-Copilot/Causal-Copilot"><b>[Demo]</b></a> •
-  <a href="https://github.com/Lancelot39/Causal-Copilot"><b>[Code]</b></a>
+  <a href="https://github.com/Lancelot39/Causal-Copilot"><b>[Code]</b></a> •
+  <a href="https://github.com/Lancelot39/Causal-Copilot"><b>[Technical Report]</b></a>
 </p>
 
+---
+## News
+![new](/asset/new.gif) **04/16/2025**: We release **Causal-Copilot-V2** and the official **Technical Report**. The new version supports automatically using 20 state-of-the-art causal analysis techniques, spanning from causal discovery, causal inference, and other analysis algorithms.
+
+![new](/asset/new.gif) **11/04/2024**: We release **Causal-Copilot-V1**, the first autonomous causal analysis agent.
 
 ---
 
