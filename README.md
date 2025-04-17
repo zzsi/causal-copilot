@@ -18,9 +18,9 @@ Causal-Copilot: An Autonomous Causal Analysis Agent
 ---
 
 ## Introduction
-Understanding causal relationships is fundamental to scientific discovery, enabling researchers to move beyond mere correlation and establish the underlying mechanisms that drive natural and social phenomena. Recent years have witnessed significant theoretical advancements in causal discovery, yielding a diverse array of sophisticated methodologies. However, the complexity of these methods—each with its distinct assumptions, applicability conditions, and technical nuances—has created substantial barriers for scientists outside the field of causal analysis, often deterring them from adopting these powerful analytical tools in their research.
+Identifying causality lets scientists look past correlations and uncover the mechanisms behind natural and social phenomena. Although many advanced methods for causal discovery now exist, their varied assumptions and technical complexity often discourage non‑experts from using them.
 
-Causal-Copilot is a LLM-oriented toolkit for **automatic causal analysis** that uniquely integrates domain knowledge from large language models with established expertise from causal discovery researchers. Designed for scientific researchers and data scientists, it facilitates the identification, analysis, and interpretation of causal relationships within real-world datasets through natural dialogue. The system autonomously orchestrates the entire analytical pipeline-analyzing statistics, selecting optimal causal analysis algorithms, configuring appropriate hyperparameters, synthesizing executable code, conducting uncertainty quantification, and generating comprehensive PDF reports—while requiring minimal expertise in causal methods. This seamless integration of conversational interaction and rigorous methodology culminates enables researchers across disciplines to focus on domain-specific insights rather than technical implementation details.
+**Causal‑Copilot** addresses this gap. Guided by a LLM, it automates the full causal‑analysis workflow: data inspection, algorithm and hyperparameter selection, code generation, uncertainty assessment, and PDF report creation— all triggered through simple dialogue. By combining LLM‑driven domain knowledge with state‑of‑the‑art causal techniques, Causal‑Copilot lets researchers focus on scientific insight instead of implementation details.
 
 <p align="center">
   🔍 Try out our interactive demo: <a href="https://huggingface.co/spaces/Causal-Copilot/Causal-Copilot"><b>Causal-Copilot Live Demo</b></a>
@@ -57,7 +57,7 @@ We provide some examples of our system automatically generated reports for open-
 
 ## Features
 
-- **Automated Causal Analysis**: Harnesses the power of large language models combined with domain expertise to select optimal causal analysis algorithms and hyperparameters. Incorporates proven methodological insights from causal discovery researchers to ensure the analytical reliability, without the requirements in expertise about causality and extensive parameter tuning. 
+- **Automated Causal Analysis**: Harnesses the power of LLMs combined with domain expertise to select optimal causal analysis algorithms and hyperparameters. Incorporates proven methodological insights from causal discovery researchers to ensure the analytical reliability, without the requirements in expertise about causality and extensive parameter tuning. 
 - **Statistical-LLM Hybrid Post Processing**: Present the edge uncertainty examination (bootstrap), as well as graph pruning and direction revision driven by LLM's prior knowledge.
 - **Chat-based User-friendly Interface**: Navigate complex causal analysis through natural dialogue, and visualize data statistics and causal graphs through clear, intuitive figures, without wrestling with technical details. 
 - **Comprehensive Analysis Report**: Provide well-formulated scientific report for the whole causal analysis process, containing detailed explanation documenting the complete analytical process, intuitive visualization and in-depth interpretation of the findings.
@@ -73,13 +73,13 @@ We provide some examples of our system automatically generated reports for open-
 </div>
 </h1>
 
-### Architecture Details
+### Autonomous Workflow
 
-- Our Causal-Copilot consists of four components, namely preprocessing, decision making, post processing and intepretation parts, which are all supported by SOTA LLMs (e.g., GPT-4o, GPT-4o-mini).
+- Powered by an integrated LLM, **Causal‑Copilot** delivers a fully autonomous causal‑analysis pipeline. A user simply uploads a tabular dataset and a natural‑language query. The LLM—augmented by rule‑based routines—parses the query, cleans the data, infers variable types, and fills in missing values. It then chooses the best causal method, tunes its hyperparameters, and generates the code to run it. After execution (e.g., producing a causal graph), the LLM checks for inconsistencies, optionally queries the user for clarification, and can chain additional steps—such as effect or counterfactual estimation—on top of the discovered structure. The system concludes by compiling an interpretable PDF report that summarizes the data, details intermediate choices, and visualizes the final causal results, making the analysis accessible to non‑experts.
 
 <h1 align="center">
 <div style="text-align: center;">
-    <img src="asset/architecture.png" width="700" alt="Causality" />
+    <img src="asset/model.png" width="700" alt="Causality" />
 </div>
 </h1>
 
