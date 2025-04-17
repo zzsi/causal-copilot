@@ -57,11 +57,11 @@ We provide some examples of our system automatically generated reports for open-
 
 ## Features
 
-- **Automated Causal Analysis**: Harnesses the power of LLMs combined with domain expertise to select optimal causal analysis algorithms and hyperparameters. Incorporates proven methodological insights from causal discovery researchers to ensure the analytical reliability, without the requirements in expertise about causality and extensive parameter tuning. 
-- **Statistical-LLM Hybrid Post Processing**: Present the edge uncertainty examination (bootstrap), as well as graph pruning and direction revision driven by LLM's prior knowledge.
-- **Chat-based User-friendly Interface**: Navigate complex causal analysis through natural dialogue, and visualize data statistics and causal graphs through clear, intuitive figures, without wrestling with technical details. 
-- **Comprehensive Analysis Report**: Provide well-formulated scientific report for the whole causal analysis process, containing detailed explanation documenting the complete analytical process, intuitive visualization and in-depth interpretation of the findings.
-- **Extensibility**: Maintain open interfaces for integrating new causal analysis algorithms and support seamless incorporation of emerging causality-related libraries and methodologies
+- **Automated Causal Analysis** – An LLM automatically picks and tunes the best causal‑analysis algorithms, embedding expert heuristics so users need no specialized knowledge.  
+- **Statistical + LLM Post‑Processing** – Performs bootstrap edge‑uncertainty checks and refines the causal graph (pruning, edge re‑direction) using the LLM’s prior knowledge.  
+- **Chat‑Style Interface** – Users steer the entire analysis via natural dialogue and receive clear visualizations of data stats and causal graphs—no technical setup required.  
+- **Complete Analysis Report** – Outputs a concise PDF that documents methods, shows intuitive visuals, and explains key findings.  
+- **Extensible Framework** – Open interfaces let developers plug in new causal algorithms or external libraries with minimal effort.
 
 ### Architecture Details
 
@@ -69,7 +69,7 @@ We provide some examples of our system automatically generated reports for open-
 
 <h1 align="center">
 <div style="text-align: center;">
-    <img src="https://github.com/Lancelot39/Causal-Copilot/blob/main/asset/architecture.png" width="700" alt="Causality" />
+    <img src="https://github.com/Lancelot39/Causal-Copilot/blob/main/asset/architecture.png" width="1000" alt="Causality" />
 </div>
 </h1>
 
@@ -98,7 +98,7 @@ We provide some examples of our system automatically generated reports for open-
 
 <h1 align="center">
 <div style="text-align: center;">
-    <img src="https://github.com/Lancelot39/Causal-Copilot/blob/main/asset/exp_result.png" width="700" alt="Causality" />
+    <img src="https://github.com/Lancelot39/Causal-Copilot/blob/main/asset/exp_result.png" width="920" alt="Causality" />
 </div>
 </h1>
 
