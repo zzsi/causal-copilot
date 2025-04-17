@@ -77,7 +77,7 @@ We provide some examples of our system automatically generated reports for open-
 
 <h1 align="center">
 <div style="text-align: center;">
-    <img src="https://github.com/Lancelot39/Causal-Copilot/blob/main/asset/algorithms.png" width="1000" alt="Causality" />
+    <img src="https://github.com/Lancelot39/Causal-Copilot/blob/main/asset/algorithms.png" width="700" alt="Causality" />
 </div>
 </h1>
 
