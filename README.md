@@ -69,7 +69,15 @@ We provide some examples of our system automatically generated reports for open-
 
 <h1 align="center">
 <div style="text-align: center;">
-    <img src="asset/architecture.png" width="700" alt="Causality" />
+    <img src="https://github.com/Lancelot39/Causal-Copilot/blob/main/asset/architecture.png" width="700" alt="Causality" />
+</div>
+</h1>
+
+- Causal-Copilot integrates over twenty state-of-the-art causal analysis algorithms, broadly categorized into **causal discovery**, **causal inference**, and **auxiliary analysis tools**.
+
+<h1 align="center">
+<div style="text-align: center;">
+    <img src="https://github.com/Lancelot39/Causal-Copilot/blob/main/asset/algorithms.png" width="700" alt="Causality" />
 </div>
 </h1>
 
@@ -79,20 +87,20 @@ We provide some examples of our system automatically generated reports for open-
 
 <h1 align="center">
 <div style="text-align: center;">
-    <img src="asset/model.png" width="700" alt="Causality" />
+    <img src="https://github.com/Lancelot39/Causal-Copilot/blob/main/asset/model.png" width="700" alt="Causality" />
 </div>
 </h1>
 
 ### Evaluation on Simulated Data
 
-- We evaluate the automatic causal discovery ability of our Causal-Copilot on in total 180 simulated datasets including different types of functional forms, graph sparsity, noise types and heterogeneity, compared with a robust baseline, PC algorithm with the default setting.
+- To test Causal‑Copilot thoroughly, we built a concise yet diverse evaluation suite. Synthetic tabular datasets vary in variable count, graph density, functional form (linear vs. non‑linear), and noise levels. Synthetic time‑series data vary in dimensionality, length, lag structure, and noise type. We also create compound benchmarks, e.g., clinical, financial, and IoT scenarios—that bundle multiple challenges to mimic real‑world complexity. Each dataset has a known ground‑truth graph, allowing us to measure how well the automated pipeline discovers causal structure under a wide range of conditions.
 - The results show that our Causal-Copilot can achieve much better performance, indicating the effectiveness of its automatic algorithm selection and hyper-parameter setting strategy, in a autonomous manner.
 
-| Metric    | Baseline | Causal-Copilot |
-|-----------|----------|----------------|
-| Precision | 78.6%    | **81.6%**      |
-| Recall    | 78.2%    | **81.0%**      |
-| F1-score  | 76.1%    | **79.3%**      |
+<h1 align="center">
+<div style="text-align: center;">
+    <img src="https://github.com/Lancelot39/Causal-Copilot/blob/main/asset/exp_result.png" width="700" alt="Causality" />
+</div>
+</h1>
 
 ---
 
@@ -180,14 +188,9 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 
-## Contributor
-
-- [Xinyue Wang*](https://github.com/CharonWangg), [Kun Zhou*](https://github.com/Lancelot39)(Equal Contribution), [Wenyi Wu](https://github.com/WenyiWU0111), [Fang Nan](https://github.com/Fangn06), Shivam Singh, [Biwei Huang](https://biweihuang.com/)
-
-
 ## Contact
 
-For additional information, questions, or feedback, please contact ours at **xiw159@ucsd.edu**, **franciskunzhou@gmail.com**, **wew058@ucsd.edu**, fnan@ucsd.edu and bih007@ucsd.edu. We welcome contributions! Come and join us now!
+For additional information, questions, or feedback, please contact ours **[Xinyue Wang](xiw159@ucsd.edu)**, **[Kun Zhou](franciskunzhou@gmail.com)**, **[Wenyi Wu](wew058@ucsd.edu)**, and **[Biwei Huang](bih007@ucsd.edu)**. We welcome contributions! Come and join us now!
 
 If you use Causal-Copilot in your research, please cite it as follows:
 
