@@ -65,6 +65,16 @@ We provide some examples of our system automatically generated reports for open-
 
 ### Architecture Details
 
+- **Causal‑Copilot** adopts a modular architecture built around five primary components—**Simulation, User Interaction, Preprocessing, Algorithm Selection,** and **Postprocessing**—that together deliver an end‑to‑end causal analysis pipeline. A large language model (LLM) sits at the core of the framework, coordinating data flow among these modules while tapping into auxiliary resources such as a causality‑focused knowledge base and a library of local algorithms. All modules communicate via unified interfaces that pass structured metadata and intermediate results, allowing the LLM to supervise execution seamlessly. This organization preserves clear separation of concerns, simplifies extension, and makes it straightforward to integrate new capabilities into the system.
+
+<h1 align="center">
+<div style="text-align: center;">
+    <img src="asset/architecture.png" width="700" alt="Causality" />
+</div>
+</h1>
+
+### Architecture Details
+
 - Our Causal-Copilot consists of four components, namely preprocessing, decision making, post processing and intepretation parts, which are all supported by SOTA LLMs (e.g., GPT-4o, GPT-4o-mini).
 
 <h1 align="center">
