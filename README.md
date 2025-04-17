@@ -188,6 +188,16 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 
+## Contributors
+
+**Affiliation**: UCSD, Abel.ai
+
+**Core Contributors**: Xinyue Wang, Kun Zhou, Wenyi Wu, Biwei Huang
+
+**Other Contributors**: Har Simrat Singh, Fang Nan, Songyao Jin, Aryan Philip, Saloni Patnaik, Hou Zhu, Shivam Singh, Parjanya Prashant, Qian Shen, Aseem Dandgaval, Wenqin Liu, Chris Zhao, Felix Wu
+
+---
+
 ## Contact
 
 For additional information, questions, or feedback, please contact ours **[Xinyue Wang](xiw159@ucsd.edu)**, **[Kun Zhou](franciskunzhou@gmail.com)**, **[Wenyi Wu](wew058@ucsd.edu)**, and **[Biwei Huang](bih007@ucsd.edu)**. We welcome contributions! Come and join us now!
@@ -197,7 +207,8 @@ If you use Causal-Copilot in your research, please cite it as follows:
 ```
 @inproceedings{causalcopilot,
   title={Causal-Copilot: An Autonomous Causal Analysis Agent},
-  author={Wang, Xinyue and Zhou, Kun and Wu, Wenyi and Nan, Fang and Huang, Biwei},
-  year={2024}
+  author={Wang, Xinyue and Zhou, Kun and Wu, Wenyi and Simrat Singh, Har and Nan, Fang and Jin, Songyao and Philip, Aryan and Patnaik, Saloni and Zhu, Hou and Singh, Shivam and Prashant, Parjanya and Shen, Qian and Huang, Biwei},
+  journal={arXiv preprint arXiv:2504.18223},
+  year={2025}
 }
 ```
