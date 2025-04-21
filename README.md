@@ -4,14 +4,14 @@
 Causal-Copilot: An Autonomous Causal Analysis Agent
 </h1>
 <p align="center">
-  <a href="https://huggingface.co/spaces/Causal-Copilot/Causal-Copilot"><b>[Demo]</b></a> •
+  <a href="https://causalcopilot.com/"><b>[Demo]</b></a> •
   <a href="https://github.com/Lancelot39/Causal-Copilot"><b>[Code]</b></a> •
-  <a href="https://github.com/Lancelot39/Causal-Copilot"><b>[Technical Report]</b></a>
+  <a href="https://arxiv.org/pdf/2504.13263"><b>[Technical Report]</b></a>
 </p>
 
 ---
 ## News
-![new](/asset/new.gif) **04/16/2025**: We release **Causal-Copilot-V2** and the official **Technical Report**. The new version supports automatically using 20 state-of-the-art causal analysis techniques, spanning from causal discovery, causal inference, and other analysis algorithms.
+![new](/asset/new.gif) **04/16/2025**: We release **Causal-Copilot-V2** and the official **[Technical Report](https://arxiv.org/pdf/2504.13263)**. The new version supports automatically using 20 state-of-the-art causal analysis techniques, spanning from causal discovery, causal inference, and other analysis algorithms.
 
 ![new](/asset/new.gif) **11/04/2024**: We release **Causal-Copilot-V1**, the first autonomous causal analysis agent.
 
@@ -23,7 +23,7 @@ Identifying causality lets scientists look past correlations and uncover the mec
 **Causal‑Copilot** addresses this gap. Guided by a LLM, it automates the full causal‑analysis workflow: data inspection, algorithm and hyperparameter selection, code generation, uncertainty assessment, and PDF report creation— all triggered through simple dialogue. By combining LLM‑driven domain knowledge with state‑of‑the‑art causal techniques, Causal‑Copilot lets researchers focus on scientific insight instead of implementation details.
 
 <p align="center">
-  🔍 Try out our interactive demo: <a href="https://huggingface.co/spaces/Causal-Copilot/Causal-Copilot"><b>Causal-Copilot Live Demo</b></a>
+  🔍 Try out our interactive demo: <a href="https://causalcopilot.com/"><b>Causal-Copilot Live Demo</b></a>
 </p>
 
 ---
@@ -32,7 +32,7 @@ Identifying causality lets scientists look past correlations and uncover the mec
 
 ### Video Demo
 
-[![Demo Video](asset/chatbot.png)](https://www.youtube.com/watch?v=A6j80I97Slg)
+[![Demo Video](asset/chatbot.png)](https://www.youtube.com/watch?v=U9-b0ZqqM24)
 
 ### Report Examples
 
@@ -109,7 +109,7 @@ We provide some examples of our system automatically generated reports for open-
 ### Online Demo
 
 <p align="center">
-  🔍 Try out our interactive demo: <a href="https://huggingface.co/spaces/Causal-Copilot/Causal-Copilot"><b>Causal-Copilot Live Demo</b></a>
+  🔍 Try out our interactive demo: <a href="https://causalcopilot.com/"><b>Causal-Copilot Live Demo</b></a>
 </p>
 
 
@@ -208,7 +208,7 @@ If you use Causal-Copilot in your research, please cite it as follows:
 @inproceedings{causalcopilot,
   title={Causal-Copilot: An Autonomous Causal Analysis Agent},
   author={Wang, Xinyue and Zhou, Kun and Wu, Wenyi and Simrat Singh, Har and Nan, Fang and Jin, Songyao and Philip, Aryan and Patnaik, Saloni and Zhu, Hou and Singh, Shivam and Prashant, Parjanya and Shen, Qian and Huang, Biwei},
-  journal={arXiv preprint arXiv:2504.18223},
+  journal={arXiv preprint arXiv:2504.13263},
   year={2025}
 }
 ```
