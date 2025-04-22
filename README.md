@@ -98,7 +98,7 @@ We provide some examples of our system automatically generated reports for open-
 
 <h1 align="center">
 <div style="text-align: center;">
-    <img src="https://github.com/Lancelot39/Causal-Copilot/blob/main/asset/exp_result.png" width="920" alt="Causality" />
+    <img src="https://github.com/Lancelot39/Causal-Copilot/blob/main/asset/exp_results_v2.png" width="990" alt="Causality" />
 </div>
 </h1>
 
