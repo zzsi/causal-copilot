@@ -740,7 +740,6 @@ def heterogeneity_check(df: pd.DataFrame, heterogeneity_indicator: str = "domain
             return True
     return False
 
-
 def stationary_check(df: pd.DataFrame, max_test: int = 1000, alpha: float = 0.1):
     '''
     :param df: imputed data in Pandas DataFrame format.
@@ -766,6 +765,13 @@ def stationary_check(df: pd.DataFrame, max_test: int = 1000, alpha: float = 0.1)
 
     return stationary
 
+def safe_drop_columns(df, columns_to_drop):
+    if isinstance(columns_to_drop, str):
+        columns_to_drop = [columns_to_drop]
+    elif not isinstance(columns_to_drop, list):
+        columns_to_drop = list(columns_to_drop)
+    return df.drop(columns=columns_to_drop, errors='ignore')
+
 
 def stat_info_collection(global_state):
     '''
@@ -773,14 +779,18 @@ def stat_info_collection(global_state):
     :param global_state: GlobalState object to update and use.
     :return: updated GlobalState object.
     '''
+    print("[DEBUG] Entered stat_info_collection")
     if global_state.statistics.heterogeneous and global_state.statistics.domain_index is not None:
         # Drop the domain index column from the data
         domain_index = global_state.statistics.domain_index
         col_domain_index = global_state.user_data.raw_data[domain_index]
         if domain_index in global_state.user_data.selected_features:
-            global_state.user_data.selected_features = global_state.user_data.selected_features.drop(domain_index)
+            # global_state.user_data.selected_features = global_state.user_data.selected_features.drop(domain_index)
+             global_state.user_data.selected_features = [f for f in global_state.user_data.selected_features if f != domain_index]
+
     else:
         col_domain_index = None
+        
     if global_state.statistics.time_series and global_state.statistics.time_index is not None:
         global_state.user_data.selected_features = [feature for feature in global_state.user_data.selected_features if feature != global_state.statistics.time_index]
         data = global_state.user_data.raw_data.set_index(global_state.statistics.time_index)
@@ -790,27 +800,43 @@ def stat_info_collection(global_state):
         data = global_state.user_data.raw_data[global_state.user_data.selected_features]
 
     if col_domain_index is not None and domain_index in data.columns:
-        data = data.drop(columns=[domain_index])
-    
+        # data = data.drop(columns=[domain_index])
+        data = safe_drop_columns(data, domain_index)
+
     n, m = data.shape
 
     # Update global state
     global_state.statistics.sample_size = n
     global_state.statistics.feature_number = m
 
+    # # Set missingness flag if not already set
+    # if global_state.statistics.missingness is None:
+    #     global_state.statistics.missingness = False
+
     # Data pre-processing
     each_type, dataset_type = data_preprocess(clean_df = data, ts=global_state.statistics.time_series)
+    print("[DEBUG] Done with data_preprocess")
 
     # Update global state
     global_state.statistics.data_type = dataset_type["Data Type"]
     global_state.statistics.data_type_column = each_type
 
+    print("[DEBUG] Done with updating global state")
+    print(global_state.statistics.heterogeneous)
+    print(global_state.statistics.domain_index)
+    print(global_state.user_data.visual_selected_features)
+    print(global_state.statistics.time_series)
+
+
     # Imputation
-    if global_state.statistics.missingness:
+    if global_state.statistics.missingness or global_state.statistics.missingness is None:
         imputed_data = imputation(df=data, column_type=each_type, ts=global_state.statistics.time_series)
     else:
         imputed_data = data
-
+    if global_state.statistics.missingness is None:
+        global_state.statistics.missingness = data.isnull().values.any()
+    if global_state.statistics.missingness:
+        print("[WARNING] Detected missing values in the dataset.")
     # drop domain index from visual selected features
     if global_state.statistics.heterogeneous and global_state.statistics.domain_index in global_state.user_data.visual_selected_features:
         global_state.user_data.visual_selected_features = [feature for feature in global_state.user_data.visual_selected_features if feature != global_state.statistics.domain_index]
@@ -820,10 +846,12 @@ def stat_info_collection(global_state):
     if global_state.statistics.data_type == "Continuous":
         if global_state.statistics.linearity is None:
             # Update global state
+            print("[DEBUG] About to run linearity_check")
             global_state = linearity_check(df_raw=imputed_data, global_state=global_state)
-
+            
         if global_state.statistics.gaussian_error is None:
             # Update global state
+            print("[DEBUG] Entering gaussian_check")
             global_state = gaussian_check(df_raw=imputed_data, global_state=global_state)
     # Assumption checking for time-series data
     elif global_state.statistics.data_type=="Time-series":
@@ -849,7 +877,7 @@ def stat_info_collection(global_state):
 
     # Convert statistics to JSON for compatibility with existing code
     # stat_info_json = json.dumps(vars(global_state.statistics), indent=4)
-
+    print("[DEBUG] Exit stat_info_collection")
     return global_state
 
 
