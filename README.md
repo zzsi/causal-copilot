@@ -167,6 +167,15 @@ $ tlmgr update --self
 $ tlmgr install fancyhdr caption subcaption nicefrac microtype lipsum graphics natbib doi
 ```
 
+### Docker
+
+You can build and run Causal-Copilot inside a Docker container. A helper script
+`build_and_run_docker.sh` is provided at the project root:
+
+```bash
+./build_and_run_docker.sh cpu  # or gpu
+```
+
 ---
 
 ## Usage
