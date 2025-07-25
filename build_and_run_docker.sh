@@ -19,4 +19,10 @@ echo "Building $IMAGE using $DOCKERFILE ..."
 docker build -t "$IMAGE" -f "$DOCKERFILE" .
 
 echo "Running $IMAGE ..."
-docker run --rm -it $GPU_FLAG -v "$(pwd)":/app "$IMAGE"
+docker run --rm -it $GPU_FLAG \
+    -e OPENAI_API_KEY=$OPENAI_API_KEY \
+    -v "$(pwd)":/app "$IMAGE"
+
+
+# Then run this in docker container (instead of directly in the script):
+    # python Gradio/demo.py

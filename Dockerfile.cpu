@@ -36,6 +36,7 @@ COPY requirements_cpu.txt ./
 
 # Install CPU requirements
 RUN pip install --no-cache-dir -r requirements_cpu.txt --no-deps
+RUN pip install -U python-multipart groovy
 
 # Copy application code
 COPY . .
